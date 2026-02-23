@@ -1,0 +1,7 @@
+uploads/
+data/
+build_yolo.log
+__pycache__/
+*.pyc
+*.pyo
+yolo-worker/__pycache__/

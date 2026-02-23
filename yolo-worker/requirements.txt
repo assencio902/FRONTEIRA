@@ -1,0 +1,10 @@
+ultralytics==8.3.50
+opencv-python-headless==4.10.0.84
+redis==5.0.8
+rq==1.16.2
+Pillow==10.4.0
+psycopg2-binary==2.9.9
+# PyTorch com CUDA 12.1 — instalado separadamente para usar GPU
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.3.1+cu121
+torchvision==0.18.1+cu121

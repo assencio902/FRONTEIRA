@@ -1,0 +1,76 @@
+﻿services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ingest:
+    build: ./ingest
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    volumes:
+      - ./data:/data
+      - ./uploads:/app/uploads
+
+  yolo-worker:
+    build: ./yolo-worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      IMAGES_DIR: /app/uploads
+      YOLO_MODEL: yolov8n.pt
+      YOLO_CONF: "0.35"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass
+      PYTHONPATH: /app
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    volumes:
+      - ./uploads:/app/uploads
+    # GPU — sintaxe compatível com Docker Desktop no Windows (WSL2 + NVIDIA)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  pgdata:
