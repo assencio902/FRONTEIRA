@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FRONTEIRA INTELIGENTE – Sistema de Controle de Fronteira</title>
+  <link rel="stylesheet" href="vendor/bootstrap.min.css" />
+  <link rel="stylesheet" href="vendor/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">
+      <i class="bi bi-shield-lock-fill me-2"></i>FRONTEIRA INTELIGENTE
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link active" href="#" data-page="dashboard">
+            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-page="lpr">
+            <i class="bi bi-camera-fill me-1"></i>Scanner LPR
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-page="vehicles">
+            <i class="bi bi-car-front-fill me-1"></i>Veículos
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-page="crossings">
+            <i class="bi bi-list-check me-1"></i>Passagens
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" data-page="alerts">
+            <i class="bi bi-bell-fill me-1"></i>Alertas
+            <span class="badge bg-danger ms-1" id="alertBadge">0</span>
+          </a>
+        </li>
+      </ul>
+      <span class="navbar-text text-light">
+        <i class="bi bi-person-circle me-1"></i>
+        <span id="currentUser">Agente Admin</span>
+        &nbsp;|&nbsp;
+        <span id="clockDisplay"></span>
+      </span>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid mt-3">
+
+  <!-- ======================== DASHBOARD ======================== -->
+  <div id="page-dashboard" class="page-section">
+    <div class="row mb-4">
+      <div class="col-12">
+        <h4 class="text-primary fw-bold"><i class="bi bi-speedometer2 me-2"></i>Painel de Controle</h4>
+        <hr />
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-white bg-primary h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-arrow-left-right fs-2 mb-2"></i>
+            <div class="fs-1 fw-bold" id="statTotal">0</div>
+            <div class="small">Passagens Hoje</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-white bg-success h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-check-circle-fill fs-2 mb-2"></i>
+            <div class="fs-1 fw-bold" id="statOk">0</div>
+            <div class="small">Liberados</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-white bg-warning h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-exclamation-triangle-fill fs-2 mb-2"></i>
+            <div class="fs-1 fw-bold" id="statAlert">0</div>
+            <div class="small">Em Alerta</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm text-white bg-danger h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-x-circle-fill fs-2 mb-2"></i>
+            <div class="fs-1 fw-bold" id="statBlocked">0</div>
+            <div class="small">Bloqueados</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold">
+            <i class="bi bi-bar-chart-fill text-primary me-2"></i>Passagens por Hora (Hoje)
+          </div>
+          <div class="card-body">
+            <canvas id="chartHourly" height="100"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold">
+            <i class="bi bi-pie-chart-fill text-primary me-2"></i>Status das Passagens
+          </div>
+          <div class="card-body d-flex align-items-center justify-content-center">
+            <canvas id="chartStatus" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent crossings -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white fw-semibold">
+            <i class="bi bi-clock-history text-primary me-2"></i>Últimas Passagens
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Hora</th>
+                    <th>Placa</th>
+                    <th>Veículo</th>
+                    <th>Proprietário</th>
+                    <th>Ponto</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="recentCrossingsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== LPR SCANNER ======================== -->
+  <div id="page-lpr" class="page-section d-none">
+    <div class="row mb-4">
+      <div class="col-12">
+        <h4 class="text-primary fw-bold"><i class="bi bi-camera-fill me-2"></i>Scanner LPR – Reconhecimento de Placa</h4>
+        <hr />
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Camera / Scan input -->
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white fw-semibold">
+            <i class="bi bi-camera me-2 text-primary"></i>Câmera de Captura
+          </div>
+          <div class="card-body">
+            <div class="lpr-camera-box mb-3" id="cameraBox">
+              <div class="lpr-scan-line" id="scanLine"></div>
+              <div class="lpr-overlay-text" id="cameraOverlay">
+                <i class="bi bi-camera-video fs-1"></i><br />
+                <span class="small">Câmera Ativa</span>
+              </div>
+              <div class="lpr-plate-detected d-none" id="plateDetected"></div>
+            </div>
+
+            <label class="form-label fw-semibold">Inserir Placa Manualmente</label>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control form-control-lg text-uppercase fw-bold text-center lpr-input"
+                     id="lprInput" placeholder="ABC-1234 ou ABC1D23"
+                     maxlength="8" autocomplete="off" />
+              <button class="btn btn-primary" id="btnScan">
+                <i class="bi bi-search me-1"></i>Escanear
+              </button>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Ponto de Controle</label>
+              <select class="form-select" id="lprCheckpoint">
+                <option value="Norte">Norte – BR-174</option>
+                <option value="Sul">Sul – BR-116</option>
+                <option value="Leste">Leste – BR-101</option>
+                <option value="Oeste">Oeste – BR-364</option>
+                <option value="Aeroporto">Aeroporto Internacional</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Direção</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="direction" id="dirEntry" value="Entrada" checked />
+                <label class="btn btn-outline-success" for="dirEntry">
+                  <i class="bi bi-box-arrow-in-right me-1"></i>Entrada
+                </label>
+                <input type="radio" class="btn-check" name="direction" id="dirExit" value="Saída" />
+                <label class="btn btn-outline-danger" for="dirExit">
+                  <i class="bi bi-box-arrow-right me-1"></i>Saída
+                </label>
+              </div>
+            </div>
+
+            <button class="btn btn-success w-100 btn-lg" id="btnSimulate">
+              <i class="bi bi-lightning-fill me-2"></i>Simular Captura Automática
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result panel -->
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold">
+            <i class="bi bi-info-circle me-2 text-primary"></i>Resultado da Consulta
+          </div>
+          <div class="card-body" id="lprResult">
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-search fs-1"></i>
+              <p class="mt-3">Escaneie uma placa para ver o resultado</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== VEHICLES ======================== -->
+  <div id="page-vehicles" class="page-section d-none">
+    <div class="row mb-4">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4 class="text-primary fw-bold mb-0"><i class="bi bi-car-front-fill me-2"></i>Cadastro de Veículos</h4>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#vehicleModal" id="btnAddVehicle">
+          <i class="bi bi-plus-circle me-1"></i>Novo Veículo
+        </button>
+      </div>
+      <div class="col-12"><hr /></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row g-2 mb-3">
+      <div class="col-md-4">
+        <input type="text" class="form-control" id="vehicleSearch" placeholder="Buscar por placa, modelo ou proprietário…" />
+      </div>
+      <div class="col-md-3">
+        <select class="form-select" id="vehicleStatusFilter">
+          <option value="">Todos os status</option>
+          <option value="Liberado">Liberado</option>
+          <option value="Alerta">Alerta</option>
+          <option value="Bloqueado">Bloqueado</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-secondary w-100" id="btnVehicleFilter">
+          <i class="bi bi-filter me-1"></i>Filtrar
+        </button>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle" id="vehiclesTable">
+            <thead class="table-primary">
+              <tr>
+                <th>Placa</th>
+                <th>Modelo</th>
+                <th>Cor</th>
+                <th>Ano</th>
+                <th>Proprietário</th>
+                <th>CPF/Doc</th>
+                <th>Nacionalidade</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="vehiclesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== CROSSINGS LOG ======================== -->
+  <div id="page-crossings" class="page-section d-none">
+    <div class="row mb-4">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4 class="text-primary fw-bold mb-0"><i class="bi bi-list-check me-2"></i>Registro de Passagens</h4>
+        <button class="btn btn-outline-secondary" id="btnExportCrossings">
+          <i class="bi bi-download me-1"></i>Exportar CSV
+        </button>
+      </div>
+      <div class="col-12"><hr /></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row g-2 mb-3">
+      <div class="col-md-3">
+        <input type="text" class="form-control" id="crossingSearch" placeholder="Placa…" />
+      </div>
+      <div class="col-md-2">
+        <select class="form-select" id="crossingStatusFilter">
+          <option value="">Todos</option>
+          <option value="Liberado">Liberado</option>
+          <option value="Alerta">Alerta</option>
+          <option value="Bloqueado">Bloqueado</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select class="form-select" id="crossingCheckpointFilter">
+          <option value="">Todos os pontos</option>
+          <option value="Norte">Norte – BR-174</option>
+          <option value="Sul">Sul – BR-116</option>
+          <option value="Leste">Leste – BR-101</option>
+          <option value="Oeste">Oeste – BR-364</option>
+          <option value="Aeroporto">Aeroporto Internacional</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-secondary w-100" id="btnCrossingFilter">
+          <i class="bi bi-filter me-1"></i>Filtrar
+        </button>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-primary">
+              <tr>
+                <th>Data/Hora</th>
+                <th>Placa</th>
+                <th>Veículo</th>
+                <th>Proprietário</th>
+                <th>Ponto de Controle</th>
+                <th>Direção</th>
+                <th>Status</th>
+                <th>Agente</th>
+              </tr>
+            </thead>
+            <tbody id="crossingsBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer text-muted small">
+        <span id="crossingsCount">0</span> registros encontrados
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== ALERTS ======================== -->
+  <div id="page-alerts" class="page-section d-none">
+    <div class="row mb-4">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h4 class="text-primary fw-bold mb-0"><i class="bi bi-bell-fill me-2"></i>Central de Alertas</h4>
+        <button class="btn btn-outline-danger" id="btnClearAlerts">
+          <i class="bi bi-trash me-1"></i>Limpar Todos
+        </button>
+      </div>
+      <div class="col-12"><hr /></div>
+    </div>
+
+    <div id="alertsContainer"></div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Vehicle Modal -->
+<div class="modal fade" id="vehicleModal" tabindex="-1" aria-labelledby="vehicleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="vehicleModalLabel">
+          <i class="bi bi-car-front me-2"></i>Cadastrar / Editar Veículo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="vehicleId" />
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Placa <span class="text-danger">*</span></label>
+            <input type="text" class="form-control text-uppercase" id="vPlate" placeholder="ABC-1234" maxlength="8" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Modelo <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="vModel" placeholder="Ex: Toyota Hilux" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Cor</label>
+            <input type="text" class="form-control" id="vColor" placeholder="Branco" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Ano</label>
+            <input type="number" class="form-control" id="vYear" placeholder="2022" min="1900" max="2030" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Proprietário <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="vOwner" placeholder="Nome completo" required />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">CPF / Documento</label>
+            <input type="text" class="form-control" id="vDoc" placeholder="000.000.000-00" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Nacionalidade</label>
+            <input type="text" class="form-control" id="vNationality" placeholder="Brasileiro" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+            <select class="form-select" id="vStatus">
+              <option value="Liberado">✅ Liberado</option>
+              <option value="Alerta">⚠️ Alerta</option>
+              <option value="Bloqueado">🚫 Bloqueado</option>
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label fw-semibold">Observação</label>
+            <input type="text" class="form-control" id="vObs" placeholder="Motivo do alerta ou bloqueio…" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveVehicle">
+          <i class="bi bi-save me-1"></i>Salvar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100">
+  <div id="liveToast" class="toast align-items-center border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-semibold" id="toastMessage"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
+<script src="js/database.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
