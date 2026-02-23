@@ -43,6 +43,7 @@
     volumes:
       - ./data:/data
       - ./uploads:/app/uploads
+      - ./ingest/static:/app/static
 
   yolo-worker:
     build: ./yolo-worker

@@ -5,3 +5,21 @@ __pycache__/
 *.pyc
 *.pyo
 yolo-worker/__pycache__/
+
+# Modelos YOLO (arquivos grandes)
+*.pt
+*.onnx
+
+# Arquivos XML de passagens
+*.xml
+
+# Variáveis de ambiente
+.env
+.env.*
+
+# Temporários
+*.log
+*.tmp
+*.bak
+web_ui/
+wsl_diagnostic.ps1

@@ -3,35 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monitoramento LPR</title>
+  <title>BPFRON - Polícia de Fronteiras e Divisas</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:        #f0f2f5;
-      --sidebar:   #ffffff;
-      --card:      #ffffff;
-      --card2:     #f8fafc;
-      --border:    #e2e8f0;
-      --accent:    #3b82f6;
-      --accent2:   #1d4ed8;
-      --text:      #1e293b;
-      --muted:     #64748b;
-      --danger:    #ef4444;
-      --success:   #16a34a;
-      --warning:   #d97706;
-      --purple:    #7c3aed;
+      --bg:        #052e16;
+      --sidebar:   #064e24;
+      --card:      #0a5c2a;
+      --card2:     #086325;
+      --border:    #1a9448;
+      --accent:    #facc15;
+      --accent2:   #fbbf24;
+      --text:      #ffffff;
+      --muted:     #d4f5df;
+      --danger:    #ff6b6b;
+      --success:   #6ee7a0;
+      --warning:   #facc15;
+      --purple:    #c4b5fd;
       --radius:    10px;
       --sidebar-w: 230px;
     }
     body { font-family: system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
     #sidebar { width:var(--sidebar-w); background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; padding:20px 0 16px; z-index:100; }
-    .sidebar-logo { padding:12px 18px 16px; display:flex; flex-direction:column; align-items:center; gap:6px; border-bottom:1px solid var(--border); margin-bottom:8px; }
-    .sidebar-logo img { width:72px; height:72px; object-fit:contain; }
-    .sidebar-logo-text { font-size:.78rem; font-weight:700; letter-spacing:.06em; color:var(--accent2); text-align:center; line-height:1.3; }
+    .sidebar-logo { padding:12px 12px 14px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+    .sidebar-logo img { width:100%; height:auto; max-height:160px; object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
+    .sidebar-logo-text { font-size:1rem; font-weight:800; letter-spacing:.18em; color:#facc15; text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
+    .topbar-title-group { display:flex; align-items:baseline; gap:12px; }
+    .topbar-subtitle { font-size:1.25rem; font-weight:700; color:#facc15; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
     .sidebar-section { font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:14px 18px 5px; }
-    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 18px; cursor:pointer; border-left:3px solid transparent; color:var(--muted); font-size:.88rem; font-weight:500; transition:all .15s; user-select:none; }
-    .nav-item:hover { color:var(--text); background:rgba(0,0,0,.045); }
-    .nav-item.active { color:var(--accent2); border-left-color:var(--accent); background:rgba(59,130,246,.08); }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 18px; cursor:pointer; border-left:3px solid transparent; color:#ffffff; font-size:.88rem; font-weight:500; transition:all .15s; user-select:none; }
+    .nav-item:hover { color:#facc15; background:rgba(255,255,255,.07); }
+    .nav-item.active { color:#facc15; border-left-color:#facc15; background:rgba(250,204,21,.1); }
     .nav-item svg { flex-shrink:0; }
     .sidebar-footer { margin-top:auto; padding:12px 18px; font-size:.72rem; color:var(--muted); border-top:1px solid var(--border); }
     #main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh; }
@@ -46,8 +48,8 @@
     .btn-primary { background:var(--accent); color:#fff; }
     .btn-success { background:var(--success); color:#fff; }
     .btn-danger  { background:var(--danger); color:#fff; }
-    .btn-outline { background:transparent; border:1px solid #94a3b8; color:var(--muted); }
-    .btn-outline:hover { color:var(--text); border-color:var(--accent); background:rgba(59,130,246,.06); }
+    .btn-outline { background:transparent; border:1px solid #4ade80; color:#ffffff; }
+    .btn-outline:hover { color:#facc15; border-color:#facc15; background:rgba(250,204,21,.08); }
     .btn-sm { padding:4px 10px; font-size:.77rem; border-radius:6px; }
     .btn-xs { padding:2px 7px; font-size:.73rem; border-radius:5px; }
     #content { padding:22px 26px; flex:1; }
@@ -72,7 +74,7 @@
     .alvo-desc { color:var(--muted); font-size:.82rem; flex:1; }
     /* tabela compacta de alvos */
     #alvos-table { width:100%; border-collapse:collapse; }
-    #alvos-table th { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:7px 12px; border-bottom:1px solid var(--border); text-align:left; }
+    #alvos-table th { font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#facc15; padding:7px 12px; border-bottom:1px solid var(--border); text-align:left; }
     #alvos-table td { padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:middle; font-size:.85rem; }
     #alvos-table tr:hover td { background:rgba(0,0,0,.025); }
     /* modal relatório alvo */
@@ -92,7 +94,9 @@
     .sub-pane.active { display:block; }
     .cards-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:14px; margin-bottom:20px; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:15px 17px; }
-    .card-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:6px; }
+    .card-label { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:#d4f5df; margin-bottom:6px; }
+    .card-value { font-size:1.45rem; font-weight:700; color:#ffffff; line-height:1; }
+    .card-sub   { font-size:.73rem; color:#d4f5df; margin-top:3px; }
     .card-value { font-size:1.6rem; font-weight:700; color:var(--text); }
     .card-sub   { font-size:.73rem; color:var(--muted); margin-top:3px; }
     .card-icon  { float:right; opacity:.18; font-size:1.8rem; line-height:1; }
@@ -123,6 +127,22 @@
     .thumb-none { width:72px; height:48px; background:var(--card2); border-radius:5px; border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.68rem; }
     .pagination { display:flex; align-items:center; gap:8px; padding:11px 14px; border-top:1px solid var(--border); justify-content:flex-end; }
     .pagination span { font-size:.8rem; color:var(--muted); }
+    #ev-limit-select {
+      background:#0a3d1f;
+      color:#facc15;
+      border:1px solid #facc15;
+      font-weight:700;
+      padding:5px 10px;
+      border-radius:6px;
+      cursor:pointer;
+      outline:none;
+    }
+    #ev-limit-select option {
+      background:#0a3d1f;
+      color:#ffffff;
+      font-weight:600;
+    }
+    #ev-limit-select:hover { background:#0f5c2a; }
     .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:22px; }
     .chart-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
     .chart-title { font-size:.71rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:11px; font-weight:600; }
@@ -239,7 +259,7 @@
 <nav id="sidebar">
   <div class="sidebar-logo">
     <img src="/static/logo.png" alt="BPFRON" onerror="this.style.display='none'">
-    <div class="sidebar-logo-text">BPFRON<br style="line-height:.5"><span style="font-size:.65rem;font-weight:500;color:var(--muted);letter-spacing:.04em">Monitoramento LPR</span></div>
+    <div class="sidebar-logo-text">BPFRON</div>
   </div>
   <div class="sidebar-section">Operacional</div>
   <div class="nav-item" onclick="switchTab('painel',this)">
@@ -265,7 +285,10 @@
 <!-- MAIN -->
 <div id="main">
   <div id="topbar">
-    <h1 id="topbar-title">Eventos</h1>
+    <div class="topbar-title-group">
+      <h1 id="topbar-title" style="display:none">Painel</h1>
+      <span class="topbar-subtitle">Pol&#237;cia de Fronteiras e Divisas</span>
+    </div>
     <div class="top-right">
       <div class="badge-live"><span class="dot"></span> Ao vivo</div>
       <button id="btn-alerts" class="btn btn-outline btn-sm" onclick="openAlertsPanel()" title="Hist&#243;rico de alertas">
@@ -402,6 +425,15 @@
         </div>
         <button class="btn btn-primary btn-sm" onclick="filterEvents()">&#128269; Filtrar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
+        <select id="ev-limit-select" onchange="setEvLimit(this.value)">
+            <option value="10" selected>10 por pág.</option>
+            <option value="50">50 por pág.</option>
+            <option value="100">100 por pág.</option>
+            <option value="200">200 por pág.</option>
+            <option value="300">300 por pág.</option>
+            <option value="400">400 por pág.</option>
+            <option value="500">500 por pág.</option>
+          </select>
         <span class="status-line" id="events-status"></span>
       </div>
       <div class="table-wrap">
@@ -1247,7 +1279,7 @@ var curCamera   = '';
 var curDateFrom = '';
 var curDateTo   = '';
 var evOffset    = 0;
-var EV_LIMIT    = 50;
+var EV_LIMIT    = 10;
 var evTotal     = 0;
 var lastMaxId   = 0;
 var monPlates   = {};
@@ -1512,6 +1544,12 @@ function updatePagination() {
 }
 
 function evPage(dir) { loadEvents(Math.max(0, evOffset + dir * EV_LIMIT)); }
+
+function setEvLimit(val) {
+  EV_LIMIT = parseInt(val, 10);
+  evOffset = 0;
+  loadEvents(0);
+}
 
 function _toLocalInput(d) {
   // Formata Date para string "YYYY-MM-DDTHH:MM" usada em datetime-local
