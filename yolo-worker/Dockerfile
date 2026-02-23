@@ -1,4 +1,6 @@
-FROM python:3.11-slim
+# Imagem base oficial com PyTorch 2.3.1 + CUDA 12.1 já incluídos
+# Evita download de ~2.5 GB do torch+cu121 durante o build
+FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
