@@ -121,6 +121,7 @@
     .badge-red    { background:rgba(239,68,68,.15); color:var(--danger); }
     .badge-yellow { background:rgba(245,158,11,.15); color:var(--warning); }
     .badge-green  { background:rgba(34,197,94,.15); color:var(--success); }
+    .cam-sort-active { background:rgba(99,102,241,.22) !important; color:var(--accent) !important; border-color:var(--accent) !important; }
     .list-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; font-size:.69rem; font-weight:600; }
     .thumb { width:72px; height:48px; object-fit:cover; border-radius:5px; cursor:pointer; background:#000; border:1px solid var(--border); transition:transform .15s; display:block; }
     .thumb:hover { transform:scale(1.08); }
@@ -278,6 +279,10 @@
   <div class="nav-item" onclick="switchTab('veiculos',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     Veiculos Monitorados
+  </div>
+  <div class="nav-item" onclick="switchTab('cameras',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+    C&#226;meras
   </div>
   <div class="sidebar-footer" id="sb-clock"></div>
 </nav>
@@ -440,11 +445,11 @@
         <table>
           <thead>
             <tr>
-              <th>#</th><th>Foto</th><th>Placa</th><th>Data/Hora</th><th>Camera</th><th>Conf.</th><th>YOLO IA</th><th></th>
+              <th>#</th><th>Foto</th><th>Placa</th><th>Data/Hora</th><th>Camera</th><th>Dire&ccedil;&atilde;o</th><th>Conf.</th><th>YOLO IA</th><th></th>
             </tr>
           </thead>
           <tbody id="events-tbody">
-            <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+            <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
           </tbody>
         </table>
         <div class="pagination">
@@ -468,17 +473,17 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab active" onclick="switchBatTab('suspeitos',this)">
+        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)">
           &#9888;&#65039; Suspeitos
         </div>
-        <div class="sub-tab" onclick="switchBatTab('comboio',this)">
+        <div class="sub-tab" data-bat="comboio" onclick="switchBatTab('comboio',this)">
           &#128663; Comboio / Batedor
         </div>
-        <div class="sub-tab" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
+        <div class="sub-tab" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
           &#128663;&#128663; Grupos Juntos
           <span id="bat-live-badge" class="bat-live-badge" style="display:none"><span class="dot"></span><span id="bat-live-count">0</span> AO VIVO</span>
         </div>
-        <div class="sub-tab" onclick="switchBatTab('alvos',this)">
+        <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
           &#127919; Alvos Rastreados
         </div>
       </div>
@@ -712,6 +717,36 @@
       </div>
     </div>
 
+    <!-- ===== ABA CAMERAS ===== -->
+    <div id="tab-cameras" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128247; C&#226;meras Cadastradas</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Gerencie as c&#226;meras do sistema. O nome &#233; usado automaticamente na ingest&#227;o de eventos.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:.8rem;color:var(--muted)">Ordenar por:</span>
+          <button id="cam-sort-id" class="btn btn-outline btn-xs cam-sort-active" onclick="_setCamSort('id')">ID &#9650;</button>
+          <button id="cam-sort-nome" class="btn btn-outline btn-xs" onclick="_setCamSort('nome')">Nome</button>
+          <button id="cam-sort-ip" class="btn btn-outline btn-xs" onclick="_setCamSort('ip')">IP</button>
+          <button id="cam-sort-status" class="btn btn-outline btn-xs" onclick="_setCamSort('status')">Status</button>
+          <button class="btn btn-outline btn-sm" onclick="loadCameras()" id="btn-refresh-cameras" title="Atualizar lista">&#8635; Atualizar</button>
+          <button class="btn btn-primary btn-sm" onclick="openCameraModal()">+ Adicionar c&#226;mera</button>
+        </div>
+      </div>
+      <div class="form-error" id="cameras-error" style="margin-bottom:12px"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>camera_id</th><th>Nome</th><th>IP</th><th>Criticidade</th><th>Peso</th><th>Ativa</th><th>&#218;ltimo Evento</th><th>Hoje</th><th>Total</th><th>Dire&ccedil;&atilde;o</th><th>A&#231;&#245;es</th></tr>
+          </thead>
+          <tbody id="cameras-tbody">
+            <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -759,12 +794,20 @@
 <!-- MODAL IMAGEM -->
 <div class="modal-overlay" id="img-modal" onclick="if(event.target===this)closeModal('img-modal')">
   <div class="modal">
-    <div class="modal-header">
-      <h2 id="img-modal-title">Imagem do evento</h2>
-      <button class="modal-close" onclick="closeModal('img-modal')">&times;</button>
+    <div class="modal-header" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+        <span id="img-modal-evnum" style="font-size:.8rem;color:var(--muted);font-weight:500">Evento #</span>
+        <button class="modal-close" onclick="closeModal('img-modal')">&times;</button>
+      </div>
+      <div id="img-modal-plate-title" style="font-size:1.9rem;font-weight:900;letter-spacing:.12em;color:#ffffff;line-height:1.1">—</div>
     </div>
     <img id="img-modal-img" src="" alt="foto" onerror="this.style.display='none';document.getElementById('img-modal-error').style.display='block'">
     <div id="img-modal-error">&#128247; Imagem nao encontrada.</div>
+    <div id="img-modal-meta" style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;padding:10px 14px;background:rgba(0,0,0,.15);border-radius:8px;font-size:.82rem">
+      <div><span style="color:var(--muted)">&#128247; C&acirc;mera:</span> <strong id="img-modal-cam">-</strong></div>
+      <div><span style="color:var(--muted)">&#128197; Data:</span> <strong id="img-modal-date">-</strong></div>
+      <div><span style="color:var(--muted)">&#128336; Hor&aacute;rio:</span> <strong id="img-modal-time">-</strong></div>
+    </div>
   </div>
 </div>
 
@@ -846,6 +889,54 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('vehicle-modal')">Cancelar</button>
       <button class="btn btn-success btn-sm" onclick="saveVehicle()">Cadastrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADICIONAR/EDITAR C\u00c2MERA -->
+<div class="modal-overlay" id="camera-modal" onclick="if(event.target===this)closeModal('camera-modal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 id="camera-modal-title">Adicionar C&#226;mera</h2>
+      <button class="modal-close" onclick="closeModal('camera-modal')">&times;</button>
+    </div>
+    <div class="form-group">
+      <label>ID / Nome da c&#226;mera *</label>
+      <input type="text" id="cam-camera-id" placeholder="Ex: 06_TREVO_4EIXO_CEREJEIRAS" maxlength="80">
+      <div id="cam-id-hint" style="display:none"></div>
+    </div>
+    <div class="form-group">
+      <label>IP da c&#226;mera</label>
+      <input type="text" id="cam-ip" placeholder="Ex: 172.21.151.16" maxlength="45">
+    </div>
+    <div class="form-group">
+      <label>Dire&ccedil;&atilde;o do fluxo</label>
+      <select id="cam-direcao">
+        <option value="">N&atilde;o definida</option>
+        <option value="CRESCENTE">&#8593; CRESCENTE</option>
+        <option value="DECRESCENTE">&#8595; DECRESCENTE</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Criticidade</label>
+      <select id="cam-criticidade">
+        <option value="NORMAL">NORMAL</option>
+        <option value="CRITICA">CR&#205;TICA</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Peso Score</label>
+      <input type="number" id="cam-peso-score" value="1.0" min="0.1" max="99" step="0.1">
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="cam-ativa" checked style="width:auto"> Ativa
+      </label>
+    </div>
+    <div class="form-error" id="camera-form-error"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('camera-modal')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="saveCamera()">Salvar</button>
     </div>
   </div>
 </div>
@@ -1066,10 +1157,6 @@ function triggerComboio(batedor, alvo, escolta, cameras, avgDelta) {
   } catch(e) {}
 }
 
-function triggerAbordagem(follower, leader, cameras, avgDelta) {
-  triggerComboio(leader, follower, null, cameras, avgDelta);
-}
-
 function triggerAlvoAvistado(plate, camera, descricao) {
   _toastPlates['avistado'] = plate;
   addAlert('avistado', '&#127919;', plate, 'C&acirc;mera: <strong>' + camera + '</strong>' + (descricao ? ' &mdash; ' + descricao : ''), {type:'avistado', plate:plate});
@@ -1201,21 +1288,20 @@ function _mkDoughnut(id, labels, data) {
 
 async function loadPainel() {
   try {
-    // overview
     var ov = await fetch('/api/stats/overview').then(function(r){ return r.json(); });
-    document.getElementById('pn-total').textContent     = (ov.total_events||0).toLocaleString('pt-BR');
-    document.getElementById('pn-today').textContent     = (ov.today_events||0).toLocaleString('pt-BR');
-    document.getElementById('pn-lasthour').textContent  = (ov.last_hour_events||0).toLocaleString('pt-BR');
-    document.getElementById('pn-cameras').textContent   = (ov.active_cameras||0).toLocaleString('pt-BR');
-    document.getElementById('pn-monitored').textContent = (ov.monitored_plates||0).toLocaleString('pt-BR');
-    document.getElementById('pn-alerts').textContent    = (ov.alerts_today||0).toLocaleString('pt-BR');
+    document.getElementById('pn-total').textContent     = (ov.total_events    || ov.total || 0).toLocaleString('pt-BR');
+    document.getElementById('pn-today').textContent     = (ov.today_events    || 0).toLocaleString('pt-BR');
+    document.getElementById('pn-lasthour').textContent  = (ov.last_hour_events || ov.last_hour || 0).toLocaleString('pt-BR');
+    document.getElementById('pn-cameras').textContent   = (ov.active_cameras  || 0).toLocaleString('pt-BR');
+    document.getElementById('pn-monitored').textContent = (ov.monitored_plates || 0).toLocaleString('pt-BR');
+    document.getElementById('pn-alerts').textContent    = (ov.alerts_today    || ov.alerts || 0).toLocaleString('pt-BR');
   } catch(e) { console.error('overview', e); }
 
   try {
-    // eventos por hora (últimas 24h)
     var ph = await fetch('/api/stats/events-per-hour').then(function(r){ return r.json(); });
-    var hourLabels = ph.data.map(function(d){ return d.hour.substring(11,16)+'h'; });
-    var hourData   = ph.data.map(function(d){ return d.total; });
+    var phItems    = ph.items || [];
+    var hourLabels = phItems.map(function(d){ return d.hour || d.label || ''; });
+    var hourData   = phItems.map(function(d){ return d.count || d.total || 0; });
     _mkChart('pn-chart-hour', 'bar', hourLabels, [{
       label: 'Eventos', data: hourData,
       backgroundColor: 'rgba(59,130,246,.55)', borderColor: '#3b82f6', borderWidth: 1,
@@ -1224,10 +1310,10 @@ async function loadPainel() {
   } catch(e) { console.error('hour', e); }
 
   try {
-    // eventos por dia (últimos 30 dias)
     var pd = await fetch('/api/stats/events-per-day').then(function(r){ return r.json(); });
-    var dayLabels = pd.data.map(function(d){ return d.day.substring(5); }); // MM-DD
-    var dayData   = pd.data.map(function(d){ return d.total; });
+    var pdItems   = pd.items || [];
+    var dayLabels = pdItems.map(function(d){ return (d.day || '').substring(5); });
+    var dayData   = pdItems.map(function(d){ return d.count || d.total || 0; });
     _mkChart('pn-chart-day', 'line', dayLabels, [{
       label: 'Eventos', data: dayData,
       borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)',
@@ -1242,10 +1328,10 @@ async function loadPainel() {
   } catch(e) { console.error('day', e); }
 
   try {
-    // top placas
     var tp = await fetch('/api/stats/top-plates?limit=10').then(function(r){ return r.json(); });
-    var pLabels = tp.data.map(function(d){ return d.plate; });
-    var pData   = tp.data.map(function(d){ return d.total; });
+    var tpItems = tp.items || [];
+    var pLabels = tpItems.map(function(d){ return d.plate || ''; });
+    var pData   = tpItems.map(function(d){ return d.count || d.total || 0; });
     _mkChart('pn-chart-plates', 'bar', pLabels, [{
       label: 'Passagens', data: pData,
       backgroundColor: _CHART_COLORS.map(function(c){ return c + '99'; }),
@@ -1261,12 +1347,12 @@ async function loadPainel() {
   } catch(e) { console.error('plates', e); }
 
   try {
-    // cameras (doughnut)
     var ec = await fetch('/api/stats/events-per-camera').then(function(r){ return r.json(); });
-    if (ec.data.length > 0) {
+    var ecItems = ec.items || [];
+    if (ecItems.length > 0) {
       _mkDoughnut('pn-chart-cam',
-        ec.data.map(function(d){ return d.camera; }),
-        ec.data.map(function(d){ return d.total; })
+        ecItems.map(function(d){ return d.camera || ''; }),
+        ecItems.map(function(d){ return d.count || d.total || 0; })
       );
     }
   } catch(e) { console.error('cam', e); }
@@ -1288,6 +1374,7 @@ var chartHour   = null;
 var chartCam    = null;
 var editListId  = null;
 var listsCache  = [];
+var _imgMeta    = {}; // cache evId -> {camName, ts} para o modal de imagem
 
 // ===== UTILS =====
 function fmtTs(ts) {
@@ -1314,7 +1401,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados' };
+var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras' };
 var _pnCharts = {};
 
 function switchTab(name, el) {
@@ -1325,6 +1412,7 @@ function switchTab(name, el) {
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
   if (name === 'painel')  loadPainel();
+  if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
     var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
@@ -1333,6 +1421,7 @@ function switchTab(name, el) {
     else if (batName === 'grupos') loadGrupos();
   }
   if (name === 'veiculos') { loadLists(); loadListsIntoSelects(); }
+  if (name === 'cameras')  loadCameras();
 }
 
 function switchBatTab(name, el) {
@@ -1362,6 +1451,7 @@ function refreshCurrent() {
   if (currentTab === 'painel')  loadPainel();
   else if (currentTab === 'eventos') loadEvents();
   else if (currentTab === 'batedor') loadBatedor();
+  else if (currentTab === 'cameras') loadCameras();
   else { loadLists(); loadVehicles(); }
 }
 
@@ -1371,17 +1461,23 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal'].forEach(closeModal);
   }
 });
 
 function openImage(evId, plate) {
   var img = document.getElementById('img-modal-img');
   var err = document.getElementById('img-modal-error');
-  document.getElementById('img-modal-title').textContent = 'Evento #' + evId + (plate ? ' - ' + plate : '');
+  document.getElementById('img-modal-evnum').textContent = 'Evento #' + evId;
+  document.getElementById('img-modal-plate-title').textContent = plate || '—';
   img.style.display = 'block';
   err.style.display = 'none';
   img.src = '/api/events/' + evId + '/image?_=' + Date.now();
+  var meta = _imgMeta[evId] || {};
+  document.getElementById('img-modal-cam').textContent  = meta.camName || '-';
+  var dtObj = meta.ts ? new Date(meta.ts) : null;
+  document.getElementById('img-modal-date').textContent = dtObj ? dtObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
+  document.getElementById('img-modal-time').textContent = dtObj ? dtObj.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
   openModal('img-modal');
 }
 
@@ -1397,7 +1493,7 @@ async function loadMonPlates() {
 }
 
 function plateHtml(plate) {
-  if (!plate) return '<span class="plate-tag">-</span>';
+  if (!plate || plate === 'unknown' || plate.trim() === '') return '<span style="color:var(--muted)">-</span>';
   var pm = monPlates[plate.toUpperCase()];
   if (pm && pm.length) {
     var c = pm[0].color || '#ef4444';
@@ -1423,8 +1519,8 @@ async function loadEvents(newOffset) {
   var p = new URLSearchParams({ limit: EV_LIMIT, offset: evOffset });
   if (curFilter)   p.set('plate', curFilter);
   if (curCamera)   p.set('camera_id', curCamera);
-  if (curDateFrom) p.set('date_from', curDateFrom);
-  if (curDateTo)   p.set('date_to',   curDateTo);
+  if (curDateFrom) p.set('dt_from', curDateFrom);
+  if (curDateTo)   p.set('dt_to',   curDateTo);
   try {
     var r = await fetch('/api/events?' + p);
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1456,7 +1552,7 @@ async function loadEvents(newOffset) {
     document.getElementById('events-status').textContent = items.length + ' de ' + evTotal + ' registro(s)';
   } catch(e) {
     document.getElementById('events-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('events-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    document.getElementById('events-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
   }
 }
 
@@ -1479,28 +1575,39 @@ function renderEvents(items, newIds) {
   newIds = newIds || new Set();
   var tb = document.getElementById('events-tbody');
   if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Nenhum evento encontrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhum evento encontrado.</td></tr>';
     return;
   }
+  items.forEach(function(ev) {
+    _imgMeta[ev.id] = { camName: ev.cam_nome || ev.channel_name || ev.camera_id || '', ts: ev.ts || ev.occurred_at || '' };
+  });
   tb.innerHTML = items.map(function(ev) {
     var isNew = newIds.has(ev.id);
-    var thumb = ev.image_path
-      ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=144&h=96" loading="lazy" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">'
+    var imgUrl = ev.image || ev.image_path || ev.thumb || null;
+    var thumb = imgUrl
+      ? '<img class="thumb" src="' + imgUrl + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=\\\'thumb-none\\\'>sem foto</div>\'" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">'
       : '<div class="thumb-none">sem foto</div>';
     var badges = listBadgesHtml(ev.plate);
     var ts = fmtTs(ev.ts || ev.occurred_at);
-    var cam = ev.camera_id || '-';
+    var cam = ev.cam_nome || ev.channel_name || ev.camera_id || 'desconhecida';
     if (cam.length > 28) cam = cam.substring(0,28) + '...';
-    return '<tr class="' + (isNew ? 'row-new' : '') + '">' +
-      '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>' +
-      '<td>' + thumb + '</td>' +
-      '<td>' + plateHtml(ev.plate) + (badges ? '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">' + badges + '</div>' : '') + '</td>' +
-      '<td style="font-size:.79rem;white-space:nowrap">' + ts + '</td>' +
-      '<td style="color:var(--muted);font-size:.77rem">' + cam + '</td>' +
-      '<td>' + fmtConf(ev.confidence) + '</td>' +
-      '<td style="min-width:90px">' + _yoloBadge(ev) + '</td>' +
-      '<td><button class="btn btn-outline btn-xs" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">&#128269;</button></td>' +
-      '</tr>';
+    var dir = ev.direcao;
+    var dirCell = dir === 'CRESCENTE'
+      ? '<span style="color:#4ade80;font-size:.72rem;font-weight:700">&#8593; CRESC.</span>'
+      : dir === 'DECRESCENTE'
+        ? '<span style="color:#f87171;font-size:.72rem;font-weight:700">&#8595; DECRESC.</span>'
+        : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+    return '<tr class="' + (isNew ? 'row-new' : '') + '">'
+      + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
+      + '<td>' + thumb + '</td>'
+      + '<td>' + plateHtml(ev.plate) + (badges ? '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">' + badges + '</div>' : '') + '</td>'
+      + '<td style="font-size:.79rem;white-space:nowrap">' + ts + '</td>'
+      + '<td style="color:var(--muted);font-size:.77rem">' + cam + '</td>'
+      + '<td style="white-space:nowrap">' + dirCell + '</td>'
+      + '<td>' + fmtConf(ev.confidence) + '</td>'
+      + '<td style="min-width:90px">' + _yoloBadge(ev) + '</td>'
+      + '<td><button class="btn btn-outline btn-xs" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">🔍</button></td>'
+      + '</tr>';
   }).join('');
 }
 
@@ -1997,22 +2104,73 @@ async function openDetail(plate) {
     var data = await r.json();
     var events = data.items || [];
     var badges = listBadgesHtml(plate);
+    events.forEach(function(ev) {
+      _imgMeta[ev.id] = { camName: ev.cam_nome || ev.channel_name || ev.camera_id || '', ts: ev.ts || ev.occurred_at || '' };
+    });
+
+    // --- Calcula direção consolidada ---
+    // Conta câmeras DISTINTAS com direção classificada
+    var camDirMap = {};
+    events.forEach(function(ev) {
+      var cid = ev.camera_id || ev.channel_name;
+      if (cid && ev.direcao) camDirMap[cid] = ev.direcao;
+    });
+    var camDirs = Object.values(camDirMap);
+    var nCresc  = camDirs.filter(function(d){ return d === 'CRESCENTE'; }).length;
+    var nDecresc= camDirs.filter(function(d){ return d === 'DECRESCENTE'; }).length;
+    // Banner só aparece se 2+ câmeras distintas com a mesma direção
+    var dirBanner = '';
+    if (nCresc >= 2 && nCresc >= nDecresc) {
+      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.13);border:1px solid #4ade80;border-radius:8px;padding:10px 16px;margin-bottom:14px">'
+        + '<span style="font-size:1.6rem">&#8593;</span>'
+        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
+        + '<div style="font-weight:800;font-size:1.05rem;color:#4ade80">CRESCENTE</div>'
+        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nCresc + ' câmera(s) classificada(s) neste sentido</div></div></div>';
+    } else if (nDecresc >= 2 && nDecresc > nCresc) {
+      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(248,113,113,.13);border:1px solid #f87171;border-radius:8px;padding:10px 16px;margin-bottom:14px">'
+        + '<span style="font-size:1.6rem">&#8595;</span>'
+        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
+        + '<div style="font-weight:800;font-size:1.05rem;color:#f87171">DECRESCENTE</div>'
+        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nDecresc + ' câmera(s) classificada(s) neste sentido</div></div></div>';
+    } else if (nCresc >= 1 && nDecresc >= 1) {
+      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(250,204,21,.1);border:1px solid var(--accent);border-radius:8px;padding:10px 16px;margin-bottom:14px">'
+        + '<span style="font-size:1.6rem">&#8597;</span>'
+        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
+        + '<div style="font-weight:800;font-size:1.05rem;color:var(--accent)">AMBOS OS SENTIDOS</div>'
+        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nCresc + ' crescente / ' + nDecresc + ' decrescente</div></div></div>';
+    }
+
     var rows = events.map(function(ev) {
       var thumb = ev.image_path
         ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=144&h=96" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\\'") + '\')">'
         : '<div class="thumb-none">-</div>';
+      var ts = ev.ts || ev.occurred_at;
+      var dtObj = ts ? new Date(ts) : null;
+      var dateFmt = dtObj ? dtObj.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
+      var timeFmt = dtObj ? dtObj.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+      var camName = ev.cam_nome || ev.channel_name || ev.camera_id || '-';
+      var camIp   = ev.camera_ip ? '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">' + ev.camera_ip + '</div>' : '';
+      var dir = ev.direcao;
+      var dirCell = dir === 'CRESCENTE'
+        ? '<span style="color:#4ade80;font-weight:700">&#8593; CRESCENTE</span>'
+        : dir === 'DECRESCENTE'
+          ? '<span style="color:#f87171;font-weight:700">&#8595; DECRESCENTE</span>'
+          : '<span style="color:var(--muted)">&#8212;</span>';
       return '<tr>' +
         '<td>' + thumb + '</td>' +
         '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>' +
-        '<td style="font-size:.79rem">' + fmtTs(ev.ts || ev.occurred_at) + '</td>' +
-        '<td style="color:var(--muted);font-size:.77rem">' + (ev.camera_id||'-') + '</td>' +
+        '<td style="font-size:.79rem;white-space:nowrap">' + dateFmt + '</td>' +
+        '<td style="font-size:.79rem;white-space:nowrap">' + timeFmt + '</td>' +
+        '<td style="font-size:.79rem">' + camName + camIp + '</td>' +
+        '<td style="font-size:.76rem;white-space:nowrap">' + dirCell + '</td>' +
         '<td>' + fmtConf(ev.confidence) + '</td>' +
         '</tr>';
     }).join('');
     document.getElementById('detail-modal-body').innerHTML =
       (badges ? '<div style="margin-bottom:12px">' + badges + '</div>' : '') +
+      dirBanner +
       '<p style="color:var(--muted);font-size:.81rem;margin-bottom:12px">' + events.length + ' evento(s)</p>' +
-      '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>#</th><th>Data/Hora</th><th>Camera</th><th>Conf.</th></tr></thead>' +
+      '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>#</th><th>Data</th><th>Hor&aacute;rio</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Conf.</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table></div>';
   } catch(e) {
     document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro: ' + e.message + '</p>';
@@ -2662,6 +2820,206 @@ async function checkAlvosRealtime() {
       });
     }
   } catch(e) { /* silencioso */ }
+}
+
+// ===== C\u00c2MERAS =====
+var _cameraEditId = null;
+
+var _cameraRows = [];
+var _cameraStatusMap = {};
+var _camSortField = 'id';
+var _camSortDir   = 'asc';
+
+function _setCamSort(field) {
+  if (_camSortField === field) {
+    _camSortDir = _camSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _camSortField = field;
+    _camSortDir   = 'asc';
+  }
+  var labels = { id: 'ID', nome: 'Nome', ip: 'IP', status: 'Status' };
+  ['id','nome','ip','status'].forEach(function(f) {
+    var btn = document.getElementById('cam-sort-' + f);
+    if (!btn) return;
+    btn.classList.toggle('cam-sort-active', f === _camSortField);
+    btn.innerHTML = labels[f] + (f === _camSortField ? ' ' + (_camSortDir === 'asc' ? '&#9650;' : '&#9660;') : '');
+  });
+  _renderCameras();
+}
+
+function _renderCameras() {
+  var tbody = document.getElementById('cameras-tbody');
+  if (!tbody) return;
+  if (!_cameraRows.length) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px">Nenhuma c\u00e2mera cadastrada.</td></tr>';
+    return;
+  }
+  var sorted = _cameraRows.slice().sort(function(a, b) {
+    var va, vb;
+    if (_camSortField === 'status') {
+      va = _cameraStatusPriority(a.last_seen);
+      vb = _cameraStatusPriority(b.last_seen);
+      return _camSortDir === 'asc' ? va - vb : vb - va;
+    }
+    if (_camSortField === 'id') {
+      return _camSortDir === 'asc' ? a.id - b.id : b.id - a.id;
+    }
+    va = (a[_camSortField] || '').toString().toLowerCase();
+    vb = (b[_camSortField] || '').toString().toLowerCase();
+    if (va < vb) return _camSortDir === 'asc' ? -1 :  1;
+    if (va > vb) return _camSortDir === 'asc' ?  1 : -1;
+    return 0;
+  });
+  tbody.innerHTML = sorted.map(function(c) {
+    var critBadge  = c.criticidade === 'CRITICA' ? 'badge-red' : 'badge-green';
+    var encoded    = encodeURIComponent(JSON.stringify(c));
+    var statusDot  = _cameraStatusDot(c.last_seen);
+    var lastSeenFmt = c.last_seen
+      ? new Date(c.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : '<span style="color:var(--muted)">Nunca</span>';
+    var todayBadge = c.events_today > 0
+      ? '<span class="badge badge-green">' + c.events_today + '</span>'
+      : '<span style="color:var(--muted)">0</span>';
+    var totalFmt = c.total_events > 0 ? c.total_events.toLocaleString('pt-BR') : '<span style="color:var(--muted)">0</span>';
+    return '<tr>'
+      + '<td style="color:var(--muted)">'  + c.id + '</td>'
+      + '<td style="color:var(--muted);font-size:.82rem">'  + _camEsc(c.camera_id || '\u2014') + '</td>'
+      + '<td style="font-weight:600">'     + statusDot + _camEsc(c.nome) + '</td>'
+      + '<td style="font-family:monospace;font-size:.82rem">' + _camEsc(c.ip || '\u2014') + '</td>'
+      + '<td><span class="badge ' + critBadge + '">' + _camEsc(c.criticidade || 'NORMAL') + '</span></td>'
+      + '<td>' + parseFloat(c.peso_score != null ? c.peso_score : 1.0).toFixed(1) + '</td>'
+      + '<td>' + (c.ativa ? '<span class="badge badge-green">Sim</span>' : '<span class="badge badge-red">N\u00e3o</span>') + '</td>'
+      + '<td style="font-size:.8rem;white-space:nowrap">' + lastSeenFmt + '</td>'
+      + '<td style="text-align:center">' + todayBadge + '</td>'
+      + '<td style="text-align:center;font-size:.82rem">' + totalFmt + '</td>'
+      + '<td style="text-align:center;font-size:.82rem;color:' + (c.posicao > 0 ? 'var(--accent)' : 'var(--muted)') + '">' + (c.posicao > 0 ? c.posicao : '—') + '</td>'
+      + '<td style="white-space:nowrap">'
+      +   '<button class="btn btn-outline btn-xs" onclick="editCamera(decodeURIComponent(\'' + encoded + '\'))">Editar</button> '
+      +   '<button class="btn btn-danger btn-xs" onclick="deleteCamera(' + c.id + ',\'' + _camEsc(c.nome).replace(/'/g,'\x27') + '\')">Excluir</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function loadCameras() {
+  var tbody = document.getElementById('cameras-tbody');
+  var err   = document.getElementById('cameras-error');
+  var btn   = document.getElementById('btn-refresh-cameras');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  if (err) err.textContent = '';
+  if (btn) { btn.disabled = true; btn.textContent = '\u29D7 Atualizando...'; }
+  try {
+    var r = await fetch('/api/cameras?include_inactive=true');
+    if (!r.ok) {
+      var ed = await r.json().catch(function(){ return {}; });
+      throw new Error('HTTP ' + r.status + (ed.detail ? ' \u2014 ' + ed.detail : ''));
+    }
+    var d = await r.json();
+    _cameraRows      = d.items || [];
+    _cameraStatusMap = {};
+    _cameraRows.forEach(function(c){ if (c.last_seen) _cameraStatusMap[c.camera_id] = c.last_seen; });
+    _renderCameras();
+  } catch(e) {
+    if (err) err.textContent = 'Erro ao carregar c\u00e2meras: ' + e.message;
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '\u21bb Atualizar'; }
+  }
+}
+
+function _camEsc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _cameraStatusDot(lastSeenIso) {
+  if (!lastSeenIso) return '<span title="Nunca detectado" style="color:#6b7280;font-size:.9em;margin-right:5px">&#9679;</span>';
+  var mins = (Date.now() - new Date(lastSeenIso).getTime()) / 60000;
+  if (mins < 15)  return '<span title="ONLINE \u2014 \u00faltimo evento h\u00e1 ' + Math.round(mins) + 'min" style="color:#22c55e;font-size:.9em;margin-right:5px">&#9679;</span>';
+  if (mins < 60)  return '<span title="AGUARDANDO \u2014 ' + Math.round(mins) + 'min sem evento" style="color:#f59e0b;font-size:.9em;margin-right:5px">&#9679;</span>';
+  var h = (mins/60);
+  return '<span title="OFFLINE \u2014 \u00faltimo evento h\u00e1 ' + (h < 24 ? Math.round(h) + 'h' : Math.round(h/24) + 'd') + '" style="color:#ef4444;font-size:.9em;margin-right:5px">&#9679;</span>';
+}
+
+// 0=online, 1=aguardando, 2=offline, 3=nunca
+function _cameraStatusPriority(lastSeenIso) {
+  if (!lastSeenIso) return 3;
+  var mins = (Date.now() - new Date(lastSeenIso).getTime()) / 60000;
+  if (mins < 15) return 0;
+  if (mins < 60) return 1;
+  return 2;
+}
+
+function openCameraModal(cam) {
+  _cameraEditId = cam ? cam.id : null;
+  document.getElementById('camera-modal-title').textContent = cam ? 'Editar Câmera' : 'Adicionar Câmera';
+  var camIdField = document.getElementById('cam-camera-id');
+  camIdField.value = cam ? (cam.camera_id || '') : '';
+  camIdField.removeAttribute('readonly');
+  camIdField.removeAttribute('tabindex');
+  camIdField.style.opacity       = '1';
+  camIdField.style.cursor        = '';
+  camIdField.style.pointerEvents = '';
+  document.getElementById('cam-id-hint').style.display = 'none';
+  document.getElementById('cam-ip').value          = cam ? (cam.ip          || '') : '';
+  document.getElementById('cam-direcao').value     = cam ? (cam.direcao     || '') : '';
+  document.getElementById('cam-criticidade').value = cam ? (cam.criticidade || 'NORMAL') : 'NORMAL';
+  document.getElementById('cam-peso-score').value  = cam ? (cam.peso_score  != null ? cam.peso_score : 1.0) : 1.0;
+  document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
+  document.getElementById('camera-form-error').textContent = '';
+  openModal('camera-modal');
+  setTimeout(function(){ document.getElementById('cam-camera-id').focus(); }, 80);
+}
+
+function editCamera(encodedOrObj) {
+  var cam = (typeof encodedOrObj === 'string') ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj;
+  openCameraModal(cam);
+}
+
+async function saveCamera() {
+  var cameraId    = document.getElementById('cam-camera-id').value.trim();
+  var ip          = document.getElementById('cam-ip').value.trim();
+  var direcao     = document.getElementById('cam-direcao').value || null;
+  var criticidade = document.getElementById('cam-criticidade').value;
+  var peso_score  = parseFloat(document.getElementById('cam-peso-score').value) || 1.0;
+  var ativa       = document.getElementById('cam-ativa').checked;
+  var errEl       = document.getElementById('camera-form-error');
+  errEl.textContent = '';
+  if (!cameraId) { errEl.textContent = 'ID / Nome da câmera é obrigatório.'; return; }
+  if (peso_score <= 0) { errEl.textContent = 'Peso Score deve ser maior que 0.'; return; }
+  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa };
+  try {
+    var url    = _cameraEditId ? '/api/cameras/' + _cameraEditId : '/api/cameras';
+    var method = _cameraEditId ? 'PUT' : 'POST';
+    var r = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (!r.ok) {
+      var ed = await r.json().catch(function(){ return {}; });
+      throw new Error('HTTP ' + r.status + (ed.detail ? ' — ' + ed.detail : ''));
+    }
+    closeModal('camera-modal');
+    await loadCameras();
+    alert(_cameraEditId ? 'Câmera atualizada com sucesso.' : 'Câmera adicionada com sucesso.');
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+  }
+}
+
+async function deleteCamera(id, nome) {
+  if (!confirm('Excluir a câmera "' + nome + '"?\nEsta ação não pode ser desfeita.')) return;
+  var err = document.getElementById('cameras-error');
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/cameras/' + id, { method: 'DELETE' });
+    if (!r.ok) {
+      var ed = await r.json().catch(function(){ return {}; });
+      throw new Error('HTTP ' + r.status + (ed.detail ? ' — ' + ed.detail : ''));
+    }
+    await loadCameras();
+  } catch(e) {
+    var msg = 'Erro ao excluir câmera: ' + e.message;
+    if (err) err.textContent = msg;
+    alert(msg);
+  }
 }
 
 // ===== INIT =====
