@@ -25,9 +25,9 @@
     }
     body { font-family: system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
     #sidebar { width:var(--sidebar-w); background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; padding:20px 0 16px; z-index:100; }
-    .sidebar-logo { padding:12px 12px 14px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; }
-    .sidebar-logo img { width:100%; height:auto; max-height:160px; object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
-    .sidebar-logo-text { font-size:1rem; font-weight:800; letter-spacing:.18em; color:#facc15; text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
+    .sidebar-logo { padding:16px 12px 18px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; }
+    .sidebar-logo img { width:100%; height:auto; max-height:220px; object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
+    .sidebar-logo-text { font-size:1.4rem; font-weight:800; letter-spacing:.18em; color:#facc15; text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
     .topbar-title-group { display:flex; align-items:baseline; gap:12px; }
     .topbar-subtitle { font-size:1.25rem; font-weight:700; color:#facc15; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
     .sidebar-section { font-size:.67rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); padding:14px 18px 5px; }
@@ -1593,9 +1593,9 @@ function renderEvents(items, newIds) {
     if (cam.length > 28) cam = cam.substring(0,28) + '...';
     var dir = ev.direcao;
     var dirCell = dir === 'CRESCENTE'
-      ? '<span style="color:#4ade80;font-size:.72rem;font-weight:700">&#8593; CRESC.</span>'
+      ? '<span style="color:#4ade80;font-size:.72rem;font-weight:700">&#8593; CRESCENTE</span>'
       : dir === 'DECRESCENTE'
-        ? '<span style="color:#f87171;font-size:.72rem;font-weight:700">&#8595; DECRESC.</span>'
+        ? '<span style="color:#f87171;font-size:.72rem;font-weight:700">&#8595; DECRESCENTE</span>'
         : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
     return '<tr class="' + (isNew ? 'row-new' : '') + '">'
       + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
@@ -2892,7 +2892,7 @@ function _renderCameras() {
       + '<td style="font-size:.8rem;white-space:nowrap">' + lastSeenFmt + '</td>'
       + '<td style="text-align:center">' + todayBadge + '</td>'
       + '<td style="text-align:center;font-size:.82rem">' + totalFmt + '</td>'
-      + '<td style="text-align:center;font-size:.82rem;color:' + (c.posicao > 0 ? 'var(--accent)' : 'var(--muted)') + '">' + (c.posicao > 0 ? c.posicao : '—') + '</td>'
+      + '<td style="text-align:center;font-size:.82rem;color:' + (c.direcao ? 'var(--accent)' : 'var(--muted)') + '">' + _camEsc(c.direcao || '—') + '</td>'
       + '<td style="white-space:nowrap">'
       +   '<button class="btn btn-outline btn-xs" onclick="editCamera(decodeURIComponent(\'' + encoded + '\'))">Editar</button> '
       +   '<button class="btn btn-danger btn-xs" onclick="deleteCamera(' + c.id + ',\'' + _camEsc(c.nome).replace(/'/g,'\x27') + '\')">Excluir</button>'
