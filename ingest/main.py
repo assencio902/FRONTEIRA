@@ -249,9 +249,12 @@ def _utcnow() -> datetime:
 def get_camera_row(camera_id: str) -> dict[str, Any] | None:
     with _conn() as conn:
         with conn.cursor() as cur:
+            # Busca por camera_id (nome descritivo) OU por ip — necessário porque
+            # as câmeras Hikvision enviam o próprio IP no XML <ipAddress> e esse
+            # valor é usado como chave de lookup no webhook.
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip FROM cameras WHERE camera_id=%s LIMIT 1",
-                (camera_id,),
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
+                (camera_id, camera_id),
             )
             row = cur.fetchone()
             if not row:
@@ -267,6 +270,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
                 "peso_score": peso_val,
                 "ip": row[7],
                 "created_at": row[6].isoformat() if row[6] else None,
+                "direcao": row[8] or None,
             }
 
 
@@ -1135,7 +1139,7 @@ async def simple_webhook(request: Request):
                 plate,
                 camera_id,
                 channel_name,
-                client_ip,
+                xml_ip or client_ip,   # usa o IP real da câmera (do XML); fallback: IP do cliente HTTP
                 confidence,
                 image_path,
                 occurred_at

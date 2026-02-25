@@ -1873,14 +1873,34 @@ function updateEvCards(total, items) {
   document.getElementById('ev-alerts').textContent = alerts > 0 ? String(alerts) : '0';
 }
 
-function updateCamFilter(items) {
-  items.forEach(function(ev){ if (ev.camera_id) cameraSet.add(ev.camera_id); });
+function populateEvCameraFilter() {
   var sel = document.getElementById('ev-camera');
+  if (!sel) return;
   var cur = sel.value;
+  var cams = (window._camsData || []).filter(function(c){ return c.ativa !== false; });
+  if (cams.length === 0) {
+    // fallback: usa cameraSet (IPs dos eventos carregados)
+    sel.innerHTML = '<option value="">Todas as cameras</option>' +
+      Array.from(cameraSet).sort().map(function(c){
+        return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + c + '</option>';
+      }).join('');
+    return;
+  }
+  // Ordena pelo nome da câmera
+  cams = cams.slice().sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
   sel.innerHTML = '<option value="">Todas as cameras</option>' +
-    Array.from(cameraSet).sort().map(function(c){
-      return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + c + '</option>';
+    cams.map(function(c){
+      // valor para filtro = ip (é o que fica em lpr_events.camera_id)
+      var val = c.ip || c.camera_id;
+      var label = c.nome || c.camera_id;
+      return '<option value="' + val + '"' + (val === cur ? ' selected' : '') + '>' + label + '</option>';
     }).join('');
+}
+
+function updateCamFilter(items) {
+  // Mantém cameraSet atualizado (fallback), mas usa _camsData se disponível
+  items.forEach(function(ev){ if (ev.camera_id) cameraSet.add(ev.camera_id); });
+  populateEvCameraFilter();
 }
 
 function updatePagination() {
@@ -3198,6 +3218,7 @@ async function loadCameras() {
     _cameraStatusMap = {};
     _cameraRows.forEach(function(c){ if (c.last_seen) _cameraStatusMap[c.camera_id] = c.last_seen; });
     _renderCameras();
+    populateEvCameraFilter(); // atualiza filtro de eventos com todas as câmeras
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar c\u00e2meras: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
@@ -3577,10 +3598,10 @@ async function deleteUser(id, username) {
 // ===== INIT =====
 (async function() {
   await loadMonPlates();
+  // Carrega câmeras primeiro para o filtro ficar pronto antes dos eventos
+  await loadCameras().catch(function(){});
   await loadEvents(0);
   await loadListsIntoSelects();
-  // Carrega câmeras em background para _camsData ficar disponível (direção)
-  loadCameras().catch(function(){});
   // Liga alarmes por padrão após a página estar pronta
   setTimeout(function() {
     try { toggleCameraAlarm(); } catch(e) {}
