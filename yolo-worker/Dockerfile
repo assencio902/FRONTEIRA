@@ -20,4 +20,6 @@ RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
 
 COPY worker.py .
 
-CMD ["rq", "worker", "--url", "redis://redis:6379/0", "yolo"]
+# Startup script garante keepalive no Redis e restart automático
+COPY start_worker.py .
+CMD ["python", "start_worker.py"]

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BPFRON - Polícia de Fronteiras e Divisas</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -258,6 +259,8 @@
     .btn-logout { display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:7px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:.78rem; cursor:pointer; transition:all .15s; width:100%; }
     .btn-logout:hover { background:rgba(255,107,107,.18); border-color:#ff6b6b; color:#ff6b6b; }
     .nav-admin-only { display:none; }
+    .traj-num-label { background:transparent !important; border:none !important; box-shadow:none !important; color:#000 !important; font-weight:800 !important; font-size:.7rem !important; padding:0 !important; }
+    .traj-num-label::before { display:none !important; }
   </style>
 </head>
 <body>
@@ -289,6 +292,10 @@
   <div class="nav-item" onclick="switchTab('cameras',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
     C&#226;meras
+  </div>
+  <div class="nav-item" onclick="switchTab('mapa',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    Mapa de C&#226;meras
   </div>
   <div class="sidebar-section nav-admin-only">Sistema</div>
   <div class="nav-item nav-admin-only" onclick="switchTab('usuarios',this)">
@@ -761,7 +768,15 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>#</th><th>camera_id</th><th>Nome</th><th>IP</th><th>Criticidade</th><th>Peso</th><th>Ativa</th><th>&#218;ltimo Evento</th><th>Hoje</th><th>Total</th><th>Dire&ccedil;&atilde;o</th><th>A&#231;&#245;es</th></tr>
+            <tr>
+              <th style="cursor:pointer;user-select:none" onclick="_setCamSort('id')"    title="Ordenar por ID">#</th>
+              <th>camera_id</th>
+              <th style="cursor:pointer;user-select:none" onclick="_setCamSort('nome')"  title="Ordenar por Nome">Nome</th>
+              <th style="cursor:pointer;user-select:none" onclick="_setCamSort('ip')"    title="Ordenar por IP">IP</th>
+              <th>Criticidade</th><th>Peso</th><th>Ativa</th>
+              <th style="cursor:pointer;user-select:none" onclick="_setCamSort('status')" title="Ordenar por Status">&#218;ltimo Evento</th>
+              <th>Hoje</th><th>Total</th><th>Dire&ccedil;&atilde;o</th><th>A&#231;&#245;es</th>
+            </tr>
           </thead>
           <tbody id="cameras-tbody">
             <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
@@ -769,6 +784,33 @@
         </table>
       </div>
     </div><!-- /tab-cameras -->
+
+    <!-- ===== ABA MAPA ===== -->
+    <div id="tab-mapa" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#127760; Mapa de C&#226;meras</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Posi&#231;&#227;o geogr&#225;fica das c&#226;meras com coordenadas GPS cadastradas.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="loadMapa()">&#8635; Atualizar</button>
+          <button id="btn-mapa-heat" class="btn btn-outline btn-sm" onclick="_toggleHeatMap()" title="Exibe um mapa de calor pela densidade de detecções por câmera">&#128293; Heat Map</button>
+          <button id="btn-mapa-auto" class="btn btn-outline btn-sm" onclick="_toggleMapaAutoRefresh()" title="Atualiza o status dos marcadores automaticamente a cada 30 segundos">&#9711; Auto-refresh: OFF</button>
+        </div>
+      </div>
+      <!-- Legenda de status -->
+      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;font-size:.79rem;color:var(--muted)">
+        <span><span style="color:#22c55e;font-size:1rem">&#9679;</span> Online (&lt;15 min)</span>
+        <span><span style="color:#f59e0b;font-size:1rem">&#9679;</span> Aguardando (15&#8211;60 min)</span>
+        <span><span style="color:#ef4444;font-size:1rem">&#9679;</span> Offline (&gt;60 min)</span>
+        <span><span style="color:#6b7280;font-size:1rem">&#9679;</span> Nunca detectado</span>
+        <span><span style="color:#a855f7;font-size:1rem">&#9679;</span> Inativa</span>
+      </div>
+      <!-- Mapa Leaflet -->
+      <div id="map-container" style="width:100%;height:520px;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:#0a1f0f"></div>
+      <!-- C&#226;meras sem GPS -->
+      <div id="map-no-gps" style="margin-top:16px"></div>
+    </div><!-- /tab-mapa -->
 
     <!-- ===== ABA USUÁRIOS ===== -->
     <div id="tab-usuarios" class="tab-pane">
@@ -1001,6 +1043,11 @@
       <div><span style="color:var(--muted)">&#128197; Data:</span> <strong id="img-modal-date">-</strong></div>
       <div><span style="color:var(--muted)">&#128336; Hor&aacute;rio:</span> <strong id="img-modal-time">-</strong></div>
     </div>
+    <!-- Painel YOLO -->
+    <div id="img-modal-yolo" style="display:none;margin-top:12px;padding:12px 14px;background:rgba(0,0,0,.18);border-radius:8px;font-size:.82rem;border-left:3px solid var(--accent)">
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#129302; An&aacute;lise YOLO</div>
+      <div id="img-modal-yolo-body" style="display:flex;flex-wrap:wrap;gap:14px"></div>
+    </div>
   </div>
 </div>
 
@@ -1009,6 +1056,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h2>Detalhes &#8212; <span id="detail-modal-plate"></span></h2>
+      <button id="detail-modal-map-btn" class="btn btn-outline btn-xs" style="display:none;margin-right:10px;font-size:.78rem" onclick="verTrajetoriaNoMapa()">&#127760; Ver Trajet&oacute;ria</button>
       <button class="modal-close" onclick="closeModal('detail-modal')">&times;</button>
     </div>
     <div id="detail-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
@@ -1122,6 +1170,14 @@
       <input type="number" id="cam-peso-score" value="1.0" min="0.1" max="99" step="0.1">
     </div>
     <div class="form-group">
+      <label>Localiza&ccedil;&atilde;o GPS</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="number" id="cam-latitude"  placeholder="Latitude"  step="any" style="font-size:.82rem">
+        <input type="number" id="cam-longitude" placeholder="Longitude" step="any" style="font-size:.82rem">
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:3px">Ex: -12.9714 / -60.1714 &nbsp;(negativo para Sul/Oeste)</div>
+    </div>
+    <div class="form-group">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="cam-ativa" checked style="width:auto"> Ativa
       </label>
@@ -1180,6 +1236,8 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 // ===== ALARME — WEB AUDIO API =====
@@ -1640,7 +1698,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', config: 'Configura\u00e7\u00f5es' };
+var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 
 function switchTab(name, el) {
@@ -1661,6 +1719,8 @@ function switchTab(name, el) {
   }
   if (name === 'veiculos') { loadLists(); loadListsIntoSelects(); }
   if (name === 'cameras')  loadCameras();
+  if (name === 'mapa')     loadMapa();
+  else                     _stopMapaAutoRefresh();
   if (name === 'usuarios') loadUsers();
   if (name === 'config')   initConfigTab();
 }
@@ -1719,6 +1779,34 @@ function openImage(evId, plate) {
   var dtObj = meta.ts ? new Date(meta.ts) : null;
   document.getElementById('img-modal-date').textContent = dtObj ? dtObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
   document.getElementById('img-modal-time').textContent = dtObj ? dtObj.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+  // Painel YOLO
+  var yoloPanel = document.getElementById('img-modal-yolo');
+  var yoloBody  = document.getElementById('img-modal-yolo-body');
+  var yoloParts = [];
+  if (meta.sem_placa_motivo) {
+    yoloParts.push('<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:7px;padding:6px 10px;min-width:200px"><div style="font-size:.68rem;color:#fca5a5;text-transform:uppercase;margin-bottom:3px">&#9888; Motivo sem placa</div><div style="color:#fecaca;font-weight:600;font-size:.84rem">' + meta.sem_placa_motivo + '</div></div>');
+  }
+  if (meta.vehicle_details && meta.vehicle_details.length) {
+    var colorDot = { 'Branco':'#f8fafc','Preto':'#1e293b','Prata/Cinza':'#94a3b8','Vermelho':'#ef4444','Azul':'#3b82f6','Amarelo':'#eab308','Verde':'#22c55e','Laranja':'#f97316','Roxo':'#a855f7','Outro':'#64748b','Indeterminada':'#64748b' };
+    meta.vehicle_details.forEach(function(vd, i) {
+      var cor = vd.cor || 'Indeterminada';
+      var dot = colorDot[cor] || '#64748b';
+      var pq  = vd.plate_analysis || {};
+      var pqStr = pq.qualidade ? '<span style="font-size:.74rem;color:var(--muted)"> | Placa: ' + pq.qualidade + '</span>' : '';
+      yoloParts.push('<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Ve&iacute;culo ' + (i+1) + '</div><div style="font-weight:600;font-size:.84rem">' + (vd.class_pt || vd.class || '') + ' &nbsp;<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dot + ';border:1px solid rgba(255,255,255,.3);vertical-align:middle"></span> ' + cor + pqStr + '</div></div>');
+    });
+  }
+  if (meta.image_quality) {
+    var iq = meta.image_quality;
+    var iqColor = iq.qualidade && iq.qualidade !== 'Boa' ? '#fca5a5' : '#86efac';
+    yoloParts.push('<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:6px 10px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Qualidade da imagem</div><div style="font-size:.82rem"><span style="color:' + iqColor + ';font-weight:600">' + (iq.qualidade||'-') + '</span> &nbsp;<span style="color:var(--muted)">blur=' + (iq.blur_score||0) + ' brilho=' + (iq.brightness||0) + '</span></div></div>');
+  }
+  if (yoloParts.length) {
+    yoloBody.innerHTML = yoloParts.join('');
+    yoloPanel.style.display = 'block';
+  } else {
+    yoloPanel.style.display = 'none';
+  }
   openModal('img-modal');
 }
 
@@ -1801,13 +1889,26 @@ function _yoloBadge(ev) {
   var yr = ev.yolo_result;
   if (!yr || yr.error) return '<span style="font-size:.68rem;color:var(--muted)">&#8212;</span>';
   var icons = { car:'&#128663;', truck:'&#128666;', motorcycle:'&#127949;', bus:'&#128652;', bicycle:'&#128690;', person:'&#128694;' };
+  var colorDot = { 'Branco':'#f8fafc','Preto':'#1e293b','Prata/Cinza':'#94a3b8','Vermelho':'#ef4444','Azul':'#3b82f6','Amarelo':'#eab308','Verde':'#22c55e','Laranja':'#f97316','Roxo':'#a855f7','Outro':'#64748b','Indeterminada':'#64748b' };
   var parts = [];
-  if (yr.vehicle_types) {
+  // Linha com tipo + cor por veículo
+  if (yr.vehicle_details && yr.vehicle_details.length) {
+    yr.vehicle_details.forEach(function(vd) {
+      var cor = vd.cor || '';
+      var dot = cor ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (colorDot[cor]||'#64748b') + ';border:1px solid rgba(255,255,255,.3);vertical-align:middle;margin-left:2px"></span>' : '';
+      parts.push((icons[vd.class]||'&#128663;') + '&nbsp;' + (vd.class_pt||vd.class) + dot + (cor?' '+cor:''));
+    });
+  } else if (yr.vehicle_types) {
     Object.keys(yr.vehicle_types).forEach(function(t) {
       parts.push((icons[t] || '&#128663;') + '&nbsp;' + yr.vehicle_types[t] + ' ' + t);
     });
   }
-  if (yr.person_count > 0) parts.push('&#128694;&nbsp;' + yr.person_count);
+  if (yr.person_count > 0) parts.push('&#128694;&nbsp;' + yr.person_count + ' pessoa');
+  // Motivo sem placa
+  var motivo = ev.sem_placa_motivo || (yr && yr.sem_placa_motivo);
+  if (motivo) {
+    parts.push('<span style="color:#fca5a5">&#9888;&nbsp;' + motivo + '</span>');
+  }
   if (!parts.length) return '<span style="font-size:.68rem;color:var(--muted)">sem detec.</span>';
   return '<span style="font-size:.69rem;color:var(--success);line-height:1.7">' + parts.join('<br>') + '</span>';
 }
@@ -1820,7 +1921,13 @@ function renderEvents(items, newIds) {
     return;
   }
   items.forEach(function(ev) {
-    _imgMeta[ev.id] = { camName: ev.cam_nome || ev.channel_name || ev.camera_id || '', ts: ev.ts || ev.occurred_at || '' };
+    _imgMeta[ev.id] = {
+      camName:          ev.cam_nome || ev.channel_name || ev.camera_id || '',
+      ts:               ev.ts || ev.occurred_at || '',
+      sem_placa_motivo: ev.sem_placa_motivo || null,
+      vehicle_details:  ev.vehicle_details  || null,
+      image_quality:    ev.image_quality    || null,
+    };
   });
   tb.innerHTML = items.map(function(ev) {
     var isNew = newIds.has(ev.id);
@@ -2136,6 +2243,17 @@ function openConvoyDetail(btn, evidenceJson) {
     '<div class="table-wrap"><table><thead><tr>'
     + '<th>Camera A</th><th>Camera B</th><th>Delta-t</th><th>Horario</th><th>YOLO A</th><th>YOLO B</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  // Trajetória no mapa
+  var _tcPlates = [], _tcPoints = [];
+  evidences.forEach(function(ev) {
+    if (ev.plate_a && _tcPlates.indexOf(ev.plate_a) < 0) _tcPlates.push(ev.plate_a);
+    if (ev.plate_b && _tcPlates.indexOf(ev.plate_b) < 0) _tcPlates.push(ev.plate_b);
+    if (ev.cam_a && ev.ts_a) _tcPoints.push({ camera_id: ev.cam_a, ts: ev.ts_a, plate: ev.plate_a || '', cam_nome: ev.cam_a });
+    if (ev.cam_b && ev.ts_b) _tcPoints.push({ camera_id: ev.cam_b, ts: ev.ts_b, plate: ev.plate_b || '', cam_nome: ev.cam_b });
+  });
+  _mapaTrajetoria = _tcPlates.length ? { plates: _tcPlates, points: _tcPoints } : null;
+  var _mb1 = document.getElementById('detail-modal-map-btn');
+  if (_mb1) _mb1.style.display = _tcPlates.length ? '' : 'none';
   openModal('detail-modal');
 }
 
@@ -2291,6 +2409,16 @@ function openGroupDetail(idx) {
     + '<div class="table-wrap"><table><thead><tr>'
     + '<th>#</th><th>C&acirc;mera</th><th>Passou primeiro</th><th>Passou depois</th><th>Intervalo</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  // Trajetória no mapa
+  var _tgPoints = [];
+  evidences.forEach(function(ev) {
+    var cam = ev.camera || ev.camera_id || '';
+    if (cam && ev.ts_a) _tgPoints.push({ camera_id: cam, ts: ev.ts_a, plate: pa, cam_nome: cam });
+    if (cam && ev.ts_b) _tgPoints.push({ camera_id: cam, ts: ev.ts_b, plate: pb, cam_nome: cam });
+  });
+  _mapaTrajetoria = _tgPoints.length ? { plates: [pa, pb], points: _tgPoints } : null;
+  var _mb2 = document.getElementById('detail-modal-map-btn');
+  if (_mb2) _mb2.style.display = _tgPoints.length ? '' : 'none';
   openModal('detail-modal');
 }
 
@@ -2461,6 +2589,12 @@ async function openDetail(plate) {
       '<p style="color:var(--muted);font-size:.81rem;margin-bottom:12px">' + events.length + ' evento(s)</p>' +
       '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>#</th><th>Data</th><th>Hor&aacute;rio</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Conf.</th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table></div>';
+    // Trajetória no mapa
+    _mapaTrajetoria = { plates: [plate], points: events.map(function(ev) {
+      return { camera_id: ev.camera_id, ts: ev.ts || ev.occurred_at, plate: plate, cam_nome: ev.cam_nome || ev.channel_name || ev.camera_id || '' };
+    })};
+    var _mb3 = document.getElementById('detail-modal-map-btn');
+    if (_mb3) _mb3.style.display = '';
   } catch(e) {
     document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro: ' + e.message + '</p>';
   }
@@ -2835,6 +2969,24 @@ async function openAlvoDetail(plate, descricao) {
     }).join('<hr style="border-color:var(--border);margin:20px 0">');
 
     document.getElementById('detail-modal-body').innerHTML = headerHtml + sectionsHtml;
+    // Trajetória no mapa
+    var _taPoints = [], _taPlates = [plate];
+    companions.forEach(function(c) {
+      if (_taPlates.indexOf(c.companion) < 0) _taPlates.push(c.companion);
+      (c.evidence || []).forEach(function(ev) {
+        var cam = ev.camera || '';
+        if (cam && ev.ts_target)    _taPoints.push({ camera_id: cam, ts: ev.ts_target,    plate: plate,       cam_nome: cam });
+        if (cam && ev.ts_companion) _taPoints.push({ camera_id: cam, ts: ev.ts_companion, plate: c.companion, cam_nome: cam });
+      });
+    });
+    var _taSeen = {};
+    _taPoints = _taPoints.filter(function(p) {
+      var k = p.camera_id + '|' + p.plate + '|' + p.ts;
+      return _taSeen[k] ? false : (_taSeen[k] = true);
+    });
+    _mapaTrajetoria = _taPoints.length ? { plates: _taPlates, points: _taPoints } : null;
+    var _mb4 = document.getElementById('detail-modal-map-btn');
+    if (_mb4) _mb4.style.display = _taPoints.length ? '' : 'none';
   } catch(e) {
     document.getElementById('detail-modal-body').innerHTML =
       '<div style="color:var(--danger);padding:16px">Erro ao buscar dados: ' + e + '</div>';
@@ -3161,6 +3313,15 @@ function _renderCameras() {
     if (_camSortField === 'id') {
       return _camSortDir === 'asc' ? a.id - b.id : b.id - a.id;
     }
+    if (_camSortField === 'ip') {
+      // Comparação numérica por octeto para ordenar IPs corretamente
+      function _ipToNum(ip) {
+        if (!ip) return -1;
+        return ip.split('.').reduce(function(acc, o){ return acc * 256 + parseInt(o, 10); }, 0);
+      }
+      var na = _ipToNum(a.ip), nb = _ipToNum(b.ip);
+      return _camSortDir === 'asc' ? na - nb : nb - na;
+    }
     va = (a[_camSortField] || '').toString().toLowerCase();
     vb = (b[_camSortField] || '').toString().toLowerCase();
     if (va < vb) return _camSortDir === 'asc' ? -1 :  1;
@@ -3264,6 +3425,8 @@ function openCameraModal(cam) {
   document.getElementById('cam-direcao').value     = cam ? (cam.direcao     || '') : '';
   document.getElementById('cam-criticidade').value = cam ? (cam.criticidade || 'NORMAL') : 'NORMAL';
   document.getElementById('cam-peso-score').value  = cam ? (cam.peso_score  != null ? cam.peso_score : 1.0) : 1.0;
+  document.getElementById('cam-latitude').value    = cam ? (cam.latitude  != null ? cam.latitude  : '') : '';
+  document.getElementById('cam-longitude').value   = cam ? (cam.longitude != null ? cam.longitude : '') : '';
   document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
   document.getElementById('camera-form-error').textContent = '';
   openModal('camera-modal');
@@ -3282,11 +3445,17 @@ async function saveCamera() {
   var criticidade = document.getElementById('cam-criticidade').value;
   var peso_score  = parseFloat(document.getElementById('cam-peso-score').value) || 1.0;
   var ativa       = document.getElementById('cam-ativa').checked;
+  var latRaw      = document.getElementById('cam-latitude').value.trim();
+  var lngRaw      = document.getElementById('cam-longitude').value.trim();
+  var latitude    = latRaw  !== '' ? parseFloat(latRaw)  : null;
+  var longitude   = lngRaw  !== '' ? parseFloat(lngRaw) : null;
   var errEl       = document.getElementById('camera-form-error');
   errEl.textContent = '';
   if (!cameraId) { errEl.textContent = 'ID / Nome da câmera é obrigatório.'; return; }
   if (peso_score <= 0) { errEl.textContent = 'Peso Score deve ser maior que 0.'; return; }
-  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa };
+  if (latRaw !== '' && (isNaN(latitude)  || latitude  < -90  || latitude  > 90))  { errEl.textContent = 'Latitude inválida (-90 a 90).';   return; }
+  if (lngRaw !== '' && (isNaN(longitude) || longitude < -180 || longitude > 180)) { errEl.textContent = 'Longitude inválida (-180 a 180).'; return; }
+  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude };
   try {
     var url    = _cameraEditId ? '/api/cameras/' + _cameraEditId : '/api/cameras';
     var method = _cameraEditId ? 'PUT' : 'POST';
@@ -3318,6 +3487,322 @@ async function deleteCamera(id, nome) {
     var msg = 'Erro ao excluir câmera: ' + e.message;
     if (err) err.textContent = msg;
     alert(msg);
+  }
+}
+
+// ===== MAPA DE CÂMERAS (Leaflet) =====
+var _mapaLeaflet      = null;
+var _mapaMarkers      = [];
+var _mapaLayer        = null;
+var _mapaTrajetoria   = null;  // {plates:[], points:[{camera_id,ts,plate,cam_nome}]}
+var _trajetoriaLayers = [];
+var _mapaHeatLayer    = null;
+var _mapaHeatActive   = false;
+var _mapaAutoTimer    = null;
+var _mapaCacheItems   = [];   // cache da última lista de câmeras com GPS
+
+// --- Filtrar eventos por câmera a partir do mapa ---
+function _filtrarEventosPorCamera(cameraId) {
+  if (_mapaLeaflet) _mapaLeaflet.closePopup();
+  curCamera = cameraId;
+  var sel = document.getElementById('ev-camera');
+  if (sel) sel.value = cameraId;
+  var evNav = document.querySelector('.nav-item[onclick*="eventos"]');
+  if (evNav) evNav.click();
+  else { loadEvents(0); }
+}
+
+// --- Heat Map ---
+function _toggleHeatMap() {
+  _mapaHeatActive = !_mapaHeatActive;
+  var btn = document.getElementById('btn-mapa-heat');
+  if (!_mapaLeaflet) return;
+  if (_mapaHeatActive) {
+    // Constrói pontos com intensidade = total_events (normalizado)
+    var maxEvt = Math.max(1, _mapaCacheItems.reduce(function(m, c) { return Math.max(m, c.total_events || 0); }, 0));
+    var pts = _mapaCacheItems
+      .filter(function(c) { return c.latitude != null && c.longitude != null && (c.total_events || 0) > 0; })
+      .map(function(c) { return [c.latitude, c.longitude, (c.total_events || 1) / maxEvt]; });
+    if (!pts.length) {
+      alert('Nenhuma câmera com GPS e eventos detectados para gerar o heat map.');
+      _mapaHeatActive = false;
+      return;
+    }
+    _mapaHeatLayer = L.heatLayer(pts, { radius: 35, blur: 25, maxZoom: 17,
+      gradient: { 0.2: '#22c55e', 0.5: '#f59e0b', 0.8: '#ef4444', 1.0: '#fff' }
+    }).addTo(_mapaLeaflet);
+    if (btn) { btn.textContent = '\u274c Fechar Heat Map'; btn.classList.add('cam-sort-active'); }
+  } else {
+    if (_mapaHeatLayer) { _mapaHeatLayer.remove(); _mapaHeatLayer = null; }
+    if (btn) { btn.textContent = '\uD83D\uDD25 Heat Map'; btn.classList.remove('cam-sort-active'); }
+  }
+}
+
+// --- Auto-refresh de status ---
+function _stopMapaAutoRefresh() {
+  if (_mapaAutoTimer) { clearInterval(_mapaAutoTimer); _mapaAutoTimer = null; }
+  var btn = document.getElementById('btn-mapa-auto');
+  if (btn) { btn.textContent = '\u25EF Auto-refresh: OFF'; btn.classList.remove('cam-sort-active'); }
+}
+
+async function _mapaRefreshStatus() {
+  // Atualiza apenas as cores dos marcadores existentes sem rebuilddar o mapa
+  if (!_mapaLeaflet || !_mapaCacheItems.length) return;
+  try {
+    var r = await fetch('/api/cameras/status');
+    if (!r.ok) return;
+    var d = await r.json();
+    var statusMap = d.status || {};
+    _mapaMarkers.forEach(function(m, i) {
+      var c = _mapaCacheItems.filter(function(x) { return x.latitude != null && x.longitude != null; })[i];
+      if (!c) return;
+      var lastSeen = statusMap[c.camera_id] || null;
+      var color    = _mapaStatusColor(lastSeen, c.ativa);
+      m.setIcon(_mapaIcon(color));
+    });
+  } catch(e) { /* silencioso */ }
+}
+
+function _toggleMapaAutoRefresh() {
+  var btn = document.getElementById('btn-mapa-auto');
+  if (_mapaAutoTimer) {
+    _stopMapaAutoRefresh();
+  } else {
+    _mapaAutoTimer = setInterval(_mapaRefreshStatus, 30000);
+    if (btn) { btn.textContent = '\u25CF Auto-refresh: 30s'; btn.classList.add('cam-sort-active'); }
+  }
+}
+
+function verTrajetoriaNoMapa() {
+  if (!_mapaTrajetoria) return;
+  closeModal('detail-modal');
+  var nav = document.querySelector('[onclick*="\'mapa\'"]');
+  if (nav) nav.click();
+}
+
+function _plotarTrajetoria() {
+  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers = [];
+  if (!_mapaTrajetoria || !_mapaTrajetoria.points.length) return;
+
+  // Lookup por camera_id e por nome (case-insensitive)
+  var camPos = {};
+  (_cameraRows || []).forEach(function(c) {
+    if (c.latitude == null || c.longitude == null) return;
+    var pos = { lat: c.latitude, lng: c.longitude, nome: c.nome };
+    camPos[c.camera_id] = pos;
+    if (c.nome) camPos[c.nome.toLowerCase()] = pos;
+  });
+
+  var COLORS = ['#facc15','#3b82f6','#f97316','#a855f7','#ef4444','#06b6d4','#4ade80'];
+  var colorMap = {};
+  (_mapaTrajetoria.plates || []).forEach(function(p, i) { colorMap[p] = COLORS[i % COLORS.length]; });
+
+  var points = _mapaTrajetoria.points.slice().sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
+
+  var byPlate = {};
+  var allLL   = [];
+  var seq = 0;
+  points.forEach(function(pt) {
+    var cam = camPos[pt.camera_id] || camPos[(pt.cam_nome || '').toLowerCase()];
+    if (!cam) return;
+    seq++;
+    if (!byPlate[pt.plate]) byPlate[pt.plate] = [];
+    byPlate[pt.plate].push({ lat: cam.lat, lng: cam.lng, ts: pt.ts, cam_nome: cam.nome, seq: seq });
+    allLL.push([cam.lat, cam.lng]);
+  });
+
+  Object.keys(byPlate).forEach(function(plate) {
+    var color = colorMap[plate] || '#facc15';
+    var pts   = byPlate[plate];
+    if (pts.length >= 2) {
+      var line = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
+        color: color, weight: 3, opacity: .85, dashArray: '8 6'
+      }).addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(line);
+    }
+    pts.forEach(function(p) {
+      var dt  = new Date(p.ts);
+      var fmt = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) + ' '
+              + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      var mk = L.circleMarker([p.lat, p.lng], {
+        radius: 11, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1
+      }).bindPopup(
+        '<div style="font-family:system-ui;min-width:180px">'
+        + '<div style="font-weight:800;font-size:.92rem;color:' + color + ';margin-bottom:4px">' + plate + '</div>'
+        + '<div style="font-size:.8rem;line-height:1.7">'
+        + '<b>Passagem #' + p.seq + '</b><br>'
+        + '<b>C\u00e2mera:</b> ' + p.cam_nome + '<br>'
+        + '<b>Hor\u00e1rio:</b> ' + fmt
+        + '</div></div>'
+      ).bindTooltip(String(p.seq), { permanent: true, direction: 'center', className: 'traj-num-label' })
+       .addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(mk);
+    });
+  });
+
+  if (allLL.length) _mapaLeaflet.fitBounds(allLL, { padding: [60, 60], maxZoom: 14 });
+
+  // Info bar
+  var noGps = document.getElementById('map-no-gps');
+  if (noGps) {
+    var missing = points.filter(function(pt) {
+      return !(camPos[pt.camera_id] || camPos[(pt.cam_nome || '').toLowerCase()]);
+    }).map(function(pt) { return pt.cam_nome || pt.camera_id; });
+    var uniq = missing.filter(function(v, i, a) { return a.indexOf(v) === i; });
+    var missStr = uniq.length ? ' <span style="color:var(--muted);font-size:.74rem">(sem GPS: ' + uniq.join(', ') + ')</span>' : '';
+    noGps.innerHTML = '<div style="background:rgba(250,204,21,.1);border:1px solid var(--accent);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '<span style="font-size:1.1rem">&#127760;</span>'
+      + '<span style="font-size:.83rem"><strong style="color:var(--accent)">' + _mapaTrajetoria.plates.join(' + ') + '</strong>'
+      + ' &mdash; ' + points.length + ' passagem(ns)' + missStr + '</span>'
+      + '<button class="btn btn-outline btn-xs" onclick="_limparTrajetoria()">&#10005; Limpar</button>'
+      + '</div>';
+  }
+}
+
+function _limparTrajetoria() {
+  _mapaTrajetoria = null;
+  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers = [];
+  var noGps = document.getElementById('map-no-gps');
+  if (noGps) noGps.innerHTML = '';
+  loadMapa();
+}
+
+function _mapaStatusColor(lastSeenIso, ativa) {
+  if (ativa === false) return '#a855f7';
+  if (!lastSeenIso) return '#6b7280';
+  var mins = (Date.now() - new Date(lastSeenIso).getTime()) / 60000;
+  if (mins < 15) return '#22c55e';
+  if (mins < 60) return '#f59e0b';
+  return '#ef4444';
+}
+
+function _mapaStatusLabel(lastSeenIso) {
+  if (!lastSeenIso) return 'Nunca detectado';
+  var mins = (Date.now() - new Date(lastSeenIso).getTime()) / 60000;
+  if (mins < 15) return 'Online (h\u00e1 ' + Math.round(mins) + ' min)';
+  if (mins < 60) return 'Aguardando (' + Math.round(mins) + ' min sem evento)';
+  var h = mins / 60;
+  return 'Offline (h\u00e1 ' + (h < 24 ? Math.round(h) + 'h' : Math.round(h/24) + 'd') + ')';
+}
+
+function _mapaIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid rgba(255,255,255,.85);box-shadow:0 0 7px ' + color + 'aa"></div>',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -9],
+  });
+}
+
+async function loadMapa() {
+  var container = document.getElementById('map-container');
+  if (!container) return;
+
+  // Inicializa Leaflet na primeira chamada
+  if (!_mapaLeaflet) {
+    _mapaLeaflet = L.map('map-container', { zoomControl: true }).setView([-15.0, -52.0], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+      maxZoom: 19
+    }).addTo(_mapaLeaflet);
+  }
+
+  // Remove marcadores anteriores
+  _mapaMarkers.forEach(function(m) { m.remove(); });
+  _mapaMarkers = [];
+
+  try {
+    var rCams   = await fetch('/api/cameras?include_inactive=true');
+    var rStatus = await fetch('/api/cameras/status');
+    var dCams   = await rCams.json();
+    var dStatus = rStatus.ok ? await rStatus.json() : {};
+    var cameras   = dCams.items || [];
+    var statusMap = dStatus.status || {};
+    _mapaCacheItems = cameras;   // cache para heat map e auto-refresh
+
+    var withGps = [], withoutGps = [];
+    cameras.forEach(function(c) {
+      if (c.latitude != null && c.longitude != null) withGps.push(c);
+      else withoutGps.push(c);
+    });
+
+    var bounds = [];
+    withGps.forEach(function(c) {
+      var lastSeen = statusMap[c.camera_id] || c.last_seen || null;
+      var color    = _mapaStatusColor(lastSeen, c.ativa);
+      var label    = c.ativa === false ? 'Inativa' : _mapaStatusLabel(lastSeen);
+      var critTag  = c.criticidade === 'CRITICA'
+        ? '<span style="color:#ef4444;font-weight:700">CR\u00cdTICA</span>'
+        : '<span style="color:#86efac">NORMAL</span>';
+      var dirTag   = c.direcao
+        ? '<br><b>Dire\u00e7\u00e3o:</b> <span style="color:#facc15">' + c.direcao + '</span>'
+        : '';
+      var camIdEsc = (c.camera_id || '').replace(/'/g, "\\'");
+      var popup = '<div style="font-family:system-ui;min-width:210px">'
+        + '<div style="font-weight:700;font-size:.95rem;margin-bottom:6px">&#128247; ' + c.nome + '</div>'
+        + '<div style="font-size:.8rem;line-height:1.8">'
+        + '<b>ID:</b> ' + (c.camera_id || '\u2014') + '<br>'
+        + '<b>IP:</b> <span style="font-family:monospace">' + (c.ip || '\u2014') + '</span><br>'
+        + '<b>Criticidade:</b> ' + critTag
+        + dirTag + '<br>'
+        + '<b>Status:</b> <span style="color:' + color + ';font-weight:600">' + label + '</span><br>'
+        + '<b>Eventos hoje:</b> ' + (c.events_today || 0) + '&nbsp;&nbsp;'
+        + '<b>Total:</b> ' + (c.total_events || 0)
+        + '</div>'
+        + '<div style="font-size:.72rem;color:#999;margin-top:6px;font-family:monospace">'
+        + c.latitude.toFixed(6) + ', ' + c.longitude.toFixed(6)
+        + '</div>'
+        + '<div style="margin-top:10px">'
+        + '<button onclick="_filtrarEventosPorCamera(\''+camIdEsc+'\')" style="background:var(--accent);color:#000;border:none;border-radius:7px;padding:5px 12px;font-size:.78rem;font-weight:700;cursor:pointer;width:100%">&#128467; Ver eventos desta c\u00e2mera</button>'
+        + '</div>'
+        + '</div>';
+
+      var marker = L.marker([c.latitude, c.longitude], { icon: _mapaIcon(color) })
+        .bindPopup(popup, { maxWidth: 260 })
+        .addTo(_mapaLeaflet);
+      _mapaMarkers.push(marker);
+      bounds.push([c.latitude, c.longitude]);
+    });
+
+    if (bounds.length > 0 && !_mapaTrajetoria) {
+      _mapaLeaflet.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+
+    // Necessário quando a aba estava oculta
+    setTimeout(function() {
+      _mapaLeaflet.invalidateSize();
+      if (_mapaTrajetoria) _plotarTrajetoria();
+    }, 80);
+
+    // C\u00e2meras sem GPS
+    var noGps = document.getElementById('map-no-gps');
+    if (noGps) {
+      if (!withoutGps.length) {
+        noGps.innerHTML = '<div style="font-size:.79rem;color:var(--muted)">&#10003; Todas as c\u00e2meras possuem coordenadas GPS.</div>';
+      } else {
+        noGps.innerHTML = '<div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">'
+          + '&#9888;&#65039; ' + withoutGps.length + ' c\u00e2mera(s) sem GPS cadastrado:'
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+          + withoutGps.map(function(c) {
+              var clr = _mapaStatusColor(statusMap[c.camera_id] || c.last_seen || null, c.ativa);
+              return '<span style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.79rem;display:inline-flex;align-items:center;gap:6px">'
+                + '<span style="color:' + clr + '">&#9679;</span>'
+                + _camEsc(c.nome)
+                + ' <button class="btn btn-outline btn-xs" style="padding:1px 6px;font-size:.7rem" onclick="editCamera(decodeURIComponent(\'' + encodeURIComponent(JSON.stringify(c)) + '\'))">+ GPS</button>'
+                + '</span>';
+            }).join('')
+          + '</div>';
+      }
+    }
+
+  } catch(e) {
+    console.error('[Mapa]', e);
+    var noGps = document.getElementById('map-no-gps');
+    if (noGps) noGps.innerHTML = '<div style="color:var(--danger);font-size:.82rem">Erro ao carregar c\u00e2meras: ' + e.message + '</div>';
   }
 }
 

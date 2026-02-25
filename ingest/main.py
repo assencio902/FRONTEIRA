@@ -150,23 +150,8 @@ def _init_db():
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS ip TEXT;")
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS posicao INTEGER DEFAULT 0;")
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS direcao TEXT DEFAULT NULL;")
-
-            # Migração: preenche ip a partir do histórico de lpr_events
-            # (usa o camera_ip mais recente para cada camera_id já cadastrada)
-            cur.execute("""
-                UPDATE cameras c
-                SET ip = sub.camera_ip
-                FROM (
-                    SELECT DISTINCT ON (camera_id)
-                        camera_id, camera_ip
-                    FROM lpr_events
-                    WHERE camera_id IS NOT NULL AND camera_ip IS NOT NULL
-                      AND camera_ip NOT LIKE '172.19.%'
-                    ORDER BY camera_id, ts DESC
-                ) sub
-                WHERE c.camera_id = sub.camera_id
-                  AND c.ip IS NULL;
-            """)
+            cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION DEFAULT NULL;")
+            cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION DEFAULT NULL;")
 
             # Eventos LPR
             cur.execute("""
@@ -183,6 +168,33 @@ def _init_db():
                 );
             """)
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS yolo_result JSONB;")
+            # Garante que a coluna ts existe mesmo em tabelas criadas por versões mais antigas
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS ts TIMESTAMPTZ DEFAULT NOW();")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS channel_name TEXT;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS camera_ip TEXT;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS confidence FLOAT;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS image_path TEXT;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS plate TEXT;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS camera_id TEXT;")
+
+            # Migração: preenche ip a partir do histórico de lpr_events
+            # (usa o camera_ip mais recente para cada camera_id já cadastrada)
+            # Executa após garantir que lpr_events e coluna ts existem
+            cur.execute("""
+                UPDATE cameras c
+                SET ip = sub.camera_ip
+                FROM (
+                    SELECT DISTINCT ON (camera_id)
+                        camera_id, camera_ip
+                    FROM lpr_events
+                    WHERE camera_id IS NOT NULL AND camera_ip IS NOT NULL
+                      AND camera_ip NOT LIKE '172.19.%'
+                    ORDER BY camera_id, ts DESC
+                ) sub
+                WHERE c.camera_id = sub.camera_id
+                  AND c.ip IS NULL;
+            """)
 
             # Veículos e Listas de Monitoramento
             cur.execute("""
@@ -253,7 +265,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
             # as câmeras Hikvision enviam o próprio IP no XML <ipAddress> e esse
             # valor é usado como chave de lookup no webhook.
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
                 (camera_id, camera_id),
             )
             row = cur.fetchone()
@@ -271,6 +283,8 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
                 "ip": row[7],
                 "created_at": row[6].isoformat() if row[6] else None,
                 "direcao": row[8] or None,
+                "latitude":  float(row[9])  if row[9]  is not None else None,
+                "longitude": float(row[10]) if row[10] is not None else None,
             }
 
 
@@ -578,7 +592,7 @@ def list_cameras(include_inactive: bool = False):
                 SELECT c.id, c.camera_id, c.nome, c.ativa, c.criticidade, c.peso,
                        c.created_at, c.ip,
                        s.last_seen, s.total_events, s.events_today,
-                       c.direcao
+                       c.direcao, c.latitude, c.longitude
                 FROM cameras c
                 LEFT JOIN (
                     SELECT camera_id,
@@ -588,8 +602,9 @@ def list_cameras(include_inactive: bool = False):
                     FROM lpr_events
                     GROUP BY camera_id
                 ) s ON s.camera_id = c.camera_id
+                      OR s.camera_id = c.ip
                 {where}
-                ORDER BY c.nome ASC
+                ORDER BY c.id ASC
             """)
             rows = cur.fetchall()
 
@@ -608,6 +623,8 @@ def list_cameras(include_inactive: bool = False):
             "total_events": int(r[9] or 0),
             "events_today": int(r[10] or 0),
             "direcao":      r[11] or None,
+            "latitude":     float(r[12]) if r[12] is not None else None,
+            "longitude":    float(r[13]) if r[13] is not None else None,
         })
     return {"items": items, "total": len(items)}
 
@@ -639,6 +656,8 @@ async def create_camera(request: Request):
     peso = float(data.get("peso_score") or data.get("peso") or 1.0)
     ip = (data.get("ip") or "").strip() or None
     direcao = (data.get("direcao") or "").strip().upper() or None
+    latitude  = float(data["latitude"])  if data.get("latitude")  not in (None, "") else None
+    longitude = float(data["longitude"]) if data.get("longitude") not in (None, "") else None
 
     if not camera_id or not nome:
         raise HTTPException(status_code=400, detail="camera_id e nome são obrigatórios")
@@ -659,8 +678,8 @@ async def create_camera(request: Request):
                     raise HTTPException(status_code=400, detail=f"IP {ip} já está em uso pela câmera '{dup[0]}'")
             cur.execute(
                 """
-                INSERT INTO cameras (camera_id, nome, ativa, criticidade, peso, peso_score, ip, direcao)
-                VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s)
+                INSERT INTO cameras (camera_id, nome, ativa, criticidade, peso, peso_score, ip, direcao, latitude, longitude)
+                VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (camera_id) DO UPDATE SET
                     nome = EXCLUDED.nome,
                     ativa = TRUE,
@@ -668,9 +687,11 @@ async def create_camera(request: Request):
                     peso = EXCLUDED.peso,
                     peso_score = EXCLUDED.peso_score,
                     ip = COALESCE(EXCLUDED.ip, cameras.ip),
-                    direcao = EXCLUDED.direcao
+                    direcao = EXCLUDED.direcao,
+                    latitude  = COALESCE(EXCLUDED.latitude,  cameras.latitude),
+                    longitude = COALESCE(EXCLUDED.longitude, cameras.longitude)
                 """,
-                (camera_id, nome, criticidade, peso, peso, ip, direcao),
+                (camera_id, nome, criticidade, peso, peso, ip, direcao, latitude, longitude),
             )
 
     return {"ok": True, "camera": get_camera_row(camera_id)}
@@ -731,6 +752,12 @@ async def update_camera(cam_id: int, request: Request):
                 if d_val and d_val not in ("CRESCENTE", "DECRESCENTE"):
                     raise HTTPException(status_code=400, detail="direcao deve ser 'CRESCENTE' ou 'DECRESCENTE'")
                 sets.append("direcao=%s"); vals.append(d_val)
+            if "latitude" in data:
+                lat_val = float(data["latitude"]) if data["latitude"] not in (None, "") else None
+                sets.append("latitude=%s"); vals.append(lat_val)
+            if "longitude" in data:
+                lng_val = float(data["longitude"]) if data["longitude"] not in (None, "") else None
+                sets.append("longitude=%s"); vals.append(lng_val)
 
             if sets:
                 vals.append(cam_id)
@@ -740,7 +767,7 @@ async def update_camera(cam_id: int, request: Request):
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip FROM cameras WHERE id=%s LIMIT 1",
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, latitude, longitude FROM cameras WHERE id=%s LIMIT 1",
                 (cam_id,),
             )
             row = cur.fetchone()
@@ -753,6 +780,8 @@ async def update_camera(cam_id: int, request: Request):
         "peso_score": peso_val, "peso": peso_val,
         "created_at": row[6].isoformat() if row[6] else None,
         "ip": row[7],
+        "latitude":  float(row[8]) if row[8] is not None else None,
+        "longitude": float(row[9]) if row[9] is not None else None,
     }
 
 
@@ -832,6 +861,7 @@ def list_events(
     for r in rows:
         ts = r[7].isoformat() if r[7] else None
         img = r[6]
+        yolo = _json_lib.loads(r[8]) if r[8] else None
         items.append({
             "id": r[0],
             "plate": r[1],
@@ -845,7 +875,11 @@ def list_events(
             "timestamp": ts,
             "image": img,
             "thumb": img,
-            "yolo_result": _json_lib.loads(r[8]) if r[8] else None,
+            "yolo_result": yolo,
+            # Campos extraídos do yolo_result para fácil acesso no frontend
+            "sem_placa_motivo": yolo.get("sem_placa_motivo") if yolo else None,
+            "vehicle_details":  yolo.get("vehicle_details")  if yolo else None,
+            "image_quality":    yolo.get("image_quality")    if yolo else None,
             "cam_nome": r[9] or r[3],
             "direcao": r[10] or None,
         })
@@ -1124,7 +1158,12 @@ async def simple_webhook(request: Request):
         # Enfileira análise YOLO para esta imagem
         try:
             abs_path = f"/app/uploads/{day}/{fname}"
-            _get_rq_queue().enqueue("worker.job_analyze_event", abs_path, job_timeout=120)
+            _get_rq_queue().enqueue(
+                "worker.job_analyze_event",
+                abs_path,
+                plate or "",          # plate_raw: permite calcular sem_placa_motivo
+                job_timeout=120,
+            )
         except Exception as _rq_err:
             print(f"[RQ] Falha ao enfileirar job YOLO: {_rq_err}")
 

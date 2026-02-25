@@ -61,7 +61,7 @@
     depends_on:
       redis:
         condition: service_healthy
-    restart: on-failure
+    restart: always
     volumes:
       - ./uploads:/app/uploads
     # GPU — sintaxe compatível com Docker Desktop no Windows (WSL2 + NVIDIA)
