@@ -3,6 +3,7 @@
 # ===========================
 
 import os
+import re
 import uuid
 import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager, contextmanager
@@ -23,6 +24,10 @@ import json as _json_lib
 import redis as _redis_lib
 from rq import Queue as _RQ_Queue
 
+from jose import JWTError, jwt as _jwt
+from passlib.context import CryptContext
+from starlette.middleware.base import BaseHTTPMiddleware
+
 # ===========================
 # CONFIG
 # ===========================
@@ -31,6 +36,50 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
+
+# ===========================
+# AUTH / JWT
+# ===========================
+JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-secret-change-me-2026")
+JWT_ALG     = "HS256"
+JWT_EXPIRE  = int(os.getenv("JWT_EXPIRE_HOURS", "8"))  # horas
+
+_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _hash_pw(plain: str) -> str:
+    return _pwd_ctx.hash(plain)
+
+def _verify_pw(plain: str, hashed: str) -> bool:
+    return _pwd_ctx.verify(plain, hashed)
+
+def _make_token(sub: str, role: str, full_name: str) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE)
+    return _jwt.encode({"sub": sub, "role": role, "name": full_name, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
+
+def _decode_token(token: str) -> dict:
+    return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+
+# Paths públicos (não exigem JWT)
+_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest")
+_PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login"}
+
+# Regex para endpoints de imagem que o browser carrega diretamente (sem JWT header)
+_PUBLIC_RE = re.compile(r'^/api/events/\d+/(image|thumbnail)(\?.*)?$')
+
+class _AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        path = request.url.path
+        if path in _PUBLIC_EXACT or any(path.startswith(p) for p in _PUBLIC_PREFIXES) or _PUBLIC_RE.match(path):
+            return await call_next(request)
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return JSONResponse({"detail": "Não autenticado"}, status_code=401)
+        try:
+            payload = _decode_token(auth.split(" ", 1)[1])
+            request.state.user = payload
+        except JWTError:
+            return JSONResponse({"detail": "Token inválido ou expirado"}, status_code=401)
+        return await call_next(request)
 
 # ===========================
 # DB
@@ -154,6 +203,27 @@ def _init_db():
             cur.execute("ALTER TABLE vehicle_lists ADD COLUMN IF NOT EXISTS color TEXT;")
             cur.execute("ALTER TABLE vehicle_lists ADD COLUMN IF NOT EXISTS alarm_enabled BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE vehicle_lists ADD COLUMN IF NOT EXISTS alarm_sound TEXT;")
+
+            # Usuários
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    full_name TEXT DEFAULT '',
+                    role TEXT DEFAULT 'operator',
+                    ativa BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            # Inserir admin padrão se não existir
+            cur.execute("SELECT id FROM users WHERE username='admin' LIMIT 1")
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO users (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)",
+                    ("admin", _hash_pw("admin123"), "Administrador", "admin")
+                )
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS vehicle_list_items (
@@ -303,6 +373,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(_AuthMiddleware)
 
 # static
 os.makedirs("static", exist_ok=True)
@@ -332,6 +403,153 @@ def dashboard():
             "Expires": "0",
         },
     )
+
+@app.get("/login", include_in_schema=False)
+def login_page():
+    return FileResponse(
+        "static/login.html",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+# ===========================
+# AUTH ENDPOINTS
+# ===========================
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request):
+    data = await request.json()
+    username = str(data.get("username") or "").strip().lower()
+    password = str(data.get("password") or "")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="username e password são obrigatórios")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, username, password_hash, full_name, role, ativa FROM users WHERE username=%s LIMIT 1", (username,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
+    uid, uname, pw_hash, full_name, role, ativa = row
+    if not ativa:
+        raise HTTPException(status_code=403, detail="Usuário inativo")
+    if not _verify_pw(password, pw_hash):
+        raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
+    token = _make_token(uname, role, full_name or uname)
+    return {"access_token": token, "token_type": "bearer", "role": role, "full_name": full_name or uname, "username": uname}
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    return {"username": user.get("sub"), "role": user.get("role"), "full_name": user.get("name")}
+
+@app.put("/api/auth/password")
+async def change_my_password(request: Request):
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    data = await request.json()
+    current_pw = data.get("current_password", "")
+    new_pw     = data.get("new_password", "")
+    if not current_pw or not new_pw:
+        raise HTTPException(status_code=400, detail="Campos obrigatórios: current_password e new_password")
+    if len(new_pw) < 6:
+        raise HTTPException(status_code=400, detail="Nova senha deve ter pelo menos 6 caracteres")
+    username = user.get("sub")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, password_hash FROM users WHERE username=%s", (username,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            if not _verify_pw(current_pw, row[1]):
+                raise HTTPException(status_code=400, detail="Senha atual incorreta")
+            cur.execute("UPDATE users SET password_hash=%s, updated_at=NOW() WHERE id=%s", (_hash_pw(new_pw), row[0]))
+    return {"ok": True}
+
+# ===========================
+# USERS CRUD
+# ===========================
+
+@app.get("/api/users")
+async def list_users(request: Request):
+    user = getattr(request.state, "user", {})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, username, full_name, role, ativa, created_at FROM users ORDER BY id")
+            rows = cur.fetchall()
+    return {"items": [{"id": r[0], "username": r[1], "full_name": r[2], "role": r[3], "ativa": r[4], "created_at": r[5].isoformat() if r[5] else None} for r in rows]}
+
+@app.post("/api/users", status_code=201)
+async def create_user(request: Request):
+    user = getattr(request.state, "user", {})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    data = await request.json()
+    username  = str(data.get("username") or "").strip().lower()
+    password  = str(data.get("password") or "").strip()
+    full_name = str(data.get("full_name") or "").strip()
+    role      = str(data.get("role") or "operator").strip()
+    ativa     = bool(data.get("ativa", True))
+    if not username: raise HTTPException(status_code=400, detail="username obrigatório")
+    if not password: raise HTTPException(status_code=400, detail="password obrigatório")
+    if role not in ("admin", "operator", "viewer"): raise HTTPException(status_code=400, detail="role inválido")
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO users (username, password_hash, full_name, role, ativa) VALUES (%s,%s,%s,%s,%s) RETURNING id",
+                    (username, _hash_pw(password), full_name, role, ativa)
+                )
+                new_id = cur.fetchone()[0]
+    except Exception as e:
+        if "unique" in str(e).lower():
+            raise HTTPException(status_code=409, detail="Username já existe")
+        raise
+    return {"id": new_id, "username": username, "full_name": full_name, "role": role, "ativa": ativa}
+
+@app.put("/api/users/{uid}")
+async def update_user(uid: int, request: Request):
+    requester = getattr(request.state, "user", {})
+    if requester.get("role") != "admin" and requester.get("sub") != uid:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    data = await request.json()
+    sets, vals = [], []
+    if "full_name" in data: sets.append("full_name=%s"); vals.append(str(data["full_name"]).strip())
+    if "role" in data:
+        role = str(data["role"]).strip()
+        if role not in ("admin", "operator", "viewer"): raise HTTPException(status_code=400, detail="role inválido")
+        sets.append("role=%s"); vals.append(role)
+    if "ativa" in data: sets.append("ativa=%s"); vals.append(bool(data["ativa"]))
+    if "password" in data and data["password"]:
+        sets.append("password_hash=%s"); vals.append(_hash_pw(str(data["password"])))
+    if not sets: raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
+    sets.append("updated_at=NOW()")
+    vals.append(uid)
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"UPDATE users SET {', '.join(sets)} WHERE id=%s", tuple(vals))
+            if cur.rowcount == 0: raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return {"ok": True}
+
+@app.delete("/api/users/{uid}", status_code=204)
+async def delete_user(uid: int, request: Request):
+    requester = getattr(request.state, "user", {})
+    if requester.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
+            row = cur.fetchone()
+            if not row: raise HTTPException(status_code=404, detail="Usuário não encontrado")
+            if row[0] == "admin": raise HTTPException(status_code=400, detail="Não é possível excluir o admin principal")
+            cur.execute("DELETE FROM users WHERE id=%s", (uid,))
 
 
 # ===========================
@@ -1502,6 +1720,64 @@ def batedor_convoys(
         except Exception:
             pass
 
+    # Tipo de veículo dominante por placa (agregado do yolo_result)
+    _TIPO_PT = {"car": "Carro", "truck": "Caminhão", "motorcycle": "Moto",
+                "bus": "Ônibus", "van": "Van", "bicycle": "Bicicleta"}
+    dominant_type_by_plate: dict = {}
+    if active_plates:
+        try:
+            with _conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT plate, yolo_result->'vehicle_types'
+                        FROM lpr_events
+                        WHERE plate = ANY(%s)
+                          AND yolo_result IS NOT NULL
+                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                        """,
+                        (active_plates, t_from, t_to)
+                    )
+                    type_counts_conv: dict = {}
+                    for row in cur.fetchall():
+                        vt = row[1]
+                        if vt and isinstance(vt, dict):
+                            tc = type_counts_conv.setdefault(row[0], {})
+                            for k, v in vt.items():
+                                tc[k] = tc.get(k, 0) + int(v)
+            for pl, counts in type_counts_conv.items():
+                best = max(counts, key=counts.get)
+                dominant_type_by_plate[pl] = _TIPO_PT.get(best, best.capitalize())
+        except Exception:
+            pass
+
+    # ── Resolve direção dominante por placa cruzando câmeras com tabela cameras ──
+    all_cam_ids = list({ev["cam_a"] for pd in plate_data.values() for ev in pd["evidence"]} |
+                       {ev["cam_b"] for pd in plate_data.values() for ev in pd["evidence"]})
+    cam_dir_map: dict = {}
+    if all_cam_ids:
+        try:
+            with _conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT camera_id, ip, direcao FROM cameras WHERE direcao IS NOT NULL")
+                    for row in cur.fetchall():
+                        if row[2]:
+                            cam_dir_map[row[0]] = row[2]  # por camera_id
+                            if row[1]:
+                                cam_dir_map[row[1].strip()] = row[2]  # por IP
+        except Exception:
+            pass
+
+    def _dom_dir_convoys(pd_ev):
+        nc, nd = 0, 0
+        for ev in pd_ev:
+            for cid in (ev.get("cam_a"), ev.get("cam_b")):
+                d = cam_dir_map.get(cid)
+                if d == "CRESCENTE": nc += 1
+                elif d == "DECRESCENTE": nd += 1
+        if nc == 0 and nd == 0: return None
+        return "CRESCENTE" if nc >= nd else "DECRESCENTE"
+
     items = []
     for plate, pd in plate_data.items():
         if pd["transitions"] < min_tr:
@@ -1513,7 +1789,8 @@ def batedor_convoys(
             "score":             score,
             "valid_transitions": pd["transitions"],
             "avg_delta_t_sec":   avg_delta,
-            "dominant_type":     None,
+            "dominant_direcao":  _dom_dir_convoys(pd["evidence"]),
+            "dominant_type":     dominant_type_by_plate.get(plate),
             "yolo_multi_events": yolo_multi_by_plate.get(plate, 0),
             "first_seen":        pd["first_seen"],
             "last_seen":         pd["last_seen"],
@@ -1632,6 +1909,68 @@ def batedor_groups(
         except Exception:
             pass
 
+    # Tipo de veículo dominante por par (agregado do yolo_result)
+    _TIPO_PT_GRP = {"car": "Carro", "truck": "Caminhão", "motorcycle": "Moto",
+                    "bus": "Ônibus", "van": "Van", "bicycle": "Bicicleta"}
+    dominant_type_by_pair: dict = {}
+    if active_pairs:
+        try:
+            all_pl_grp = list({pl for pair in active_pairs for pl in pair})
+            with _conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT plate, yolo_result->'vehicle_types'
+                        FROM lpr_events
+                        WHERE plate = ANY(%s)
+                          AND yolo_result IS NOT NULL
+                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                        """,
+                        (all_pl_grp, t_from, t_to)
+                    )
+                    type_counts_grp: dict = {}
+                    for row in cur.fetchall():
+                        vt = row[1]
+                        if vt and isinstance(vt, dict):
+                            tc = type_counts_grp.setdefault(row[0], {})
+                            for k, v in vt.items():
+                                tc[k] = tc.get(k, 0) + int(v)
+            for pa, pb in active_pairs:
+                merged: dict = {}
+                for pl in (pa, pb):
+                    for k, v in type_counts_grp.get(pl, {}).items():
+                        merged[k] = merged.get(k, 0) + v
+                if merged:
+                    best = max(merged, key=merged.get)
+                    dominant_type_by_pair[(pa, pb)] = _TIPO_PT_GRP.get(best, best.capitalize())
+        except Exception:
+            pass
+
+    # ── Resolve direção dominante por par cruzando câmeras com tabela cameras ──
+    all_cam_ids_grp = list({ev["camera_id"] for pd in pair_data.values() for ev in pd["evidence"]})
+    cam_dir_map_grp: dict = {}
+    if all_cam_ids_grp:
+        try:
+            with _conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT camera_id, ip, direcao FROM cameras WHERE direcao IS NOT NULL")
+                    for row in cur.fetchall():
+                        if row[2]:
+                            cam_dir_map_grp[row[0]] = row[2]  # por camera_id
+                            if row[1]:
+                                cam_dir_map_grp[row[1].strip()] = row[2]  # por IP
+        except Exception:
+            pass
+
+    def _dom_dir_groups(cameras_set):
+        nc, nd = 0, 0
+        for cid in cameras_set:
+            d = cam_dir_map_grp.get(cid)
+            if d == "CRESCENTE": nc += 1
+            elif d == "DECRESCENTE": nd += 1
+        if nc == 0 and nd == 0: return None
+        return "CRESCENTE" if nc >= nd else "DECRESCENTE"
+
     items = []
     for (plate_a, plate_b), pd in pair_data.items():
         cameras_together = len(pd["cameras"])
@@ -1646,7 +1985,8 @@ def batedor_groups(
             "cameras_together": cameras_together,
             "avg_co_delta_sec": avg_co,
             "yolo_multi_count": yolo_multi_by_pair.get((plate_a, plate_b), 0),
-            "dominant_type":    None,
+            "dominant_direcao": _dom_dir_groups(pd["cameras"]),
+            "dominant_type":    dominant_type_by_pair.get((plate_a, plate_b)),
             "first_seen":       pd["first_seen"],
             "last_seen":        pd["last_seen"],
             "evidence":         pd["evidence"][:20],

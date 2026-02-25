@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BPFRON - Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-dark:  #021a0d;
+      --green-deep:  #042b14;
+      --green-mid:   #064e24;
+      --green-light: #0a7a36;
+      --gold:        #facc15;
+      --gold-dark:   #d4a003;
+      --text:        #ffffff;
+      --muted:       #b6e8c8;
+      --danger:      #ff6b6b;
+      --radius:      14px;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--green-dark);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+    }
+
+    /* ── Background animado ── */
+    .bg-layer {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 60% at 20% 50%, rgba(6,78,36,.75) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 80% at 80% 50%, rgba(4,43,20,.9) 0%, transparent 70%),
+        linear-gradient(135deg, #021a0d 0%, #042b14 40%, #064e24 100%);
+      z-index: 0;
+    }
+    .bg-dots {
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(250,204,21,.06) 1px, transparent 1px);
+      background-size: 36px 36px;
+      z-index: 0;
+    }
+    /* Linha diagonal decorativa */
+    .bg-line {
+      position: fixed;
+      top: 0; bottom: 0;
+      left: 52%;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(250,204,21,.15) 30%, rgba(250,204,21,.15) 70%, transparent);
+      z-index: 0;
+    }
+
+    /* ── Layout coluna única ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 100vh;
+      padding: 40px 20px 60px;
+      gap: 0;
+    }
+
+    /* ── Painel branding (topo) ── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+    .logo-ring {
+      position: relative;
+      width: 260px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* Anel pulsante externo */
+    .logo-ring::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      border: 2px solid rgba(250,204,21,.4);
+      animation: pulse-ring 2.8s ease-in-out infinite;
+    }
+    .logo-ring::after {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      border-radius: 50%;
+      border: 1px solid rgba(250,204,21,.15);
+      animation: pulse-ring 2.8s ease-in-out infinite .9s;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: .12; transform: scale(1); }
+      50%       { opacity: .7;  transform: scale(1.04); }
+    }
+    /* Círculo verde de fundo (igual ao sidebar) */
+    .logo-bg {
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: #064e24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+      box-shadow:
+        0 0 0 3px rgba(250,204,21,.45),
+        0 8px 40px rgba(0,0,0,.6);
+    }
+    .logo-bg img {
+      width: 196px;
+      height: 196px;
+      object-fit: contain;
+      mix-blend-mode: multiply;
+      filter: contrast(1.15) saturate(1.1);
+    }
+    .brand-title {
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: .22em;
+      color: var(--gold);
+      text-shadow: 0 0 28px rgba(250,204,21,.6), 0 2px 0 rgba(0,0,0,.6);
+      text-align: center;
+    }
+    .brand-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+      line-height: 1.6;
+    }
+    .brand-divider {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      border-radius: 2px;
+    }
+    .brand-slogan {
+      font-size: .72rem;
+      color: rgba(182,232,200,.55);
+      letter-spacing: .06em;
+      text-align: center;
+      text-transform: uppercase;
+      max-width: 240px;
+    }
+
+    /* ── Painel direito (formulário) ── */
+    .right-panel {
+      flex: .9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 32px 48px;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 380px;
+    }
+    .login-header {
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .login-header h1 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .login-header p {
+      font-size: .74rem;
+      color: rgba(182,232,200,.5);
+      margin-top: 5px;
+      letter-spacing: .04em;
+    }
+    .login-header .header-bar {
+      width: 40px;
+      height: 3px;
+      background: var(--gold);
+      border-radius: 3px;
+      margin: 10px auto 0;
+    }
+    .card {
+      background: rgba(10,60,28,.6);
+      border: 1px solid rgba(250,204,21,.18);
+      border-radius: var(--radius);
+      padding: 34px 30px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .09em;
+    }
+    .input-wrap {
+      position: relative;
+    }
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: .95rem;
+      opacity: .5;
+      pointer-events: none;
+    }
+    input {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(250,204,21,.2);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 11px 13px 11px 36px;
+      font-size: .92rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      width: 100%;
+    }
+    input::placeholder { color: rgba(255,255,255,.28); }
+    input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(250,204,21,.12);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 9px;
+      font-size: .95rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .2s, opacity .15s;
+      margin-top: 6px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(250,204,21,.3);
+    }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      color: #021a0d;
+      box-shadow: 0 4px 16px rgba(250,204,21,.25);
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .error-msg {
+      color: var(--danger);
+      font-size: .8rem;
+      text-align: center;
+      margin-top: 12px;
+      min-height: 18px;
+      font-weight: 500;
+    }
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(2,26,13,.3);
+      border-top-color: #021a0d;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    .page-footer {
+      position: fixed;
+      bottom: 16px;
+      left: 0; right: 0;
+      text-align: center;
+      font-size: .66rem;
+      color: rgba(182,232,200,.3);
+      letter-spacing: .06em;
+      z-index: 2;
+    }
+
+    /* ── Responsivo mobile ── */
+    @media (max-width: 500px) {
+      .logo-ring { width: 180px; height: 180px; }
+      .logo-bg { width: 180px; height: 180px; }
+      .logo-bg img { width: 136px; height: 136px; }
+      .brand-title { font-size: 1.8rem; }
+      .bg-line { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-layer"></div>
+  <div class="bg-dots"></div>
+
+  <div class="page">
+    <!-- Branding: logo + título -->
+    <div class="left-panel">
+      <div class="logo-ring">
+        <div class="logo-bg">
+          <img src="/static/logo.png" alt="BPFRON" onerror="this.style.display='none'">
+        </div>
+      </div>
+      <div class="brand-title">BPFRON</div>
+      <div class="brand-divider"></div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="right-panel">
+      <div class="login-box">
+        <div class="login-header">
+          <h1>Acesso ao Sistema</h1>
+          <p>Identifique-se para continuar</p>
+          <div class="header-bar"></div>
+        </div>
+        <div class="card">
+          <div class="form-group">
+            <label for="username">Usuário</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input id="username" type="text" placeholder="Digite seu usuário" autocomplete="username" autofocus />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="password">Senha</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input id="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" />
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Entrar</button>
+          <div class="error-msg" id="login-error"></div>
+        </div>
+        <div class="brand-slogan" style="margin-top:18px">Sistema Integrado de Monitoramento Veicular</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">BPFRON &nbsp;·&nbsp; Sistema de Monitoramento &nbsp;·&nbsp; Uso Restrito</div>
+
+  <script>
+    // Se já tem token válido, redirecionar para dashboard
+    (function(){
+      var token = localStorage.getItem('bpfron_token');
+      if (token) {
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+          .then(function(r){ if (r.ok) window.location.replace('/dashboard'); })
+          .catch(function(){});
+      }
+    })();
+
+    document.getElementById('password').addEventListener('keydown', function(e){
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('username').addEventListener('keydown', function(e){
+      if (e.key === 'Enter') document.getElementById('password').focus();
+    });
+
+    async function doLogin() {
+      var btn  = document.getElementById('btn-login');
+      var errEl = document.getElementById('login-error');
+      var user = document.getElementById('username').value.trim();
+      var pass = document.getElementById('password').value;
+      errEl.textContent = '';
+      if (!user || !pass) { errEl.textContent = 'Preencha usuário e senha.'; return; }
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span> Entrando...';
+      try {
+        var r = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+        var data = await r.json();
+        if (!r.ok) { errEl.textContent = data.detail || 'Erro ao autenticar.'; return; }
+        localStorage.setItem('bpfron_token',     data.access_token);
+        localStorage.setItem('bpfron_role',      data.role);
+        localStorage.setItem('bpfron_user',      data.username);
+        localStorage.setItem('bpfron_fullname',  data.full_name);
+        window.location.replace('/dashboard');
+      } catch(e) {
+        errEl.textContent = 'Erro de conexão. Tente novamente.';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Entrar';
+      }
+    }
+  </script>
+</body>
+</html>

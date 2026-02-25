@@ -252,6 +252,12 @@
       width:14px; height:14px; background:#fff; border-radius:50%; transition:left .2s; }
     .toggle-switch input[type=checkbox]:checked::after { left:21px; }
     .toggle-switch span { font-size:.84rem; color:var(--text); }
+    .user-info-bar { padding:10px 16px 6px; border-top:1px solid var(--border); }
+    .user-info-bar .uname { font-size:.8rem; font-weight:700; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .user-info-bar .urole { font-size:.72rem; color:var(--muted); margin-bottom:7px; }
+    .btn-logout { display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:7px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:.78rem; cursor:pointer; transition:all .15s; width:100%; }
+    .btn-logout:hover { background:rgba(255,107,107,.18); border-color:#ff6b6b; color:#ff6b6b; }
+    .nav-admin-only { display:none; }
   </style>
 </head>
 <body>
@@ -284,6 +290,22 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
     C&#226;meras
   </div>
+  <div class="sidebar-section nav-admin-only">Sistema</div>
+  <div class="nav-item nav-admin-only" onclick="switchTab('usuarios',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Usu&#225;rios
+  </div>
+  <div style="flex:1"></div>
+  <div class="nav-item" onclick="switchTab('config',this)" title="Configura\u00e7\u00f5es">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Configura&#231;&#245;es
+  </div>
+  <div style="flex:1"></div>
+  <div class="user-info-bar">
+    <div class="uname" id="sb-username"></div>
+    <div class="urole" id="sb-role"></div>
+    <button class="btn-logout" onclick="doLogout()">&#128274; Sair do sistema</button>
+  </div>
   <div class="sidebar-footer" id="sb-clock"></div>
 </nav>
 
@@ -296,6 +318,7 @@
     </div>
     <div class="top-right">
       <div class="badge-live"><span class="dot"></span> Ao vivo</div>
+      <span id="topbar-user" style="font-size:.78rem;color:var(--muted);padding:0 4px"></span>
       <button id="btn-alerts" class="btn btn-outline btn-sm" onclick="openAlertsPanel()" title="Hist&#243;rico de alertas">
         &#128276;<span id="alerts-badge" class="notif-badge" style="display:none">0</span>
       </button>
@@ -525,8 +548,8 @@
           <input type="datetime-local" id="bat-ts-to">
         </div>
         <div class="table-wrap">
-          <table><thead><tr><th>Placa</th><th>Listas</th><th>Score</th><th>Passes</th><th>Cameras</th><th>Primeiro visto</th><th>Ultimo visto</th><th>Acoes</th></tr></thead>
-          <tbody id="batedor-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
+          <table><thead><tr><th>Placa</th><th>Listas</th><th>Score</th><th>Passes</th><th>Cameras</th><th>Dire&#231;&#227;o</th><th>Primeiro visto</th><th>Ultimo visto</th><th>Acoes</th></tr></thead>
+          <tbody id="batedor-tbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -580,10 +603,10 @@
         <div class="table-wrap">
           <table><thead><tr>
             <th>Placa</th><th>Score</th><th>Transicoes</th>
-            <th>Delta-t medio</th><th>YOLO multi-veic</th><th>Tipo dominante</th>
+            <th>Delta-t medio</th><th>Dire&#231;&#227;o</th><th>YOLO multi-veic</th><th>Tipo dominante</th>
             <th>Primeiro visto</th><th>Ultimo visto</th><th>Acoes</th>
           </tr></thead>
-          <tbody id="comboio-tbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
+          <tbody id="comboio-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
           </table>
         </div>
       </div><!-- /bat-sub-comboio -->
@@ -627,10 +650,10 @@
         <div class="table-wrap">
           <table><thead><tr>
             <th>Placa A</th><th>Placa B</th><th>Score</th>
-            <th>C&acirc;meras juntas</th><th>YOLO Multi-Veic</th><th>Tipo Dominante</th><th>Delta medio (s)</th>
+            <th>C&acirc;meras juntas</th><th>Dire&#231;&#227;o</th><th>YOLO Multi-Veic</th><th>Tipo Dominante</th><th>Delta medio (s)</th>
             <th>Primeiro visto</th><th>Ultimo visto</th><th>Evidencias</th>
           </tr></thead>
-          <tbody id="grupos-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
+          <tbody id="grupos-tbody"><tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
           </table>
         </div>
       </div><!-- /bat-sub-grupos -->
@@ -745,9 +768,179 @@
           </tbody>
         </table>
       </div>
+    </div><!-- /tab-cameras -->
+
+    <!-- ===== ABA USUÁRIOS ===== -->
+    <div id="tab-usuarios" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128100; Gerenciamento de Usu&#225;rios</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Gerencie os usu&#225;rios com acesso ao sistema. Somente administradores.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="loadUsers()" title="Atualizar">&#8635; Atualizar</button>
+          <button class="btn btn-primary btn-sm" onclick="openUserModal(null)">+ Novo Usu&#225;rio</button>
+        </div>
+      </div>
+
+      <!-- Cards resumo -->
+      <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap" id="users-cards">
+        <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total</div>
+          <div id="uc-total" style="font-size:1.6rem;font-weight:800;color:var(--text)">—</div>
+        </div>
+        <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Admins</div>
+          <div id="uc-admins" style="font-size:1.6rem;font-weight:800;color:#f87171">—</div>
+        </div>
+        <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Operadores</div>
+          <div id="uc-operators" style="font-size:1.6rem;font-weight:800;color:#4ade80">—</div>
+        </div>
+        <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+          <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Inativos</div>
+          <div id="uc-inactive" style="font-size:1.6rem;font-weight:800;color:var(--muted)">—</div>
+        </div>
+      </div>
+
+      <!-- Busca -->
+      <div style="margin-bottom:12px">
+        <input id="users-search" type="text" placeholder="&#128269; Buscar por usu&#225;rio ou nome..." oninput="_filterUsersTable()" style="max-width:320px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
+      </div>
+
+      <div class="form-error" id="users-error" style="margin-bottom:12px"></div>
+      <div class="table-wrap">
+        <table id="users-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Usu&#225;rio</th>
+              <th>Nome Completo</th>
+              <th>Perfil</th>
+              <th>Status</th>
+              <th>Criado em</th>
+              <th style="text-align:center">A&#231;&#245;es</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
-  </div><!-- /content -->
+    <!-- ===== ABA CONFIGURA\u00c7\u00d5ES ===== -->
+    <div id="tab-config" class="tab-pane">
+      <div style="font-weight:700;font-size:.97rem;margin-bottom:20px">&#9881;&#65039; Configura&#231;&#245;es</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px">
+
+        <!-- MINHA CONTA -->
+        <div class="card" style="padding:20px">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128100; Minha Conta</div>
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Usu&#225;rio: <strong id="cfg-me-username" style="color:var(--accent)"></strong></div>
+          <div class="form-group">
+            <label>Senha Atual</label>
+            <input type="password" id="cfg-pw-current" placeholder="Digite sua senha atual" style="background:rgba(0,0,0,.3)">
+          </div>
+          <div class="form-group">
+            <label>Nova Senha</label>
+            <input type="password" id="cfg-pw-new" placeholder="M&#237;nimo 6 caracteres" style="background:rgba(0,0,0,.3)">
+          </div>
+          <div class="form-group">
+            <label>Confirmar Nova Senha</label>
+            <input type="password" id="cfg-pw-new2" placeholder="Repita a nova senha" style="background:rgba(0,0,0,.3)">
+          </div>
+          <div class="form-error" id="cfg-pw-error"></div>
+          <div id="cfg-pw-ok" style="color:var(--success);font-size:.8rem;min-height:18px;margin-bottom:8px"></div>
+          <button class="btn btn-primary btn-sm" id="cfg-pw-btn" onclick="changeMyPassword()">&#128274; Alterar Senha</button>
+        </div>
+
+        <!-- APAR\u00caNCIA -->
+        <div class="card" style="padding:20px">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#127912; Apar&#234;ncia</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Tema do sistema</div>
+          <div style="display:flex;flex-direction:column;gap:8px" id="cfg-theme-list">
+            <div data-theme="verde" onclick="applyTheme('verde')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+              <span style="width:13px;height:13px;border-radius:50%;background:#4ade80;flex-shrink:0"></span>
+              <span style="font-size:.85rem">Verde Escuro <span style="color:var(--muted);font-size:.72rem">(padr&#227;o)</span></span>
+            </div>
+            <div data-theme="azul" onclick="applyTheme('azul')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+              <span style="width:13px;height:13px;border-radius:50%;background:#60a5fa;flex-shrink:0"></span>
+              <span style="font-size:.85rem">Azul Noite</span>
+            </div>
+            <div data-theme="cinza" onclick="applyTheme('cinza')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+              <span style="width:13px;height:13px;border-radius:50%;background:#6b7280;flex-shrink:0"></span>
+              <span style="font-size:.85rem">Cinza T&#225;tico</span>
+            </div>
+            <div data-theme="claro" onclick="applyTheme('claro')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+              <span style="width:13px;height:13px;border-radius:50%;background:#ffffff;border:1px solid #ccc;flex-shrink:0"></span>
+              <span style="font-size:.85rem">Claro &#9728;&#65039;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATUALIZA\u00c7\u00c3O -->
+        <div class="card" style="padding:20px">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128260; Atualiza&#231;&#227;o Autom&#225;tica</div>
+          <div class="form-group">
+            <label>Intervalo de auto-refresh (aba Eventos)</label>
+            <select id="cfg-refresh" onchange="saveRefreshSetting()">
+              <option value="10000">10 segundos</option>
+              <option value="15000">15 segundos (padr&#227;o)</option>
+              <option value="30000">30 segundos</option>
+              <option value="60000">60 segundos</option>
+              <option value="0">Desativado</option>
+            </select>
+          </div>
+          <div style="font-size:.74rem;color:var(--muted)">Define o intervalo de busca autom&#225;tica de novos eventos.</div>
+        </div>
+
+        <!-- ALERTAS -->
+        <div class="card" style="padding:20px">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128276; Alertas &amp; Sons</div>
+          <div class="form-group">
+            <label>Som de alarme de placa monitorada</label>
+            <select id="cfg-alarm-sound" onchange="saveCfgAlarmSound()">
+              <option value="beep">Beep simples</option>
+              <option value="siren">Sirene</option>
+              <option value="alert">Alerta</option>
+              <option value="none">Sem som</option>
+            </select>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="testCfgAlarmSound()">&#9654; Testar som</button>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:10px">Som disparado quando uma placa monitorada &#233; detectada.</div>
+        </div>
+
+        <!-- SISTEMA (admin) -->
+        <div class="card" id="cfg-sistema" style="padding:20px;display:none;grid-column:1/-1">
+          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">
+            &#128295; Sistema
+            <span style="font-size:.68rem;color:#f87171;background:rgba(248,113,113,.15);padding:1px 7px;border-radius:4px;margin-left:6px">Admin</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+            <div>
+              <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">Vers&#227;o</div>
+              <div style="font-weight:700;color:var(--accent)">BPFRON v1.0</div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">Banco de dados</div>
+              <div style="font-weight:700;color:var(--success)">&#9679; PostgreSQL ativo</div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">Usu&#225;rio autenticado</div>
+              <div id="cfg-sys-user" style="font-weight:700"></div>
+            </div>
+            <div>
+              <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">Sess&#227;o</div>
+              <div style="font-size:.8rem;color:var(--muted)">Expira 8h ap&#243;s o login</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    </div><!-- /content -->
 </div><!-- /main -->
 
 <!-- OVERLAY DE ALARME -->
@@ -937,6 +1130,52 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('camera-modal')">Cancelar</button>
       <button class="btn btn-primary btn-sm" onclick="saveCamera()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: USUARIO -->
+<div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeModal('user-modal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 id="user-modal-title">Novo Usu&#225;rio</h2>
+      <button class="modal-close" onclick="closeModal('user-modal')">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+      <div class="form-group" style="grid-column:1/3">
+        <label>Nome Completo</label>
+        <input type="text" id="um-fullname" placeholder="Ex: Jo&#227;o da Silva" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>Usu&#225;rio (login) *</label>
+        <input type="text" id="um-username" placeholder="Ex: joao.silva" maxlength="40" autocomplete="off" style="text-transform:lowercase">
+      </div>
+      <div class="form-group">
+        <label>Perfil</label>
+        <select id="um-role">
+          <option value="operator">&#128100; Operador</option>
+          <option value="admin">&#128081; Administrador</option>
+          <option value="viewer">&#128065;&#65039; Visualizador</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="um-pw-label">Senha *</label>
+        <input type="password" id="um-password" placeholder="Senha" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Confirmar Senha</label>
+        <input type="password" id="um-password2" placeholder="Repita a senha" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+        <input type="checkbox" id="um-ativa" checked style="width:auto"> Usu&#225;rio ativo
+      </label>
+    </div>
+    <div class="form-error" id="user-form-error"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('user-modal')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="um-save-btn" onclick="saveUser()">&#128190; Salvar</button>
     </div>
   </div>
 </div>
@@ -1401,7 +1640,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras' };
+var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 
 function switchTab(name, el) {
@@ -1422,6 +1661,8 @@ function switchTab(name, el) {
   }
   if (name === 'veiculos') { loadLists(); loadListsIntoSelects(); }
   if (name === 'cameras')  loadCameras();
+  if (name === 'usuarios') loadUsers();
+  if (name === 'config')   initConfigTab();
 }
 
 function switchBatTab(name, el) {
@@ -1461,7 +1702,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal'].forEach(closeModal);
   }
 });
 
@@ -1593,9 +1834,9 @@ function renderEvents(items, newIds) {
     if (cam.length > 28) cam = cam.substring(0,28) + '...';
     var dir = ev.direcao;
     var dirCell = dir === 'CRESCENTE'
-      ? '<span style="color:#4ade80;font-size:.72rem;font-weight:700">&#8593; CRESCENTE</span>'
+      ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>'
       : dir === 'DECRESCENTE'
-        ? '<span style="color:#f87171;font-size:.72rem;font-weight:700">&#8595; DECRESCENTE</span>'
+        ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
         : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
     return '<tr class="' + (isNew ? 'row-new' : '') + '">'
       + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
@@ -1795,7 +2036,7 @@ async function loadComboio() {
     w = '2h';
   }
   document.getElementById('comboio-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   try {
     var url = '/api/batedor/convoys?window=' + w + '&min_transitions=' + mtr + '&dt_min=' + dtmi + '&dt_max=' + dtma + '&type=' + tp + '&limit=50';
     if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
@@ -1814,7 +2055,7 @@ async function loadComboio() {
     // tabela
     var tb = document.getElementById('comboio-tbody');
     if (!items.length) {
-      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhum comboio detectado.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Nenhum comboio detectado.</td></tr>';
     } else {
       tb.innerHTML = items.map(function(s) {
         var evidences = (s.evidence||[]);
@@ -1835,6 +2076,7 @@ async function loadComboio() {
           + '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>'
           + '<td>' + (s.valid_transitions||0) + '</td>'
           + '<td>' + (s.avg_delta_t_sec ? s.avg_delta_t_sec + 's' : '-') + '</td>'
+          + '<td style="white-space:nowrap">' + _dirCell(s.dominant_direcao||null) + '</td>'
           + '<td>' + yoloMulti + '</td>'
           + '<td>' + tipo + '</td>'
           + '<td style="font-size:.78rem">' + fmtTs(s.first_seen) + '</td>'
@@ -1846,7 +2088,7 @@ async function loadComboio() {
     document.getElementById('comboio-status').textContent = items.length + ' comboio(s)';
   } catch(e) {
     document.getElementById('comboio-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
+    document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
   }
 }
 
@@ -1889,7 +2131,7 @@ async function loadGrupos() {
     w = '2h';
   }
   document.getElementById('grupos-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   try {
     var url = '/api/batedor/groups?window=' + w + '&min_shared=' + ms + '&co_window=' + cw + '&limit=50';
     if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
@@ -1910,7 +2152,7 @@ async function loadGrupos() {
     var _abordagemFired = {};
     var tb = document.getElementById('grupos-tbody');
     if (!items.length) {
-      tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Nenhum grupo detectado na janela selecionada.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">Nenhum grupo detectado na janela selecionada.</td></tr>';
     } else {
       tb.innerHTML = items.map(function(s, idx) {
         var evidences = s.evidence || [];
@@ -1938,6 +2180,7 @@ async function loadGrupos() {
           + '<td><span class="plate-tag ' + pbHl + '">' + (s.plate_b||'-') + '</span>' + abordarBadgeB + (listBadgesHtml(s.plate_b) ? ' ' + listBadgesHtml(s.plate_b) : '') + '</td>'
           + '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>'
           + '<td style="font-weight:700;color:var(--accent2)">' + (s.cameras_together||0) + ' c&acirc;m.</td>'
+          + '<td style="white-space:nowrap">' + _dirCell(s.dominant_direcao||null) + '</td>'
           + '<td style="text-align:center">' + (s.yolo_multi_count > 0 ? '<span class="badge badge-red">&#128663; ' + s.yolo_multi_count + '</span>' : '<span style="color:var(--muted)">-</span>') + '</td>'
           + '<td style="text-align:center">' + (s.dominant_type ? '<span class="badge badge-yellow">' + s.dominant_type + '</span>' : '-') + '</td>'
           + '<td>' + (s.avg_co_delta_sec != null ? s.avg_co_delta_sec + 's' : '-') + '</td>'
@@ -1950,7 +2193,7 @@ async function loadGrupos() {
     document.getElementById('grupos-status').textContent = items.length + ' grupo(s)';
   } catch(e) {
     document.getElementById('grupos-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
+    document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
   }
 }
 
@@ -2043,7 +2286,7 @@ async function loadBatedor() {
     wm = '180'; // valor ignorado quando ts_from/ts_to sao enviados
   }
   document.getElementById('batedor-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   try {
     var url = '/api/batedor/suspects?window_minutes=' + wm + '&min_passes=' + mp + '&min_cameras=' + mc + '&limit=50';
     if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
@@ -2056,24 +2299,50 @@ async function loadBatedor() {
     document.getElementById('batedor-status').textContent = items.length + ' suspeito(s)';
   } catch(e) {
     document.getElementById('batedor-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
   }
+}
+
+// Helpers de direção
+function _dirCell(dir) {
+  if (dir === 'CRESCENTE')   return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>';
+  if (dir === 'DECRESCENTE') return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>';
+  return '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+}
+function _domDir(cameraList) {
+  // Tenta derivar direção dominante cruzando a lista de câmeras com o cache de câmeras
+  if (!cameraList || !window._camsData) return null;
+  var names = (cameraList + '').split(',').map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean);
+  var nC = 0, nD = 0;
+  (window._camsData || []).forEach(function(c) {
+    var n = (c.nome || '').toLowerCase();
+    var ip = (c.ip || '').toLowerCase();
+    if (names.indexOf(n) >= 0 || names.indexOf(ip) >= 0 || names.indexOf((c.camera_id||'').toLowerCase()) >= 0) {
+      if (c.direcao === 'CRESCENTE')   nC++;
+      if (c.direcao === 'DECRESCENTE') nD++;
+    }
+  });
+  if (nC > 0 && nC >= nD) return 'CRESCENTE';
+  if (nD > 0 && nD > nC)   return 'DECRESCENTE';
+  return null;
 }
 
 function renderBatedor(items) {
   var tb = document.getElementById('batedor-tbody');
   if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Nenhum suspeito encontrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhum suspeito encontrado.</td></tr>';
     return;
   }
   tb.innerHTML = items.map(function(s) {
     var badges = listBadgesHtml(s.plate) || '<span style="color:var(--muted)">-</span>';
+    var dir = _domDir(s.camera_list);
     return '<tr>' +
       '<td>' + plateHtml(s.plate) + '</td>' +
       '<td style="font-size:.77rem">' + badges + '</td>' +
       '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>' +
       '<td>' + s.passes + '</td>' +
       '<td>' + s.cameras + '</td>' +
+      '<td style="white-space:nowrap">' + _dirCell(dir) + '</td>' +
       '<td style="font-size:.78rem">' + fmtTs(s.first_seen) + '</td>' +
       '<td style="font-size:.78rem">' + fmtTs(s.last_seen) + '</td>' +
       '<td><button class="btn btn-outline btn-xs" onclick="openDetail(\'' + (s.plate||'').replace(/'/g,"\\'") + '\')">&#128269; Detalhes</button></td>' +
@@ -2152,9 +2421,9 @@ async function openDetail(plate) {
       var camIp   = ev.camera_ip ? '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">' + ev.camera_ip + '</div>' : '';
       var dir = ev.direcao;
       var dirCell = dir === 'CRESCENTE'
-        ? '<span style="color:#4ade80;font-weight:700">&#8593; CRESCENTE</span>'
+        ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>'
         : dir === 'DECRESCENTE'
-          ? '<span style="color:#f87171;font-weight:700">&#8595; DECRESCENTE</span>'
+          ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
           : '<span style="color:var(--muted)">&#8212;</span>';
       return '<tr>' +
         '<td>' + thumb + '</td>' +
@@ -2378,10 +2647,18 @@ setInterval(function() {
   });
 }, 1000);
 
-// ===== AUTO-REFRESH (15s) =====
-setInterval(function() {
-  if (currentTab === 'eventos') loadEvents(evOffset);
-}, 15000);
+// ===== AUTO-REFRESH (configurável) =====
+var _refreshIntervalId = null;
+function _startAutoRefresh() {
+  if (_refreshIntervalId) clearInterval(_refreshIntervalId);
+  var ms = parseInt(localStorage.getItem('bpfron_refresh_interval') || '15000');
+  if (ms > 0) {
+    _refreshIntervalId = setInterval(function() {
+      if (currentTab === 'eventos') loadEvents(evOffset);
+    }, ms);
+  }
+}
+_startAutoRefresh();
 
 // ===== ALVOS RASTREADOS =====
 async function loadAlvos() {
@@ -2892,7 +3169,7 @@ function _renderCameras() {
       + '<td style="font-size:.8rem;white-space:nowrap">' + lastSeenFmt + '</td>'
       + '<td style="text-align:center">' + todayBadge + '</td>'
       + '<td style="text-align:center;font-size:.82rem">' + totalFmt + '</td>'
-      + '<td style="text-align:center;font-size:.82rem;color:' + (c.direcao ? 'var(--accent)' : 'var(--muted)') + '">' + _camEsc(c.direcao || '—') + '</td>'
+      + '<td style="text-align:center;font-size:.82rem">' + (c.direcao === 'CRESCENTE' ? '<span style="color:var(--accent);font-weight:700">&#8593; CRESCENTE</span>' : c.direcao === 'DECRESCENTE' ? '<span style="color:var(--accent);font-weight:700">&#8595; DECRESCENTE</span>' : '<span style="color:var(--muted)">&#8212;</span>') + '</td>'
       + '<td style="white-space:nowrap">'
       +   '<button class="btn btn-outline btn-xs" onclick="editCamera(decodeURIComponent(\'' + encoded + '\'))">Editar</button> '
       +   '<button class="btn btn-danger btn-xs" onclick="deleteCamera(' + c.id + ',\'' + _camEsc(c.nome).replace(/'/g,'\x27') + '\')">Excluir</button>'
@@ -2917,6 +3194,7 @@ async function loadCameras() {
     }
     var d = await r.json();
     _cameraRows      = d.items || [];
+    window._camsData = _cameraRows;
     _cameraStatusMap = {};
     _cameraRows.forEach(function(c){ if (c.last_seen) _cameraStatusMap[c.camera_id] = c.last_seen; });
     _renderCameras();
@@ -3022,11 +3300,287 @@ async function deleteCamera(id, nome) {
   }
 }
 
+// ===== AUTH =====
+(function(){
+  var token = localStorage.getItem('bpfron_token');
+  if (!token) { window.location.replace('/login'); return; }
+  // Expor token globalmente
+  window._authToken = token;
+  window._authRole  = localStorage.getItem('bpfron_role') || '';
+  window._authUser  = localStorage.getItem('bpfron_user') || '';
+  window._authName  = localStorage.getItem('bpfron_fullname') || '';
+  // Mostrar info do usuário
+  var sbUser = document.getElementById('sb-username');
+  var sbRole = document.getElementById('sb-role');
+  var tbUser = document.getElementById('topbar-user');
+  if (sbUser) sbUser.textContent = window._authName || window._authUser;
+  if (sbRole) sbRole.textContent = window._authRole === 'admin' ? '&#128081; Administrador' : window._authRole === 'operator' ? '&#128100; Operador' : '&#128065; Visualizador';
+  if (tbUser) tbUser.textContent = window._authUser;
+  // Mostrar itens de admin
+  if (window._authRole === 'admin') {
+    document.querySelectorAll('.nav-admin-only').forEach(function(el){
+      el.style.display = el.classList.contains('nav-item') ? 'flex' : 'block';
+    });
+  }
+})();
+
+// Interceptar fetch para adicionar Authorization
+(function(){
+  var origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    var token = window._authToken;
+    if (token && typeof url === 'string' && url.startsWith('/api/')) {
+      opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+    }
+    return origFetch.call(this, url, opts).then(function(resp) {
+      if (resp.status === 401) {
+        localStorage.removeItem('bpfron_token');
+        window.location.replace('/login');
+      }
+      return resp;
+    });
+  };
+})();
+
+function doLogout() {
+  if (!confirm('Deseja sair do sistema?')) return;
+  localStorage.removeItem('bpfron_token');
+  localStorage.removeItem('bpfron_role');
+  localStorage.removeItem('bpfron_user');
+  localStorage.removeItem('bpfron_fullname');
+  window.location.replace('/login');
+}
+
+// ===== CONFIGURA\u00c7\u00d5ES =====
+var _THEMES = {
+  verde: { '--bg':'#052e16','--sidebar':'#064e24','--card':'#0a5c2a','--card2':'#086325','--border':'#1a9448','--accent':'#facc15','--accent2':'#fbbf24','--text':'#ffffff','--muted':'#d4f5df','--success':'#6ee7a0','--danger':'#ff6b6b' },
+  azul:  { '--bg':'#060f2a','--sidebar':'#0a1540','--card':'#0e1e52','--card2':'#122464','--border':'#2a4fcc','--accent':'#60a5fa','--accent2':'#93c5fd','--text':'#ffffff','--muted':'#bfdbfe','--success':'#34d399','--danger':'#f87171' },
+  cinza: { '--bg':'#0b0b0b','--sidebar':'#161616','--card':'#202020','--card2':'#272727','--border':'#3a3a3a','--accent':'#facc15','--accent2':'#fbbf24','--text':'#ffffff','--muted':'#9ca3af','--success':'#6ee7a0','--danger':'#ff6b6b' },
+  claro: { '--bg':'#f1f5f2','--sidebar':'#3d7a52','--card':'#ffffff','--card2':'#f7faf7','--border':'#b8d4bc','--accent':'#facc15','--accent2':'#fbbf24','--text':'#111827','--muted':'#4b5563','--success':'#16a34a','--danger':'#dc2626' }
+};
+function applyTheme(name) {
+  var t = _THEMES[name] || _THEMES['verde'];
+  Object.keys(t).forEach(function(k){ document.documentElement.style.setProperty(k, t[k]); });
+  localStorage.setItem('bpfron_theme', name);
+  document.querySelectorAll('#cfg-theme-list [data-theme]').forEach(function(el){
+    var active = el.getAttribute('data-theme') === name;
+    el.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    el.style.background  = active ? 'rgba(255,255,255,.07)' : '';
+  });
+}
+(function(){
+  var saved = localStorage.getItem('bpfron_theme');
+  if (saved && _THEMES[saved]) applyTheme(saved);
+})();
+
+function saveRefreshSetting() {
+  var ms = parseInt(document.getElementById('cfg-refresh').value || '15000');
+  localStorage.setItem('bpfron_refresh_interval', ms);
+  _startAutoRefresh();
+}
+function saveCfgAlarmSound() {
+  localStorage.setItem('bpfron_alarm_sound', document.getElementById('cfg-alarm-sound').value);
+}
+function testCfgAlarmSound() {
+  var s = document.getElementById('cfg-alarm-sound').value;
+  if (s !== 'none') playAlarmSound(s);
+}
+function initConfigTab() {
+  var meEl = document.getElementById('cfg-me-username');
+  if (meEl) meEl.textContent = window._authUser || '';
+  var sysCard = document.getElementById('cfg-sistema');
+  if (sysCard) sysCard.style.display = (window._authRole === 'admin') ? 'block' : 'none';
+  var sysUser = document.getElementById('cfg-sys-user');
+  if (sysUser) sysUser.textContent = (window._authName || window._authUser) + ' (' + (window._authRole) + ')';
+  var curTheme = localStorage.getItem('bpfron_theme') || 'verde';
+  document.querySelectorAll('#cfg-theme-list [data-theme]').forEach(function(el){
+    var active = el.getAttribute('data-theme') === curTheme;
+    el.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    el.style.background  = active ? 'rgba(255,255,255,.07)' : '';
+  });
+  var cfgRef = document.getElementById('cfg-refresh');
+  if (cfgRef) cfgRef.value = localStorage.getItem('bpfron_refresh_interval') || '15000';
+  var cfgSound = document.getElementById('cfg-alarm-sound');
+  if (cfgSound) cfgSound.value = localStorage.getItem('bpfron_alarm_sound') || 'beep';
+  ['cfg-pw-current','cfg-pw-new','cfg-pw-new2'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var errEl = document.getElementById('cfg-pw-error'); if (errEl) errEl.textContent='';
+  var okEl  = document.getElementById('cfg-pw-ok');    if (okEl)  okEl.textContent='';
+}
+async function changeMyPassword() {
+  var errEl = document.getElementById('cfg-pw-error');
+  var okEl  = document.getElementById('cfg-pw-ok');
+  var btn   = document.getElementById('cfg-pw-btn');
+  errEl.textContent = ''; okEl.textContent = '';
+  var cur = document.getElementById('cfg-pw-current').value;
+  var nw  = document.getElementById('cfg-pw-new').value;
+  var nw2 = document.getElementById('cfg-pw-new2').value;
+  if (!cur) { errEl.textContent = 'Informe a senha atual.'; return; }
+  if (!nw)  { errEl.textContent = 'Informe a nova senha.'; return; }
+  if (nw.length < 6) { errEl.textContent = 'Nova senha deve ter pelo menos 6 caracteres.'; return; }
+  if (nw !== nw2)    { errEl.textContent = 'As senhas n\u00e3o coincidem.'; return; }
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    var r = await fetch('/api/auth/password', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ current_password: cur, new_password: nw }) });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP '+r.status); }
+    okEl.textContent = '\u2713 Senha alterada com sucesso!';
+    ['cfg-pw-current','cfg-pw-new','cfg-pw-new2'].forEach(function(id){ document.getElementById(id).value=''; });
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '&#128274; Alterar Senha';
+  }
+}
+
+// ===== USUARIOS =====
+var _usersCache = [];
+
+async function loadUsers() {
+  var tbody = document.getElementById('users-tbody');
+  var err   = document.getElementById('users-error');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/users');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    _usersCache = d.items || [];
+    _renderUsersTable(_usersCache);
+    // Atualizar cards
+    document.getElementById('uc-total').textContent     = _usersCache.length;
+    document.getElementById('uc-admins').textContent    = _usersCache.filter(function(u){ return u.role==='admin'; }).length;
+    document.getElementById('uc-operators').textContent = _usersCache.filter(function(u){ return u.role==='operator'; }).length;
+    document.getElementById('uc-inactive').textContent  = _usersCache.filter(function(u){ return !u.ativa; }).length;
+  } catch(e) {
+    if (err) err.textContent = 'Erro ao carregar usu\u00e1rios: ' + e.message;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
+  }
+}
+
+function _filterUsersTable() {
+  var q = (document.getElementById('users-search').value || '').toLowerCase();
+  var filtered = q ? _usersCache.filter(function(u){
+    return (u.username||'').toLowerCase().includes(q) || (u.full_name||'').toLowerCase().includes(q);
+  }) : _usersCache;
+  _renderUsersTable(filtered);
+}
+
+function _renderUsersTable(items) {
+  var tbody = document.getElementById('users-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Nenhum usu\u00e1rio encontrado.</td></tr>';
+    return;
+  }
+  var roleInfo = {
+    admin:    { lbl:'Administrador', cls:'badge-red',   icon:'&#128081;' },
+    operator: { lbl:'Operador',      cls:'badge-green', icon:'&#128100;' },
+    viewer:   { lbl:'Visualizador',  cls:'',            icon:'&#128065;&#65039;' }
+  };
+  tbody.innerHTML = items.map(function(u){
+    var ri  = roleInfo[u.role] || { lbl: u.role, cls:'', icon:'' };
+    var dt  = u.created_at ? new Date(u.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '\u2014';
+    var isSelf = (u.username === window._authUser);
+    var isMainAdmin = (u.username === 'admin');
+    var enc = encodeURIComponent(JSON.stringify(u));
+    return '<tr>'
+      + '<td style="color:var(--muted);font-size:.8rem">' + u.id + '</td>'
+      + '<td><span style="font-weight:700;color:var(--accent)">' + u.username + '</span>'
+          + (isSelf ? ' <span style="font-size:.68rem;color:var(--muted);background:rgba(255,255,255,.12);padding:1px 6px;border-radius:4px">voc\u00ea</span>' : '') + '</td>'
+      + '<td>' + (u.full_name || '<span style="color:var(--muted)">\u2014</span>') + '</td>'
+      + '<td><span class="badge ' + ri.cls + '">' + ri.icon + ' ' + ri.lbl + '</span></td>'
+      + '<td>' + (u.ativa
+          ? '<span class="badge badge-green">&#9679; Ativo</span>'
+          : '<span class="badge badge-red">&#9679; Inativo</span>') + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + dt + '</td>'
+      + '<td style="text-align:center;white-space:nowrap">'
+      + (isMainAdmin
+          ? '<span style="color:var(--muted);font-size:.72rem">admin principal</span>'
+          : '<button class="btn btn-outline btn-xs" onclick="openUserModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">&#9998; Editar</button> '
+            + '<button class="btn btn-danger btn-xs" onclick="deleteUser(' + u.id + ',\'' + u.username + '\')" title="Excluir">&#128465; Excluir</button>')
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+var _userEditId = null;
+function openUserModal(encodedOrObj) {
+  var u = encodedOrObj ? (typeof encodedOrObj === 'string' ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj) : null;
+  _userEditId = u ? u.id : null;
+  document.getElementById('user-modal-title').textContent = u ? 'Editar Usu\u00e1rio' : 'Novo Usu\u00e1rio';
+  document.getElementById('um-username').value  = u ? (u.username||'') : '';
+  document.getElementById('um-fullname').value  = u ? (u.full_name||'') : '';
+  document.getElementById('um-role').value      = u ? (u.role||'operator') : 'operator';
+  document.getElementById('um-ativa').checked   = u ? !!u.ativa : true;
+  document.getElementById('um-password').value  = '';
+  document.getElementById('um-password2').value = '';
+  document.getElementById('um-username').readOnly = !!u;
+  document.getElementById('um-username').style.opacity = u ? '.6' : '1';
+  document.getElementById('um-pw-label').textContent = u ? 'Nova Senha (opcional)' : 'Senha *';
+  document.getElementById('um-password').placeholder  = u ? 'Deixe em branco para manter' : 'M\u00ednimo 6 caracteres';
+  document.getElementById('um-password2').placeholder = u ? 'Confirme se alterar' : 'Repita a senha';
+  document.getElementById('user-form-error').textContent = '';
+  openModal('user-modal');
+  setTimeout(function(){ document.getElementById(u ? 'um-fullname' : 'um-username').focus(); }, 80);
+}
+
+async function saveUser() {
+  var errEl  = document.getElementById('user-form-error');
+  var saveBtn = document.getElementById('um-save-btn');
+  errEl.textContent = '';
+  var username  = document.getElementById('um-username').value.trim().toLowerCase();
+  var full_name = document.getElementById('um-fullname').value.trim();
+  var role      = document.getElementById('um-role').value;
+  var ativa     = document.getElementById('um-ativa').checked;
+  var pw        = document.getElementById('um-password').value;
+  var pw2       = document.getElementById('um-password2').value;
+  // Valida\u00e7\u00f5es
+  if (!_userEditId && !username) { errEl.textContent = 'Usu\u00e1rio (login) \u00e9 obrigat\u00f3rio.'; return; }
+  if (!_userEditId && !pw)       { errEl.textContent = 'Senha \u00e9 obrigat\u00f3ria para novo usu\u00e1rio.'; return; }
+  if (pw && pw.length < 6)       { errEl.textContent = 'Senha deve ter pelo menos 6 caracteres.'; return; }
+  if (pw && pw !== pw2)          { errEl.textContent = 'As senhas n\u00e3o coincidem.'; return; }
+  var body = { username: username, full_name: full_name, role: role, ativa: ativa };
+  if (pw) body.password = pw;
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Salvando...';
+  try {
+    var url    = _userEditId ? '/api/users/' + _userEditId : '/api/users';
+    var method = _userEditId ? 'PUT' : 'POST';
+    var r = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    closeModal('user-modal');
+    await loadUsers();
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '&#128190; Salvar';
+  }
+}
+
+async function deleteUser(id, username) {
+  if (!confirm('Excluir o usu\u00e1rio "' + username + '"?\nEsta a\u00e7\u00e3o n\u00e3o pode ser desfeita.')) return;
+  var err = document.getElementById('users-error');
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/users/' + id, { method: 'DELETE' });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    await loadUsers();
+  } catch(e) {
+    if (err) err.textContent = 'Erro: ' + e.message;
+    else alert('Erro: ' + e.message);
+  }
+}
+
 // ===== INIT =====
 (async function() {
   await loadMonPlates();
   await loadEvents(0);
   await loadListsIntoSelects();
+  // Carrega câmeras em background para _camsData ficar disponível (direção)
+  loadCameras().catch(function(){});
   // Liga alarmes por padrão após a página estar pronta
   setTimeout(function() {
     try { toggleCameraAlarm(); } catch(e) {}
