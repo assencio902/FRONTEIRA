@@ -64,7 +64,7 @@
     restart: always
     volumes:
       - ./uploads:/app/uploads
-    # GPU — sintaxe compatível com Docker Desktop no Windows (WSL2 + NVIDIA)
+    # GPU — NVIDIA RTX 3050 6GB
     deploy:
       resources:
         reservations:
