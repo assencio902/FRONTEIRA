@@ -23,3 +23,6 @@ yolo-worker/__pycache__/
 *.bak
 web_ui/
 wsl_diagnostic.ps1
+
+check_*.js
+
