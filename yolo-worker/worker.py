@@ -133,26 +133,34 @@ def _analyze_plate_region(img_bgr, xyxy: list) -> dict:
     return {"blur_score": blur_score, "brightness": brightness, "qualidade": qualidade}
 
 
-# Tabela HSV → cor em português
+# Tabela HSV → cor em português (valores em escala OpenCV: H=0-179, S/V=0-255)
+# Formato: (nome, h_min, h_max, s_min, v_min)
 _COR_RANGES = [
-    ("Vermelho",  0,   10, 80, 60),
-    ("Laranja",  10,   25, 80, 60),
-    ("Amarelo",  25,   35, 80, 60),
-    ("Verde",    35,   85, 50, 40),
-    ("Azul",     85,  135, 50, 40),
-    ("Roxo",    135,  165, 50, 40),
-    ("Vermelho",165,  180, 80, 60),  # wraparound
+    ("Vermelho",  0,   10, 45, 30),
+    ("Laranja",  10,   25, 45, 35),
+    ("Amarelo",  25,   35, 45, 40),
+    ("Verde",    35,   85, 35, 30),
+    ("Azul",     85,  130, 35, 30),
+    ("Roxo",    130,  165, 35, 30),
+    ("Vermelho",165,  180, 45, 30),  # wraparound vermelho
 ]
 
 def _hsv_to_color_name(h: int, s: int, v: int) -> str:
-    if v < 40:
+    # Preto: somente quando há pouca luz e baixa saturação (carros coloridos escuros ficam fora)
+    if v < 45 and s < 80:
         return "Preto"
-    if s < 30:
-        return "Branco" if v > 200 else "Prata/Cinza"
+    # Branco: brilho alto com saturação bem baixa
+    if s < 45 and v > 185:
+        return "Branco"
+    # Prata / Cinza: saturação baixa em qualquer nível de brilho
+    if s < 70:
+        return "Prata/Cinza"
+    # Cores saturadas — busca na tabela de faixas
     for nome, h_min, h_max, s_min, v_min in _COR_RANGES:
         if h_min <= h <= h_max and s >= s_min and v >= v_min:
             return nome
-    return "Outro"
+    # Fallback: tons residuais tratados como cinza
+    return "Prata/Cinza"
 
 
 def _detect_vehicle_color(img_bgr, xyxy: list) -> str:

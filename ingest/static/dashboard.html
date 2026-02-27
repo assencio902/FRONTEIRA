@@ -503,14 +503,8 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)">
-          &#9888;&#65039; Suspeitos
-        </div>
-        <div class="sub-tab" data-bat="comboio" onclick="switchBatTab('comboio',this)">
-          &#128663; Comboio / Batedor
-        </div>
-        <div class="sub-tab" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
-          &#128663;&#128663; Grupos Juntos
+        <div class="sub-tab active" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
+          &#128663;&#128663; Comboio/Batedor
           <span id="bat-live-badge" class="bat-live-badge" style="display:none"><span class="dot"></span><span id="bat-live-count">0</span> AO VIVO</span>
         </div>
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
@@ -518,110 +512,12 @@
         </div>
       </div>
 
-      <!-- SUB: SUSPEITOS -->
-      <div id="bat-sub-suspeitos" class="sub-pane active">
-        <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:var(--warning)">
-          <strong>&#9888;&#65039; Suspeitos por frequencia</strong> &mdash; Qualquer placa vista muitas vezes em varias cameras na janela de tempo. Nao precisa estar na hotlist. Indica veiculo que circula muito pela area.
-        </div>
-        <div class="cards-row">
-          <div class="card"><div class="card-icon">&#128680;</div><div class="card-label">Suspeitos</div><div class="card-value" id="bat-total">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label">Maior score</div><div class="card-value" id="bat-top-score">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#127942;</div><div class="card-label">Placa top</div><div class="card-value" style="font-size:1.05rem" id="bat-top-plate">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128247;</div><div class="card-label">Cameras</div><div class="card-value" id="bat-cameras">&#8212;</div></div>
-        </div>
-        <div class="toolbar">
-          <label>Janela:
-            <select id="bat-window" onchange="batWindowChange()" style="margin-left:6px">
-              <option value="60">1 hora</option>
-              <option value="180" selected>3 horas</option>
-              <option value="360">6 horas</option>
-              <option value="720">12 horas</option>
-              <option value="1440">24 horas</option>
-              <option value="10080">7 dias</option>
-              <option value="43200">30 dias</option>
-              <option value="129600">90 dias</option>
-              <option value="custom">&#128197; Personalizado</option>
-            </select>
-          </label>
-          <label>Min. passes:<input type="number" id="bat-min-passes" value="6" min="1" max="999" style="width:64px;margin-left:6px"></label>
-          <label>Min. cameras:<input type="number" id="bat-min-cameras" value="2" min="1" max="99" style="width:64px;margin-left:6px"></label>
-          <button class="btn btn-primary btn-sm" onclick="loadBatedor()">Aplicar</button>
-          <span class="status-line" id="batedor-status"></span>
-        </div>
-        <div class="date-range-row" id="bat-date-row">
-          <span>De</span>
-          <input type="datetime-local" id="bat-ts-from">
-          <span>At&#233;</span>
-          <input type="datetime-local" id="bat-ts-to">
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Placa</th><th>Listas</th><th>Score</th><th>Passes</th><th>Cameras</th><th>Dire&#231;&#227;o</th><th>Primeiro visto</th><th>Ultimo visto</th><th>Acoes</th></tr></thead>
-          <tbody id="batedor-tbody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- SUB: COMBOIO -->
-      <div id="bat-sub-comboio" class="sub-pane">
-        <div style="background:rgba(168,85,247,.07);border:1px solid rgba(168,85,247,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#d8b4fe">
-          <strong>&#128663; Comboio / Batedor (Comportamental + YOLO)</strong> &mdash; Qualquer placa com deslocamento entre 2+ cameras dentro do tempo de transito esperado (40&#8211;180 s). Nao precisa estar na hotlist. Identifica veiculos fazendo reconhecimento ou escoltando.
-        </div>
-        <div class="cards-row">
-          <div class="card"><div class="card-icon">&#128663;</div><div class="card-label">Comboios</div><div class="card-value" id="conv-total">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label">Maior score</div><div class="card-value" id="conv-top-score">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#8987;</div><div class="card-label">Delta-t medio</div><div class="card-value" style="font-size:1.1rem" id="conv-avg-dt">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#127986;</div><div class="card-label">Com YOLO multi-veic</div><div class="card-value" id="conv-yolo-multi">&#8212;</div></div>
-        </div>
-        <div class="toolbar">
-          <label>Janela:
-            <select id="conv-window" onchange="convWindowChange()" style="margin-left:6px">
-              <option value="1h" selected>1 hora</option>
-              <option value="2h">2 horas</option>
-              <option value="6h">6 horas</option>
-              <option value="12h">12 horas</option>
-              <option value="24h">24 horas</option>
-              <option value="7d">7 dias</option>
-              <option value="30d">30 dias</option>
-              <option value="90d">90 dias</option>
-              <option value="custom">&#128197; Personalizado</option>
-            </select>
-          </label>
-          <label>Min. transicoes:<input type="number" id="conv-min-tr" value="2" min="1" max="99" style="width:56px;margin-left:6px"></label>
-          <label>Delta-t min (s):<input type="number" id="conv-dt-min" value="40" min="5" max="600" style="width:60px;margin-left:6px"></label>
-          <label>Delta-t max (s):<input type="number" id="conv-dt-max" value="180" min="10" max="3600" style="width:60px;margin-left:6px"></label>
-          <label>Tipo:
-            <select id="conv-type" style="margin-left:6px">
-              <option value="all">Todos</option>
-              <option value="car">&#128663; Carro</option>
-              <option value="motorcycle">&#128664; Moto</option>
-              <option value="truck">&#128666; Caminhao</option>
-              <option value="bus">&#128652; Onibus</option>
-            </select>
-          </label>
-          <button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="loadComboio()">Aplicar</button>
-          <span class="status-line" id="comboio-status"></span>
-        </div>
-        <div class="date-range-row" id="conv-date-row">
-          <span>De</span>
-          <input type="datetime-local" id="conv-ts-from">
-          <span>At&#233;</span>
-          <input type="datetime-local" id="conv-ts-to">
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>Placa</th><th>Score</th><th>Transicoes</th>
-            <th>Delta-t medio</th><th>Dire&#231;&#227;o</th><th>YOLO multi-veic</th><th>Tipo dominante</th>
-            <th>Primeiro visto</th><th>Ultimo visto</th><th>Acoes</th>
-          </tr></thead>
-          <tbody id="comboio-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
-          </table>
-        </div>
-      </div><!-- /bat-sub-comboio -->
+      <!-- SUB: GRUPOS JUNTOS (primeira aba ativa) -->
 
       <!-- SUB: GRUPOS JUNTOS -->
-      <div id="bat-sub-grupos" class="sub-pane">
+      <div id="bat-sub-grupos" class="sub-pane active">
         <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#86efac">
-          <strong>&#128663;&#128663; Grupos Juntos (Comboio Real)</strong> &mdash; Detecta <strong>2 ou mais placas DIFERENTES</strong> que foram vistas na <strong>mesma c&acirc;mera</strong> com menos de 30 minutos de diferenca entre si. A cada nova c&acirc;mera onde as duas placas aparecem juntas o score aumenta &mdash; quanto mais c&acirc;meras compartilhadas, maior a suspeita de comboio real.
+          <strong>&#128663;&#128663; Comboio/Batedor</strong> &mdash; Detecta <strong>2 ou mais placas DIFERENTES</strong> que foram vistas na <strong>mesma c&acirc;mera</strong> com menos de 30 minutos de diferenca entre si. A cada nova c&acirc;mera onde as duas placas aparecem juntas o score aumenta &mdash; quanto mais c&acirc;meras compartilhadas, maior a suspeita de comboio real.
         </div>
         <div class="cards-row">
           <div class="card"><div class="card-icon">&#128663;</div><div class="card-label">Grupos detectados</div><div class="card-value" id="grp-total">&#8212;</div></div>
@@ -2374,10 +2270,10 @@ function openGroupDetail(idx) {
   }
 
   var rows = evidences.map(function(ev, i) {
-    var delta = ev.co_delta_sec;
-    var badgeCls = delta <= 60 ? 'red' : delta <= 300 ? 'yellow' : 'green';
     var tsA = new Date(ev.ts_a);
     var tsB = new Date(ev.ts_b);
+    var delta = ev.co_delta_sec != null ? ev.co_delta_sec : Math.round(Math.abs(tsB - tsA) / 1000);
+    var badgeCls = delta <= 60 ? 'red' : delta <= 300 ? 'yellow' : 'green';
     var first, second, tsFirst, tsSecond;
     if (tsA <= tsB) {
       first = pa; second = pb; tsFirst = ev.ts_a; tsSecond = ev.ts_b;
@@ -2624,6 +2520,7 @@ function renderLists(lists) {
       : '<span style="font-size:.68rem;color:var(--muted)">Sem alarme</span>';
     return '<div class="list-card" onclick="goToCadastro(' + l.id + ')">' +
       '<div class="list-card-actions">' +
+        '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa">&#127919;</button>' +
         '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar">&#9998;</button>' +
         '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>' +
       '</div>' +
@@ -2635,6 +2532,22 @@ function renderLists(lists) {
       '</div>' +
       '</div>';
   }).join('');
+}
+
+async function importListToAlvos(listId, listName) {
+  if (!confirm('Enviar todas as placas da lista "' + listName + '" para Alvos Rastreados?\n\nAs placas já cadastradas terão a descrição atualizada.')) return;
+  try {
+    var resp = await fetch('/api/alvos/import-list/' + listId, { method: 'POST',
+      headers: { 'Content-Type': 'application/json' } });
+    var data = await resp.json();
+    if (!resp.ok) { alert('Erro: ' + (data.detail || resp.status)); return; }
+    alert('\u2705 ' + data.total + ' placa(s) da lista "' + data.list_name + '" enviadas para Alvos Rastreados!');
+    // Se estiver na aba batedor/alvos, recarrega
+    var alvoPane = document.getElementById('bat-sub-alvos');
+    if (alvoPane && alvoPane.classList.contains('active')) loadAlvos();
+  } catch(e) {
+    alert('Erro ao importar: ' + e);
+  }
 }
 
 function goToCadastro(listId) {
@@ -2847,6 +2760,7 @@ async function loadAlvos() {
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
         + '<td style="white-space:nowrap">'
           + '<button class="btn btn-primary btn-xs" onclick="openAlvoDetail(\'' + a.plate + '\',\'' + descEsc + '\')" style="margin-right:6px">&#128269; Ver Relat&oacute;rio</button>'
+          + '<button class="btn btn-outline btn-xs" onclick="editAlvo(' + a.id + ',\'' + a.plate + '\',\'' + descEsc + '\')" style="margin-right:6px">&#9998; Editar</button>'
           + '<button class="btn btn-outline btn-xs" onclick="removeAlvo(' + a.id + ',\'' + a.plate + '\')" style="color:var(--danger)">&#128465;</button>'
         + '</td>'
         + '</tr>';
@@ -2919,7 +2833,7 @@ async function openAlvoDetail(plate, descricao) {
         } else {
           first = c.companion; second = plate;    tsFirst = ev.ts_companion; tsSecond = ev.ts_target;
         }
-        var delta = ev.co_delta_sec;
+        var delta = ev.co_delta_sec != null ? ev.co_delta_sec : Math.round(Math.abs(new Date(ev.ts_companion) - new Date(ev.ts_target)) / 1000);
         var badgeCls = delta <= 60 ? 'red' : delta <= 300 ? 'yellow' : 'green';
         var isCompFirst = (first === c.companion);
         var yoloVcT = ev.yolo_vc_target;
@@ -2993,6 +2907,48 @@ async function openAlvoDetail(plate, descricao) {
   }
 }
 
+var _editAlvoId = null;
+
+function editAlvo(id, plate, descricao) {
+  _editAlvoId = id;
+  document.getElementById('alvo-plate-input').value = plate;
+  document.getElementById('alvo-desc-input').value  = descricao.replace(/&#39;/g, "'");
+  var btn = document.querySelector('[onclick="addAlvo()"]');
+  if (btn) {
+    btn.textContent = '&#9998; Salvar';
+    btn.innerHTML   = '&#9998; Salvar';
+    btn.setAttribute('onclick', 'saveEditAlvo()');
+    btn.style.background = 'var(--warning)';
+  }
+  document.getElementById('alvo-plate-input').focus();
+}
+
+function _resetAlvoForm() {
+  _editAlvoId = null;
+  document.getElementById('alvo-plate-input').value = '';
+  document.getElementById('alvo-desc-input').value  = '';
+  var btn = document.querySelector('[onclick="saveEditAlvo()"]');
+  if (btn) {
+    btn.innerHTML = '&#43; Adicionar';
+    btn.setAttribute('onclick', 'addAlvo()');
+    btn.style.background = '';
+  }
+}
+
+async function saveEditAlvo() {
+  var plate = (document.getElementById('alvo-plate-input').value || '').trim().toUpperCase();
+  var desc  = (document.getElementById('alvo-desc-input').value || '').trim();
+  if (!plate) { alert('Informe a placa.'); return; }
+  var resp = await fetch('/api/alvos/' + _editAlvoId, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({plate: plate, descricao: desc})
+  });
+  if (!resp.ok) { alert('Erro ao salvar: ' + await resp.text()); return; }
+  _resetAlvoForm();
+  loadAlvos();
+}
+
 async function addAlvo() {
   var plate = (document.getElementById('alvo-plate-input').value || '').trim().toUpperCase();
   var desc  = (document.getElementById('alvo-desc-input').value || '').trim();
@@ -3003,8 +2959,7 @@ async function addAlvo() {
     body: JSON.stringify({plate: plate, descricao: desc})
   });
   if (!resp.ok) { alert('Erro ao adicionar: ' + await resp.text()); return; }
-  document.getElementById('alvo-plate-input').value = '';
-  document.getElementById('alvo-desc-input').value  = '';
+  _resetAlvoForm();
   loadAlvos();
 }
 

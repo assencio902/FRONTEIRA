@@ -248,6 +248,16 @@ def _init_db():
                 );
             """)
 
+            # Alvos Rastreados
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alvos (
+                    id SERIAL PRIMARY KEY,
+                    plate TEXT NOT NULL UNIQUE,
+                    descricao TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+
 
 
 # ===========================
@@ -823,8 +833,11 @@ def list_events(
         vals.append(f"%{plate.strip()}%")
 
     if camera_id:
-        where.append("e.camera_id = %s")
-        vals.append(camera_id.strip())
+        # camera_id em lpr_events pode ser o IP ou o nome do canal dependendo da origem;
+        # camera_ip sempre contém o IP real — verificamos ambas as colunas para garantir o match
+        _cid = camera_id.strip()
+        where.append("(e.camera_id = %s OR e.camera_ip = %s OR e.camera_id IN (SELECT camera_id FROM cameras WHERE ip = %s))")
+        vals.extend([_cid, _cid, _cid])
 
     f = _parse_dt(dt_from)
     t = _parse_dt(dt_to)
@@ -861,7 +874,13 @@ def list_events(
     for r in rows:
         ts = r[7].isoformat() if r[7] else None
         img = r[6]
-        yolo = _json_lib.loads(r[8]) if r[8] else None
+        raw_yolo = r[8]
+        if raw_yolo is None:
+            yolo = None
+        elif isinstance(raw_yolo, dict):
+            yolo = raw_yolo
+        else:
+            yolo = _json_lib.loads(raw_yolo)
         items.append({
             "id": r[0],
             "plate": r[1],
@@ -1500,22 +1519,194 @@ def vehicles_delete(vid: int):
 
 @app.get("/api/alvos")
 def alvos_list():
-    return {"items": []}
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, plate, descricao, created_at
+                FROM alvos
+                ORDER BY created_at DESC
+            """)
+            rows = cur.fetchall()
+    alvos = [
+        {"id": r[0], "plate": r[1], "descricao": r[2],
+         "created_at": r[3].isoformat() if r[3] else None}
+        for r in rows
+    ]
+    return {"alvos": alvos, "total": len(alvos)}
+
+
+# ---------------------------------------------------------------------------
+# Helper: sincroniza alvo com a lista de monitoramento (alarme ativo)
+# ---------------------------------------------------------------------------
+ALVOS_LIST_NAME = "Alvos Rastreados"
+
+def _get_or_create_alvos_list_id(cur) -> int:
+    """Retorna o id da lista 'Alvos Rastreados', criando-a com alarme ativo se não existir."""
+    cur.execute("SELECT id FROM vehicle_lists WHERE name = %s", (ALVOS_LIST_NAME,))
+    row = cur.fetchone()
+    if row:
+        cur.execute("UPDATE vehicle_lists SET alarm_enabled = TRUE WHERE id = %s", (row[0],))
+        return row[0]
+    cur.execute(
+        """
+        INSERT INTO vehicle_lists (name, description, color, alarm_enabled)
+        VALUES (%s, %s, %s, TRUE)
+        RETURNING id
+        """,
+        (ALVOS_LIST_NAME, "Gerada automaticamente pelo módulo Batedor/Alvos Rastreados", "#dc2626")
+    )
+    return cur.fetchone()[0]
+
+
+def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
+    """Adiciona ou atualiza a placa na lista de monitoramento 'Alvos Rastreados'."""
+    list_id = _get_or_create_alvos_list_id(cur)
+    notes = descricao or "Alvo rastreado"
+    if old_plate and old_plate != plate:
+        cur.execute(
+            "DELETE FROM vehicle_list_items WHERE list_id = %s AND plate = %s",
+            (list_id, old_plate)
+        )
+    cur.execute(
+        """
+        INSERT INTO vehicle_list_items (list_id, plate, notes)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (list_id, plate) DO UPDATE SET notes = EXCLUDED.notes
+        """,
+        (list_id, plate, notes)
+    )
+
+
+def _remove_alvo_from_lista(cur, plate: str):
+    """Remove a placa da lista de monitoramento 'Alvos Rastreados'."""
+    cur.execute("SELECT id FROM vehicle_lists WHERE name = %s", (ALVOS_LIST_NAME,))
+    row = cur.fetchone()
+    if row:
+        cur.execute(
+            "DELETE FROM vehicle_list_items WHERE list_id = %s AND plate = %s",
+            (row[0], plate)
+        )
 
 
 @app.post("/api/alvos")
-async def alvos_create():
-    return {"ok": True}
+async def alvos_create(request: Request):
+    data = await request.json()
+    plate = (data.get("plate") or "").strip().upper()
+    descricao = (data.get("descricao") or "").strip()
+    if not plate:
+        raise HTTPException(status_code=400, detail="Placa obrigatória")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO alvos (plate, descricao)
+                VALUES (%s, %s)
+                ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
+                RETURNING id, plate, descricao, created_at
+                """,
+                (plate, descricao),
+            )
+            r = cur.fetchone()
+            _sync_alvo_to_lista(cur, plate, descricao)
+    return {"ok": True, "alvo": {"id": r[0], "plate": r[1], "descricao": r[2],
+                                  "created_at": r[3].isoformat() if r[3] else None}}
 
 
 @app.delete("/api/alvos/{aid}")
-def alvos_delete(aid: str):
+def alvos_delete(aid: int):
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT plate FROM alvos WHERE id = %s", (aid,))
+            row = cur.fetchone()
+            if row:
+                _remove_alvo_from_lista(cur, row[0])
+            cur.execute("DELETE FROM alvos WHERE id = %s", (aid,))
     return {"ok": True}
 
 
+@app.put("/api/alvos/{aid}")
+async def alvos_update(aid: int, request: Request):
+    body = await request.json()
+    plate    = (body.get("plate") or "").strip().upper()
+    descricao = (body.get("descricao") or "").strip()
+    if not plate:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "Placa obrigatoria"})
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT plate FROM alvos WHERE id = %s", (aid,))
+            row = cur.fetchone()
+            if not row:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(status_code=404, content={"error": "Alvo nao encontrado"})
+            old_plate = row[0]
+            cur.execute(
+                "UPDATE alvos SET plate = %s, descricao = %s WHERE id = %s RETURNING id, plate, descricao",
+                (plate, descricao, aid)
+            )
+            r = cur.fetchone()
+            _sync_alvo_to_lista(cur, plate, descricao, old_plate=old_plate)
+    return {"ok": True, "alvo": {"id": r[0], "plate": r[1], "descricao": r[2]}}
+
+
+@app.post("/api/alvos/import-list/{list_id}")
+def alvos_import_list(list_id: int):
+    """Importa todas as placas de uma lista de monitoramento como Alvos Rastreados."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # Verifica se a lista existe
+            cur.execute("SELECT name FROM vehicle_lists WHERE id = %s", (list_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Lista não encontrada")
+            list_name = row[0]
+            # Busca todas as placas da lista
+            cur.execute(
+                "SELECT plate, notes FROM vehicle_list_items WHERE list_id = %s",
+                (list_id,),
+            )
+            items = cur.fetchall()
+            if not items:
+                raise HTTPException(status_code=400, detail="Lista não tem veículos cadastrados")
+            inserted = 0
+            updated = 0
+            for plate, notes in items:
+                desc = f"Importado da lista: {list_name}" + (f" — {notes}" if notes else "")
+                cur.execute(
+                    """
+                    INSERT INTO alvos (plate, descricao)
+                    VALUES (%s, %s)
+                    ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
+                    """,
+                    (plate.upper(), desc),
+                )
+                if cur.rowcount:
+                    inserted += 1
+                else:
+                    updated += 1
+    return {"ok": True, "list_name": list_name, "total": len(items), "inserted": inserted}
+
+
 @app.get("/api/alvos/recentes")
-def alvos_recent():
-    return {"items": []}
+def alvos_recent(window: str = "30m"):
+    wm = _parse_window_to_minutes(window)
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT a.id, a.plate, a.descricao, MAX(COALESCE(e.occurred_at, e.ts)) AS ultimo
+                FROM alvos a
+                LEFT JOIN lpr_events e ON e.plate = a.plate
+                  AND COALESCE(e.occurred_at, e.ts) >= NOW() - (%s * INTERVAL '1 minute')
+                GROUP BY a.id, a.plate, a.descricao
+                HAVING MAX(COALESCE(e.occurred_at, e.ts)) IS NOT NULL
+                ORDER BY ultimo DESC
+            """, (wm,))
+            rows = cur.fetchall()
+    return {"items": [
+        {"id": r[0], "plate": r[1], "descricao": r[2],
+         "ultimo": r[3].isoformat() if r[3] else None}
+        for r in rows
+    ]}
 
 
 @app.get("/api/batedor/plate/{plate}")

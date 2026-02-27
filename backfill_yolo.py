@@ -1,9 +1,13 @@
 """
 backfill_yolo.py
-Enfileira no Redis/RQ todos os lpr_events sem yolo_result que tenham image_path.
-Roda fora do container: usa as mesmas variáveis de ambiente do docker-compose.
+Enfileira no Redis/RQ lpr_events para re-análise pelo yolo-worker.
+
+Modos:
+  python backfill_yolo.py          -> apenas eventos sem yolo_result
+  python backfill_yolo.py --force  -> TODOS os eventos (reprocessa cores erradas)
 """
 import os
+import sys
 import psycopg2
 import redis as _redis
 from rq import Queue
@@ -18,18 +22,30 @@ IMAGES_DIR        = os.getenv("IMAGES_DIR",        "/app/uploads")
 BATCH             = 500   # quantos jobs enfileirar por vez
 
 def main():
+    force = "--force" in sys.argv
+
     conn = psycopg2.connect(
         host=POSTGRES_HOST, port=POSTGRES_PORT,
         dbname=POSTGRES_DB, user=POSTGRES_USER, password=POSTGRES_PASSWORD,
     )
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT COUNT(*) FROM lpr_events
-        WHERE yolo_result IS NULL AND image_path IS NOT NULL AND image_path <> ''
-    """)
+    if force:
+        cur.execute("""
+            SELECT COUNT(*) FROM lpr_events
+            WHERE image_path IS NOT NULL AND image_path <> ''
+        """)
+        modo = "TODOS os eventos (--force)"
+    else:
+        cur.execute("""
+            SELECT COUNT(*) FROM lpr_events
+            WHERE yolo_result IS NULL AND image_path IS NOT NULL AND image_path <> ''
+        """)
+        modo = "eventos sem yolo_result"
+
     total = cur.fetchone()[0]
-    print(f"[BACKFILL] Total de eventos sem yolo_result: {total}")
+    print(f"[BACKFILL] Modo: {modo}")
+    print(f"[BACKFILL] Total a processar: {total}")
 
     if total == 0:
         print("[BACKFILL] Nada a fazer.")
@@ -39,11 +55,18 @@ def main():
     rq_conn = _redis.from_url(REDIS_URL)
     queue   = Queue("yolo", connection=rq_conn)
 
-    cur.execute("""
-        SELECT id, image_path FROM lpr_events
-        WHERE yolo_result IS NULL AND image_path IS NOT NULL AND image_path <> ''
-        ORDER BY id ASC
-    """)
+    if force:
+        cur.execute("""
+            SELECT id, image_path FROM lpr_events
+            WHERE image_path IS NOT NULL AND image_path <> ''
+            ORDER BY id ASC
+        """)
+    else:
+        cur.execute("""
+            SELECT id, image_path FROM lpr_events
+            WHERE yolo_result IS NULL AND image_path IS NOT NULL AND image_path <> ''
+            ORDER BY id ASC
+        """)
 
     enqueued = 0
     batch = cur.fetchmany(BATCH)
