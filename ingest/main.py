@@ -1820,15 +1820,18 @@ def batedor_companions(
             cur.execute("""
                 SELECT
                     b.plate                                              AS companion,
-                    a.camera_id                                          AS camera,
+                    COALESCE(c.nome, a.camera_id)                        AS camera_name,
                     COALESCE(a.occurred_at, a.ts)                        AS ts_target,
                     COALESCE(b.occurred_at, b.ts)                        AS ts_companion,
                     ABS(EXTRACT(EPOCH FROM (
                         COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
                     )))::int                                              AS co_delta_sec,
                     COALESCE((a.yolo_result->>'vehicle_count')::int, -1) AS yolo_vc_target,
-                    COALESCE((b.yolo_result->>'vehicle_count')::int, -1) AS yolo_vc_companion
+                    COALESCE((b.yolo_result->>'vehicle_count')::int, -1) AS yolo_vc_companion,
+                    COALESCE(NULLIF(a.direcao,''), c.direcao)            AS direcao,
+                    a.camera_id                                          AS camera_id
                 FROM lpr_events a
+                LEFT JOIN cameras c ON c.camera_id = a.camera_id
                 JOIN lpr_events b
                     ON  a.camera_id = b.camera_id
                     AND a.id       != b.id
@@ -1856,9 +1859,9 @@ def batedor_companions(
     })
 
     for row in rows:
-        companion, camera, ts_target, ts_companion, co_delta_sec, yolo_vc_t, yolo_vc_c = row
+        companion, camera_name, ts_target, ts_companion, co_delta_sec, yolo_vc_t, yolo_vc_c, direcao, camera_id = row
         cd               = comp_data[companion]
-        cd["cameras"].add(camera)
+        cd["cameras"].add(camera_id)
         cd["co_deltas"].append(int(co_delta_sec))
         ts_t_iso = ts_target.isoformat()    if ts_target    else None
         ts_c_iso = ts_companion.isoformat() if ts_companion  else None
@@ -1872,7 +1875,9 @@ def batedor_companions(
         if int(yolo_vc_t) > 1 or int(yolo_vc_c) > 1:
             cd["yolo_multi_events"] += 1
         cd["evidence"].append({
-            "camera":            camera,
+            "camera":            camera_name,
+            "camera_id":         camera_id,
+            "direcao":           direcao or None,
             "ts_target":         ts_t_iso,
             "ts_companion":      ts_c_iso,
             "co_delta_sec":      int(co_delta_sec),
