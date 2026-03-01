@@ -72,6 +72,7 @@
     .btn-primary { background:var(--accent); color:#fff; }
     .btn-success { background:var(--success); color:#fff; }
     .btn-danger  { background:var(--danger); color:#fff; }
+    .btn-warning { background:#d97706; color:#fff; }
     .btn-outline { background:transparent; border:1px solid #4ade80; color:#ffffff; }
     .btn-outline:hover { color:#facc15; border-color:#facc15; background:rgba(250,204,21,.08); }
     .btn-sm { padding:4px 10px; font-size:.77rem; border-radius:6px; }
@@ -236,15 +237,20 @@
       display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
     #alerts-panel-head h2 { font-size:.95rem; font-weight:700; }
     #alerts-panel-body { flex:1; overflow-y:auto; }
-    .alert-item { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start; }
-    .alert-item.unseen { background:rgba(109,40,217,.09); border-left:3px solid #7c3aed; }
+    .alert-item { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start; border-left:3px solid transparent; }
+    .alert-item.unseen { border-left-width:3px; }
     .alert-item-icon { font-size:1.15rem; flex-shrink:0; margin-top:1px; }
     .alert-item-plate { font-weight:800; font-size:.93rem; letter-spacing:.06em; }
     .alert-item-detail { font-size:.78rem; color:var(--muted); margin-top:3px; line-height:1.45; }
     .alert-item-ts { font-size:.7rem; color:var(--muted); white-space:nowrap; flex-shrink:0; }
     .alert-item.clickable { cursor:pointer; }
-    .alert-item.clickable:hover { background:rgba(109,40,217,.16); }
+    .alert-item.clickable:hover { filter:brightness(1.08); }
     .alert-item-link { font-size:.68rem; color:#a78bfa; margin-top:4px; }
+    /* relatório de alerta de câmera */
+    .alert-report { background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.22); border-radius:8px; padding:10px 13px; margin-top:6px; font-size:.78rem; line-height:1.7; }
+    .alert-report-plate { font-size:1.05rem; font-weight:900; letter-spacing:.08em; color:#f87171; margin-bottom:4px; }
+    .alert-report-row { display:flex; gap:6px; align-items:baseline; color:var(--muted); }
+    .alert-report-row strong { color:var(--text); }
     .date-range-row { display:none; flex-wrap:wrap; align-items:center; gap:6px;
       padding:6px 0; font-size:.8rem; color:var(--muted); }
     .date-range-row.visible { display:flex; }
@@ -355,6 +361,10 @@
       <button id="btn-camera-alarm-toggle" class="btn btn-outline btn-sm" onclick="toggleCameraAlarm()"
         title="Ativar/desativar alarme de c&#226;mera das listas de monitoramento">
         &#128247; Alarme C&#226;m. <span id="camera-alarm-label">OFF</span>
+      </button>
+      <button id="btn-mute-alarm" class="btn btn-outline btn-sm" onclick="toggleMuteAlarm()"
+        title="Silenciar/ativar som das notifica&#231;&#245;es">
+        &#128276; Som: <span id="mute-alarm-label">ON</span>
       </button>
       <button id="btn-monitor-toggle" class="btn btn-outline btn-sm" onclick="toggleRealtime()"
         title="Ativar/desativar monitoramento autom&#225;tico de batedor em tempo real">
@@ -985,7 +995,7 @@
 <div id="alerts-panel-overlay" onclick="closeAlertsPanel()"></div>
 <div id="alerts-panel">
   <div id="alerts-panel-head">
-    <h2>&#128276; Alertas</h2>
+    <h2>&#128276; Alertas &nbsp;<span id="alerts-panel-count" style="font-size:.78rem;font-weight:400;color:var(--muted)"></span></h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button class="btn btn-outline btn-xs" onclick="clearAlerts()" title="Limpar todos">&#128465; Limpar</button>
       <button class="btn btn-outline btn-xs" onclick="closeAlertsPanel()">&#10005;</button>
@@ -1049,8 +1059,20 @@
       <input type="text" id="list-desc" placeholder="Opcional" maxlength="200">
     </div>
     <div class="form-group">
-      <label>Cor de identificacao</label>
-      <input type="color" id="list-color" value="#ef4444" style="width:60px">
+      <label>Prioridade / Cor de alerta</label>
+      <input type="hidden" id="list-color" value="#ef4444">
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button type="button" id="list-color-btn-yellow"
+          onclick="selectListColor('#eab308')"
+          style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid #eab308;background:#eab30820;color:#eab308;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s">
+          &#9888; Atenção
+        </button>
+        <button type="button" id="list-color-btn-red"
+          onclick="selectListColor('#ef4444')"
+          style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid #ef4444;background:#ef444440;color:#ef4444;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s">
+          &#128680; Urgente
+        </button>
+      </div>
     </div>
     <div class="form-group" style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px 14px;margin-top:4px">
       <label style="color:var(--text);font-size:.83rem;font-weight:600;margin-bottom:8px;display:block">&#128680; Alarme</label>
@@ -1213,6 +1235,23 @@
 <script>
 // ===== ALARME — WEB AUDIO API =====
 var _audioCtx = null;
+var _alarmSoundMuted = false;
+
+function toggleMuteAlarm() {
+  _alarmSoundMuted = !_alarmSoundMuted;
+  var btn   = document.getElementById('btn-mute-alarm');
+  var label = document.getElementById('mute-alarm-label');
+  if (_alarmSoundMuted) {
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-warning');
+    label.textContent = 'MUDO';
+    btn.title = 'Som silenciado — clique para reativar';
+  } else {
+    btn.classList.remove('btn-warning'); btn.classList.add('btn-outline');
+    label.textContent = 'ON';
+    btn.title = 'Silenciar/ativar som das notificações';
+  }
+}
+
 function _getAudioCtx() {
   if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return _audioCtx;
@@ -1230,6 +1269,7 @@ function _playTone(freq, duration, startTime, ctx, type) {
 }
 
 function playAlarmSound(sound) {
+  if (_alarmSoundMuted) return;  // silenciado — pula o som, mantém flash/toast
   try {
     var ctx = _getAudioCtx();
     var t = ctx.currentTime;
@@ -1279,20 +1319,23 @@ function toggleCameraAlarm() {
   if (_cameraAlarmEnabled) {
     btn.classList.remove('btn-outline'); btn.classList.add('btn-danger');
     label.innerHTML = 'ATIVO <span class="dot" style="display:inline-block;margin-left:4px"></span>';
+    _startBgAlarm();   // inicia poller background
   } else {
     btn.classList.remove('btn-danger'); btn.classList.add('btn-outline');
     label.textContent = 'OFF';
+    _stopBgAlarm();    // para poller background
   }
 }
 
-var _alertsList    = [];  // {type, icon, plate, detail, ts, seen}
+var _alertsList    = [];  // {type, icon, plate, detail, ts, tsISO, seen, data}
 var _alertsUnseen  = 0;
 
-function addAlert(type, icon, plate, detail, routeInfo) {
+function addAlert(type, icon, plate, detail, routeInfo, extraData) {
   var now = new Date();
   var ts  = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  _alertsList.unshift({type:type, icon:icon, plate:plate, detail:detail, ts:ts, seen:false, route: routeInfo||null});
-  if (_alertsList.length > 200) _alertsList.pop(); // limite
+  var tsISO = now.toISOString();
+  _alertsList.unshift({type:type, icon:icon, plate:plate, detail:detail, ts:ts, tsISO:tsISO, seen:false, route: routeInfo||null, data: extraData||null});
+  if (_alertsList.length > 200) _alertsList.pop();
   _alertsUnseen++;
   var badge = document.getElementById('alerts-badge');
   if (badge) { badge.textContent = _alertsUnseen > 99 ? '99+' : _alertsUnseen; badge.style.display = ''; }
@@ -1306,14 +1349,53 @@ function _renderAlertsList() {
     return;
   }
   body.innerHTML = _alertsList.map(function(a, i) {
-    var plateColor = a.type === 'avistado' ? '#c4b5fd' : a.type === 'abordagem' ? '#fbbf24' : '#f87171';
-    var clickCls  = a.route ? ' clickable' : '';
-    var clickAttr = a.route ? ' onclick="_alertClick(' + i + ')"' : '';
-    return '<div class="alert-item' + (a.seen ? '' : ' unseen') + clickCls + '"' + clickAttr + '>'
+    // Cor base: usa a cor da lista (câmera) ou cor fixa por tipo
+    var accentColor;
+    if (a.type === 'camera' && a.data && a.data.lists && a.data.lists[0] && a.data.lists[0].color) {
+      accentColor = a.data.lists[0].color;
+    } else if (a.type === 'avistado') {
+      accentColor = '#c4b5fd';
+    } else if (a.type === 'abordagem') {
+      accentColor = '#fbbf24';
+    } else {
+      accentColor = '#f87171';
+    }
+
+    var clickCls   = a.route ? ' clickable' : '';
+    var clickAttr  = a.route ? ' onclick="_alertClick(' + i + ')"' : '';
+    // Estilo inline: borda lateral + fundo tint baseados na cor da lista
+    var itemStyle  = a.seen
+      ? 'border-left:3px solid ' + accentColor + '44'
+      : 'border-left:3px solid ' + accentColor + ';background:' + accentColor + '18';
+
+    // Relatório detalhado para alertas de câmera
+    var reportHtml = '';
+    if (a.type === 'camera' && a.data) {
+      var d = a.data;
+      var dtFmt = a.tsISO
+        ? new Date(a.tsISO).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})
+        : a.ts;
+      var listTags = (d.lists || []).map(function(l) {
+        return '<span style="background:' + l.color + '33;color:' + l.color + ';border:1px solid ' + l.color + '44;border-radius:99px;padding:1px 8px;font-weight:700;font-size:.72rem;margin-right:3px">' + (l.list_name || l.name) + '</span>';
+      }).join('');
+      reportHtml =
+        '<div class="alert-report" style="background:' + accentColor + '12;border-color:' + accentColor + '44">' +
+          '<div class="alert-report-plate" style="color:' + accentColor + '">&#9888; ' + a.plate + '</div>' +
+          '<div class="alert-report-row"><span>&#128197; Data/Hora:</span><strong>' + dtFmt + '</strong></div>' +
+          (d.camera ? '<div class="alert-report-row"><span>&#128247; C\u00e2mera:</span><strong>' + d.camera + '</strong></div>' : '') +
+          (listTags ? '<div class="alert-report-row" style="flex-wrap:wrap;gap:3px"><span>&#128203; Listas:</span>' + listTags + '</div>' : '') +
+          (d.sound ? '<div class="alert-report-row"><span>&#128266; Som:</span><strong>' + d.sound + '</strong></div>' : '') +
+          (d.direcao ? '<div class="alert-report-row"><span>&#8597; Dire\u00e7\u00e3o:</span><strong style="color:var(--accent)">' + (d.direcao === 'CRESCENTE' ? '&#8593; CRESCENTE' : '&#8595; DECRESCENTE') + '</strong></div>' : '') +
+          (a.seen ? '' : '<div style="font-size:.68rem;color:' + accentColor + ';margin-top:4px">&#9679; N\u00e3o visualizado</div>') +
+        '</div>';
+    }
+
+    return '<div class="alert-item' + (a.seen ? '' : ' unseen') + clickCls + '" style="' + itemStyle + '"' + clickAttr + '>'
       + '<div class="alert-item-icon">' + a.icon + '</div>'
       + '<div style="flex:1;min-width:0">'
-        + '<div class="alert-item-plate" style="color:' + plateColor + '">' + a.plate + '</div>'
+        + '<div class="alert-item-plate" style="color:' + accentColor + '">' + a.plate + '</div>'
         + '<div class="alert-item-detail">' + a.detail + '</div>'
+        + reportHtml
         + (a.route ? '<div class="alert-item-link">\uD83D\uDD0D Ver relat\u00f3rio</div>' : '')
       + '</div>'
       + '<div class="alert-item-ts">' + a.ts + '</div>'
@@ -1336,6 +1418,9 @@ function openAlertsPanel() {
   _alertsUnseen = 0;
   var badge = document.getElementById('alerts-badge');
   if (badge) badge.style.display = 'none';
+  // atualiza contador no cabeçalho
+  var cnt = document.getElementById('alerts-panel-count');
+  if (cnt) cnt.textContent = _alertsList.length ? '(' + _alertsList.length + ' registro' + (_alertsList.length > 1 ? 's' : '') + ')' : '';
   _renderAlertsList();
   document.getElementById('alerts-panel').classList.add('open');
   document.getElementById('alerts-panel-overlay').style.display = 'block';
@@ -1427,13 +1512,17 @@ function triggerComboio(batedor, alvo, escolta, cameras, avgDelta) {
   }
 }
 
-function triggerAlvoAvistado(plate, camera, descricao) {
+function triggerAlvoAvistado(plate, camera, descricao, direcao) {
   _toastPlates['avistado'] = plate;
-  addAlert('avistado', '&#127919;', plate, 'C&acirc;mera: <strong>' + camera + '</strong>' + (descricao ? ' &mdash; ' + descricao : ''), {type:'avistado', plate:plate});
+  var dirTxt = direcao === 'CRESCENTE' ? ' \u00b7 \u2191 CRESCENTE' : direcao === 'DECRESCENTE' ? ' \u00b7 \u2193 DECRESCENTE' : '';
+  addAlert('avistado', '&#127919;', plate,
+    'C&acirc;mera: <strong>' + camera + '</strong>' + (descricao ? ' &mdash; ' + descricao : '') + dirTxt,
+    {type:'avistado', plate:plate});
   var toast = document.getElementById('alvo-avistado-toast');
   document.getElementById('alvo-avistado-plate').textContent = plate;
   document.getElementById('alvo-avistado-desc').innerHTML =
     'Detectado na c&acirc;mera <strong>' + camera + '</strong>'
+    + (direcao ? ' &nbsp;<span style="color:var(--accent);font-weight:700">' + (direcao === 'CRESCENTE' ? '&#8593;' : '&#8595;') + ' ' + direcao + '</span>' : '')
     + (descricao ? '<br><span style="opacity:.85">' + descricao + '</span>' : '');
   if (_batNotifEnabled) {
     toast.style.display = 'block';
@@ -1492,13 +1581,25 @@ function triggerAbordagem(follower, leader, cameras, avgDelta) {
     }
   } catch(e) {}
 }
-function triggerAlarm(plate, lists) {
+function triggerAlarm(plate, lists, direcao) {
   var alarmLists = lists.filter(function(l){ return l.alarm_enabled; });
   if (!alarmLists.length) return;
   var listNames = alarmLists.map(function(l){ return l.list_name || l.name || '?'; }).join(', ');
-  addAlert('camera', '&#128247;', plate, 'Lista(s): <strong>' + listNames + '</strong>');
-  // Som — usa o som da primeira lista com alarme ativo
-  playAlarmSound(alarmLists[0].alarm_sound || 'beep');
+  var soundName = alarmLists[0].alarm_sound || 'beep';
+  var dirTxt = direcao === 'CRESCENTE' ? ' \u00b7 \u2191 CRESCENTE' : direcao === 'DECRESCENTE' ? ' \u00b7 \u2193 DECRESCENTE' : '';
+
+  // Sempre salva no histórico (mesmo mudo)
+  addAlert('camera', '&#128247;', plate,
+    'Lista(s): <strong>' + listNames + '</strong>' + dirTxt,
+    null,
+    { lists: alarmLists, camera: null, sound: soundName, direcao: direcao || null }
+  );
+
+  // Se mudo: apenas histórico — sem som, sem flash, sem toast
+  if (_alarmSoundMuted) return;
+
+  // Som
+  playAlarmSound(soundName);
   // Flash na tela
   var ov = document.getElementById('alarm-overlay');
   ov.style.display = 'block';
@@ -1508,7 +1609,9 @@ function triggerAlarm(plate, lists) {
   document.getElementById('alarm-toast-plate').textContent = plate;
   document.getElementById('alarm-toast-lists').innerHTML = alarmLists.map(function(l){
     return '<span style="background:' + l.color + '44;color:' + l.color + ';border-radius:99px;padding:1px 8px;margin-right:4px;font-weight:600">' + l.list_name + '</span>';
-  }).join('');
+  }).join('')
+    + (direcao ? ' <span style="color:var(--accent);font-weight:700;font-size:.82rem">'
+        + (direcao === 'CRESCENTE' ? '&#8593;' : '&#8595;') + ' ' + direcao + '</span>' : '');
   toast.style.display = 'block';
   if (_alarmToastTimer) clearTimeout(_alarmToastTimer);
   _alarmToastTimer = setTimeout(function(){ toast.style.display = 'none'; }, 7000);
@@ -2437,7 +2540,9 @@ async function openBatedorReport(plate, _fromHistory) {
       + '</div>'
       + '<div style="font-size:.77rem;color:var(--muted)">'
       + (d.summary ? d.summary.total_passes + ' passagens \u00b7 ' + d.summary.cameras_count + ' c\u00e2meras \u00b7 ' + d.summary.partners_count + ' parceiros'
-          + (d.summary.avg_confidence > 0 ? ' \u00b7 conf. m\u00e9d. ' + Math.round(d.summary.avg_confidence * 100) + '%' : '') : '')
+          + (d.summary.avg_confidence > 0 ? ' \u00b7 conf. m\u00e9d. ' + Math.round(d.summary.avg_confidence * 100) + '%' : '')
+          + (d.summary.dom_direction === 'CRESCENTE'   ? ' \u00b7 <span style="color:var(--accent);font-weight:700">\u2191 CRESCENTE</span>'   : '')
+          + (d.summary.dom_direction === 'DECRESCENTE' ? ' \u00b7 <span style="color:var(--accent);font-weight:700">\u2193 DECRESCENTE</span>' : '') : '')
       + '</div></div>'
       + (d.is_alvo
         ? '<div style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.45);border-radius:10px;padding:12px 18px;min-width:160px">'
@@ -2561,7 +2666,7 @@ function _reportGoBack() {
 async function _submitDecision(plate, score, level, decision) {
   var note = '';
   if (decision === 'confirmado') {
-    var r = prompt('Observa\u00e7\u00e3o opcional:', '');
+    var r = prompt('Observação (será usada como descrição do alvo rastreado):', '');
     if (r === null) return;
     note = r;
   }
@@ -2575,8 +2680,34 @@ async function _submitDecision(plate, score, level, decision) {
       var err = await resp.json().catch(function(){ return { detail: 'Erro ' + resp.status }; });
       alert('Erro: ' + (err.detail || resp.status)); return;
     }
+
+    // ── Quando confirmado: adicionar automaticamente aos Alvos Rastreados ──
+    if (decision === 'confirmado') {
+      var descAlvo = note || ('Confirmado via Central de Ameaças — Score ' + score + ' (' + level + ')');
+      var alvResp = await fetch('/api/alvos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plate: plate, descricao: descAlvo })
+      });
+      if (alvResp.ok) {
+        _flashMsg('🎯 ' + plate + ' salvo nos Alvos Rastreados!', '#22c55e');
+        // atualiza cache se a aba estiver aberta
+        if (typeof loadAlvos === 'function') loadAlvos();
+      } else {
+        _flashMsg('⚠ Não foi possível salvar nos Alvos Rastreados.', '#d97706');
+      }
+    }
+
     openBatedorReport(plate, true);
-  } catch(e) { alert('Erro ao registrar decis\u00e3o: ' + e.message); }
+  } catch(e) { alert('Erro ao registrar decisão: ' + e.message); }
+}
+
+function _flashMsg(msg, bg) {
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;bottom:28px;right:28px;z-index:9999;background:' + (bg||'#6d28d9') + ';color:#fff;padding:11px 20px;border-radius:10px;font-weight:700;font-size:.88rem;box-shadow:0 4px 24px rgba(0,0,0,.45);transition:opacity .4s';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(function(){ el.style.opacity='0'; setTimeout(function(){ el.remove(); }, 500); }, 3000);
 }
 
 function _toggleScoreBreakdown() {
@@ -2687,6 +2818,22 @@ function goToCadastro(listId) {
   });
 }
 
+function selectListColor(color) {
+  document.getElementById('list-color').value = color;
+  var btnY = document.getElementById('list-color-btn-yellow');
+  var btnR = document.getElementById('list-color-btn-red');
+  if (!btnY || !btnR) return;
+  // reset ambos
+  btnY.style.background = '#eab30820'; btnY.style.borderWidth = '2px'; btnY.style.transform = '';
+  btnR.style.background = '#ef444420'; btnR.style.borderWidth = '2px'; btnR.style.transform = '';
+  // destaca o selecionado
+  if (color === '#eab308') {
+    btnY.style.background = '#eab30840'; btnY.style.borderWidth = '3px'; btnY.style.transform = 'scale(1.04)';
+  } else {
+    btnR.style.background = '#ef444440'; btnR.style.borderWidth = '3px'; btnR.style.transform = 'scale(1.04)';
+  }
+}
+
 function openListModal(id) {
   editListId = id || null;
   document.getElementById('list-modal-title').textContent = id ? 'Editar Lista' : 'Nova Lista';
@@ -2696,18 +2843,20 @@ function openListModal(id) {
     if (l) {
       document.getElementById('list-name').value = l.name;
       document.getElementById('list-desc').value = l.description || '';
-      document.getElementById('list-color').value = l.color || '#ef4444';
       document.getElementById('list-alarm-enabled').checked = !!l.alarm_enabled;
       document.getElementById('list-alarm-sound').value = l.alarm_sound || 'beep';
       document.getElementById('alarm-sound-group').style.display = l.alarm_enabled ? 'block' : 'none';
+      // usa a cor salva; se não for amarelo, assume vermelho
+      var savedColor = (l.color === '#eab308') ? '#eab308' : '#ef4444';
+      selectListColor(savedColor);
     }
   } else {
     document.getElementById('list-name').value = '';
     document.getElementById('list-desc').value = '';
-    document.getElementById('list-color').value = '#ef4444';
     document.getElementById('list-alarm-enabled').checked = false;
     document.getElementById('list-alarm-sound').value = 'beep';
     document.getElementById('alarm-sound-group').style.display = 'none';
+    selectListColor('#ef4444');
   }
   openModal('list-modal');
   setTimeout(function(){ document.getElementById('list-name').focus(); }, 80);
@@ -2851,6 +3000,57 @@ function _startAutoRefresh() {
   }
 }
 _startAutoRefresh();
+
+// ===== ALARME BACKGROUND (independente de aba) =====
+// Roda a cada 15s sempre que o alarme estiver ATIVO.
+// Busca apenas os últimos 30 eventos, compara com monPlates,
+// e dispara triggerAlarm sem tocar na UI da aba Eventos.
+var _bgAlarmIntervalId = null;
+var _bgAlarmMaxId      = 0;   // maior ID já visto pelo poller
+
+async function _bgAlarmTick() {
+  if (!_cameraAlarmEnabled) return;
+  try {
+    var r = await fetch('/api/events?limit=30&offset=0');
+    if (!r.ok) return;
+    var data = await r.json();
+    var items = data.items || [];
+    if (!items.length) return;
+
+    // Na primeira execução inicializa o cursor com o maior ID atual
+    // para não disparar alarme para eventos antigos
+    if (_bgAlarmMaxId === 0) {
+      _bgAlarmMaxId = Math.max.apply(null, items.map(function(e){ return e.id; }));
+      return;
+    }
+
+    var alarmed = new Set();
+    items.forEach(function(ev) {
+      if (ev.id <= _bgAlarmMaxId) return;           // já visto
+      var pm = ev.plate && monPlates[ev.plate.toUpperCase()];
+      if (pm && !alarmed.has(ev.plate)) {
+        alarmed.add(ev.plate);
+        triggerAlarm(ev.plate, pm, ev.direcao || null);
+      }
+    });
+
+    // Avança o cursor
+    var maxNow = Math.max.apply(null, items.map(function(e){ return e.id; }));
+    if (maxNow > _bgAlarmMaxId) _bgAlarmMaxId = maxNow;
+
+  } catch(e) { /* silencioso — não interrompe o loop */ }
+}
+
+function _startBgAlarm() {
+  _stopBgAlarm();
+  _bgAlarmMaxId = 0;   // força re-inicialização do cursor na próxima tick
+  _bgAlarmTick();      // primeira execução imediata (só inicializa cursor)
+  _bgAlarmIntervalId = setInterval(_bgAlarmTick, 15000);
+}
+
+function _stopBgAlarm() {
+  if (_bgAlarmIntervalId) { clearInterval(_bgAlarmIntervalId); _bgAlarmIntervalId = null; }
+}
 
 // ===== ALVOS RASTREADOS =====
 async function loadAlvos() {
