@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -526,63 +526,114 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab active" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
-          &#128663;&#128663; Comboio/Batedor
-          <span id="bat-live-badge" class="bat-live-badge" style="display:none"><span class="dot"></span><span id="bat-live-count">0</span> AO VIVO</span>
+        <div class="sub-tab active" data-bat="central" onclick="switchBatTab('central',this)" id="bat-subtab-central">
+          &#9889; Central de Amea&ccedil;as
         </div>
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
           &#127919; Alvos Rastreados
         </div>
+        <button id="btn-bat-notif" class="btn btn-outline btn-sm" onclick="toggleBatNotif()"
+          style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;white-space:nowrap">
+          &#128276; <span id="bat-notif-label">Notif. OFF</span>
+        </button>
       </div>
 
-      <!-- SUB: GRUPOS JUNTOS (primeira aba ativa) -->
-
-      <!-- SUB: GRUPOS JUNTOS -->
-      <div id="bat-sub-grupos" class="sub-pane active">
-        <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#86efac">
-          <strong>&#128663;&#128663; Comboio/Batedor</strong> &mdash; Detecta <strong>2 ou mais placas DIFERENTES</strong> que foram vistas na <strong>mesma c&acirc;mera</strong> com menos de 30 minutos de diferenca entre si. A cada nova c&acirc;mera onde as duas placas aparecem juntas o score aumenta &mdash; quanto mais c&acirc;meras compartilhadas, maior a suspeita de comboio real.
+      <!-- SUB: CENTRAL DE AMEAÇAS -->
+      <div id="bat-sub-central" class="sub-pane active">
+        <div style="background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#c4b5fd">
+          <strong>&#9889; Central de Amea&ccedil;as</strong> &mdash; Vis&atilde;o unificada em <strong>tempo real</strong> que cruza Suspeitos, Comboio, Grupos e Alvos. Placas em m&uacute;ltiplos m&oacute;dulos recebem badge <strong>&#9889; M&Uacute;LTIPLOS</strong> e score amplificado.
         </div>
         <div class="cards-row">
-          <div class="card"><div class="card-icon">&#128663;</div><div class="card-label">Grupos detectados</div><div class="card-value" id="grp-total">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label">Maior score</div><div class="card-value" id="grp-top-score">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#8987;</div><div class="card-label">Delta medio (s)</div><div class="card-value" style="font-size:1.1rem" id="grp-avg-co">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128101;</div><div class="card-label">C&acirc;meras juntas max</div><div class="card-value" id="grp-max-shared">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#128203;</div><div class="card-label">Placas analisadas</div><div class="card-value" id="cen-total">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#9889;</div><div class="card-label">M&uacute;ltiplos sinais</div><div class="card-value" id="cen-multi">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label">Top score</div><div class="card-value" id="cen-top-score">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#127919;</div><div class="card-label">Alvos na janela</div><div class="card-value" id="cen-alvos">&#8212;</div></div>
         </div>
-        <div class="toolbar">
-          <label>Janela:
-            <select id="grp-window" onchange="grpWindowChange()" style="margin-left:6px">
-              <option value="1h" selected>1 hora</option>
-              <option value="2h">2 horas</option>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px">
+          <label style="display:flex;align-items:center;gap:6px">&#128269; Placa:
+            <input type="text" id="cen-filter-plate" placeholder="ex: ABC1234"
+              oninput="cenApplyFilter()"
+              onkeydown="if(event.key==='Enter'&&this.value.trim())openBatedorReport(this.value.trim().toUpperCase())"
+              style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
+            <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('cen-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
+          </label>
+          <label>Janela de tempo:
+            <select id="cen-window" onchange="cenWindowChange()" style="margin-left:6px">
+              <option value="1m">1 minuto</option>
+              <option value="5m">5 minutos</option>
+              <option value="10m">10 minutos</option>
+              <option value="15m">15 minutos</option>
+              <option value="30m">30 minutos</option>
+              <option value="1h">1 hora</option>
+              <option value="2h" selected>2 horas</option>
+              <option value="3h">3 horas</option>
               <option value="6h">6 horas</option>
               <option value="12h">12 horas</option>
               <option value="24h">24 horas</option>
-              <option value="7d">7 dias</option>
-              <option value="30d">30 dias</option>
-              <option value="90d">90 dias</option>
-              <option value="custom">&#128197; Personalizado</option>
+              <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
             </select>
           </label>
-          <label>Min. c&acirc;meras juntas:<input type="number" id="grp-min-shared" value="1" min="1" max="99" style="width:52px;margin-left:6px"></label>
-          <label>Janela de grupo (s):<input type="number" id="grp-co-window" value="120" min="10" max="1800" style="width:60px;margin-left:6px" title="Max segundos de diferenca entre as duas placas na mesma camera"></label>
-          <button class="btn btn-sm" style="background:var(--success);color:#fff" onclick="loadGrupos()">Aplicar</button>
-          <span class="status-line" id="grupos-status"></span>
+          <label>M&iacute;n. c&acirc;meras:
+            <select id="cen-min-cameras" style="margin-left:6px" onchange="cenApplyFilter()">
+              <option value="0">Todas</option>
+              <option value="1">&#8805; 1 c&acirc;mera</option>
+              <option value="2" selected>&#8805; 2 c&acirc;meras</option>
+              <option value="3">&#8805; 3 c&acirc;meras</option>
+              <option value="4">&#8805; 4 c&acirc;meras</option>
+              <option value="5">&#8805; 5 c&acirc;meras</option>
+            </select>
+          </label>
+          <label>Min. sinais:
+            <select id="cen-min-sinais" style="margin-left:6px" onchange="cenApplyFilter()">
+              <option value="1">&#8805; 1 (todos)</option>
+              <option value="2" selected>&#8805; 2 sinais</option>
+              <option value="3">&#8805; 3 sinais</option>
+              <option value="4">4 sinais (todos os m&oacute;dulos)</option>
+            </select>
+          </label>
+          <label>Intervalo:
+            <select id="cen-interval" style="margin-left:6px">
+              <option value="30">30s</option>
+              <option value="60" selected>1 min</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+            </select>
+          </label>
+          <button id="btn-cen-live" class="btn btn-outline btn-sm" onclick="toggleCenLive()" style="display:flex;align-items:center;gap:6px">
+            &#9654; <span id="cen-live-label">Monitorar</span>
+          </button>
+          <button class="btn btn-sm" style="background:rgba(139,92,246,.7);color:#fff" onclick="loadCentral(true)">&#8635; Agora</button>
+          <span class="status-line" id="central-status"></span>
         </div>
-        <div class="date-range-row" id="grp-date-row">
-          <span>De</span>
-          <input type="datetime-local" id="grp-ts-from">
-          <span>At&#233;</span>
-          <input type="datetime-local" id="grp-ts-to">
+        <div class="date-range-row" id="cen-date-row">
+          <span>Per&iacute;odo &mdash; De</span>
+          <input type="datetime-local" id="cen-ts-from">
+          <span>At&eacute;</span>
+          <input type="datetime-local" id="cen-ts-to">
+          <button class="btn btn-outline btn-xs" onclick="loadCentral(true)">&#9654; Aplicar</button>
         </div>
         <div class="table-wrap">
           <table><thead><tr>
-            <th>Placa A</th><th>Placa B</th><th>Score</th>
-            <th>C&acirc;meras juntas</th><th>Dire&#231;&#227;o</th><th>YOLO Multi-Veic</th><th>Tipo Dominante</th><th>Delta medio (s)</th>
-            <th>Primeiro visto</th><th>Ultimo visto</th><th>Evidencias</th>
+            <th>Placa</th>
+            <th>Score Total</th>
+            <th>Sinais</th>
+            <th>&#128270; Suspeito</th>
+            <th>&#128663;&#128663; Comboio</th>
+            <th>&#128101; Grupos</th>
+            <th>&#127919; Alvo</th>
+            <th>Primeiro visto</th>
+            <th>&Uacute;ltimo visto</th>
+            <th>A&#231;&otilde;es</th>
           </tr></thead>
-          <tbody id="grupos-tbody"><tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">Clique em "Aplicar" para carregar.</td></tr></tbody>
+          <tbody id="central-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em &ldquo;&#9654; Monitorar&rdquo; para iniciar o monitoramento em tempo real.</td></tr></tbody>
           </table>
         </div>
-      </div><!-- /bat-sub-grupos -->
+        <div id="cen-pagination" style="display:none;align-items:center;gap:10px;padding:10px 0;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-outline btn-xs" id="cen-btn-prev" onclick="cenPageNav(-1)">&#8592; Anterior</button>
+          <span id="cen-page-info" style="font-size:.8rem;color:var(--muted)"></span>
+          <button class="btn btn-outline btn-xs" id="cen-btn-next" onclick="cenPageNav(1)">Pr&oacute;xima &#8594;</button>
+        </div>
+      </div><!-- /bat-sub-central -->
 
       <!-- SUB: ALVOS RASTREADOS -->
       <div id="bat-sub-alvos" class="sub-pane">
@@ -1357,20 +1408,22 @@ function triggerComboio(batedor, alvo, escolta, cameras, avgDelta) {
     'Vistos juntos em <strong>' + cameras + ' c\u00e2mera(s)</strong>'
     + ' \u2014 intervalo m\u00e9dio de <strong>' + avgDelta + 's</strong>.<br>'
     + '<span style="color:#f87171">' + batedor + '</span> chega <strong>antes</strong> \u2014 poss\u00edvel abertura de caminho.';
-  toast.style.display = 'block';
-  if (_abordagemTimer) clearTimeout(_abordagemTimer);
-  _abordagemTimer = setTimeout(function(){ toast.style.display = 'none'; }, 20000);
-  try {
-    var ctx = _getAudioCtx(); var t = ctx.currentTime;
-    for (var i = 0; i < 3; i++) {
-      var osc = ctx.createOscillator(); var g = ctx.createGain();
-      osc.connect(g); g.connect(ctx.destination);
-      osc.type = 'triangle'; osc.frequency.value = i === 1 ? 660 : 880;
-      g.gain.setValueAtTime(0.4, t + i*0.22);
-      g.gain.exponentialRampToValueAtTime(0.001, t + i*0.22 + 0.2);
-      osc.start(t + i*0.22); osc.stop(t + i*0.22 + 0.22);
-    }
-  } catch(e) {}
+  if (_batNotifEnabled) {
+    toast.style.display = 'block';
+    if (_abordagemTimer) clearTimeout(_abordagemTimer);
+    _abordagemTimer = setTimeout(function(){ toast.style.display = 'none'; }, 20000);
+    try {
+      var ctx = _getAudioCtx(); var t = ctx.currentTime;
+      for (var i = 0; i < 3; i++) {
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = 'triangle'; osc.frequency.value = i === 1 ? 660 : 880;
+        g.gain.setValueAtTime(0.4, t + i*0.22);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i*0.22 + 0.2);
+        osc.start(t + i*0.22); osc.stop(t + i*0.22 + 0.22);
+      }
+    } catch(e) {}
+  }
 }
 
 function triggerAlvoAvistado(plate, camera, descricao) {
@@ -1381,21 +1434,23 @@ function triggerAlvoAvistado(plate, camera, descricao) {
   document.getElementById('alvo-avistado-desc').innerHTML =
     'Detectado na c&acirc;mera <strong>' + camera + '</strong>'
     + (descricao ? '<br><span style="opacity:.85">' + descricao + '</span>' : '');
-  toast.style.display = 'block';
-  if (_alvoAvistadoTimer) clearTimeout(_alvoAvistadoTimer);
-  _alvoAvistadoTimer = setTimeout(function(){ toast.style.display = 'none'; }, 15000);
-  try {
-    var ctx = _getAudioCtx();
-    var t = ctx.currentTime;
-    [440, 660].forEach(function(freq, i) {
-      var osc = ctx.createOscillator(); var g = ctx.createGain();
-      osc.connect(g); g.connect(ctx.destination);
-      osc.type = 'sine'; osc.frequency.value = freq;
-      g.gain.setValueAtTime(0.35, t + i*0.22);
-      g.gain.exponentialRampToValueAtTime(0.001, t + i*0.22 + 0.25);
-      osc.start(t + i*0.22); osc.stop(t + i*0.22 + 0.28);
-    });
-  } catch(e) {}
+  if (_batNotifEnabled) {
+    toast.style.display = 'block';
+    if (_alvoAvistadoTimer) clearTimeout(_alvoAvistadoTimer);
+    _alvoAvistadoTimer = setTimeout(function(){ toast.style.display = 'none'; }, 15000);
+    try {
+      var ctx = _getAudioCtx();
+      var t = ctx.currentTime;
+      [440, 660].forEach(function(freq, i) {
+        var osc = ctx.createOscillator(); var g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = freq;
+        g.gain.setValueAtTime(0.35, t + i*0.22);
+        g.gain.exponentialRampToValueAtTime(0.001, t + i*0.22 + 0.25);
+        osc.start(t + i*0.22); osc.stop(t + i*0.22 + 0.28);
+      });
+    } catch(e) {}
+  }
 }
 function triggerAbordagem(follower, leader, cameras, avgDelta) {
   _toastPlates['abordagem'] = follower;
@@ -1634,10 +1689,10 @@ function switchTab(name, el) {
   if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
-    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
-    if (!batName || batName === 'suspeitos') loadBatedor();
-    else if (batName === 'comboio') loadComboio();
-    else if (batName === 'grupos') loadGrupos();
+    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'central';
+    if (!batName || batName === 'central') loadCentral();
+    else if (batName === 'alvos') loadAlvos();
+    else loadCentral();
   }
   if (name === 'veiculos') { loadLists(); loadListsIntoSelects(); }
   if (name === 'cameras')  loadCameras();
@@ -1648,17 +1703,22 @@ function switchTab(name, el) {
 }
 
 function switchBatTab(name, el) {
+  // para o monitoramento ao vivo da Central se sair dela
+  if (name !== 'central' && _cenLiveEnabled) {
+    _cenLiveEnabled = false; _cenStopTimer();
+    var livBtn = document.getElementById('btn-cen-live');
+    if (livBtn) { livBtn.classList.remove('btn-success'); livBtn.classList.add('btn-outline');
+                  livBtn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
+  }
   document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  ['suspeitos','comboio','grupos','alvos'].forEach(function(n){
+  ['central','alvos'].forEach(function(n){
     var el2 = document.getElementById('bat-sub-'+n);
     if (el2) el2.classList.remove('active');
   });
   el.classList.add('active');
   el.setAttribute('data-bat', name);
   document.getElementById('bat-sub-' + name).classList.add('active');
-  if (name === 'suspeitos') loadBatedor();
-  else if (name === 'comboio') loadComboio();
-  else if (name === 'grupos') loadGrupos();
+  if (name === 'central')    { /* aguarda clique em Monitorar */ }
   else if (name === 'alvos') loadAlvos();
 }
 
@@ -1673,7 +1733,13 @@ function switchSubTab(name, el) {
 function refreshCurrent() {
   if (currentTab === 'painel')  loadPainel();
   else if (currentTab === 'eventos') loadEvents();
-  else if (currentTab === 'batedor') loadBatedor();
+  else if (currentTab === 'batedor') {
+    var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
+    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'central';
+    if      (batName === 'central') loadCentral();
+    else if (batName === 'alvos')   loadAlvos();
+    else loadCentral();
+  }
   else if (currentTab === 'cameras') loadCameras();
   else { loadLists(); loadVehicles(); }
 }
@@ -1978,6 +2044,10 @@ function batWindowChange() {
   var v = document.getElementById('bat-window').value;
   document.getElementById('bat-date-row').classList.toggle('visible', v === 'custom');
 }
+function cenWindowChange() {
+  var v = document.getElementById('cen-window').value;
+  document.getElementById('cen-date-row').classList.toggle('visible', v === 'custom');
+}
 function convWindowChange() {
   var v = document.getElementById('conv-window').value;
   document.getElementById('conv-date-row').classList.toggle('visible', v === 'custom');
@@ -2070,77 +2140,6 @@ function buildCharts(items) {
 }
 
 // ===== BATEDOR =====
-
-async function loadComboio() {
-  var w    = document.getElementById('conv-window').value;
-  var mtr  = document.getElementById('conv-min-tr').value;
-  var dtmi = document.getElementById('conv-dt-min').value;
-  var dtma = document.getElementById('conv-dt-max').value;
-  var tp   = document.getElementById('conv-type').value;
-  var tsFrom = null, tsTo = null;
-  if (w === 'custom') {
-    tsFrom = _toIso(document.getElementById('conv-ts-from').value);
-    tsTo   = _toIso(document.getElementById('conv-ts-to').value);
-    if (!tsFrom || !tsTo) { alert('Informe o periodo personalizado (De / Ate).'); return; }
-    w = '2h';
-  }
-  document.getElementById('comboio-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
-  try {
-    var url = '/api/batedor/convoys?window=' + w + '&min_transitions=' + mtr + '&dt_min=' + dtmi + '&dt_max=' + dtma + '&type=' + tp + '&limit=50';
-    if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
-    var r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    var data = await r.json();
-    var items = data.items || [];
-    // cards
-    document.getElementById('conv-total').textContent = items.length;
-    document.getElementById('conv-top-score').textContent = items.length ? items[0].score : '-';
-    var avgDts = items.filter(function(i){ return i.avg_delta_t_sec; });
-    var avgDt = avgDts.length ? Math.round(avgDts.reduce(function(a,i){return a+i.avg_delta_t_sec;},0)/avgDts.length) : null;
-    document.getElementById('conv-avg-dt').textContent = avgDt !== null ? avgDt + 's' : '-';
-    var totalMulti = items.reduce(function(a,i){ return a + (i.yolo_multi_events||0); }, 0);
-    document.getElementById('conv-yolo-multi').textContent = totalMulti || '-';
-    // tabela
-    var tb = document.getElementById('comboio-tbody');
-    if (!items.length) {
-      tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Nenhum comboio detectado.</td></tr>';
-    } else {
-      tb.innerHTML = items.map(function(s) {
-        var evidences = (s.evidence||[]);
-        var evTooltip = evidences.slice(0,3).map(function(ev){
-          return (ev.cam_a||'?') + ' &#8594; ' + (ev.cam_b||'?') + ' (' + (ev.delta_t||'?') + 's)';
-        }).join('<br>');
-        var evBtn = evidences.length
-          ? '<button class="btn btn-outline btn-xs" title="' + evidences.length + ' transicao(oes)" onclick="openConvoyDetail(this, ' + JSON.stringify(JSON.stringify(evidences)).slice(1,-1) + ')">&#128269; ' + evidences.length + '</button>'
-          : '-';
-        var yoloMulti = s.yolo_multi_events > 0
-          ? '<span class="badge badge-red">&#128293; ' + s.yolo_multi_events + '</span>'
-          : '<span style="color:var(--muted)">-</span>';
-        var tipo = s.dominant_type
-          ? '<span class="badge badge-yellow">' + s.dominant_type + '</span>'
-          : '<span style="color:var(--muted)">?</span>';
-        return '<tr>'
-          + '<td>' + plateHtml(s.plate) + '</td>'
-          + '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>'
-          + '<td>' + (s.valid_transitions||0) + '</td>'
-          + '<td>' + (s.avg_delta_t_sec ? s.avg_delta_t_sec + 's' : '-') + '</td>'
-          + '<td style="white-space:nowrap">' + _dirCell(s.dominant_direcao||null) + '</td>'
-          + '<td>' + yoloMulti + '</td>'
-          + '<td>' + tipo + '</td>'
-          + '<td style="font-size:.78rem">' + fmtTs(s.first_seen) + '</td>'
-          + '<td style="font-size:.78rem">' + fmtTs(s.last_seen) + '</td>'
-          + '<td>' + evBtn + '</td>'
-          + '</tr>';
-      }).join('');
-    }
-    document.getElementById('comboio-status').textContent = items.length + ' comboio(s)';
-  } catch(e) {
-    document.getElementById('comboio-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('comboio-tbody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
-  }
-}
-
 function openConvoyDetail(btn, evidenceJson) {
   var evidences;
   try { evidences = JSON.parse(evidenceJson); } catch(e) { evidences = []; }
@@ -2178,349 +2177,448 @@ function openConvoyDetail(btn, evidenceJson) {
   if (_mb1) _mb1.style.display = _tcPlates.length ? '' : 'none';
   openModal('detail-modal');
 }
+// ===================================================================
+// CENTRAL DE AMEAÇAS — tempo real + paginação
+// ===================================================================
 
-async function loadGrupos() {
-  var w   = document.getElementById('grp-window').value;
-  var ms  = document.getElementById('grp-min-shared').value;
-  var cw  = document.getElementById('grp-co-window').value;
+var _cenLiveEnabled = false;
+var _cenLiveTimer   = null;
+var _cenAllItems    = [];   // cache bruto
+var _cenPage        = 0;
+var _cenPageSize    = 10;
+
+function toggleCenLive() {
+  _cenLiveEnabled = !_cenLiveEnabled;
+  var btn = document.getElementById('btn-cen-live');
+  if (_cenLiveEnabled) {
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-success');
+    btn.innerHTML = '<span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1s infinite;margin-right:4px"></span> AO VIVO';
+    loadCentral(false);
+    _cenScheduleNext();
+  } else {
+    _cenStopTimer();
+    btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
+    btn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>';
+  }
+}
+
+function _cenStopTimer() {
+  if (_cenLiveTimer) { clearTimeout(_cenLiveTimer); _cenLiveTimer = null; }
+}
+
+function _cenScheduleNext() {
+  if (!_cenLiveEnabled) return;
+  var sec = parseInt(document.getElementById('cen-interval').value, 10) || 60;
+  _cenLiveTimer = setTimeout(function() {
+    loadCentral(false).then(function() { _cenScheduleNext(); });
+  }, sec * 1000);
+}
+
+function cenApplyFilter() {
+  _cenPage = 0;
+  _cenRenderPage();
+}
+
+async function loadCentral(showSpinner) {
+  if (showSpinner === undefined) showSpinner = true;
+  var w = document.getElementById('cen-window').value;
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
-    tsFrom = _toIso(document.getElementById('grp-ts-from').value);
-    tsTo   = _toIso(document.getElementById('grp-ts-to').value);
-    if (!tsFrom || !tsTo) { alert('Informe o periodo personalizado (De / Ate).'); return; }
+    tsFrom = _toIso(document.getElementById('cen-ts-from').value);
+    tsTo   = _toIso(document.getElementById('cen-ts-to').value);
+    if (!tsFrom || !tsTo) { alert('Informe o período personalizado (De / Até).'); return; }
     w = '2h';
   }
-  document.getElementById('grupos-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  if (showSpinner) {
+    document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
+    document.getElementById('central-tbody').innerHTML =
+      '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando…</td></tr>';
+  }
   try {
-    var url = '/api/batedor/groups?window=' + w + '&min_shared=' + ms + '&co_window=' + cw + '&limit=50';
+    var url = '/api/batedor/central?window=' + w + '&limit=300';
     if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
     var r = await fetch(url);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
-    var items = data.items || [];
-    // cards
-    document.getElementById('grp-total').textContent = items.length;
-    document.getElementById('grp-top-score').textContent = items.length ? items[0].score : '-';
-    var avgCos = items.filter(function(i){ return i.avg_co_delta_sec != null; });
-    var avgCo = avgCos.length ? Math.round(avgCos.reduce(function(a,i){ return a + i.avg_co_delta_sec; }, 0) / avgCos.length) : null;
-    document.getElementById('grp-avg-co').textContent = avgCo !== null ? avgCo + 's' : '-';
-    var maxShared = items.reduce(function(a,i){ return Math.max(a, i.cameras_together||0); }, 0);
-    document.getElementById('grp-max-shared').textContent = maxShared || '-';
-    // tabela
-    window._grpItems = items;
-    var _abordagemFired = {};
-    var tb = document.getElementById('grupos-tbody');
-    if (!items.length) {
-      tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:32px">Nenhum grupo detectado na janela selecionada.</td></tr>';
-    } else {
-      tb.innerHTML = items.map(function(s, idx) {
-        var evidences = s.evidence || [];
-        // detecta batedor na tabela
-        var leadsA = 0, leadsB = 0;
-        evidences.forEach(function(ev){ if(new Date(ev.ts_a)<=new Date(ev.ts_b)) leadsA++; else leadsB++; });
-        var tot = evidences.length || 1;
-        var batedor = null, escoltado = null;
-        if (leadsA / tot >= 0.7) { batedor = s.plate_a; escoltado = s.plate_b; }
-        else if (leadsB / tot >= 0.7) { batedor = s.plate_b; escoltado = s.plate_a; }
-        // dispara toast de abordagem uma vez por escoltado
-        if (escoltado && !_abordagemFired[escoltado]) {
-          _abordagemFired[escoltado] = true;
-          triggerAbordagem(escoltado, batedor, s.cameras_together, s.avg_co_delta_sec);
-        }
-        var evBtn = evidences.length
-          ? '<button class="btn btn-outline btn-xs" onclick="openGroupDetail(' + idx + ')">&#128269; ' + evidences.length + ' transi&ccedil;&otilde;es</button>'
-          : '-';
-        var paHl = listBadgesHtml(s.plate_a) ? 'plate-alert' : '';
-        var pbHl = listBadgesHtml(s.plate_b) ? 'plate-alert' : '';
-        var abordarBadgeA = (escoltado === s.plate_a) ? ' <span style="background:#d97706;color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;padding:1px 7px;vertical-align:middle">&#9888; ABORDAR</span>' : '';
-        var abordarBadgeB = (escoltado === s.plate_b) ? ' <span style="background:#d97706;color:#fff;border-radius:99px;font-size:.65rem;font-weight:700;padding:1px 7px;vertical-align:middle">&#9888; ABORDAR</span>' : '';
-        return '<tr>'
-          + '<td><span class="plate-tag ' + paHl + '">' + (s.plate_a||'-') + '</span>' + abordarBadgeA + (listBadgesHtml(s.plate_a) ? ' ' + listBadgesHtml(s.plate_a) : '') + '</td>'
-          + '<td><span class="plate-tag ' + pbHl + '">' + (s.plate_b||'-') + '</span>' + abordarBadgeB + (listBadgesHtml(s.plate_b) ? ' ' + listBadgesHtml(s.plate_b) : '') + '</td>'
-          + '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>'
-          + '<td style="font-weight:700;color:var(--accent2)">' + (s.cameras_together||0) + ' c&acirc;m.</td>'
-          + '<td style="white-space:nowrap">' + _dirCell(s.dominant_direcao||null) + '</td>'
-          + '<td style="text-align:center">' + (s.yolo_multi_count > 0 ? '<span class="badge badge-red">&#128663; ' + s.yolo_multi_count + '</span>' : '<span style="color:var(--muted)">-</span>') + '</td>'
-          + '<td style="text-align:center">' + (s.dominant_type ? '<span class="badge badge-yellow">' + s.dominant_type + '</span>' : '-') + '</td>'
-          + '<td>' + (s.avg_co_delta_sec != null ? s.avg_co_delta_sec + 's' : '-') + '</td>'
-          + '<td style="font-size:.78rem">' + fmtTs(s.first_seen) + '</td>'
-          + '<td style="font-size:.78rem">' + fmtTs(s.last_seen) + '</td>'
-          + '<td>' + evBtn + '</td>'
-          + '</tr>';
-      }).join('');
-    }
-    document.getElementById('grupos-status').textContent = items.length + ' grupo(s)';
+    var all = data.items || [];
+    _cenAllItems = all;
+    _cenPage     = 0;
+    // cards (sempre com dados brutos completos)
+    document.getElementById('cen-total').textContent = all.length;
+    document.getElementById('cen-multi').textContent = all.filter(function(i){ return i.sinais >= 2; }).length || '-';
+    document.getElementById('cen-alvos').textContent = all.filter(function(i){ return i.is_alvo; }).length || '-';
+    _cenRenderPage();
+    var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('central-status').textContent = 'Atualizado às ' + ts;
   } catch(e) {
-    document.getElementById('grupos-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('grupos-tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--danger);padding:24px">' + e.message + '</td></tr>';
+    document.getElementById('central-status').textContent = 'Erro: ' + e.message;
+    if (showSpinner)
+      document.getElementById('central-tbody').innerHTML =
+        '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    // para o live se der erro
+    _cenLiveEnabled = false; _cenStopTimer();
+    var btn = document.getElementById('btn-cen-live');
+    if (btn) { btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
+               btn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
   }
 }
 
-function openGroupDetail(idx) {
-  var s = (window._grpItems || [])[idx] || {};
-  var evidences = s.evidence || [];
-  var pa = s.plate_a || '?';
-  var pb = s.plate_b || '?';
-  document.getElementById('detail-modal-plate').textContent = pa + '  +  ' + pb;
-
-  // Calcula quem liderou em quantas cameras
-  var leadsA = 0, leadsB = 0;
-  evidences.forEach(function(ev) {
-    if (new Date(ev.ts_a) <= new Date(ev.ts_b)) leadsA++; else leadsB++;
-  });
-  var total = evidences.length;
-  var leader = null, follower = null, leaderPct = 0;
-  if (total > 0) {
-    if (leadsA > leadsB) { leader = pa; follower = pb; leaderPct = Math.round(leadsA/total*100); }
-    else if (leadsB > leadsA) { leader = pb; follower = pa; leaderPct = Math.round(leadsB/total*100); }
-  }
-
-  // Banner de diagnóstico
-  var avgDelta = s.avg_co_delta_sec || 0;
-  var diagHtml = '';
-  if (leader && leaderPct >= 70) {
-    var role = avgDelta <= 120 ? 'BATEDOR (escolta próxima)' : avgDelta <= 600 ? 'BATEDOR (reconhecimento)' : 'VEÍCULO LÍDER (distância grande)';
-    diagHtml = '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem">'
-      + '<strong style="color:#f87171">&#9888; Poss&iacute;vel ' + role + '</strong><br>'
-      + '<span style="color:var(--muted)">A placa <strong style="color:#fbbf24">' + leader + '</strong> passou na frente em <strong>' + leaderPct + '%</strong> das c&acirc;meras ('
-      + (leader === pa ? leadsA : leadsB) + ' de ' + total + '), com m&eacute;dia de <strong>' + avgDelta + 's</strong> de antecedência. '
-      + 'A placa <strong style="color:#60a5fa">' + follower + '</strong> vem atr&aacute;s. Padr&atilde;o consistente com batedor.</span>'
-      + '</div>';
-  } else if (total > 0) {
-    diagHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.83rem">'
-      + '<strong style="color:#4ade80">&#128663;&#128663; Comboio lado a lado</strong><br>'
-      + '<span style="color:var(--muted)">As placas se alternam na liderança (' + pa + ': ' + leadsA + 'x na frente / ' + pb + ': ' + leadsB + 'x na frente). '
-      + 'Sem papel fixo de batedor — provavelmente viajando em grupo sem hierarquia definida.</span>'
-      + '</div>';
-  }
-
-  var rows = evidences.map(function(ev, i) {
-    var tsA = new Date(ev.ts_a);
-    var tsB = new Date(ev.ts_b);
-    var delta = ev.co_delta_sec != null ? ev.co_delta_sec : Math.round(Math.abs(tsB - tsA) / 1000);
-    var badgeCls = delta <= 60 ? 'red' : delta <= 300 ? 'yellow' : 'green';
-    var first, second, tsFirst, tsSecond;
-    if (tsA <= tsB) {
-      first = pa; second = pb; tsFirst = ev.ts_a; tsSecond = ev.ts_b;
-    } else {
-      first = pb; second = pa; tsFirst = ev.ts_b; tsSecond = ev.ts_a;
+function _cenRenderPage() {
+  var ms      = parseInt(document.getElementById('cen-min-sinais').value, 10) || 1;
+  var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);  // 0 = todas
+  var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
+  var items = _cenAllItems.filter(function(i) {
+    // filtro placa
+    if (plateFl && i.plate.toUpperCase().indexOf(plateFl) === -1) return false;
+    // filtro mín sinais
+    if (i.sinais < ms) return false;
+    // filtro mín câmeras (0 = sem filtro)
+    if (mc > 0) {
+      var cams = 0;
+      if (i.in_suspeitos && i.in_suspeitos.cameras) cams = Math.max(cams, i.in_suspeitos.cameras);
+      if (i.in_comboio   && i.in_comboio.cameras)   cams = Math.max(cams, i.in_comboio.cameras);
+      if (cams < mc) return false;
     }
-    return '<tr>'
-      + '<td style="text-align:center;font-weight:700;color:var(--muted)">' + (i+1) + '</td>'
-      + '<td style="font-size:.78rem">' + (ev.camera||'?') + '</td>'
-      + '<td>'
-        + '<span style="color:#4ade80;font-weight:700;margin-right:4px">&#9650; 1&ordm;</span>'
-        + '<span class="plate-tag' + (first === leader ? ' plate-alert' : '') + '">' + first + '</span>'
-        + '<span style="color:var(--muted);font-size:.75rem;margin-left:6px">' + fmtTs(tsFirst) + '</span>'
+    return true;
+  });
+  var total = items.length;
+  var pages = Math.max(1, Math.ceil(total / _cenPageSize));
+  if (_cenPage >= pages) _cenPage = pages - 1;
+  var start = _cenPage * _cenPageSize;
+  var page  = items.slice(start, start + _cenPageSize);
+
+  document.getElementById('cen-top-score').textContent = items.length ? items[0].score_total : '-';
+
+  var pg = document.getElementById('cen-pagination');
+  if (total > _cenPageSize) {
+    pg.style.display = 'flex';
+    document.getElementById('cen-page-info').textContent =
+      'Página ' + (_cenPage + 1) + ' de ' + pages + ' · ' + total + ' ameaça(s)';
+    document.getElementById('cen-btn-prev').disabled = _cenPage === 0;
+    document.getElementById('cen-btn-next').disabled = _cenPage >= pages - 1;
+  } else if (total > 0) {
+    pg.style.display = 'flex';
+    document.getElementById('cen-page-info').textContent = total + ' ameaça(s)';
+    document.getElementById('cen-btn-prev').disabled = true;
+    document.getElementById('cen-btn-next').disabled = true;
+  } else {
+    pg.style.display = 'none';
+  }
+  renderCentral(page, total);
+}
+
+function cenPageNav(delta) {
+  var ms    = parseInt(document.getElementById('cen-min-sinais').value, 10) || 1;
+  var total = _cenAllItems.filter(function(i){ return i.sinais >= ms; }).length;
+  var pages = Math.max(1, Math.ceil(total / _cenPageSize));
+  _cenPage  = Math.max(0, Math.min(pages - 1, _cenPage + delta));
+  _cenRenderPage();
+}
+
+function _cenScoreClass(s) {
+  if (s >= 100) return 'badge-red';
+  if (s >= 50)  return 'badge-yellow';
+  return 'badge-green';
+}
+
+function _sinaisBadges(item) {
+  var parts = [];
+  if (item.in_suspeitos) parts.push('<span class="badge badge-yellow" title="Suspeito — ' + item.in_suspeitos.passes + ' pass. em ' + item.in_suspeitos.cameras + ' câm.">&#128270; S</span>');
+  if (item.in_comboio)   parts.push('<span class="badge badge-red"    title="Comboio — ' + item.in_comboio.transitions + ' transições">&#128663;&#128663; C</span>');
+  if (item.in_grupos && item.in_grupos.length) {
+    var gs = item.in_grupos.map(function(g){ return g.plate + ' (' + g.cameras_together + 'câm)'; }).join(', ');
+    parts.push('<span class="badge" style="background:rgba(34,197,94,.2);color:#86efac" title="Grupos — junto com: ' + gs + '">&#128101; G</span>');
+  }
+  if (item.is_alvo) parts.push('<span class="badge badge-red" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="Alvo rastreado: ' + (item.alvo_descricao||'') + '">&#127919; A</span>');
+  if (item.sinais >= 3) parts.unshift('<span class="badge badge-red" style="font-size:.7rem">&#9889; MÚLTIPLOS</span>');
+  return parts.join(' ');
+}
+
+function _grupoLinks(grupos) {
+  if (!grupos || !grupos.length) return '<span style="color:var(--muted)">-</span>';
+  return grupos.map(function(g){
+    return '<span class="badge" style="background:rgba(34,197,94,.15);color:#86efac;cursor:pointer" onclick="openDetail(\'' + (g.plate||'').replace(/'/g,"\\'") + '\')">'
+      + g.plate + ' <small>(' + g.cameras_together + '&#128247;)</small></span>';
+  }).join(' ');
+}
+
+function renderCentral(items, total) {
+  var tb = document.getElementById('central-tbody');
+  if (!items.length) {
+    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">'
+      + (total === 0 ? 'Nenhuma ameaça encontrada com os filtros atuais.' : 'Sem resultados nesta página.')
+      + '</td></tr>';
+    return;
+  }
+  tb.innerHTML = items.map(function(item) {
+    var sc = item.in_suspeitos;
+    var cc = item.in_comboio;
+    var scCell = sc
+      ? '<span style="font-size:.78rem">&#10003; ' + sc.passes + 'x / ' + sc.cameras + '&#128247;</span>'
+      : '<span style="color:var(--muted)">&#8212;</span>';
+    var ccCell = cc
+      ? '<span style="font-size:.78rem">&#10003; ' + cc.transitions + ' trans.</span>'
+      : '<span style="color:var(--muted)">&#8212;</span>';
+    var alvoCell = item.is_alvo
+      ? '<span class="badge" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
+      : '<span style="color:var(--muted)">&#8212;</span>';
+    var rowStyle = item.sinais >= 3 ? 'background:rgba(239,68,68,.06)' : item.is_alvo ? 'background:rgba(139,92,246,.05)' : '';
+    return '<tr style="' + rowStyle + '">'
+      + '<td>' + plateHtml(item.plate) + '</td>'
+      + '<td><span class="badge ' + _cenScoreClass(item.score_total) + '">' + item.score_total + '</span></td>'
+      + '<td style="white-space:nowrap">' + _sinaisBadges(item) + '</td>'
+      + '<td>' + scCell + '</td>'
+      + '<td>' + ccCell + '</td>'
+      + '<td style="font-size:.78rem">' + _grupoLinks(item.in_grupos) + '</td>'
+      + '<td>' + alvoCell + '</td>'
+      + '<td style="font-size:.78rem">' + fmtTs(item.first_seen) + '</td>'
+      + '<td style="white-space:nowrap">' + fmtTs(item.last_seen)  + '</td>'
+      + '<td style="white-space:nowrap">'
+      + '<button class="btn btn-outline btn-xs" style="margin-right:4px" title="Hist&oacute;rico de eventos" onclick="openDetail(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128269;</button>'
+      + '<button class="btn btn-xs" style="background:rgba(139,92,246,.5);color:#fff" title="Relat&oacute;rio de batedor" onclick="openBatedorReport(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128196; Relat&oacute;rio</button>'
       + '</td>'
-      + '<td>'
-        + '<span style="color:#f87171;font-weight:700;margin-right:4px">&#9660; 2&ordm;</span>'
-        + '<span class="plate-tag">' + second + '</span>'
-        + '<span style="color:var(--muted);font-size:.75rem;margin-left:6px">' + fmtTs(tsSecond) + '</span>'
-      + '</td>'
-      + '<td style="text-align:center"><span class="badge badge-' + badgeCls + '">' + delta + 's atr&aacute;s</span></td>'
       + '</tr>';
   }).join('');
+}
 
-  document.getElementById('detail-modal-body').innerHTML =
-    diagHtml
-    + '<p style="color:var(--muted);font-size:.81rem;margin-bottom:10px">'
-    + '&#9650; = passou na frente &nbsp;|&nbsp; &#9660; = passou atr&aacute;s &nbsp;|&nbsp; placa destacada em laranja = poss&iacute;vel batedor'
-    + '</p>'
-    + '<div class="table-wrap"><table><thead><tr>'
-    + '<th>#</th><th>C&acirc;mera</th><th>Passou primeiro</th><th>Passou depois</th><th>Intervalo</th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
-  // Trajetória no mapa
-  var _tgPoints = [];
-  evidences.forEach(function(ev) {
-    var cam = ev.camera || ev.camera_id || '';
-    if (cam && ev.ts_a) _tgPoints.push({ camera_id: cam, ts: ev.ts_a, plate: pa, cam_nome: cam });
-    if (cam && ev.ts_b) _tgPoints.push({ camera_id: cam, ts: ev.ts_b, plate: pb, cam_nome: cam });
-  });
-  _mapaTrajetoria = _tgPoints.length ? { plates: [pa, pb], points: _tgPoints } : null;
-  var _mb2 = document.getElementById('detail-modal-map-btn');
-  if (_mb2) _mb2.style.display = _tgPoints.length ? '' : 'none';
+// ===== HISTORICO DE DRILL-DOWN DO RELATORIO =====
+var _reportHistory = [];
+var _reportCurrentPlate = null;
+
+async function openBatedorReport(plate, _fromHistory) {
+  plate = (plate || '').trim().toUpperCase();
+  if (!plate) return;
+
+  if (!_fromHistory && _reportCurrentPlate && _reportCurrentPlate !== plate) {
+    _reportHistory.push(_reportCurrentPlate);
+  } else if (!_fromHistory && !_reportCurrentPlate) {
+    _reportHistory = [];
+  }
+  _reportCurrentPlate = plate;
+
+  document.getElementById('detail-modal-plate').textContent = '\uD83D\uDCCB Relat\u00F3rio \u2014 ' + plate;
+  document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Analisando ' + plate + '...</p>';
+  var _mb = document.getElementById('detail-modal-map-btn');
+  if (_mb) _mb.style.display = 'none';
   openModal('detail-modal');
-}
 
-async function loadBatedor() {
-  var wm = document.getElementById('bat-window').value;
-  var mp = document.getElementById('bat-min-passes').value;
-  var mc = document.getElementById('bat-min-cameras').value;
-  var tsFrom = null, tsTo = null;
-  if (wm === 'custom') {
-    tsFrom = _toIso(document.getElementById('bat-ts-from').value);
-    tsTo   = _toIso(document.getElementById('bat-ts-to').value);
-    if (!tsFrom || !tsTo) { alert('Informe o periodo personalizado (De / Ate).'); return; }
-    wm = '180'; // valor ignorado quando ts_from/ts_to sao enviados
-  }
-  document.getElementById('batedor-status').innerHTML = '<span class="spinner"></span>';
-  document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  var w = '2h';
+  try { var cw = document.getElementById('cen-window').value; if (cw && cw !== 'custom') w = cw; } catch(e) {}
+
   try {
-    var url = '/api/batedor/suspects?window_minutes=' + wm + '&min_passes=' + mp + '&min_cameras=' + mc + '&limit=50';
-    if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
-    var r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    var data = await r.json();
-    var items = data.items || [];
-    renderBatedor(items);
-    updateBatCards(items);
-    document.getElementById('batedor-status').textContent = items.length + ' suspeito(s)';
+    var resp = await fetch('/api/vehicle/report?plate=' + encodeURIComponent(plate) + '&window=' + encodeURIComponent(w));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var d = await resp.json();
+
+    // ---- 0: Botao Voltar ----
+    var backHtml = '';
+    if (_reportHistory.length > 0) {
+      var prevPlate = _reportHistory[_reportHistory.length - 1];
+      backHtml = '<div style="margin-bottom:10px"><button class="btn btn-outline btn-sm" onclick="_reportGoBack()">&#8592; Voltar para ' + prevPlate + '</button></div>';
+    }
+
+    // ---- 1: Header ----
+    var levelColor = d.level === 'alerta' ? 'badge-danger' : d.level === 'suspeito' ? 'badge-warning' : 'badge-info';
+    var sBadge = d.score >= 80 ? 'badge-danger' : d.score >= 40 ? 'badge-warning' : 'badge-info';
+    var headerHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:flex-start">'
+      + '<div style="background:var(--bg2);border-radius:10px;padding:12px 18px;text-align:center;min-width:90px">'
+      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Score</div>'
+      + '<span class="badge ' + sBadge + '" style="font-size:1.2rem;padding:5px 14px">' + d.score + '</span>'
+      + '<div style="margin-top:6px"><span class="badge ' + levelColor + '" style="font-size:.68rem;text-transform:uppercase">' + (d.level||'normal') + '</span></div>'
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:10px;padding:12px 18px;flex:1;min-width:200px">'
+      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Atividade</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:5px 8px;margin-bottom:7px">'
+      + (d.badges||[]).map(function(b){
+          var cl = b==='ALVO'?'badge-danger':(b==='MULTI-C\u00c2MERA'||b==='COMBOIO')?'badge-warning':'badge-info';
+          return '<span class="badge ' + cl + '">' + b + '</span>';
+        }).join('')
+      + '</div>'
+      + '<div style="font-size:.77rem;color:var(--muted)">'
+      + (d.summary ? d.summary.total_passes + ' passagens \u00b7 ' + d.summary.cameras_count + ' c\u00e2meras \u00b7 ' + d.summary.partners_count + ' parceiros'
+          + (d.summary.avg_confidence > 0 ? ' \u00b7 conf. m\u00e9d. ' + Math.round(d.summary.avg_confidence * 100) + '%' : '') : '')
+      + '</div></div>'
+      + (d.is_alvo
+        ? '<div style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.45);border-radius:10px;padding:12px 18px;min-width:160px">'
+          + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">\uD83C\uDFAF Alvo Rastreado</div>'
+          + '<div style="color:#c4b5fd;font-weight:700;margin-bottom:2px">' + plate + '</div>'
+          + (d.alvo_descricao ? '<div style="font-size:.78rem;color:#ddd8fe">' + d.alvo_descricao + '</div>' : '')
+          + (d.alvo_list ? '<div style="font-size:.72rem;color:var(--muted)">Lista: ' + d.alvo_list + '</div>' : '')
+          + '</div>'
+        : '')
+      + '</div>';
+
+    // ---- 2: Acoes ----
+    var actionsHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+      + (!d.is_alvo
+        ? '<button class="btn btn-sm" style="background:rgba(139,92,246,.7);color:#fff" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\'") + '\')">\uD83C\uDFAF Cadastrar como Alvo</button>'
+        : '<button class="btn btn-sm btn-danger" onclick="_navigateToAlvos()">&#128065; Ver nos Alvos</button>')
+      + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Detalhes do Score</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="closeModal(\'detail-modal\');var inp=document.getElementById(\'cen-filter-plate\');if(inp){inp.value=\'' + plate.replace(/'/g,"\'") + '\';cenApplyFilter();}">&#128269; Ver na Central</button>'
+      + '</div>';
+
+    // ---- 3: Decisao Operacional ----
+    var lastDec = d.last_decision;
+    var decLabels = { confirmado: '&#9989; Suspeito confirmado', falso_positivo: '&#10060; Falso positivo', ignorar: '&#9197; Ignorado' };
+    var decBg = { confirmado: 'rgba(220,38,38,.2)', falso_positivo: 'rgba(34,197,94,.1)', ignorar: 'rgba(100,100,100,.15)' };
+    var decBorder = { confirmado: 'rgba(220,38,38,.5)', falso_positivo: 'rgba(34,197,94,.3)', ignorar: 'rgba(120,120,120,.3)' };
+    var _escPlate = plate.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var _sc = d.score;
+    var _lv = d.level || 'normal';
+    var decisionHtml = '<div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px">'
+      + '<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase">&#128203; Decis\u00e3o Operacional</div>'
+      + (lastDec
+        ? '<div style="background:' + (decBg[lastDec.decision]||'rgba(100,100,100,.1)') + ';border:1px solid ' + (decBorder[lastDec.decision]||'rgba(120,120,120,.3)') + ';border-radius:7px;padding:8px 12px;margin-bottom:8px;font-size:.82rem">'
+          + '<strong>' + (decLabels[lastDec.decision]||lastDec.decision) + '</strong>'
+          + (lastDec.note ? ' \u2014 ' + lastDec.note : '')
+          + ' <span style="color:var(--muted);font-size:.72rem">por ' + (lastDec.operator||'sistema') + ' em ' + fmtTs(lastDec.created_at) + '</span></div>'
+        : '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Nenhuma decis\u00e3o registrada ainda.</div>')
+      + '<div style="display:flex;flex-wrap:wrap;gap:7px">'
+      + '<button class="btn btn-sm" style="background:rgba(220,38,38,.7);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'confirmado\')">&#9989; Confirmar suspeito</button>'
+      + '<button class="btn btn-sm" style="background:rgba(34,197,94,.5);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'falso_positivo\')">&#10060; Falso positivo</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'ignorar\')">&#9197; Ignorar</button>'
+      + '</div></div>';
+
+    // ---- 4: Score Breakdown ----
+    var breakdownHtml = '<div id="score-breakdown-panel" style="display:none;margin-bottom:14px">'
+      + '<h3 style="font-size:.88rem;font-weight:700;margin:0 0 8px;color:var(--accent2)">&#128202; Breakdown do Score</h3>'
+      + '<div class="table-wrap"><table><thead><tr><th>Fator</th><th>Val.</th><th>Mult.</th><th>Pts</th><th>Obs</th></tr></thead><tbody>'
+      + (d.score_breakdown||[]).map(function(b){
+          return '<tr><td style="font-size:.8rem">' + b.label + '</td>'
+            + '<td style="text-align:center">' + b.value + '</td>'
+            + '<td style="text-align:center;color:var(--accent)">&times;' + b.multiplier + '</td>'
+            + '<td style="text-align:center"><strong>+' + b.points + '</strong></td>'
+            + '<td style="font-size:.75rem;color:var(--muted)">' + (b.reason||'') + '</td></tr>';
+        }).join('')
+      + '<tr style="font-weight:700;background:rgba(139,92,246,.1)"><td colspan="3">TOTAL</td><td>+' + d.score + '</td><td></td></tr>'
+      + '</tbody></table></div></div>';
+
+    // ---- 5: Parceiros ----
+    var partners = d.convoy_partners || [];
+    var partnersHtml;
+    if (partners.length) {
+      partnersHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#fca5a5">&#128663;&#128101; Parceiros Co-detectados (' + partners.length + ')</h3>'
+        + '<div class="table-wrap"><table><thead><tr><th>Parceiro</th><th>C\u00e2m. juntos</th><th>\u0394t m\u00e9d.</th><th>Ocorr.</th><th>Conf.</th><th>\u00daltimo</th><th>A\u00e7\u00f5es</th></tr></thead><tbody>'
+        + partners.map(function(p){
+            var alvoMark = p.is_alvo ? ' <span class="badge badge-danger" style="font-size:.64rem">ALVO</span>' : '';
+            return '<tr>'
+              + '<td>' + plateHtml(p.plate) + alvoMark + '</td>'
+              + '<td style="text-align:center;font-weight:700;color:var(--accent2)">' + p.cameras_together + '</td>'
+              + '<td style="text-align:center">' + (p.avg_delta_sec||0) + 's</td>'
+              + '<td style="text-align:center">' + (p.joint_events||0) + '</td>'
+              + '<td style="text-align:center;font-size:.75rem">' + (p.avg_conf > 0 ? Math.round(p.avg_conf*100)+'%' : '-') + '</td>'
+              + '<td style="font-size:.75rem">' + fmtTs(p.last_seen) + '</td>'
+              + '<td><button class="btn btn-xs" style="background:rgba(139,92,246,.45);color:#fff" onclick="openBatedorReport(\'' + p.plate.replace(/'/g,"\'") + '\')">\uD83D\uDCC4 Relat\u00f3rio</button></td>'
+              + '</tr>';
+          }).join('')
+        + '</tbody></table></div>';
+    } else {
+      partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro co-detectado na janela de ' + w + '.</div>';
+    }
+
+    // ---- 6: Passagens ----
+    var events = d.events || [];
+    events.forEach(function(ev){ _imgMeta[ev.id] = { camName: ev.camera_name||ev.camera_id||'', ts: ev.ts||'' }; });
+    var evRows = events.map(function(ev) {
+      var dtObj = ev.ts ? new Date(ev.ts) : null;
+      var dtFmt = dtObj ? dtObj.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+      var conf = ev.confidence > 0 ? Math.round(ev.confidence * 100) + '%' : '-';
+      var thumb = ev.image_path
+        ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=100&h=68" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\'") + '\')" style="border-radius:4px;cursor:pointer">'
+        : '<div class="thumb-none">-</div>';
+      return '<tr><td>' + thumb + '</td>'
+        + '<td style="font-size:.78rem;white-space:nowrap">' + dtFmt + '</td>'
+        + '<td style="font-size:.79rem">' + (ev.camera_name||ev.camera_id||'-') + '</td>'
+        + '<td>' + _dirCell(ev.direcao) + '</td>'
+        + '<td style="font-size:.75rem;color:var(--muted)">' + (ev.vehicle_type||'-') + '</td>'
+        + '<td style="text-align:center;font-size:.75rem;color:var(--muted)">' + conf + '</td>'
+        + '</tr>';
+    }).join('');
+    var evHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px">&#128247; Passagens registradas (' + events.length + ')</h3>'
+      + (events.length
+        ? '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>Data/Hora</th><th>C\u00e2mera</th><th>Dire\u00e7\u00e3o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + evRows + '</tbody></table></div>'
+        : '<p style="color:var(--muted);font-size:.82rem">Nenhuma passagem no per\u00edodo.</p>');
+
+    document.getElementById('detail-modal-body').innerHTML =
+      backHtml + headerHtml + actionsHtml + decisionHtml + breakdownHtml + partnersHtml + evHtml;
+
+    _mapaTrajetoria = { plates: [plate], points: events.map(function(ev){
+      return { camera_id: ev.camera_id, ts: ev.ts||'', plate: plate, cam_nome: ev.camera_name||ev.camera_id||'' };
+    })};
+    if (_mb) _mb.style.display = events.length ? '' : 'none';
   } catch(e) {
-    document.getElementById('batedor-status').textContent = 'Erro: ' + e.message;
-    document.getElementById('batedor-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro ao carregar relat\u00f3rio: ' + e.message + '</p>';
   }
 }
 
-// Helpers de direção
+function _reportGoBack() {
+  if (_reportHistory.length === 0) return;
+  var prev = _reportHistory.pop();
+  openBatedorReport(prev, true);
+}
+
+async function _submitDecision(plate, score, level, decision) {
+  var note = '';
+  if (decision === 'confirmado') {
+    var r = prompt('Observa\u00e7\u00e3o opcional:', '');
+    if (r === null) return;
+    note = r;
+  }
+  try {
+    var resp = await fetch('/api/vehicle/report/decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plate: plate, score_total: score, level: level, decision: decision, note: note, window: '2h' })
+    });
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return { detail: 'Erro ' + resp.status }; });
+      alert('Erro: ' + (err.detail || resp.status)); return;
+    }
+    openBatedorReport(plate, true);
+  } catch(e) { alert('Erro ao registrar decis\u00e3o: ' + e.message); }
+}
+
+function _toggleScoreBreakdown() {
+  var p = document.getElementById('score-breakdown-panel');
+  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+function _addPlateAsAlvo(plate) {
+  var inp = document.getElementById('alvo-plate-input');
+  if (inp) inp.value = plate;
+  closeModal('detail-modal');
+  var batTab = document.querySelector('.tab-btn[data-tab="batedor"]');
+  if (batTab) switchTab('batedor', batTab);
+  var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
+  if (alvosBtn) switchBatTab('alvos', alvosBtn);
+  setTimeout(function(){ var inp2=document.getElementById('alvo-plate-input'); if(inp2) inp2.focus(); }, 200);
+}
+function _navigateToAlvos() {
+  closeModal('detail-modal');
+  var batTab = document.querySelector('.tab-btn[data-tab="batedor"]');
+  if (batTab) switchTab('batedor', batTab);
+  var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
+  if (alvosBtn) switchBatTab('alvos', alvosBtn);
+}
 function _dirCell(dir) {
   if (dir === 'CRESCENTE')   return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>';
   if (dir === 'DECRESCENTE') return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>';
   return '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
 }
 function _domDir(cameraList) {
-  // Tenta derivar direção dominante cruzando a lista de câmeras com o cache de câmeras
   if (!cameraList || !window._camsData) return null;
   var names = (cameraList + '').split(',').map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean);
   var nC = 0, nD = 0;
   (window._camsData || []).forEach(function(c) {
-    var n = (c.nome || '').toLowerCase();
-    var ip = (c.ip || '').toLowerCase();
+    var n = (c.nome || '').toLowerCase(); var ip = (c.ip || '').toLowerCase();
     if (names.indexOf(n) >= 0 || names.indexOf(ip) >= 0 || names.indexOf((c.camera_id||'').toLowerCase()) >= 0) {
-      if (c.direcao === 'CRESCENTE')   nC++;
-      if (c.direcao === 'DECRESCENTE') nD++;
+      if (c.direcao === 'CRESCENTE') nC++; if (c.direcao === 'DECRESCENTE') nD++;
     }
   });
   if (nC > 0 && nC >= nD) return 'CRESCENTE';
-  if (nD > 0 && nD > nC)   return 'DECRESCENTE';
+  if (nD > 0 && nD > nC) return 'DECRESCENTE';
   return null;
 }
-
-function renderBatedor(items) {
-  var tb = document.getElementById('batedor-tbody');
-  if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhum suspeito encontrado.</td></tr>';
-    return;
-  }
-  tb.innerHTML = items.map(function(s) {
-    var badges = listBadgesHtml(s.plate) || '<span style="color:var(--muted)">-</span>';
-    var dir = _domDir(s.camera_list);
-    return '<tr>' +
-      '<td>' + plateHtml(s.plate) + '</td>' +
-      '<td style="font-size:.77rem">' + badges + '</td>' +
-      '<td><span class="badge ' + scoreClass(s.score) + '">' + s.score + '</span></td>' +
-      '<td>' + s.passes + '</td>' +
-      '<td>' + s.cameras + '</td>' +
-      '<td style="white-space:nowrap">' + _dirCell(dir) + '</td>' +
-      '<td style="font-size:.78rem">' + fmtTs(s.first_seen) + '</td>' +
-      '<td style="font-size:.78rem">' + fmtTs(s.last_seen) + '</td>' +
-      '<td><button class="btn btn-outline btn-xs" onclick="openDetail(\'' + (s.plate||'').replace(/'/g,"\\'") + '\')">&#128269; Detalhes</button></td>' +
-      '</tr>';
-  }).join('');
-}
-
-function updateBatCards(items) {
-  document.getElementById('bat-total').textContent = items.length;
-  if (items.length) {
-    document.getElementById('bat-top-score').textContent = items[0].score;
-    document.getElementById('bat-top-plate').textContent = items[0].plate || '-';
-    var cams = new Set();
-    items.forEach(function(i){ (i.camera_list||'').split(',').filter(Boolean).forEach(function(c){ cams.add(c); }); });
-    document.getElementById('bat-cameras').textContent = cams.size || '-';
-  } else {
-    ['bat-top-score','bat-top-plate','bat-cameras'].forEach(function(id){ document.getElementById(id).textContent = '-'; });
-  }
-}
-
-async function openDetail(plate) {
-  document.getElementById('detail-modal-plate').textContent = plate;
-  document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Carregando...</p>';
-  openModal('detail-modal');
-  var wm = document.getElementById('bat-window').value;
-  try {
-    var r = await fetch('/api/batedor/plate/' + encodeURIComponent(plate) + '?window_minutes=' + wm + '&limit=200');
-    var data = await r.json();
-    var events = data.items || [];
-    var badges = listBadgesHtml(plate);
-    events.forEach(function(ev) {
-      _imgMeta[ev.id] = { camName: ev.cam_nome || ev.channel_name || ev.camera_id || '', ts: ev.ts || ev.occurred_at || '' };
-    });
-
-    // --- Calcula direção consolidada ---
-    // Conta câmeras DISTINTAS com direção classificada
-    var camDirMap = {};
-    events.forEach(function(ev) {
-      var cid = ev.camera_id || ev.channel_name;
-      if (cid && ev.direcao) camDirMap[cid] = ev.direcao;
-    });
-    var camDirs = Object.values(camDirMap);
-    var nCresc  = camDirs.filter(function(d){ return d === 'CRESCENTE'; }).length;
-    var nDecresc= camDirs.filter(function(d){ return d === 'DECRESCENTE'; }).length;
-    // Banner só aparece se 2+ câmeras distintas com a mesma direção
-    var dirBanner = '';
-    if (nCresc >= 2 && nCresc >= nDecresc) {
-      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(74,222,128,.13);border:1px solid #4ade80;border-radius:8px;padding:10px 16px;margin-bottom:14px">'
-        + '<span style="font-size:1.6rem">&#8593;</span>'
-        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
-        + '<div style="font-weight:800;font-size:1.05rem;color:#4ade80">CRESCENTE</div>'
-        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nCresc + ' câmera(s) classificada(s) neste sentido</div></div></div>';
-    } else if (nDecresc >= 2 && nDecresc > nCresc) {
-      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(248,113,113,.13);border:1px solid #f87171;border-radius:8px;padding:10px 16px;margin-bottom:14px">'
-        + '<span style="font-size:1.6rem">&#8595;</span>'
-        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
-        + '<div style="font-weight:800;font-size:1.05rem;color:#f87171">DECRESCENTE</div>'
-        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nDecresc + ' câmera(s) classificada(s) neste sentido</div></div></div>';
-    } else if (nCresc >= 1 && nDecresc >= 1) {
-      dirBanner = '<div style="display:flex;align-items:center;gap:10px;background:rgba(250,204,21,.1);border:1px solid var(--accent);border-radius:8px;padding:10px 16px;margin-bottom:14px">'
-        + '<span style="font-size:1.6rem">&#8597;</span>'
-        + '<div><div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sentido identificado</div>'
-        + '<div style="font-weight:800;font-size:1.05rem;color:var(--accent)">AMBOS OS SENTIDOS</div>'
-        + '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + nCresc + ' crescente / ' + nDecresc + ' decrescente</div></div></div>';
-    }
-
-    var rows = events.map(function(ev) {
-      var thumb = ev.image_path
-        ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=144&h=96" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\\'") + '\')">'
-        : '<div class="thumb-none">-</div>';
-      var ts = ev.ts || ev.occurred_at;
-      var dtObj = ts ? new Date(ts) : null;
-      var dateFmt = dtObj ? dtObj.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
-      var timeFmt = dtObj ? dtObj.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
-      var camName = ev.cam_nome || ev.channel_name || ev.camera_id || '-';
-      var camIp   = ev.camera_ip ? '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">' + ev.camera_ip + '</div>' : '';
-      var dir = ev.direcao;
-      var dirCell = dir === 'CRESCENTE'
-        ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>'
-        : dir === 'DECRESCENTE'
-          ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
-          : '<span style="color:var(--muted)">&#8212;</span>';
-      return '<tr>' +
-        '<td>' + thumb + '</td>' +
-        '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>' +
-        '<td style="font-size:.79rem;white-space:nowrap">' + dateFmt + '</td>' +
-        '<td style="font-size:.79rem;white-space:nowrap">' + timeFmt + '</td>' +
-        '<td style="font-size:.79rem">' + camName + camIp + '</td>' +
-        '<td style="font-size:.76rem;white-space:nowrap">' + dirCell + '</td>' +
-        '<td>' + fmtConf(ev.confidence) + '</td>' +
-        '</tr>';
-    }).join('');
-    document.getElementById('detail-modal-body').innerHTML =
-      (badges ? '<div style="margin-bottom:12px">' + badges + '</div>' : '') +
-      dirBanner +
-      '<p style="color:var(--muted);font-size:.81rem;margin-bottom:12px">' + events.length + ' evento(s)</p>' +
-      '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>#</th><th>Data</th><th>Hor&aacute;rio</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Conf.</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table></div>';
-    // Trajetória no mapa
-    _mapaTrajetoria = { plates: [plate], points: events.map(function(ev) {
-      return { camera_id: ev.camera_id, ts: ev.ts || ev.occurred_at, plate: plate, cam_nome: ev.cam_nome || ev.channel_name || ev.camera_id || '' };
-    })};
-    var _mb3 = document.getElementById('detail-modal-map-btn');
-    if (_mb3) _mb3.style.display = '';
-  } catch(e) {
-    document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro: ' + e.message + '</p>';
-  }
-}
+function openDetail(plate) { _reportHistory = []; _reportCurrentPlate = null; openBatedorReport(plate); }
 
 // ===== LISTAS =====
 async function loadLists() {
@@ -3001,6 +3099,20 @@ var _batedorSeen = {}; // chave: 'plateA|plateB', valor: timestamp último alert
 var _batedorAtivos = 0;
 var _realtimeEnabled = false;
 var _realtimeInterval = null;
+var _batNotifEnabled = false;
+
+function toggleBatNotif() {
+  _batNotifEnabled = !_batNotifEnabled;
+  var btn   = document.getElementById('btn-bat-notif');
+  var label = document.getElementById('bat-notif-label');
+  if (_batNotifEnabled) {
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-success');
+    label.innerHTML = 'Notif. ON <span class="dot" style="display:inline-block;margin-left:3px"></span>';
+  } else {
+    btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
+    label.textContent = 'Notif. OFF';
+  }
+}
 
 function toggleRealtime() {
   _realtimeEnabled = !_realtimeEnabled;
@@ -3026,134 +3138,27 @@ function toggleRealtime() {
 async function checkBatedorRealtime() {
   if (!_realtimeEnabled) return;
   try {
-    var resp = await fetch('/api/batedor/groups?window=2h&limit=50&min_shared=2&co_window=600');
+    var resp = await fetch('/api/batedor/central?window=2h&limit=100');
     if (!resp.ok) return;
     var data = await resp.json();
     var items = data.items || [];
-    var totalAtivos = 0;
 
-    // === Filtra pares válidos (2+ câmeras) ===
-    var pairesValidos = items.filter(function(s) {
-      return (s.evidence || []).length >= 2 && s.cameras_together >= 2;
+    // Placas com badge COMBOIO ou MULTI-CÂMERA e score alto
+    var ameacas = items.filter(function(it) {
+      return it.score_total >= 40 || (it.badges && (it.badges.indexOf('COMBOIO') >= 0 || it.badges.indexOf('MULTI-CÂMERA') >= 0));
     });
 
-    // === Monta grafo de adjacência ===
-    var adj = {}; // plate -> {plate: item}
-    pairesValidos.forEach(function(s) {
-      adj[s.plate_a] = adj[s.plate_a] || {};
-      adj[s.plate_b] = adj[s.plate_b] || {};
-      adj[s.plate_a][s.plate_b] = s;
-      adj[s.plate_b][s.plate_a] = s;
-    });
+    var totalAtivos = ameacas.length;
 
-    // === Encontra componentes conectados (comboios) ===
-    var visitados = {};
-    var comboios  = [];
-    Object.keys(adj).forEach(function(plate) {
-      if (visitados[plate]) return;
-      var grupo = []; var pilha = [plate];
-      while (pilha.length) {
-        var p = pilha.pop();
-        if (visitados[p]) continue;
-        visitados[p] = true; grupo.push(p);
-        Object.keys(adj[p] || {}).forEach(function(n) { pilha.push(n); });
-      }
-      comboios.push(grupo);
-    });
-
-    comboios.forEach(function(grupo) {
-      if (grupo.length < 2 || grupo.length > 3) return; // só 2 ou 3 veículos
-      totalAtivos++;
-
-      // === Coleta last_seen e par com mais câmeras ===
-      var minLastSeen = null; var melhorPar = null; var melhorCams = 0;
-      grupo.forEach(function(pa, i) {
-        grupo.slice(i + 1).forEach(function(pb) {
-          var s = (adj[pa] || {})[pb]; if (!s) return;
-          if (s.last_seen && (!minLastSeen || new Date(s.last_seen) > new Date(minLastSeen)))
-            minLastSeen = s.last_seen;
-          if (s.cameras_together > melhorCams) { melhorCams = s.cameras_together; melhorPar = s; }
-        });
-      });
-      var avgDelta = melhorPar ? melhorPar.avg_co_delta_sec : 0;
-
-      var batedor, alvo, escolta = null;
-
-      if (grupo.length === 2) {
-        // ── 2 veículos: quem lidera > 55% = batedor ──────────────────────────
-        var s2 = (adj[grupo[0]] || {})[grupo[1]] || (adj[grupo[1]] || {})[grupo[0]];
-        if (!s2) return;
-        var leadsA = 0, leadsB = 0;
-        (s2.evidence || []).forEach(function(ev) {
-          if (new Date(ev.ts_a) <= new Date(ev.ts_b)) leadsA++; else leadsB++;
-        });
-        var total2 = leadsA + leadsB; if (total2 === 0) return;
-        var clareza2 = Math.max(leadsA, leadsB) / total2;
-        if (clareza2 < 0.55) return; // papéis ambíguos
-        batedor = leadsA >= leadsB ? s2.plate_a : s2.plate_b;
-        alvo    = leadsA >= leadsB ? s2.plate_b : s2.plate_a;
-
-      } else {
-        // ── 3 veículos: o ALVO é quem chega NO MEIO mais vezes ───────────────
-        // Reconstrói timestamps reais por câmera a partir das evidências pairwise
-        var camTimes = {}; // {camera_id: {plate: timestamp_ms}}
-        grupo.forEach(function(pa, i) {
-          grupo.slice(i + 1).forEach(function(pb) {
-            var s = (adj[pa] || {})[pb]; if (!s) return;
-            (s.evidence || []).forEach(function(ev) {
-              if (!camTimes[ev.camera]) camTimes[ev.camera] = {};
-              var times = camTimes[ev.camera];
-              var tA = new Date(ev.ts_a).getTime();
-              var tB = new Date(ev.ts_b).getTime();
-              // mantém o timestamp mais antigo por placa/câmera (primeira passagem)
-              if (!times[s.plate_a] || tA < times[s.plate_a]) times[s.plate_a] = tA;
-              if (!times[s.plate_b] || tB < times[s.plate_b]) times[s.plate_b] = tB;
-            });
-          });
-        });
-
-        // Conta posições (1º/meio/último) por câmera onde os 3 passaram
-        var pos = {}; grupo.forEach(function(p){ pos[p] = {first:0, mid:0, last:0}; });
-        var camsCompletas = 0;
-        Object.keys(camTimes).forEach(function(cam) {
-          var times = camTimes[cam];
-          var presentes = grupo.filter(function(p){ return times[p] !== undefined; });
-          if (presentes.length < 3) return; // câmera sem os 3 — ignora para posição
-          camsCompletas++;
-          var ord = presentes.slice().sort(function(a, b){ return times[a] - times[b]; });
-          pos[ord[0]].first++;
-          pos[ord[1]].mid++;
-          pos[ord[2]].last++;
-        });
-
-        // Precisa de 2+ câmeras com os 3 presentes
-        if (camsCompletas < 2) return;
-
-        // Alvo = quem ficou mais vezes no meio (independente de troca de batedor/retaguarda)
-        alvo = grupo.slice().sort(function(a, b){ return pos[b].mid - pos[a].mid; })[0];
-        // Alvo precisa ter ficado no meio pelo menos 1 vez
-        if (pos[alvo].mid === 0) return;
-
-        // Batedor = quem mais chegou primeiro (dos outros 2)
-        var outros = grupo.filter(function(p){ return p !== alvo; });
-        batedor = outros.sort(function(a, b){ return pos[b].first - pos[a].first; })[0];
-        escolta = outros.filter(function(p){ return p !== batedor; })[0];
-
-        console.warn('[COMBOIO 3V] posições:', grupo.map(function(p){
-          return p + '(1°:' + pos[p].first + ' mid:' + pos[p].mid + ' ult:' + pos[p].last + ')';
-        }).join(' | '), '| Câmeras completas:', camsCompletas);
-      }
-
-      // === Cooldown baseado em last_seen ===
-      var chave    = grupo.slice().sort().join('|');
+    ameacas.forEach(function(it) {
+      var chave = it.plate + '|' + (it.last_seen || '');
       var ultimoLs = _batedorSeen[chave];
-      if (ultimoLs && minLastSeen && new Date(minLastSeen) <= new Date(ultimoLs)) return;
-      _batedorSeen[chave] = minLastSeen;
+      if (ultimoLs === it.last_seen) return; // sem mudança
+      _batedorSeen[chave] = it.last_seen;
 
-      triggerComboio(batedor, alvo, escolta, melhorCams, avgDelta);
-      console.warn('[COMBOIO ALARME]',
-        'Bat:' + batedor, 'Alvo:' + alvo, (escolta ? 'Ret:' + escolta : ''),
-        '| Câmeras:', melhorCams, '| Δ:', avgDelta + 's');
+      if (_batNotifEnabled) {
+        triggerComboio(it.plate, '?', null, it.cameras_count || 1, 0);
+      }
     });
 
     _batedorAtivos = totalAtivos;

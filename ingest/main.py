@@ -28,6 +28,8 @@ from jose import JWTError, jwt as _jwt
 from passlib.context import CryptContext
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from cleanup_background import start_cleanup_background, stop_cleanup_background
+
 # ===========================
 # CONFIG
 # ===========================
@@ -257,7 +259,29 @@ def _init_db():
                     created_at TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
+            cur.execute("ALTER TABLE alvos ADD COLUMN IF NOT EXISTS list_id INTEGER REFERENCES vehicle_lists(id) ON DELETE SET NULL;")
 
+            # Eventos LPR — campo direcao derivado da câmera
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS direcao TEXT DEFAULT NULL;")
+
+            # Decisões operacionais sobre relatórios de veículos
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS vehicle_report_decisions (
+                    id SERIAL PRIMARY KEY,
+                    plate TEXT NOT NULL,
+                    score_total INTEGER NOT NULL DEFAULT 0,
+                    level TEXT NOT NULL DEFAULT 'normal',
+                    badges JSONB DEFAULT '[]',
+                    sinais_principais JSONB DEFAULT '{}',
+                    decision TEXT NOT NULL,
+                    decision_note TEXT,
+                    operator TEXT NOT NULL DEFAULT '',
+                    report_window TEXT NOT NULL DEFAULT '2h',
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_vrd_plate ON vehicle_report_decisions(plate);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_vrd_created ON vehicle_report_decisions(created_at);")
 
 
 # ===========================
@@ -397,7 +421,13 @@ def get_event_by_id(event_id: int) -> dict[str, Any] | None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
-    yield
+    # Inicia worker de limpeza/retencao de dados em background
+    start_cleanup_background(_conn)
+    try:
+        yield
+    finally:
+        # Sinaliza o worker para encerrar graciosamente no shutdown
+        stop_cleanup_background()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -1874,104 +1904,395 @@ def batedor_companions(
 # ===========================
 
 def _parse_window_to_minutes(w: str) -> int:
-    """Converte '2h', '24h', '7d', '90d' em minutos."""
+    """Converte '2h', '24h', '7d', '90d', '30m' em minutos."""
     w = str(w).strip().lower()
     try:
         if w.endswith("d"):
             return int(w[:-1]) * 1440
         elif w.endswith("h"):
             return int(w[:-1]) * 60
+        elif w.endswith("m"):
+            return max(1, int(w[:-1]))
         return int(w)
     except Exception:
         return 120
 
 
-@app.get("/api/batedor/suspects")
-def batedor_suspects(
-    window_minutes: int = 180,
-    min_passes: int = 3,
-    min_cameras: int = 2,
-    limit: int = 50,
-    ts_from: str | None = None,
-    ts_to: str | None = None,
+# ===========================
+# RELATÓRIO UNIFICADO DE VEÍCULO
+# ===========================
+
+
+# ===========================
+# RELATÓRIO UNIFICADO DE VEÍCULO
+# ===========================
+
+@app.get("/api/vehicle/report")
+def vehicle_report(
+    plate: str,
+    window: str = "2h",
 ):
-    """Placas vistas muitas vezes em múltiplas câmeras na janela de tempo."""
-    limit = max(1, min(500, int(limit)))
-    extra: list[str] = [
-        "plate IS NOT NULL",
-        "plate != ''",
-        "plate NOT IN ('unknown','UNKNOWN')",
-    ]
-    vals: list[Any] = []
+    """
+    Relatório completo de veículo.
 
-    if ts_from and ts_to:
-        f = _parse_dt(ts_from)
-        t = _parse_dt(ts_to)
-        if f:
-            extra.append("COALESCE(occurred_at, ts) >= %s"); vals.append(f)
-        if t:
-            extra.append("COALESCE(occurred_at, ts) <= %s"); vals.append(t)
-    else:
-        extra.append(
-            "COALESCE(occurred_at, ts) >= NOW() - INTERVAL '%d minutes'" % int(window_minutes)
-        )
+    Retorna:
+      plate, window, level, is_alvo, alvo_descricao, alvo_list,
+      score, score_breakdown[], badges[],
+      summary{}, events[], convoy_partners[],
+      last_decision{}
+    """
+    from collections import Counter
 
-    wsql = " AND ".join(extra)
-    vals += [int(min_passes), int(min_cameras), limit]
+    plate = (plate or "").strip().upper()
+    if not plate:
+        raise HTTPException(status_code=422, detail="plate é obrigatório")
+
+    window_min = _parse_window_to_minutes(window)
+    t_to   = _utcnow()
+    t_from = t_to - timedelta(minutes=window_min)
 
     with _conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"""
+
+            # ── 1. Passagens da placa ──────────────────────────────────────
+            #    BUG-FIX: JOIN por c.camera_id = e.camera_id (texto), c.nome (não c.name)
+            #    DIRECAO: priorizamos e.direcao (quando gravado) senão herdamos c.direcao
+            cur.execute("""
                 SELECT
-                    plate,
-                    COUNT(*)                         AS passes,
-                    COUNT(DISTINCT camera_id)        AS cameras,
-                    MIN(COALESCE(occurred_at, ts))   AS first_seen,
-                    MAX(COALESCE(occurred_at, ts))   AS last_seen
-                FROM lpr_events
-                WHERE {wsql}
-                GROUP BY plate
-                HAVING COUNT(*) >= %s AND COUNT(DISTINCT camera_id) >= %s
-                ORDER BY COUNT(DISTINCT camera_id) DESC, COUNT(*) DESC
-                LIMIT %s
-            """, tuple(vals))
+                    e.id,
+                    e.plate,
+                    e.camera_id,
+                    COALESCE(c.nome, e.camera_id)                                AS camera_name,
+                    COALESCE(e.occurred_at, e.ts)                                AS ts,
+                    e.image_path,
+                    COALESCE(NULLIF(e.direcao,''), c.direcao)                    AS direcao,
+                    COALESCE((e.yolo_result->>'vehicle_type'), '')               AS vehicle_type,
+                    COALESCE((e.yolo_result->>'vehicle_count')::int, 1)          AS vehicle_count,
+                    COALESCE(e.confidence, 0.0)                                  AS confidence
+                FROM lpr_events e
+                LEFT JOIN cameras c ON c.camera_id = e.camera_id
+                WHERE e.plate = %s
+                  AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                ORDER BY ts DESC
+                LIMIT 500
+            """, (plate, t_from, t_to))
+            ev_rows = cur.fetchall()
+
+            # ── 2. Parceiros de co-aparecimento ────────────────────────────
+            cur.execute("""
+                SELECT
+                    b.plate                                                      AS partner,
+                    COUNT(DISTINCT a.camera_id)                                  AS cameras_together,
+                    AVG(ABS(EXTRACT(EPOCH FROM (
+                        COALESCE(b.occurred_at, b.ts) -
+                        COALESCE(a.occurred_at, a.ts)
+                    ))))::int                                                     AS avg_delta_sec,
+                    MIN(COALESCE(b.occurred_at, b.ts))                           AS first_seen,
+                    MAX(COALESCE(b.occurred_at, b.ts))                           AS last_seen,
+                    COUNT(*)                                                      AS joint_events,
+                    AVG(COALESCE(b.confidence, 0))::float                        AS avg_conf
+                FROM lpr_events a
+                JOIN lpr_events b
+                    ON  a.camera_id = b.camera_id
+                    AND a.id       != b.id
+                    AND b.plate    != a.plate
+                    AND ABS(EXTRACT(EPOCH FROM (
+                            COALESCE(b.occurred_at, b.ts) -
+                            COALESCE(a.occurred_at, a.ts)
+                        ))) <= 300
+                WHERE a.plate = %s
+                  AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
+                  AND b.plate IS NOT NULL
+                  AND b.plate != ''
+                  AND b.plate NOT IN ('unknown','UNKNOWN')
+                GROUP BY b.plate
+                ORDER BY cameras_together DESC, joint_events DESC
+                LIMIT 30
+            """, (plate, t_from, t_to))
+            partner_rows = cur.fetchall()
+
+            # ── 3. Status alvo ─────────────────────────────────────────────
+            #    BUG-FIX: list_id pode não existir — consulta segura
+            cur.execute("""
+                SELECT a.plate, a.descricao,
+                       vl.name AS list_name
+                FROM alvos a
+                LEFT JOIN vehicle_lists vl ON vl.id = a.list_id
+                WHERE a.plate = %s
+                LIMIT 1
+            """, (plate,))
+            alvo_row = cur.fetchone()
+
+            # ── 4. Alvos entre parceiros ───────────────────────────────────
+            partner_plates = [r[0] for r in partner_rows] if partner_rows else []
+            alvo_partners: set[str] = set()
+            if partner_plates:
+                ph = ",".join(["%s"] * len(partner_plates))
+                cur.execute(f"SELECT plate FROM alvos WHERE plate IN ({ph})", partner_plates)
+                alvo_partners = {r[0] for r in cur.fetchall()}
+
+            # ── 5. Última decisão operacional ──────────────────────────────
+            cur.execute("""
+                SELECT id, decision, decision_note, operator, created_at
+                FROM vehicle_report_decisions
+                WHERE plate = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (plate,))
+            dec_row = cur.fetchone()
+
+    # ── Montar eventos ─────────────────────────────────────────────────────
+    events: list[dict] = []
+    cameras_set: set[str] = set()
+    direcoes: list[str] = []
+    confidences: list[float] = []
+    for r in ev_rows:
+        cam = str(r[2]) if r[2] else ""
+        cameras_set.add(cam)
+        d = r[6] or ""
+        if d:
+            direcoes.append(d)
+        conf = float(r[9]) if r[9] else 0.0
+        if conf > 0:
+            confidences.append(conf)
+        events.append({
+            "id":            r[0],
+            "plate":         r[1],
+            "camera_id":     cam,
+            "camera_name":   r[3] or cam,
+            "ts":            r[4].isoformat() if r[4] else None,
+            "image_path":    r[5],
+            "direcao":       d,
+            "vehicle_type":  r[7],
+            "vehicle_count": r[8],
+            "confidence":    round(conf, 2),
+        })
+
+    total_passes  = len(events)
+    cameras_count = len(cameras_set)
+    avg_conf = round(sum(confidences) / len(confidences), 2) if confidences else 0.0
+
+    # ── Montar parceiros ───────────────────────────────────────────────────
+    partners: list[dict] = []
+    for r in partner_rows:
+        partners.append({
+            "plate":            r[0],
+            "cameras_together": int(r[1]),
+            "avg_delta_sec":    int(r[2]) if r[2] else 0,
+            "first_seen":       r[3].isoformat() if r[3] else None,
+            "last_seen":        r[4].isoformat() if r[4] else None,
+            "joint_events":     int(r[5]),
+            "avg_conf":         round(float(r[6]) if r[6] else 0.0, 2),
+            "is_alvo":          r[0] in alvo_partners,
+        })
+
+    is_alvo        = alvo_row is not None
+    alvo_descricao = alvo_row[1] if alvo_row else None
+    alvo_list      = alvo_row[2] if alvo_row else None
+
+    # ── Score breakdown ────────────────────────────────────────────────────
+    breakdown: list[dict] = []
+    score = 0
+
+    def _add(label: str, value: int, multiplier: int, reason: str = "") -> None:
+        nonlocal score
+        pts = value * multiplier
+        if pts > 0:
+            breakdown.append({
+                "label":      label,
+                "value":      value,
+                "multiplier": multiplier,
+                "points":     pts,
+                "reason":     reason,
+            })
+            score += pts
+
+    _add("Câmeras distintas",           cameras_count,        10, "Cada câmera única = +10 pts")
+    _add("Total de passagens",          total_passes,          2, "Cada passagem = +2 pts")
+    _add("Parceiros co-detectados",     len(partners),        15, "Cada parceiro simultâneo = +15 pts")
+    alvo_partners_count = sum(1 for p in partners if p["is_alvo"])
+    _add("Parceiros já cadastrados como alvo", alvo_partners_count, 30, "Parceiro alvo = +30 pts")
+    if is_alvo:
+        _add("Placa cadastrada como alvo", 1, 50, "Alvo registrado = +50 pts")
+
+    # ── Badges ────────────────────────────────────────────────────────────
+    badges: list[str] = []
+    if is_alvo:                      badges.append("ALVO")
+    if cameras_count >= 3:           badges.append("MULTI-CÂMERA")
+    if len(partners) >= 2:           badges.append("COMBOIO")
+    if alvo_partners_count > 0:      badges.append("PARCEIRO-ALVO")
+    if total_passes >= 5:            badges.append("REINCIDENTE")
+
+    # ── Level ─────────────────────────────────────────────────────────────
+    if score >= 80 or is_alvo:
+        level = "alerta"
+    elif score >= 40:
+        level = "suspeito"
+    else:
+        level = "normal"
+
+    # ── Direção dominante ─────────────────────────────────────────────────
+    dom_dir = Counter(direcoes).most_common(1)[0][0] if direcoes else None
+
+    # ── Última decisão ────────────────────────────────────────────────────
+    last_decision: dict | None = None
+    if dec_row:
+        last_decision = {
+            "id":        dec_row[0],
+            "decision":  dec_row[1],
+            "note":      dec_row[2],
+            "operator":  dec_row[3],
+            "created_at": dec_row[4].isoformat() if dec_row[4] else None,
+        }
+
+    return {
+        "plate":           plate,
+        "window":          window,
+        "level":           level,
+        "is_alvo":         is_alvo,
+        "alvo_descricao":  alvo_descricao,
+        "alvo_list":       alvo_list,
+        "score":           score,
+        "score_breakdown": breakdown,
+        "badges":          badges,
+        "summary": {
+            "total_passes":   total_passes,
+            "cameras_count":  cameras_count,
+            "partners_count": len(partners),
+            "avg_confidence": avg_conf,
+            "first_seen":     events[-1]["ts"] if events else None,
+            "last_seen":      events[0]["ts"]  if events else None,
+            "dom_direction":  dom_dir,
+        },
+        "events":          events,
+        "convoy_partners": partners,
+        "last_decision":   last_decision,
+    }
+
+
+@app.post("/api/vehicle/report/decision", status_code=201)
+async def vehicle_report_decision(request: Request):
+    """
+    Salva uma decisão operacional sobre um veículo.
+
+    Body JSON:
+      plate        (str, obrigatório)
+      decision     (str: 'confirmado'|'falso_positivo'|'ignorar')
+      score_total  (int, opcional)
+      level        (str, opcional)
+      badges       (list, opcional)
+      sinais_principais (dict, opcional)
+      note         (str, opcional — observação livre)
+      window       (str, opcional)
+    """
+    data = await request.json()
+    plate    = (data.get("plate") or "").strip().upper()
+    decision = (data.get("decision") or "").strip().lower()
+    if not plate:
+        raise HTTPException(status_code=422, detail="plate é obrigatório")
+    allowed = {"confirmado", "falso_positivo", "ignorar"}
+    if decision not in allowed:
+        raise HTTPException(status_code=422, detail=f"decision deve ser um de: {allowed}")
+
+    score_total = int(data.get("score_total") or 0)
+    level       = str(data.get("level") or "normal")
+    badges      = data.get("badges") or []
+    sinais      = data.get("sinais_principais") or {}
+    note        = str(data.get("note") or "")[:1000]
+    window      = str(data.get("window") or "2h")
+    try:
+        operator = request.state.user.get("sub", "") if isinstance(request.state.user, dict) else ""
+    except Exception:
+        operator = ""
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO vehicle_report_decisions
+                    (plate, score_total, level, badges, sinais_principais, decision, decision_note, operator, report_window)
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s, %s)
+                RETURNING id, created_at
+            """, (
+                plate, score_total, level,
+                _json_lib.dumps(badges), _json_lib.dumps(sinais),
+                decision, note, operator, window,
+            ))
+            row = cur.fetchone()
+
+    return {
+        "ok":         True,
+        "id":         row[0],
+        "plate":      plate,
+        "decision":   decision,
+        "created_at": row[1].isoformat() if row[1] else None,
+    }
+
+
+@app.get("/api/vehicle/report/decisions")
+def vehicle_report_decisions(
+    plate: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Lista decisões operacionais. Filtra por placa se fornecida."""
+    limit = max(1, min(200, int(limit)))
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            if plate:
+                plate = plate.strip().upper()
+                cur.execute("""
+                    SELECT id, plate, score_total, level, badges, decision,
+                           decision_note, operator, report_window, created_at
+                    FROM vehicle_report_decisions
+                    WHERE plate = %s
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                """, (plate, limit, offset))
+            else:
+                cur.execute("""
+                    SELECT id, plate, score_total, level, badges, decision,
+                           decision_note, operator, report_window, created_at
+                    FROM vehicle_report_decisions
+                    ORDER BY created_at DESC
+                    LIMIT %s OFFSET %s
+                """, (limit, offset))
             rows = cur.fetchall()
 
     items = []
     for r in rows:
-        passes  = int(r[1])
-        cameras = int(r[2])
-        score   = cameras * 10 + passes * 2
         items.append({
-            "plate":      r[0],
-            "score":      score,
-            "passes":     passes,
-            "cameras":    cameras,
-            "first_seen": r[3].isoformat() if r[3] else None,
-            "last_seen":  r[4].isoformat() if r[4] else None,
+            "id":           r[0],
+            "plate":        r[1],
+            "score_total":  r[2],
+            "level":        r[3],
+            "badges":       r[4] if isinstance(r[4], list) else [],
+            "decision":     r[5],
+            "note":         r[6],
+            "operator":     r[7],
+            "window":       r[8],
+            "created_at":   r[9].isoformat() if r[9] else None,
         })
-    return {"items": items}
+    return {"items": items, "count": len(items)}
 
 
-@app.get("/api/batedor/convoys")
-def batedor_convoys(
+# ===========================
+# CENTRAL DE AMEAÇAS — consolida suspeitos + comboio + grupos + alvos
+# ===========================
+
+@app.get("/api/batedor/central")
+def batedor_central(
     window: str = "2h",
-    min_transitions: int = 2,
-    dt_min: int = 40,
-    dt_max: int = 180,
-    type: str = "all",
-    limit: int = 50,
+    limit: int = 150,
     ts_from: str | None = None,
-    ts_to: str | None = None,
+    ts_to:   str | None = None,
 ):
-    """Placas que transitam entre câmeras dentro do intervalo de tempo esperado (reconhecimento/escolta)."""
-    import json as _json
-    limit      = max(1, min(200, int(limit)))
-    min_tr     = max(1, int(min_transitions))
-    dt_min_s   = max(1, int(dt_min))
-    dt_max_s   = max(dt_min_s + 1, int(dt_max))
-    window_min = _parse_window_to_minutes(window)
+    """
+    Visão unificada: cruza suspeitos, comboio, grupos e alvos cadastrados.
+    Retorna por placa: de quais módulos ela consta, score total e metadados.
+    """
+    from collections import defaultdict
 
+    window_min = _parse_window_to_minutes(window)
     if ts_from and ts_to:
         t_from = _parse_dt(ts_from) or (_utcnow() - timedelta(minutes=window_min))
         t_to   = _parse_dt(ts_to)   or _utcnow()
@@ -1979,209 +2300,86 @@ def batedor_convoys(
         t_to   = _utcnow()
         t_from = t_to - timedelta(minutes=window_min)
 
+    # acumulador por placa
+    def _new():
+        return {
+            "in_suspeitos":   None,
+            "in_comboio":     None,
+            "in_grupos":      [],
+            "is_alvo":        False,
+            "alvo_descricao": None,
+            "first_seen":     None,
+            "last_seen":      None,
+        }
+
+    intel: dict = defaultdict(_new)
+
+    def _upd(d, fs, ls):
+        if fs and (d["first_seen"] is None or fs < d["first_seen"]):
+            d["first_seen"] = fs
+        if ls and (d["last_seen"]  is None or ls > d["last_seen"]):
+            d["last_seen"]  = ls
+
     with _conn() as conn:
         with conn.cursor() as cur:
+
+            # ── 1. SUSPEITOS ──────────────────────────────────────────────
             cur.execute("""
-                SELECT
-                    a.plate,
-                    a.camera_id                                                           AS cam_a,
-                    b.camera_id                                                           AS cam_b,
-                    EXTRACT(EPOCH FROM (
-                        COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                    ))::int                                                               AS delta_t,
-                    COALESCE(a.occurred_at, a.ts)                                         AS ts_a,
-                    COALESCE(b.occurred_at, b.ts)                                         AS ts_b,
-                    a.image_path                                                          AS img_a,
-                    b.image_path                                                          AS img_b
+                SELECT plate,
+                       COUNT(*)                       AS passes,
+                       COUNT(DISTINCT camera_id)      AS cameras,
+                       MIN(COALESCE(occurred_at, ts)) AS first_seen,
+                       MAX(COALESCE(occurred_at, ts)) AS last_seen
+                FROM lpr_events
+                WHERE plate IS NOT NULL
+                  AND plate NOT IN ('', 'unknown', 'UNKNOWN')
+                  AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                GROUP BY plate
+                HAVING COUNT(*) >= 2 AND COUNT(DISTINCT camera_id) >= 2
+                ORDER BY COUNT(DISTINCT camera_id) DESC, COUNT(*) DESC
+                LIMIT 300
+            """, (t_from, t_to))
+            for r in cur.fetchall():
+                plate, passes, cameras, fs, ls = r[0], int(r[1]), int(r[2]), r[3], r[4]
+                score = cameras * 10 + passes * 2
+                intel[plate]["in_suspeitos"] = {"score": score, "passes": passes, "cameras": cameras}
+                _upd(intel[plate], fs, ls)
+
+            # ── 2. COMBOIO (transições entre câmeras dentro de 10–300 s) ──
+            cur.execute("""
+                SELECT a.plate,
+                       COUNT(DISTINCT a.camera_id)      AS transitions,
+                       MIN(COALESCE(a.occurred_at, a.ts)) AS first_seen,
+                       MAX(COALESCE(a.occurred_at, a.ts)) AS last_seen
                 FROM lpr_events a
                 JOIN lpr_events b
-                    ON  a.plate      = b.plate
+                    ON  a.plate     = b.plate
                     AND a.camera_id != b.camera_id
-                    AND COALESCE(b.occurred_at, b.ts) > COALESCE(a.occurred_at, a.ts)
-                    AND EXTRACT(EPOCH FROM (
+                    AND a.id        != b.id
+                    AND ABS(EXTRACT(EPOCH FROM (
                             COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                        )) BETWEEN %s AND %s
+                        ))) BETWEEN 10 AND 300
                 WHERE a.plate IS NOT NULL
                   AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
-                ORDER BY a.plate, COALESCE(a.occurred_at, a.ts)
-                LIMIT 5000
-            """, (dt_min_s, dt_max_s, t_from, t_to))
-            rows = cur.fetchall()
+                GROUP BY a.plate
+                HAVING COUNT(DISTINCT a.camera_id) >= 2
+                ORDER BY COUNT(DISTINCT a.camera_id) DESC
+                LIMIT 300
+            """, (t_from, t_to))
+            for r in cur.fetchall():
+                plate, transitions, fs, ls = r[0], int(r[1]), r[2], r[3]
+                score = transitions * 5
+                intel[plate]["in_comboio"] = {"score": score, "transitions": transitions}
+                _upd(intel[plate], fs, ls)
 
-    from collections import defaultdict
-    plate_data: dict[str, Any] = defaultdict(lambda: {
-        "transitions": 0,
-        "deltas": [],
-        "first_seen": None,
-        "last_seen": None,
-        "evidence": [],
-    })
-
-    for r in rows:
-        plate, cam_a, cam_b, delta_t, ts_a, ts_b, img_a, img_b = r
-        pd = plate_data[plate]
-        pd["transitions"] += 1
-        pd["deltas"].append(int(delta_t))
-        ts_a_iso = ts_a.isoformat() if ts_a else None
-        ts_b_iso = ts_b.isoformat() if ts_b else None
-        if not pd["first_seen"] or (ts_a_iso and ts_a_iso < pd["first_seen"]):
-            pd["first_seen"] = ts_a_iso
-        if not pd["last_seen"] or (ts_b_iso and ts_b_iso > pd["last_seen"]):
-            pd["last_seen"] = ts_b_iso
-        pd["evidence"].append({
-            "cam_a":    cam_a,
-            "cam_b":    cam_b,
-            "delta_t":  int(delta_t),
-            "ts_a":     ts_a_iso,
-            "ts_b":     ts_b_iso,
-            "img_a":    img_a,
-            "img_b":    img_b,
-            "yolo_vc_a": -1,
-            "yolo_vc_b": -1,
-        })
-
-    # Contagem YOLO de multi-veículos por placa (dentro da mesma janela de tempo)
-    yolo_multi_by_plate: dict = {}
-    active_plates = list(plate_data.keys())
-    if active_plates:
-        try:
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT plate, COUNT(*)
-                        FROM lpr_events
-                        WHERE plate = ANY(%s)
-                          AND yolo_result IS NOT NULL
-                          AND (yolo_result->>'vehicle_count')::int > 1
-                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
-                        GROUP BY plate
-                        """,
-                        (active_plates, t_from, t_to)
-                    )
-                    for pr in cur.fetchall():
-                        yolo_multi_by_plate[pr[0]] = int(pr[1])
-        except Exception:
-            pass
-
-    # Tipo de veículo dominante por placa (agregado do yolo_result)
-    _TIPO_PT = {"car": "Carro", "truck": "Caminhão", "motorcycle": "Moto",
-                "bus": "Ônibus", "van": "Van", "bicycle": "Bicicleta"}
-    dominant_type_by_plate: dict = {}
-    if active_plates:
-        try:
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT plate, yolo_result->'vehicle_types'
-                        FROM lpr_events
-                        WHERE plate = ANY(%s)
-                          AND yolo_result IS NOT NULL
-                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
-                        """,
-                        (active_plates, t_from, t_to)
-                    )
-                    type_counts_conv: dict = {}
-                    for row in cur.fetchall():
-                        vt = row[1]
-                        if vt and isinstance(vt, dict):
-                            tc = type_counts_conv.setdefault(row[0], {})
-                            for k, v in vt.items():
-                                tc[k] = tc.get(k, 0) + int(v)
-            for pl, counts in type_counts_conv.items():
-                best = max(counts, key=counts.get)
-                dominant_type_by_plate[pl] = _TIPO_PT.get(best, best.capitalize())
-        except Exception:
-            pass
-
-    # ── Resolve direção dominante por placa cruzando câmeras com tabela cameras ──
-    all_cam_ids = list({ev["cam_a"] for pd in plate_data.values() for ev in pd["evidence"]} |
-                       {ev["cam_b"] for pd in plate_data.values() for ev in pd["evidence"]})
-    cam_dir_map: dict = {}
-    if all_cam_ids:
-        try:
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT camera_id, ip, direcao FROM cameras WHERE direcao IS NOT NULL")
-                    for row in cur.fetchall():
-                        if row[2]:
-                            cam_dir_map[row[0]] = row[2]  # por camera_id
-                            if row[1]:
-                                cam_dir_map[row[1].strip()] = row[2]  # por IP
-        except Exception:
-            pass
-
-    def _dom_dir_convoys(pd_ev):
-        nc, nd = 0, 0
-        for ev in pd_ev:
-            for cid in (ev.get("cam_a"), ev.get("cam_b")):
-                d = cam_dir_map.get(cid)
-                if d == "CRESCENTE": nc += 1
-                elif d == "DECRESCENTE": nd += 1
-        if nc == 0 and nd == 0: return None
-        return "CRESCENTE" if nc >= nd else "DECRESCENTE"
-
-    items = []
-    for plate, pd in plate_data.items():
-        if pd["transitions"] < min_tr:
-            continue
-        avg_delta = int(sum(pd["deltas"]) / len(pd["deltas"])) if pd["deltas"] else 0
-        score     = pd["transitions"] * 5 + max(0, 30 - avg_delta // 10)
-        items.append({
-            "plate":             plate,
-            "score":             score,
-            "valid_transitions": pd["transitions"],
-            "avg_delta_t_sec":   avg_delta,
-            "dominant_direcao":  _dom_dir_convoys(pd["evidence"]),
-            "dominant_type":     dominant_type_by_plate.get(plate),
-            "yolo_multi_events": yolo_multi_by_plate.get(plate, 0),
-            "first_seen":        pd["first_seen"],
-            "last_seen":         pd["last_seen"],
-            "evidence":          pd["evidence"][:10],
-        })
-
-    items.sort(key=lambda x: x["score"], reverse=True)
-    return {"items": items[:limit]}
-
-
-@app.get("/api/batedor/groups")
-def batedor_groups(
-    window: str = "2h",
-    min_shared: int = 1,
-    co_window: int = 120,
-    limit: int = 50,
-    ts_from: str | None = None,
-    ts_to: str | None = None,
-):
-    """Pares de placas DIFERENTES vistas na mesma câmera com menos de co_window segundos de diferença."""
-    limit      = max(1, min(200, int(limit)))
-    min_sh     = max(1, int(min_shared))
-    co_win_s   = max(10, int(co_window))
-    window_min = _parse_window_to_minutes(window)
-
-    if ts_from and ts_to:
-        t_from = _parse_dt(ts_from) or (_utcnow() - timedelta(minutes=window_min))
-        t_to   = _parse_dt(ts_to)   or _utcnow()
-    else:
-        t_to   = _utcnow()
-        t_from = t_to - timedelta(minutes=window_min)
-
-    with _conn() as conn:
-        with conn.cursor() as cur:
+            # ── 3. GRUPOS (pares vistos na mesma câmera em ≤120 s) ────────
             cur.execute("""
-                SELECT
-                    LEAST(a.plate, b.plate)        AS plate_a,
-                    GREATEST(a.plate, b.plate)     AS plate_b,
-                    a.camera_id                    AS camera_id,
-                    COALESCE(a.occurred_at, a.ts)  AS ts_a,
-                    COALESCE(b.occurred_at, b.ts)  AS ts_b,
-                    ABS(EXTRACT(EPOCH FROM (
-                        COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                    )))::int                        AS co_delta,
-                    a.image_path                   AS img_a,
-                    b.image_path                   AS img_b
+                SELECT LEAST(a.plate, b.plate)             AS plate_a,
+                       GREATEST(a.plate, b.plate)          AS plate_b,
+                       COUNT(DISTINCT a.camera_id)         AS cameras_together,
+                       MIN(COALESCE(a.occurred_at, a.ts))  AS first_seen,
+                       MAX(COALESCE(b.occurred_at, b.ts))  AS last_seen
                 FROM lpr_events a
                 JOIN lpr_events b
                     ON  a.camera_id = b.camera_id
@@ -2189,156 +2387,65 @@ def batedor_groups(
                     AND a.id       != b.id
                     AND ABS(EXTRACT(EPOCH FROM (
                             COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                        ))) <= %s
+                        ))) <= 120
                 WHERE a.plate IS NOT NULL AND b.plate IS NOT NULL
                   AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND b.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
-                ORDER BY plate_a, plate_b
-                LIMIT 5000
-            """, (co_win_s, t_from, t_to))
-            pair_rows = cur.fetchall()
+                GROUP BY plate_a, plate_b
+                HAVING COUNT(DISTINCT a.camera_id) >= 1
+                ORDER BY cameras_together DESC
+                LIMIT 300
+            """, (t_from, t_to))
+            for r in cur.fetchall():
+                pa, pb, ct, fs, ls = r[0], r[1], int(r[2]), r[3], r[4]
+                score = ct * 10
+                intel[pa]["in_grupos"].append({"plate": pb, "score": score, "cameras_together": ct})
+                intel[pb]["in_grupos"].append({"plate": pa, "score": score, "cameras_together": ct})
+                _upd(intel[pa], fs, ls)
+                _upd(intel[pb], fs, ls)
 
-    from collections import defaultdict
-    pair_data: dict[tuple, Any] = defaultdict(lambda: {
-        "cameras": set(),
-        "co_deltas": [],
-        "first_seen": None,
-        "last_seen": None,
-        "evidence": [],
-    })
+            # ── 4. ALVOS cadastrados ───────────────────────────────────────
+            cur.execute("SELECT plate, descricao FROM alvos")
+            for row in cur.fetchall():
+                # marca mesmo que não tenha aparecido na janela (para exibir na central)
+                d = intel[row[0]]
+                d["is_alvo"]        = True
+                d["alvo_descricao"] = row[1] or ""
 
-    for r in pair_rows:
-        plate_a, plate_b, camera_id, ts_a, ts_b, co_delta, img_a, img_b = r
-        pd = pair_data[(plate_a, plate_b)]
-        pd["cameras"].add(camera_id)
-        pd["co_deltas"].append(int(co_delta))
-        ts_a_iso = ts_a.isoformat() if ts_a else None
-        ts_b_iso = ts_b.isoformat() if ts_b else None
-        if not pd["first_seen"] or (ts_a_iso and ts_a_iso < pd["first_seen"]):
-            pd["first_seen"] = ts_a_iso
-        if not pd["last_seen"] or (ts_b_iso and ts_b_iso > pd["last_seen"]):
-            pd["last_seen"] = ts_b_iso
-        pd["evidence"].append({
-            "camera_id": camera_id,
-            "ts_a":      ts_a_iso,
-            "ts_b":      ts_b_iso,
-            "co_delta":  int(co_delta),
-            "img_a":     img_a,
-            "img_b":     img_b,
-        })
-
-    # Contagem YOLO de multi-veículos por par de placas (dentro da mesma janela)
-    yolo_multi_by_pair: dict = {}
-    active_pairs = list(pair_data.keys())
-    if active_pairs:
-        try:
-            all_plates = list({pl for pair in active_pairs for pl in pair})
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT plate, COUNT(*)
-                        FROM lpr_events
-                        WHERE plate = ANY(%s)
-                          AND yolo_result IS NOT NULL
-                          AND (yolo_result->>'vehicle_count')::int > 1
-                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
-                        GROUP BY plate
-                        """,
-                        (all_plates, t_from, t_to)
-                    )
-                    per_plate = {r[0]: int(r[1]) for r in cur.fetchall()}
-            for pa, pb in active_pairs:
-                yolo_multi_by_pair[(pa, pb)] = per_plate.get(pa, 0) + per_plate.get(pb, 0)
-        except Exception:
-            pass
-
-    # Tipo de veículo dominante por par (agregado do yolo_result)
-    _TIPO_PT_GRP = {"car": "Carro", "truck": "Caminhão", "motorcycle": "Moto",
-                    "bus": "Ônibus", "van": "Van", "bicycle": "Bicicleta"}
-    dominant_type_by_pair: dict = {}
-    if active_pairs:
-        try:
-            all_pl_grp = list({pl for pair in active_pairs for pl in pair})
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        """
-                        SELECT plate, yolo_result->'vehicle_types'
-                        FROM lpr_events
-                        WHERE plate = ANY(%s)
-                          AND yolo_result IS NOT NULL
-                          AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
-                        """,
-                        (all_pl_grp, t_from, t_to)
-                    )
-                    type_counts_grp: dict = {}
-                    for row in cur.fetchall():
-                        vt = row[1]
-                        if vt and isinstance(vt, dict):
-                            tc = type_counts_grp.setdefault(row[0], {})
-                            for k, v in vt.items():
-                                tc[k] = tc.get(k, 0) + int(v)
-            for pa, pb in active_pairs:
-                merged: dict = {}
-                for pl in (pa, pb):
-                    for k, v in type_counts_grp.get(pl, {}).items():
-                        merged[k] = merged.get(k, 0) + v
-                if merged:
-                    best = max(merged, key=merged.get)
-                    dominant_type_by_pair[(pa, pb)] = _TIPO_PT_GRP.get(best, best.capitalize())
-        except Exception:
-            pass
-
-    # ── Resolve direção dominante por par cruzando câmeras com tabela cameras ──
-    all_cam_ids_grp = list({ev["camera_id"] for pd in pair_data.values() for ev in pd["evidence"]})
-    cam_dir_map_grp: dict = {}
-    if all_cam_ids_grp:
-        try:
-            with _conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT camera_id, ip, direcao FROM cameras WHERE direcao IS NOT NULL")
-                    for row in cur.fetchall():
-                        if row[2]:
-                            cam_dir_map_grp[row[0]] = row[2]  # por camera_id
-                            if row[1]:
-                                cam_dir_map_grp[row[1].strip()] = row[2]  # por IP
-        except Exception:
-            pass
-
-    def _dom_dir_groups(cameras_set):
-        nc, nd = 0, 0
-        for cid in cameras_set:
-            d = cam_dir_map_grp.get(cid)
-            if d == "CRESCENTE": nc += 1
-            elif d == "DECRESCENTE": nd += 1
-        if nc == 0 and nd == 0: return None
-        return "CRESCENTE" if nc >= nd else "DECRESCENTE"
-
+    # ── Monta itens ──────────────────────────────────────────────────────────
     items = []
-    for (plate_a, plate_b), pd in pair_data.items():
-        cameras_together = len(pd["cameras"])
-        if cameras_together < min_sh:
-            continue
-        avg_co = int(sum(pd["co_deltas"]) / len(pd["co_deltas"])) if pd["co_deltas"] else 0
-        score  = cameras_together * 10 + len(pd["co_deltas"]) * 2
+    for plate, d in intel.items():
+        sinais = sum([
+            1 if d["in_suspeitos"] else 0,
+            1 if d["in_comboio"]   else 0,
+            1 if d["in_grupos"]    else 0,
+            1 if d["is_alvo"]      else 0,
+        ])
+        s_score = (d["in_suspeitos"] or {}).get("score", 0)
+        c_score = (d["in_comboio"]   or {}).get("score", 0)
+        g_score = max((g["score"] for g in d["in_grupos"]), default=0)
+        a_bonus = 50 if d["is_alvo"] else 0
+
+        score_total = int(s_score + c_score * 1.5 + g_score * 1.2 + a_bonus)
+        if   sinais >= 3: score_total = int(score_total * 1.5)
+        elif sinais >= 2: score_total = int(score_total * 1.2)
+
         items.append({
-            "plate_a":          plate_a,
-            "plate_b":          plate_b,
-            "score":            score,
-            "cameras_together": cameras_together,
-            "avg_co_delta_sec": avg_co,
-            "yolo_multi_count": yolo_multi_by_pair.get((plate_a, plate_b), 0),
-            "dominant_direcao": _dom_dir_groups(pd["cameras"]),
-            "dominant_type":    dominant_type_by_pair.get((plate_a, plate_b)),
-            "first_seen":       pd["first_seen"],
-            "last_seen":        pd["last_seen"],
-            "evidence":         pd["evidence"][:20],
+            "plate":          plate,
+            "score_total":    score_total,
+            "sinais":         sinais,
+            "in_suspeitos":   d["in_suspeitos"],
+            "in_comboio":     d["in_comboio"],
+            "in_grupos":      sorted(d["in_grupos"], key=lambda x: x["cameras_together"], reverse=True)[:5],
+            "is_alvo":        d["is_alvo"],
+            "alvo_descricao": d["alvo_descricao"],
+            "first_seen":     d["first_seen"].isoformat() if d["first_seen"] else None,
+            "last_seen":      d["last_seen"].isoformat()  if d["last_seen"]  else None,
         })
 
-    items.sort(key=lambda x: x["score"], reverse=True)
-    return {"items": items[:limit]}
+    items.sort(key=lambda x: (x["sinais"], x["score_total"]), reverse=True)
+    return {"items": items[:limit], "total": len(items), "window": window}
 
 
 # ===========================

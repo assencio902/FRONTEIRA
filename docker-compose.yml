@@ -12,6 +12,11 @@
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: always
 
   redis:
@@ -22,6 +27,11 @@
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   ingest:
     build: ./ingest
@@ -34,12 +44,25 @@
       POSTGRES_USER: monitor_user
       POSTGRES_PASSWORD: monitor_pass
       REDIS_URL: redis://redis:6379/0
+      # ── Retenção / Cleanup ─────────────────────────────────────────
+      CLEANUP_ENABLED: "true"
+      CLEANUP_INTERVAL_SECONDS: "600"
+      CLEANUP_DRY_RUN: "false"
+      RETENTION_DAYS_IMAGES: "7"
+      RETENTION_DAYS_EVENTS: "30"
+      MAX_UPLOADS_GB: "50"
+      UPLOADS_DIR: "/app/uploads"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - ./data:/data
       - ./uploads:/app/uploads
@@ -64,6 +87,11 @@
     restart: always
     volumes:
       - ./uploads:/app/uploads
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     # GPU — NVIDIA RTX 3050 6GB
     deploy:
       resources:
