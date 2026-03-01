@@ -62,7 +62,7 @@ def _decode_token(token: str) -> dict:
     return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
 # Paths públicos (não exigem JWT)
-_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest")
+_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest", "/api/catchall")
 _PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login"}
 
 # Regex para endpoints de imagem que o browser carrega diretamente (sem JWT header)
@@ -2463,3 +2463,56 @@ def api_event_thumbnail(event_id: int, w: int = 144, h: int = 96):
         raise HTTPException(status_code=404, detail="Imagem não disponível para este evento")
 
     return RedirectResponse(url=thumb, status_code=302)
+
+
+# ===========================
+# CATCH-ALL — debug / câmeras desconhecidas
+# Aceita qualquer método HTTP, qualquer Content-Type.
+# Loga headers + tamanho do body + primeiros 4 KB.
+# Público (sem JWT).
+# ===========================
+
+@app.api_route(
+    "/api/catchall",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=True,
+    tags=["debug"],
+    summary="Catch-all: loga qualquer requisição e retorna 200",
+)
+async def api_catchall(request: Request):
+    """Recebe qualquer requisição (qualquer método / Content-Type), loga e retorna 200."""
+    client_ip = request.client.host if request.client else "unknown"
+    method    = request.method
+    url       = str(request.url)
+    headers   = dict(request.headers)
+
+    body_raw  = await request.body()
+    body_size = len(body_raw)
+    body_preview_bytes = body_raw[:4096]          # primeiros 4 KB
+
+    # Tenta decodificar como texto; senão exibe hex
+    try:
+        body_preview = body_preview_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        body_preview = body_preview_bytes.hex()
+
+    print(
+        f"[CATCHALL] {method} {url}\n"
+        f"  client_ip : {client_ip}\n"
+        f"  body_size : {body_size} bytes\n"
+        f"  headers   : {_json_lib.dumps(headers, ensure_ascii=False)}\n"
+        f"  body_4kb  : {body_preview[:500]}"   # limita o print a 500 chars
+    )
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "ok": True,
+            "method": method,
+            "url": url,
+            "client_ip": client_ip,
+            "body_size": body_size,
+            "body_preview": body_preview[:4096],
+            "headers": headers,
+        },
+    )

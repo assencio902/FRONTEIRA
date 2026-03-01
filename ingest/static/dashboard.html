@@ -1111,6 +1111,7 @@
       <h2 id="camera-modal-title">Adicionar C&#226;mera</h2>
       <button class="modal-close" onclick="closeModal('camera-modal')">&times;</button>
     </div>
+    <div id="cam-status-bar" style="display:none;margin-bottom:14px;padding:9px 13px;border-radius:7px;font-size:.83rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
     <div class="form-group">
       <label>ID / Nome da c&#226;mera *</label>
       <input type="text" id="cam-camera-id" placeholder="Ex: 06_TREVO_4EIXO_CEREJEIRAS" maxlength="80">
@@ -3415,6 +3416,43 @@ function openCameraModal(cam) {
   document.getElementById('cam-longitude').value   = cam ? (cam.longitude != null ? cam.longitude : '') : '';
   document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
   document.getElementById('camera-form-error').textContent = '';
+
+  // Barra de status — só exibe ao editar
+  var bar = document.getElementById('cam-status-bar');
+  if (cam) {
+    var mins     = cam.last_seen ? (Date.now() - new Date(cam.last_seen).getTime()) / 60000 : null;
+    var dot, label, bg;
+    if (mins === null) {
+      dot = '&#9679;'; label = 'Nunca detectado'; bg = 'rgba(107,114,128,.13)';
+      bar.style.color = '#9ca3af';
+    } else if (mins < 15) {
+      dot = '&#9679;'; label = 'ONLINE — último evento há ' + Math.round(mins) + ' min'; bg = 'rgba(34,197,94,.13)';
+      bar.style.color = '#22c55e';
+    } else if (mins < 60) {
+      dot = '&#9679;'; label = 'AGUARDANDO — ' + Math.round(mins) + ' min sem evento'; bg = 'rgba(245,158,11,.13)';
+      bar.style.color = '#f59e0b';
+    } else {
+      var h = mins / 60;
+      dot = '&#9679;'; label = 'OFFLINE — último evento há ' + (h < 24 ? Math.round(h) + 'h' : Math.round(h/24) + 'd'); bg = 'rgba(239,68,68,.13)';
+      bar.style.color = '#ef4444';
+    }
+    var evHoje  = cam.events_today  > 0 ? cam.events_today  + ' hoje'  : '0 hoje';
+    var evTotal = cam.total_events  > 0 ? cam.total_events.toLocaleString('pt-BR') + ' total' : '0 total';
+    var lastFmt = cam.last_seen
+      ? new Date(cam.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : null;
+    bar.style.background = bg;
+    bar.style.display    = 'flex';
+    bar.innerHTML =
+      '<span style="font-size:1rem">' + dot + '</span>' +
+      '<strong>' + label + '</strong>' +
+      (lastFmt ? '<span style="color:var(--muted);font-size:.79rem">| último: ' + lastFmt + '</span>' : '') +
+      '<span style="margin-left:auto;font-size:.79rem;color:var(--muted)">' + evHoje + ' &nbsp;·&nbsp; ' + evTotal + '</span>';
+  } else {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+  }
+
   openModal('camera-modal');
   setTimeout(function(){ document.getElementById('cam-camera-id').focus(); }, 80);
 }
