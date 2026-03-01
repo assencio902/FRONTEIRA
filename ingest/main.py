@@ -14,7 +14,7 @@ from typing import Any
 import psycopg2
 import psycopg2.pool
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import UploadFile
 from starlette.requests import ClientDisconnect
@@ -62,7 +62,7 @@ def _decode_token(token: str) -> dict:
     return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
 # Paths públicos (não exigem JWT)
-_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest", "/api/catchall")
+_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest", "/api/catchall", "/catchall")
 _PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login"}
 
 # Regex para endpoints de imagem que o browser carrega diretamente (sem JWT header)
@@ -2467,52 +2467,55 @@ def api_event_thumbnail(event_id: int, w: int = 144, h: int = 96):
 
 # ===========================
 # CATCH-ALL — debug / câmeras desconhecidas
-# Aceita qualquer método HTTP, qualquer Content-Type.
-# Loga headers + tamanho do body + primeiros 4 KB.
-# Público (sem JWT).
+# Público (sem JWT). Responde em /catchall E /api/catchall.
+# Aceita GET/POST/PUT/PATCH/DELETE, qualquer Content-Type.
+# Loga método, path, ip, content-type, tamanho e primeiros 2000 bytes do body.
 # ===========================
 
+async def _catchall_handler(request: Request) -> PlainTextResponse:
+    """Handler público: loga a requisição e retorna 200 OK sem exigir JWT."""
+    client_ip    = request.client.host if request.client else "unknown"
+    method       = request.method
+    path         = request.url.path
+    content_type = request.headers.get("content-type", "-")
+
+    body_raw  = await request.body()
+    body_size = len(body_raw)
+    try:
+        body_preview = body_raw[:2000].decode("utf-8", errors="replace")
+    except Exception:
+        body_preview = body_raw[:2000].hex()
+
+    print(
+        f"[CATCHALL] {method} {path}\n"
+        f"  ip           : {client_ip}\n"
+        f"  content-type : {content_type}\n"
+        f"  body_size    : {body_size} bytes\n"
+        f"  body_2kb     : {body_preview[:500]}"
+    )
+
+    return PlainTextResponse("OK", status_code=200)
+
+
+# Rota raiz /catchall (sem prefixo /api) — usada por câmeras e testes diretos
+@app.api_route(
+    "/catchall",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    include_in_schema=True,
+    tags=["debug"],
+    summary="Catch-all público (sem /api)",
+)
+async def catchall_root(request: Request):
+    return await _catchall_handler(request)
+
+
+# Rota /api/catchall — mantida por compatibilidade
 @app.api_route(
     "/api/catchall",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     include_in_schema=True,
     tags=["debug"],
-    summary="Catch-all: loga qualquer requisição e retorna 200",
+    summary="Catch-all público (com prefixo /api)",
 )
-async def api_catchall(request: Request):
-    """Recebe qualquer requisição (qualquer método / Content-Type), loga e retorna 200."""
-    client_ip = request.client.host if request.client else "unknown"
-    method    = request.method
-    url       = str(request.url)
-    headers   = dict(request.headers)
-
-    body_raw  = await request.body()
-    body_size = len(body_raw)
-    body_preview_bytes = body_raw[:4096]          # primeiros 4 KB
-
-    # Tenta decodificar como texto; senão exibe hex
-    try:
-        body_preview = body_preview_bytes.decode("utf-8", errors="replace")
-    except Exception:
-        body_preview = body_preview_bytes.hex()
-
-    print(
-        f"[CATCHALL] {method} {url}\n"
-        f"  client_ip : {client_ip}\n"
-        f"  body_size : {body_size} bytes\n"
-        f"  headers   : {_json_lib.dumps(headers, ensure_ascii=False)}\n"
-        f"  body_4kb  : {body_preview[:500]}"   # limita o print a 500 chars
-    )
-
-    return JSONResponse(
-        status_code=200,
-        content={
-            "ok": True,
-            "method": method,
-            "url": url,
-            "client_ip": client_ip,
-            "body_size": body_size,
-            "body_preview": body_preview[:4096],
-            "headers": headers,
-        },
-    )
+async def catchall_api(request: Request):
+    return await _catchall_handler(request)
