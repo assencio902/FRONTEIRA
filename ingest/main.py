@@ -13,7 +13,7 @@ from typing import Any
 
 import psycopg2
 import psycopg2.pool
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import UploadFile
@@ -310,7 +310,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
             # as câmeras Hikvision enviam o próprio IP no XML <ipAddress> e esse
             # valor é usado como chave de lookup no webhook.
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude, usuario, senha FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
                 (camera_id, camera_id),
             )
             row = cur.fetchone()
@@ -330,6 +330,8 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
                 "direcao": row[8] or None,
                 "latitude":  float(row[9])  if row[9]  is not None else None,
                 "longitude": float(row[10]) if row[10] is not None else None,
+                "usuario": row[11] or None,
+                "senha":   row[12] or None,
             }
 
 
@@ -1196,8 +1198,78 @@ def stats_events_per_camera():
 # WEBHOOK HIKVISION (ISAPI multipart)
 # ===========================
 
+
+def _fetch_snapshot_and_enqueue(
+    event_id: int,
+    cam_ip: str,
+    usuario: str,
+    senha: str,
+    plate: str,
+    lpr_meta: dict,
+) -> None:
+    """
+    Busca um snapshot da câmera (ISAPI) e associa ao evento.
+    Executado em background após a resposta ao webhook.
+    """
+    import urllib.request
+    import urllib.error
+
+    urls = [
+        f"http://{cam_ip}/ISAPI/Streaming/channels/101/picture",
+        f"http://{cam_ip}/ISAPI/Streaming/channels/1/picture",
+    ]
+    img_data = None
+    for url in urls:
+        try:
+            password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+            password_mgr.add_password(None, url, usuario, senha)
+            digest = urllib.request.HTTPDigestAuthHandler(password_mgr)
+            basic  = urllib.request.HTTPBasicAuthHandler(password_mgr)
+            opener = urllib.request.build_opener(digest, basic)
+            with opener.open(url, timeout=5) as resp:
+                data = resp.read()
+            if len(data) > 5_000:   # imagem real (> 5 KB)
+                img_data = data
+                break
+        except Exception as exc:
+            print(f"[SNAPSHOT] {url} → {exc}")
+
+    if not img_data:
+        print(f"[SNAPSHOT] sem imagem para evento {event_id} (cam {cam_ip})")
+        return
+
+    day   = _utcnow().strftime("%Y-%m-%d")
+    d     = UPLOAD_DIR / day
+    d.mkdir(parents=True, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}.jpg"
+    (d / fname).write_bytes(img_data)
+    image_path = f"/uploads/{day}/{fname}"
+
+    # Atualiza o evento no banco
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE lpr_events SET image_path=%s WHERE id=%s",
+                (image_path, event_id),
+            )
+
+    # Enfileira análise YOLO
+    abs_path = f"/app/uploads/{day}/{fname}"
+    try:
+        _get_rq_queue().enqueue(
+            "worker.job_analyze_event",
+            abs_path,
+            plate or "",
+            lpr_meta,
+            job_timeout=120,
+        )
+    except Exception as e:
+        print(f"[SNAPSHOT][RQ] {e}")
+
+    print(f"[SNAPSHOT] evento {event_id} | cam {cam_ip} | {image_path}", flush=True)
+
 @app.post("/api/simple-webhook")
-async def simple_webhook(request: Request):
+async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     client_ip = _get_client_ip(request)
     content_type = request.headers.get("content-type", "")
 
@@ -1324,6 +1396,18 @@ async def simple_webhook(request: Request):
         channel_name = cam.get("nome") or default_nome
 
     image_path = None
+    # Monta lpr_meta para o worker YOLO (antes do bloco de imagem, pois pode ser usado no snapshot)
+    lpr_meta: dict = {"plate": plate or ""}
+    try:
+        if plate_rect:
+            lpr_meta["plate_rect"]   = plate_rect
+        if vehicle_rect:
+            lpr_meta["vehicle_rect"] = vehicle_rect
+        if pic_width and pic_height:
+            lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
+    except NameError:
+        pass  # variáveis não definidas (sem XML)
+
     if images:
         _, data = images[0]
         day = _utcnow().strftime("%Y-%m-%d")
@@ -1335,19 +1419,6 @@ async def simple_webhook(request: Request):
         # Enfileira análise YOLO para esta imagem
         try:
             abs_path = f"/app/uploads/{day}/{fname}"
-            # Monta metadados da placa/veículo para o worker focar no veículo correto
-            lpr_meta: dict = {"plate": plate or ""}
-            if "plate_rect" in dir():   # só existe se o XML foi processado
-                pass
-            try:
-                if plate_rect:
-                    lpr_meta["plate_rect"]   = plate_rect
-                if vehicle_rect:
-                    lpr_meta["vehicle_rect"] = vehicle_rect
-                if pic_width and pic_height:
-                    lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
-            except NameError:
-                pass  # variáveis não definidas (sem XML)
             _get_rq_queue().enqueue(
                 "worker.job_analyze_event",
                 abs_path,
@@ -1372,6 +1443,7 @@ async def simple_webhook(request: Request):
                     (plate, camera_id, channel_name, camera_ip, confidence, image_path, occurred_at, direcao)
                 VALUES
                     (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """, (
                 plate,
                 camera_id,
@@ -1382,6 +1454,19 @@ async def simple_webhook(request: Request):
                 occurred_at,
                 event_direcao,         # direção derivada: XML direction + direcao da câmera
             ))
+            event_id = cur.fetchone()[0]
+
+    # Se não chegou imagem pelo POST, tenta buscar snapshot da câmera via ISAPI
+    if not image_path and cam.get("ip") and cam.get("usuario") and cam.get("senha"):
+        background_tasks.add_task(
+            _fetch_snapshot_and_enqueue,
+            event_id,
+            cam["ip"],
+            cam["usuario"],
+            cam["senha"],
+            plate,
+            lpr_meta,
+        )
 
     return JSONResponse({
         "ok": True,
