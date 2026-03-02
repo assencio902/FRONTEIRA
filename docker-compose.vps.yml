@@ -1,0 +1,13 @@
+# docker-compose.vps.yml — Override para VPS sem GPU
+# Uso: docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+#
+# Substitui o yolo-worker pela versão CPU-only (imagem ~600 MB vs 8 GB CUDA)
+# e remove a reserva de GPU NVIDIA que causaria falha na VPS.
+
+services:
+  yolo-worker:
+    build:
+      context: ./yolo-worker
+      dockerfile: Dockerfile.cpu   # imagem leve CPU
+    deploy:
+      resources: {}                # remove reserva de GPU NVIDIA

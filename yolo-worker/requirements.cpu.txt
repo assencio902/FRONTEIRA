@@ -1,0 +1,11 @@
+# PyTorch CPU-only (sem CUDA) — muito menor, funciona em VPS sem GPU
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
+
+ultralytics==8.3.50
+opencv-python-headless==4.10.0.84
+redis==5.0.8
+rq==1.16.2
+Pillow==10.4.0
+psycopg2-binary==2.9.9
