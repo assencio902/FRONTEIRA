@@ -75,6 +75,8 @@
       IMAGES_DIR: /app/uploads
       YOLO_MODEL: yolov8n.pt
       YOLO_CONF: "0.35"
+      PICKUP_MAX_HEIGHT_FRAC: "0.45"
+      PICKUP_MAX_AREA_FRAC: "0.28"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: monitor
@@ -100,6 +102,29 @@
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  camera-poller:
+    build: ./camera-poller
+    environment:
+      INGEST_URL: http://ingest:8000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass
+      RECONNECT_DELAY: "10"
+      REFRESH_INTERVAL: "60"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ingest:
+        condition: service_started
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:

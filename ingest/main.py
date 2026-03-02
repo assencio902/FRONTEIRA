@@ -264,6 +264,17 @@ def _init_db():
             # Eventos LPR — campo direcao derivado da câmera
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS direcao TEXT DEFAULT NULL;")
 
+            # Migração: preenche direcao nos eventos históricos que ainda têm NULL
+            # (usa a câmera cadastrada para o camera_id ou camera_ip do evento)
+            cur.execute("""
+                UPDATE lpr_events e
+                SET direcao = c.direcao
+                FROM cameras c
+                WHERE e.direcao IS NULL
+                  AND c.direcao IS NOT NULL
+                  AND (c.camera_id = e.camera_id OR c.ip = e.camera_id OR c.ip = e.camera_ip)
+            """)
+
             # Decisões operacionais sobre relatórios de veículos
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS vehicle_report_decisions (
@@ -354,6 +365,71 @@ def get_camera_name(camera_id: str | None) -> str | None:
     except Exception as e:
         print(f"[CAMERA] erro ao resolver camera_id={camera_id}: {e}")
     return None
+
+
+def _lookup_camera_by_channel(channel_name: str) -> dict | None:
+    """
+    Fallback: busca câmera pelo channelName do XML contra camera_id ou nome no banco.
+    Útil quando o IP enviado no XML não está cadastrado mas o nome do canal casa.
+    Compara de forma case-insensitive e ignora espaços/hífens/sublinhados extras.
+    """
+    if not channel_name:
+        return None
+    # normaliza: minúsculas, substitui separadores por espaço
+    import re as _re
+    def _norm(s: str) -> str:
+        return _re.sub(r'[\s_\-]+', ' ', s.lower()).strip()
+    needle = _norm(channel_name)
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude FROM cameras WHERE ativa = TRUE"
+                )
+                rows = cur.fetchall()
+        for row in rows:
+            cam_id_norm  = _norm(row[1] or "")
+            cam_nome_norm = _norm(row[2] or "")
+            if needle in cam_id_norm or cam_id_norm in needle or \
+               needle in cam_nome_norm or cam_nome_norm in needle:
+                return {
+                    "id": row[0], "camera_id": row[1], "nome": row[2],
+                    "ativa": row[3], "criticidade": (row[4] or "NORMAL").upper(),
+                    "peso": float(row[5] or 1.0), "peso_score": float(row[5] or 1.0),
+                    "ip": row[7], "direcao": row[8] or None,
+                    "latitude":  float(row[9])  if row[9]  is not None else None,
+                    "longitude": float(row[10]) if row[10] is not None else None,
+                }
+    except Exception as e:
+        print(f"[CAMERA] _lookup_camera_by_channel erro: {e}")
+    return None
+
+
+def _derive_direcao(cam_direcao: str | None, xml_direction: str | None) -> str | None:
+    """
+    Deriva a direção absoluta do veículo combinando:
+      cam_direcao  : direção configurada na câmera (CRESCENTE / DECRESCENTE)
+      xml_direction: direção detectada no evento    (forward  / reverse)
+
+    Lógica:
+      CRESCENTE  + forward → CRESCENTE      (veículo vai no sentido crescente)
+      CRESCENTE  + reverse → DECRESCENTE    (veículo vai contra o sentido crescente)
+      DECRESCENTE + forward → DECRESCENTE   (veículo vai no sentido decrescente)
+      DECRESCENTE + reverse → CRESCENTE     (veículo vai contra o sentido decrescente)
+
+    Se um dos valores estiver ausente, retorna cam_direcao como fallback.
+    """
+    if not cam_direcao:
+        return None
+    if not xml_direction:
+        return cam_direcao
+    cd = cam_direcao.upper()
+    xd = xml_direction.lower()
+    if cd == "CRESCENTE":
+        return "CRESCENTE" if xd == "forward" else "DECRESCENTE"
+    if cd == "DECRESCENTE":
+        return "DECRESCENTE" if xd == "forward" else "CRESCENTE"
+    return cam_direcao
 
 
 def _get_client_ip(request: Request) -> str:
@@ -889,9 +965,17 @@ def list_events(
                 f"""
                 SELECT e.id, e.plate, e.camera_id, e.channel_name, e.camera_ip, e.confidence,
                        e.image_path, COALESCE(e.occurred_at, e.ts) AS when_ts, e.yolo_result,
-                       c.nome AS cam_nome, c.direcao
+                       c.nome AS cam_nome,
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao
                 FROM lpr_events e
-                LEFT JOIN cameras c ON c.ip = e.camera_id OR c.ip = e.camera_ip
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip        = e.camera_id
+                       OR ip        = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
                 {wsql}
                 ORDER BY COALESCE(e.occurred_at, e.ts) DESC
                 LIMIT %s OFFSET %s
@@ -928,6 +1012,7 @@ def list_events(
             # Campos extraídos do yolo_result para fácil acesso no frontend
             "sem_placa_motivo": yolo.get("sem_placa_motivo") if yolo else None,
             "vehicle_details":  yolo.get("vehicle_details")  if yolo else None,
+            "target_vehicle":   yolo.get("target_vehicle")   if yolo else None,
             "image_quality":    yolo.get("image_quality")    if yolo else None,
             "cam_nome": r[9] or r[3],
             "direcao": r[10] or None,
@@ -1142,21 +1227,50 @@ async def simple_webhook(request: Request):
     channel_name_xml = None
     confidence = 0.0
     occurred_at = None
+    xml_direction = None   # direção do veículo reportada pela câmera (forward/reverse)
 
     if xml_bytes:
         try:
             root = ET.fromstring(xml_bytes)
-            ns = {"h": "http://www.isapi.org/ver20/XMLSchema"}
 
             def x(tag):
-                # busca recursiva: encontra tags aninhadas (ex: ANPR/licensePlate)
-                el = root.find(f".//h:{tag}", ns)
+                # Busca namespace-agnostic: suporta hikvision.com, isapi.org e sem namespace
+                el = root.find(".//{*}" + tag)
+                if el is None:
+                    el = root.find(".//" + tag)  # fallback sem namespace
                 return el.text.strip() if el is not None and el.text else None
 
             plate            = x("licensePlate") or "unknown"
             xml_ip           = x("ipAddress")           # IP real: "172.21.151.16"
             channel_name_xml = x("channelName")         # nome do canal: "11_PRAINHA_1_CHACARAS"
             channel_id_xml   = x("channelID")           # fallback: "1"
+            xml_direction    = (x("direction") or "").lower() or None   # "forward" ou "reverse"
+
+            # Coordenadas da placa/veículo no frame (normalizadas 0-10000 pelo ISAPI)
+            # Hikvision envia <plateRect> ou <vehicleRect> com X, Y, width, height
+            def _rect(parent_tag: str) -> "dict | None":
+                try:
+                    px = x(parent_tag + "/X") or x("X")
+                    # Tenta buscar dentro da tag pai especifica
+                    ns_any = "{*}"
+                    el_parent = root.find(f".//{ns_any}{parent_tag}") or root.find(f".//{parent_tag}")
+                    if el_parent is None:
+                        return None
+                    get = lambda t: next(
+                        (el.text.strip() for el in el_parent.iter() if el.tag.split("}")[-1] == t and el.text),
+                        None
+                    )
+                    rx, ry, rw, rh = get("X"), get("Y"), get("width"), get("height")
+                    if all(v is not None for v in (rx, ry, rw, rh)):
+                        return {"x": int(rx), "y": int(ry), "w": int(rw), "h": int(rh)}
+                except Exception:
+                    pass
+                return None
+
+            plate_rect   = _rect("plateRect")   or _rect("PlateRect")
+            vehicle_rect = _rect("vehicleRect")  or _rect("VehicleRect")
+            pic_width    = x("picWidth")   or x("imageWidth")
+            pic_height   = x("picHeight")  or x("imageHeight")
 
             # camera_id = IP real do XML (identificador único por dispositivo)
             # fallback: channelName, depois channelID
@@ -1179,20 +1293,34 @@ async def simple_webhook(request: Request):
         except Exception as e:
             print(f"[XML] erro parse: {e}")
 
-    # Rejeita se não identificou nenhuma câmera no XML
+    # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
     if not camera_id:
-        print(f"[INGEST] evento sem camera_id ignorado (ip cliente={client_ip})")
-        return JSONResponse({"ok": False, "detail": "camera não identificada no XML"}, status_code=400)
+        header_ip = request.headers.get("X-Camera-IP", "").strip()
+        if header_ip:
+            camera_id = header_ip
+            xml_ip    = xml_ip or header_ip
+            print(f"[INGEST] camera_id resolvido via X-Camera-IP: {camera_id}")
+        else:
+            print(f"[INGEST] evento sem camera_id ignorado (ip cliente={client_ip})")
+            return JSONResponse({"ok": False, "detail": "camera não identificada no XML"}, status_code=400)
 
     channel_name = None
     if camera_id:
         # nome padrão = channelName do XML; fallback = próprio camera_id
         default_nome = channel_name_xml or camera_id
         cam = ensure_camera_exists(camera_id, default_name=default_nome, ip=xml_ip)
+
+        # Fallback: câmera não encontrada por IP — tenta pelo channelName do XML
+        if not cam.get("id") and channel_name_xml:
+            cam = _lookup_camera_by_channel(channel_name_xml) or cam
+
         # Rejeita evento se câmera não estiver cadastrada no banco
         if not cam.get("id"):
-            print(f"[INGEST] câmera não cadastrada ignorada: camera_id={camera_id} ip={xml_ip}")
+            print(f"[INGEST] câmera não cadastrada ignorada: camera_id={camera_id} ip={xml_ip} channel={channel_name_xml}")
             return JSONResponse({"ok": False, "detail": f"câmera '{camera_id}' não cadastrada"}, status_code=403)
+
+        # Usa sempre o camera_id canônico do banco (não o IP bruto do XML)
+        camera_id    = cam.get("camera_id") or camera_id
         channel_name = cam.get("nome") or default_nome
 
     image_path = None
@@ -1207,22 +1335,43 @@ async def simple_webhook(request: Request):
         # Enfileira análise YOLO para esta imagem
         try:
             abs_path = f"/app/uploads/{day}/{fname}"
+            # Monta metadados da placa/veículo para o worker focar no veículo correto
+            lpr_meta: dict = {"plate": plate or ""}
+            if "plate_rect" in dir():   # só existe se o XML foi processado
+                pass
+            try:
+                if plate_rect:
+                    lpr_meta["plate_rect"]   = plate_rect
+                if vehicle_rect:
+                    lpr_meta["vehicle_rect"] = vehicle_rect
+                if pic_width and pic_height:
+                    lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
+            except NameError:
+                pass  # variáveis não definidas (sem XML)
             _get_rq_queue().enqueue(
                 "worker.job_analyze_event",
                 abs_path,
-                plate or "",          # plate_raw: permite calcular sem_placa_motivo
+                plate or "",
+                lpr_meta,
                 job_timeout=120,
             )
         except Exception as _rq_err:
             print(f"[RQ] Falha ao enfileirar job YOLO: {_rq_err}")
 
+    # Deriva direção real do veículo:
+    # - Usa direction do XML (forward/reverse) + direcao configurada na câmera
+    # - forward + CRESCENTE   → CRESCENTE  | forward + DECRESCENTE → DECRESCENTE
+    # - reverse + CRESCENTE   → DECRESCENTE| reverse + DECRESCENTE → CRESCENTE
+    cam_direcao  = cam.get("direcao") if camera_id else None
+    event_direcao = _derive_direcao(cam_direcao, xml_direction)
+
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO lpr_events
-                    (plate, camera_id, channel_name, camera_ip, confidence, image_path, occurred_at)
+                    (plate, camera_id, channel_name, camera_ip, confidence, image_path, occurred_at, direcao)
                 VALUES
-                    (%s, %s, %s, %s, %s, %s, %s)
+                    (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 plate,
                 camera_id,
@@ -1230,7 +1379,8 @@ async def simple_webhook(request: Request):
                 xml_ip or client_ip,   # usa o IP real da câmera (do XML); fallback: IP do cliente HTTP
                 confidence,
                 image_path,
-                occurred_at
+                occurred_at,
+                event_direcao,         # direção derivada: XML direction + direcao da câmera
             ))
 
     return JSONResponse({
@@ -1749,11 +1899,13 @@ def batedor_plate(plate: str, window_minutes: str = "180", limit: int = 200):
             cur.execute(
                 """
                 SELECT e.id, e.plate, e.camera_id, e.channel_name, e.camera_ip, e.confidence,
-                       e.image_path, COALESCE(e.occurred_at, e.ts) AS ts, c.direcao, c.nome AS cam_nome
+                       e.image_path, COALESCE(e.occurred_at, e.ts) AS ts,
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao,
+                       c.nome AS cam_nome
                 FROM lpr_events e
                 LEFT JOIN cameras c ON c.id = (
                     SELECT id FROM cameras
-                    WHERE camera_id = e.camera_id OR ip = e.camera_ip
+                    WHERE camera_id = e.camera_id OR ip = e.camera_id OR ip = e.camera_ip
                     ORDER BY (camera_id = e.camera_id) DESC
                     LIMIT 1
                 )
@@ -1831,7 +1983,14 @@ def batedor_companions(
                     COALESCE(NULLIF(a.direcao,''), c.direcao)            AS direcao,
                     a.camera_id                                          AS camera_id
                 FROM lpr_events a
-                LEFT JOIN cameras c ON c.camera_id = a.camera_id
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = a.camera_id
+                       OR ip        = a.camera_id
+                       OR ip        = a.camera_ip
+                    ORDER BY (camera_id = a.camera_id) DESC
+                    LIMIT 1
+                )
                 JOIN lpr_events b
                     ON  a.camera_id = b.camera_id
                     AND a.id       != b.id
@@ -1975,7 +2134,14 @@ def vehicle_report(
                     COALESCE((e.yolo_result->>'vehicle_count')::int, 1)          AS vehicle_count,
                     COALESCE(e.confidence, 0.0)                                  AS confidence
                 FROM lpr_events e
-                LEFT JOIN cameras c ON c.camera_id = e.camera_id
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip        = e.camera_id
+                       OR ip        = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
                 WHERE e.plate = %s
                   AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
                 ORDER BY ts DESC

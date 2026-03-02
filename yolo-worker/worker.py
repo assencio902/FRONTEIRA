@@ -32,10 +32,126 @@ VEHICLE_CLASS_PT = {
     "car":        "Carro",
     "motorcycle": "Moto",
     "bus":        "Ônibus",
+    "van":        "Van/Kombi",
     "truck":      "Caminhão",
+    "pickup":     "Caminhonete",
     "bicycle":    "Bicicleta",
     "person":     "Pessoa",
 }
+
+# Limites de fração da altura da imagem para distinguir caminhonete de caminhão
+# Caminhões grandes e ônibus ocupam mais da imagem verticalmente
+PICKUP_MAX_HEIGHT_FRAC = float(os.getenv("PICKUP_MAX_HEIGHT_FRAC", "0.45"))
+PICKUP_MAX_AREA_FRAC   = float(os.getenv("PICKUP_MAX_AREA_FRAC",   "0.28"))
+# Limites para distinguir van/kombi de ônibus real
+VAN_MAX_HEIGHT_FRAC    = float(os.getenv("VAN_MAX_HEIGHT_FRAC",    "0.40"))
+VAN_MAX_AREA_FRAC      = float(os.getenv("VAN_MAX_AREA_FRAC",      "0.20"))
+
+
+def _normalize_rect(rect: dict, img_w: int, img_h: int,
+                    pic_w: int = 10000, pic_h: int = 10000) -> list:
+    """
+    Converte rect normalizado (0-picW x 0-picH) Hikvision para pixels reais.
+    Retorna [x1, y1, x2, y2] em pixels da imagem.
+    Hikvision usa coordenadas 0-10000 por padrão.
+    """
+    x1 = int(rect["x"] / pic_w * img_w)
+    y1 = int(rect["y"] / pic_h * img_h)
+    x2 = int((rect["x"] + rect["w"]) / pic_w * img_w)
+    y2 = int((rect["y"] + rect["h"]) / pic_h * img_h)
+    return [max(0, x1), max(0, y1), min(img_w, x2), min(img_h, y2)]
+
+
+def _iou(boxA: list, boxB: list) -> float:
+    """Intersection over Union entre dois bounding boxes [x1,y1,x2,y2]."""
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    inter = max(0, xB - xA) * max(0, yB - yA)
+    if inter == 0:
+        return 0.0
+    areaA = (boxA[2]-boxA[0]) * (boxA[3]-boxA[1])
+    areaB = (boxB[2]-boxB[0]) * (boxB[3]-boxB[1])
+    return inter / (areaA + areaB - inter)
+
+
+def _find_target_vehicle(vehicle_details: list, lpr_meta: dict,
+                         img_w: int, img_h: int) -> "dict | None":
+    """
+    Identifica qual veículo detectado corresponde à placa lida.
+    Estratégias (por prioridade):
+      1. vehicleRect do XML  → maior IoU com bbox YOLO
+      2. plateRect do XML    → bbox YOLO que contém o centro da placa
+      3. Fallback             → maior bbox (mais próximo da câmera = veículo principal)
+    """
+    if not vehicle_details:
+        return None
+
+    pic_w = lpr_meta.get("pic_size", {}).get("w", 10000)
+    pic_h = lpr_meta.get("pic_size", {}).get("h", 10000)
+
+    # 1. vehicleRect → IoU direto com YOLO
+    vrect = lpr_meta.get("vehicle_rect")
+    if vrect:
+        ref = _normalize_rect(vrect, img_w, img_h, pic_w, pic_h)
+        best = max(vehicle_details, key=lambda v: _iou(v["xyxy"], ref))
+        if _iou(best["xyxy"], ref) > 0.10:  # IoU mínimo
+            return best
+
+    # 2. plateRect → qual bbox YOLO contém o centro da placa
+    prect = lpr_meta.get("plate_rect")
+    if prect:
+        # Centro da placa em pixels
+        cx = int((prect["x"] + prect["w"] / 2) / pic_w * img_w)
+        cy = int((prect["y"] + prect["h"] / 2) / pic_h * img_h)
+        for v in vehicle_details:
+            x1, y1, x2, y2 = v["xyxy"]
+            if x1 <= cx <= x2 and y1 <= cy <= y2:
+                return v
+        # Nenhum contém o centro → mais próximo
+        best = min(vehicle_details, key=lambda v: (
+            (((v["xyxy"][0]+v["xyxy"][2])/2 - cx)**2 +
+             ((v["xyxy"][1]+v["xyxy"][3])/2 - cy)**2) ** 0.5
+        ))
+        return best
+
+    # 3. Fallback: maior área (veículo dominante da cena)
+    return max(vehicle_details, key=lambda v: (
+        (v["xyxy"][2]-v["xyxy"][0]) * (v["xyxy"][3]-v["xyxy"][1])
+    ))
+
+
+def _classify_truck_subtype(xyxy: list, img_bgr) -> str:
+    """
+    Distingue caminhonete de caminhão com base no tamanho relativo do bounding
+    box em relação à imagem. Caminhonetes são menores que caminhões grandes.
+    Retorna 'pickup' ou 'truck'.
+    """
+    h_img, w_img = img_bgr.shape[:2]
+    x1, y1, x2, y2 = [int(v) for v in xyxy]
+    altura_box  = y2 - y1
+    largura_box = x2 - x1
+    frac_altura = altura_box / h_img
+    area_relat  = (altura_box * largura_box) / (h_img * w_img)
+    if frac_altura < PICKUP_MAX_HEIGHT_FRAC and area_relat < PICKUP_MAX_AREA_FRAC:
+        return "pickup"
+    return "truck"
+
+
+def _classify_bus_subtype(xyxy: list, img_bgr) -> str:
+    """
+    Distingue Van/Kombi de ônibus real com base no tamanho do bounding box.
+    Kombis e vans são menores que ônibus rodoviários/urbanos.
+    Retorna 'van' ou 'bus'.
+    """
+    h_img, w_img = img_bgr.shape[:2]
+    x1, y1, x2, y2 = [int(v) for v in xyxy]
+    frac_altura = (y2 - y1) / h_img
+    area_relat  = ((y2 - y1) * (x2 - x1)) / (h_img * w_img)
+    if frac_altura < VAN_MAX_HEIGHT_FRAC and area_relat < VAN_MAX_AREA_FRAC:
+        return "van"
+    return "bus"
 
 IMAGES_DIR = Path(os.getenv("IMAGES_DIR", "/app/uploads"))
 MODEL_PATH  = os.getenv("YOLO_MODEL", "yolov8n.pt")
@@ -133,65 +249,110 @@ def _analyze_plate_region(img_bgr, xyxy: list) -> dict:
     return {"blur_score": blur_score, "brightness": brightness, "qualidade": qualidade}
 
 
-# Tabela HSV → cor em português (valores em escala OpenCV: H=0-179, S/V=0-255)
-# Formato: (nome, h_min, h_max, s_min, v_min)
+# ── Tabela de cores (Lab d65) — centro aproximado em BGR para mapeamento ──────────
+# Mapeamos os centros dos clusters K-means de volta para cor usando distância no espaço HSV.
 _COR_RANGES = [
-    ("Vermelho",  0,   10, 45, 30),
-    ("Laranja",  10,   25, 45, 35),
-    ("Amarelo",  25,   35, 45, 40),
-    ("Verde",    35,   85, 35, 30),
-    ("Azul",     85,  130, 35, 30),
-    ("Roxo",    130,  165, 35, 30),
-    ("Vermelho",165,  180, 45, 30),  # wraparound vermelho
+    # (nome,    h_min, h_max, s_min, s_max, v_min, v_max)
+    ("Vermelho",  0,   10,  25, 255,  30, 255),
+    ("Laranja",  10,   22,  25, 255,  40, 255),
+    ("Amarelo",  22,   35,  25, 255,  50, 255),
+    ("Verde",    35,   85,  22, 255,  25, 255),
+    ("Azul",     85,  130,  22, 255,  25, 255),
+    ("Roxo",    130,  165,  22, 255,  25, 255),
+    ("Vermelho",165,  180,  25, 255,  30, 255),  # wraparound
 ]
 
-def _hsv_to_color_name(h: int, s: int, v: int) -> str:
-    # Preto: somente quando há pouca luz e baixa saturação (carros coloridos escuros ficam fora)
-    if v < 45 and s < 80:
+
+def _hsv_cluster_to_name(h: float, s: float, v: float) -> "str | None":
+    """
+    Mapeia um cluster HSV (float OpenCV: H 0-179, S/V 0-255) para nome de cor.
+    Retorna None se o cluster for fundo (asfalto, céu, sombra profunda).
+    """
+    # Descarta fundo: pixels muito escuros (asfalto/sombra interna do carro)
+    if v < 35:
+        return None
+    # Descarta fundo: saturasão muito alta + brilho alto = ceu/superexposto
+    # (raro, mas evita confundir iluminação com cor do veículo)
+
+    # Preto genuino: escuro e dessaturado
+    if v < 70 and s < 40:
         return "Preto"
-    # Branco: brilho alto com saturação bem baixa
-    if s < 45 and v > 185:
+    # Branco: muito brilhante e dessaturado
+    if s < 35 and v > 175:
         return "Branco"
-    # Prata / Cinza: saturação baixa em qualquer nível de brilho
-    if s < 70:
+    # Prata/Cinza: dessaturado em qualquer brilho intermediário
+    if s < 45:
         return "Prata/Cinza"
-    # Cores saturadas — busca na tabela de faixas
-    for nome, h_min, h_max, s_min, v_min in _COR_RANGES:
-        if h_min <= h <= h_max and s >= s_min and v >= v_min:
+    # Cores saturadas
+    for nome, h_min, h_max, s_min, s_max, v_min, v_max in _COR_RANGES:
+        if h_min <= h <= h_max and s_min <= s <= s_max and v_min <= v <= v_max:
             return nome
-    # Fallback: tons residuais tratados como cinza
+    # Residual dessaturado
     return "Prata/Cinza"
 
 
 def _detect_vehicle_color(img_bgr, xyxy: list) -> str:
     """
-    Detecta a cor dominante do veículo analisando o trecho médio da carroceria
-    (evita capô e pneus) usando análise HSV.
+    Detecta a cor dominante do veículo usando K-means no espaço HSV.
+    Foca no corpo do veículo (evita capô reflexivo, pneus e fundo).
     """
     import cv2
-    from collections import Counter
+    import numpy as np
 
     h_img, w_img = img_bgr.shape[:2]
     x1, y1, x2, y2 = [int(v) for v in xyxy]
     x1, x2 = max(0, x1), min(w_img, x2)
     y1, y2 = max(0, y1), min(h_img, y2)
 
-    altura   = y2 - y1
-    crop_y1  = y1 + int(altura * 0.20)
-    crop_y2  = y1 + int(altura * 0.65)
-    crop     = img_bgr[crop_y1:crop_y2, x1:x2]
+    altura  = y2 - y1
+    largura = x2 - x1
+    if altura < 10 or largura < 10:
+        return "Indeterminada"
 
+    # Corpo do veículo: evita capô (top 18%), pneus/placa (bottom 22%), bordas (10%)
+    crop = img_bgr[
+        y1 + int(altura  * 0.18) : y1 + int(altura  * 0.78),
+        x1 + int(largura * 0.10) : x2 - int(largura * 0.10),
+    ]
     if crop.size == 0:
         return "Indeterminada"
 
-    small  = cv2.resize(crop, (32, 32), interpolation=cv2.INTER_AREA)
-    hsv    = cv2.cvtColor(small, cv2.COLOR_BGR2HSV)
-    pixels = hsv.reshape(-1, 3)
+    # Redimensiona para 80×80 — bom equilíbrio entre velocidade e representação
+    small = cv2.resize(crop, (80, 80), interpolation=cv2.INTER_AREA)
+    hsv   = cv2.cvtColor(small, cv2.COLOR_BGR2HSV).reshape(-1, 3).astype(np.float32)
 
-    cores     = [_hsv_to_color_name(int(p[0]), int(p[1]), int(p[2])) for p in pixels]
-    contador  = Counter(cores)
-    dominante, _ = contador.most_common(1)[0]
-    return dominante
+    # Remove pixels muito escuros (sombra/asfalto visível) antes do K-means
+    mask = hsv[:, 2] > 30
+    hsv_f = hsv[mask]
+    if len(hsv_f) < 20:
+        return "Preto"
+
+    # K-means com k=4 clusters — boa cobertura sem over-split
+    K = 4
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 15, 1.0)
+    try:
+        _, labels, centers = cv2.kmeans(
+            hsv_f, K, None, criteria, attempts=3,
+            flags=cv2.KMEANS_PP_CENTERS,
+        )
+    except Exception:
+        return "Indeterminada"
+
+    # Conta pixels por cluster e ordena por tamanho
+    counts  = np.bincount(labels.flatten(), minlength=K)
+    total   = counts.sum()
+    ordered = sorted(zip(counts, centers), key=lambda x: -x[0])
+
+    # Tenta identificar uma cor não-fundo suficientemente dominante
+    for count, center in ordered:
+        if count / total < 0.12:   # cluster com < 12% dos pixels — descarta
+            continue
+        h, s, v = float(center[0]), float(center[1]), float(center[2])
+        nome = _hsv_cluster_to_name(h, s, v)
+        if nome is not None:
+            return nome
+
+    return "Indeterminada"
 
 
 def _compute_sem_placa_motivo(output: dict, plate_raw: str) -> "str | None":
@@ -278,21 +439,18 @@ def _update_db(image_path: str, result: dict) -> bool:
         return False
 
 
-def job_analyze_event(image_path: str, plate_raw: str = "") -> dict:
+def job_analyze_event(image_path: str, plate_raw: str = "",
+                      lpr_meta: "dict | None" = None) -> dict:
     """
-    Recebe o caminho da imagem e a placa bruta do LPR (opcional).
-    Roda YOLOv8 + análises complementares e retorna dict com:
-      - vehicle_count        (int)
-      - vehicle_types        (dict {class_name: count})
-      - person_count         (int)
-      - detections           (list de {class, conf, xyxy})
-      - vehicle_details      (list com tipo_pt, cor, plate_analysis por veículo)
-      - image_quality        (blur_score, brightness, contrast, qualidade)
-      - sem_placa_motivo     (str com motivo ou null se placa foi lida)
-      - model, conf_threshold
+    Recebe o caminho da imagem, a placa bruta e metadados LPR (plate_rect, vehicle_rect).
+    Foca a análise YOLO no veículo que corresponde à placa detectada.
+    Retorna dict com vehicle_count, vehicle_types, vehicle_details, target_vehicle,
+    image_quality, sem_placa_motivo, model, conf_threshold.
     Também salva um .yolo.json ao lado da imagem e atualiza o banco.
     """
-    print(f"[YOLO] Job iniciado: {image_path}", flush=True)
+    print(f"[YOLO] Job iniciado: {image_path} | plate={plate_raw or '?'} | meta={bool(lpr_meta)}", flush=True)
+
+    lpr_meta = lpr_meta or {}
 
     p = Path(image_path)
     if not p.is_absolute():
@@ -312,6 +470,7 @@ def job_analyze_event(image_path: str, plate_raw: str = "") -> dict:
 
         # ── Qualidade geral da imagem ──────────────────────────────────────
         image_quality = _analyze_image_quality(img_bgr)
+        img_h, img_w  = img_bgr.shape[:2]
 
         # ── Detecção YOLO ──────────────────────────────────────────────────
         model   = _get_model()
@@ -340,22 +499,36 @@ def job_analyze_event(image_path: str, plate_raw: str = "") -> dict:
 
             if cls_id in VEHICLE_CLASSES and cls_id != 0:
                 vehicle_count += 1
-                vehicle_types[cls_name] = vehicle_types.get(cls_name, 0) + 1
 
-                cor            = _detect_vehicle_color(img_bgr, xyxy)
-                plate_analysis = _analyze_plate_region(img_bgr, xyxy)
+                # Refina tipo via heurísticas de tamanho do bounding box
+                effective_class = cls_name
+                if cls_name == "truck":
+                    effective_class = _classify_truck_subtype(xyxy, img_bgr)
+                elif cls_name == "bus":
+                    effective_class = _classify_bus_subtype(xyxy, img_bgr)
 
+                vehicle_types[effective_class] = vehicle_types.get(effective_class, 0) + 1
+
+                # Cor e análise de placa somente para o veículo-alvo (feito abaixo)
                 vehicle_details.append({
-                    "class":          cls_name,
-                    "class_pt":       VEHICLE_CLASS_PT.get(cls_name, cls_name),
+                    "class":          effective_class,
+                    "class_pt":       VEHICLE_CLASS_PT.get(effective_class, effective_class),
                     "conf":           round(conf_val, 4),
-                    "cor":            cor,
-                    "plate_analysis": plate_analysis,
+                    "cor":            None,
+                    "plate_analysis": None,
                     "xyxy":           xyxy,
                 })
 
             if cls_id == 0:
                 person_count += 1
+
+        # ── Identifica o veículo da placa ─────────────────────────────────
+        target_vehicle = _find_target_vehicle(vehicle_details, lpr_meta, img_w, img_h)
+
+        # Análise profunda somente no veículo-alvo (cor + região da placa)
+        if target_vehicle is not None:
+            target_vehicle["cor"]            = _detect_vehicle_color(img_bgr, target_vehicle["xyxy"])
+            target_vehicle["plate_analysis"] = _analyze_plate_region(img_bgr, target_vehicle["xyxy"])
 
         # ── Motivo de falha na leitura da placa ───────────────────────────
         sem_placa_motivo = _compute_sem_placa_motivo(
@@ -369,27 +542,30 @@ def job_analyze_event(image_path: str, plate_raw: str = "") -> dict:
         )
 
         output = {
-            "image_path":       image_path,
-            "vehicle_count":    vehicle_count,
-            "vehicle_types":    vehicle_types,
-            "person_count":     person_count,
-            "detections":       detections,
-            "vehicle_details":  vehicle_details,
-            "image_quality":    image_quality,
-            "sem_placa_motivo": sem_placa_motivo,
-            "model":            MODEL_PATH,
-            "conf_threshold":   CONFIDENCE,
+            "image_path":        image_path,
+            "vehicle_count":     vehicle_count,
+            "vehicle_types":     vehicle_types,
+            "person_count":      person_count,
+            "detections":        detections,
+            "vehicle_details":   vehicle_details,
+            "target_vehicle":    target_vehicle,   # veículo da placa
+            "image_quality":     image_quality,
+            "sem_placa_motivo":  sem_placa_motivo,
+            "model":             MODEL_PATH,
+            "conf_threshold":    CONFIDENCE,
         }
 
         # ── Salvar JSON ao lado da imagem ─────────────────────────────────
         json_path = p.with_suffix(".yolo.json")
         json_path.write_text(json.dumps(output, ensure_ascii=False, indent=2))
 
-        cor_str    = vehicle_details[0]["cor"] if vehicle_details else "-"
-        motivo_str = f" | motivo={sem_placa_motivo}" if sem_placa_motivo else ""
+        tv             = target_vehicle or (vehicle_details[0] if vehicle_details else None)
+        cor_str        = tv["cor"]     if tv else "-"
+        tipo_str       = tv["class_pt"] if tv else "-"
+        motivo_str     = f" | motivo={sem_placa_motivo}" if sem_placa_motivo else ""
         print(
-            f"[YOLO] OK — {vehicle_count} veic (cor={cor_str}), "
-            f"{person_count} pessoa(s), blur={image_quality['blur_score']}"
+            f"[YOLO] OK — {vehicle_count} veic | alvo: {tipo_str} cor={cor_str} | "
+            f"{person_count} pessoa(s) | blur={image_quality['blur_score']}"
             f"{motivo_str} — {json_path.name}",
             flush=True,
         )

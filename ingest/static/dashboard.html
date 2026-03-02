@@ -1875,18 +1875,30 @@ function openImage(evId, plate) {
   var yoloPanel = document.getElementById('img-modal-yolo');
   var yoloBody  = document.getElementById('img-modal-yolo-body');
   var yoloParts = [];
+  var colorDot  = { 'Branco':'#f8fafc','Preto':'#1e293b','Prata/Cinza':'#94a3b8','Vermelho':'#ef4444','Azul':'#3b82f6','Amarelo':'#eab308','Verde':'#22c55e','Laranja':'#f97316','Roxo':'#a855f7','Outro':'#64748b','Indeterminada':'#64748b' };
   if (meta.sem_placa_motivo) {
     yoloParts.push('<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:7px;padding:6px 10px;min-width:200px"><div style="font-size:.68rem;color:#fca5a5;text-transform:uppercase;margin-bottom:3px">&#9888; Motivo sem placa</div><div style="color:#fecaca;font-weight:600;font-size:.84rem">' + meta.sem_placa_motivo + '</div></div>');
   }
+  // Veículo da placa (destaque principal)
+  if (meta.target_vehicle) {
+    var tv  = meta.target_vehicle;
+    var cor = tv.cor || 'Indeterminada';
+    var dot = '<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + (colorDot[cor]||'#64748b') + ';border:1px solid rgba(255,255,255,.35);vertical-align:middle"></span>';
+    var pq  = tv.plate_analysis || {};
+    var pqStr = pq.qualidade ? ' &nbsp;<span style="font-size:.74rem;color:var(--muted)">Placa: ' + pq.qualidade + '</span>' : '';
+    yoloParts.push('<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);border-radius:7px;padding:7px 12px;min-width:220px"><div style="font-size:.67rem;color:#86efac;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">&#127919; Ve&iacute;culo da placa</div><div style="font-weight:700;font-size:.9rem">' + (tv.class_pt || tv.class || '-') + ' &nbsp;' + dot + ' ' + cor + pqStr + '</div></div>');
+  }
+  // Demais veículos na cena (somente contagem + tipos, sem análise profunda)
   if (meta.vehicle_details && meta.vehicle_details.length) {
-    var colorDot = { 'Branco':'#f8fafc','Preto':'#1e293b','Prata/Cinza':'#94a3b8','Vermelho':'#ef4444','Azul':'#3b82f6','Amarelo':'#eab308','Verde':'#22c55e','Laranja':'#f97316','Roxo':'#a855f7','Outro':'#64748b','Indeterminada':'#64748b' };
-    meta.vehicle_details.forEach(function(vd, i) {
-      var cor = vd.cor || 'Indeterminada';
-      var dot = colorDot[cor] || '#64748b';
-      var pq  = vd.plate_analysis || {};
-      var pqStr = pq.qualidade ? '<span style="font-size:.74rem;color:var(--muted)"> | Placa: ' + pq.qualidade + '</span>' : '';
-      yoloParts.push('<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 10px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Ve&iacute;culo ' + (i+1) + '</div><div style="font-weight:600;font-size:.84rem">' + (vd.class_pt || vd.class || '') + ' &nbsp;<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dot + ';border:1px solid rgba(255,255,255,.3);vertical-align:middle"></span> ' + cor + pqStr + '</div></div>');
-    });
+    var outros = meta.target_vehicle
+      ? meta.vehicle_details.filter(function(vd) { return vd !== meta.target_vehicle; })
+      : meta.vehicle_details;
+    if (outros.length) {
+      var tiposCount = {};
+      outros.forEach(function(vd) { var t = vd.class_pt || vd.class || '?'; tiposCount[t] = (tiposCount[t]||0)+1; });
+      var tiposStr = Object.keys(tiposCount).map(function(t){ return tiposCount[t]+'&times;'+t; }).join(', ');
+      yoloParts.push('<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:7px;padding:6px 10px"><div style="font-size:.67rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Outros na cena</div><div style="font-size:.82rem;color:var(--muted)">' + tiposStr + '</div></div>');
+    }
   }
   if (meta.image_quality) {
     var iq = meta.image_quality;
@@ -1983,8 +1995,13 @@ function _yoloBadge(ev) {
   var icons = { car:'&#128663;', truck:'&#128666;', motorcycle:'&#127949;', bus:'&#128652;', bicycle:'&#128690;', person:'&#128694;' };
   var colorDot = { 'Branco':'#f8fafc','Preto':'#1e293b','Prata/Cinza':'#94a3b8','Vermelho':'#ef4444','Azul':'#3b82f6','Amarelo':'#eab308','Verde':'#22c55e','Laranja':'#f97316','Roxo':'#a855f7','Outro':'#64748b','Indeterminada':'#64748b' };
   var parts = [];
-  // Linha com tipo + cor por veículo
-  if (yr.vehicle_details && yr.vehicle_details.length) {
+  // Veículo da placa (target_vehicle) em destaque
+  var tv = yr.target_vehicle;
+  if (tv) {
+    var cor = tv.cor || '';
+    var dot = cor ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (colorDot[cor]||'#64748b') + ';border:1px solid rgba(255,255,255,.3);vertical-align:middle;margin-left:2px"></span>' : '';
+    parts.push((icons[tv.class]||'&#128663;') + '&nbsp;<strong>' + (tv.class_pt||tv.class) + '</strong>' + dot + (cor?' '+cor:''));
+  } else if (yr.vehicle_details && yr.vehicle_details.length) {
     yr.vehicle_details.forEach(function(vd) {
       var cor = vd.cor || '';
       var dot = cor ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (colorDot[cor]||'#64748b') + ';border:1px solid rgba(255,255,255,.3);vertical-align:middle;margin-left:2px"></span>' : '';
@@ -2017,6 +2034,7 @@ function renderEvents(items, newIds) {
       camName:          ev.cam_nome || ev.channel_name || ev.camera_id || '',
       ts:               ev.ts || ev.occurred_at || '',
       sem_placa_motivo: ev.sem_placa_motivo || null,
+      target_vehicle:   ev.target_vehicle   || (ev.yolo_result && ev.yolo_result.target_vehicle) || null,
       vehicle_details:  ev.vehicle_details  || null,
       image_quality:    ev.image_quality    || null,
     };
