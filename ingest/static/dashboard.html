@@ -129,6 +129,8 @@
     .toolbar input, .toolbar select { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); padding:6px 12px; font-size:.84rem; outline:none; }
     .toolbar input { width:195px; }
     .toolbar select { min-width:115px; }
+    select option { background:#0a3d1f; color:#ffffff; }
+    select option:hover, select option:checked { background:#1a9448; color:#ffffff; }
     .toolbar input:focus, .toolbar select:focus { border-color:var(--accent); }
     .toolbar label { font-size:.8rem; color:var(--muted); white-space:nowrap; }
     .table-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; overflow-x:auto; }
@@ -701,7 +703,10 @@
 
         <!-- Painel de Filtros do Relatório de Veículos -->
         <div style="background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px">
-          <div style="font-size:.73rem;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">&#9881; Filtros do Relat&oacute;rio de Ve&iacute;culos</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:.73rem;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.05em">&#9881; Filtros do Relat&oacute;rio de Ve&iacute;culos</span>
+            <span id="alvo-rep-filter-badge" style="display:none;background:var(--accent);color:#052e16;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em"></span>
+          </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center">
             <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128336; Janela:
               <select id="alvo-rep-window" onchange="_alvoRepWindowChange()" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
@@ -747,6 +752,8 @@
                 <option value="5">&#8805; 5 c&acirc;meras</option>
               </select>
             </label>
+            <button id="alvo-rep-apply-btn" class="btn btn-primary btn-sm" onclick="_applyAlvoRepFilters()" style="margin-left:6px;padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
+            <button class="btn btn-outline btn-sm" onclick="_resetAlvoRepFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
           </div>
           <div id="alvo-rep-date-row" style="display:none;margin-top:8px;flex-wrap:wrap;gap:8px;align-items:center">
             <span style="font-size:.82rem;color:var(--muted)">De:</span>
@@ -3344,6 +3351,73 @@ function _alvoRepWindowChange() {
   if (dr) dr.style.display = v === 'custom' ? 'flex' : 'none';
 }
 
+function _applyAlvoRepFilters() {
+  var f = _getAlvoRepFilters();
+  try { localStorage.setItem('alvoRepFilters', JSON.stringify(f)); } catch(e){}
+  _updateAlvoRepFilterBadge();
+  var btn = document.getElementById('alvo-rep-apply-btn');
+  if (btn) {
+    var orig = btn.innerHTML;
+    btn.innerHTML = '&#10003; Filtros salvos!';
+    btn.disabled = true;
+    setTimeout(function(){ btn.innerHTML = orig; btn.disabled = false; }, 1800);
+  }
+}
+
+function _resetAlvoRepFilters() {
+  var ids = ['alvo-rep-window','alvo-rep-camera','alvo-rep-direction','alvo-rep-confidence','alvo-rep-min-cameras'];
+  ids.forEach(function(id){ var el = document.getElementById(id); if(el){ el.selectedIndex = 0; } });
+  var w = document.getElementById('alvo-rep-window');
+  if (w) { w.value = '2h'; }
+  _alvoRepWindowChange();
+  try { localStorage.removeItem('alvoRepFilters'); } catch(e){}
+  _updateAlvoRepFilterBadge();
+}
+
+function _updateAlvoRepFilterBadge() {
+  var badge = document.getElementById('alvo-rep-filter-badge');
+  if (!badge) return;
+  var f = _getAlvoRepFilters();
+  var count = 0;
+  if (f.window && f.window !== '2h') count++;
+  if (f.ts_from || f.ts_to) count++;
+  if (f.camera_id) count++;
+  if (f.direction) count++;
+  if (f.min_confidence > 0) count++;
+  if (f.min_cameras > 0) count++;
+  if (count > 0) {
+    badge.textContent = count + (count === 1 ? ' filtro ativo' : ' filtros ativos');
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function _restoreAlvoRepFilters() {
+  try {
+    var saved = localStorage.getItem('alvoRepFilters');
+    if (!saved) return;
+    var f = JSON.parse(saved);
+    var set = function(id, val) {
+      var el = document.getElementById(id);
+      if (el && val != null) el.value = val;
+    };
+    set('alvo-rep-window',      f.window      || '2h');
+    set('alvo-rep-direction',   f.direction   || '');
+    set('alvo-rep-confidence',  f.min_confidence != null ? String(f.min_confidence) : '0');
+    set('alvo-rep-min-cameras', f.min_cameras != null    ? String(f.min_cameras)    : '0');
+    _alvoRepWindowChange();
+    if (f.window === 'custom') {
+      set('alvo-rep-ts-from', f.ts_from || '');
+      set('alvo-rep-ts-to',   f.ts_to   || '');
+    }
+    // câmera restaurada após loadAlvoCameras (async) — feito em _loadAlvoCameras
+    _alvoRepSavedCamera = f.camera_id || null;
+  } catch(e){}
+  _updateAlvoRepFilterBadge();
+}
+var _alvoRepSavedCamera = null;
+
 function _getAlvoRepFilters() {
   var w  = (document.getElementById('alvo-rep-window')      || {}).value || '2h';
   var tsFrom = null, tsTo = null;
@@ -3368,6 +3442,7 @@ function _getAlvoRepFilters() {
 }
 
 async function _loadAlvoCameras() {
+  _restoreAlvoRepFilters();
   var sel = document.getElementById('alvo-rep-camera');
   if (!sel) return;
   try {
@@ -3375,7 +3450,7 @@ async function _loadAlvoCameras() {
     if (!resp.ok) return;
     var data = await resp.json();
     var cameras = data.cameras || data.items || data || [];
-    var current = sel.value;
+    var current = sel.value || _alvoRepSavedCamera || '';
     sel.innerHTML = '<option value="">&#8212; Todas &#8212;</option>';
     cameras.forEach(function(c) {
       var id   = c.camera_id || c.id || '';
@@ -3386,6 +3461,7 @@ async function _loadAlvoCameras() {
       if (id === current) opt.selected = true;
       sel.appendChild(opt);
     });
+    _alvoRepSavedCamera = null;
   } catch(e) { /* silencioso */ }
 }
 
