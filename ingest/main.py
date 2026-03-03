@@ -154,6 +154,9 @@ def _init_db():
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS direcao TEXT DEFAULT NULL;")
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION DEFAULT NULL;")
             cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION DEFAULT NULL;")
+            cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS modo_integracao TEXT DEFAULT NULL;")
+            cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS usuario TEXT DEFAULT NULL;")
+            cur.execute("ALTER TABLE cameras ADD COLUMN IF NOT EXISTS senha TEXT DEFAULT NULL;")
 
             # Eventos LPR
             cur.execute("""
@@ -311,7 +314,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
             # as câmeras Hikvision enviam o próprio IP no XML <ipAddress> e esse
             # valor é usado como chave de lookup no webhook.
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude, usuario, senha FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude, usuario, senha, modo_integracao FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
                 (camera_id, camera_id),
             )
             row = cur.fetchone()
@@ -332,7 +335,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
                 "latitude":  float(row[9])  if row[9]  is not None else None,
                 "longitude": float(row[10]) if row[10] is not None else None,
                 "usuario": row[11] or None,
-                "senha":   row[12] or None,
+                "modo_integracao": row[13] or "push",
             }
 
 
@@ -711,7 +714,7 @@ def list_cameras(include_inactive: bool = False):
                 SELECT c.id, c.camera_id, c.nome, c.ativa, c.criticidade, c.peso,
                        c.created_at, c.ip,
                        s.last_seen, s.total_events, s.events_today,
-                       c.direcao, c.latitude, c.longitude
+                       c.direcao, c.latitude, c.longitude, c.modo_integracao, c.usuario
                 FROM cameras c
                 LEFT JOIN (
                     SELECT camera_id,
@@ -730,20 +733,22 @@ def list_cameras(include_inactive: bool = False):
     items = []
     for r in rows:
         items.append({
-            "id":           r[0],
-            "camera_id":    r[1],
-            "nome":         r[2],
-            "ativa":        r[3],
-            "criticidade":  (r[4] or "NORMAL").upper(),
-            "peso_score":   float(r[5] or 1.0),
-            "created_at":   r[6].isoformat() if r[6] else None,
-            "ip":           r[7],
-            "last_seen":    r[8].isoformat() if r[8] else None,
-            "total_events": int(r[9] or 0),
-            "events_today": int(r[10] or 0),
-            "direcao":      r[11] or None,
-            "latitude":     float(r[12]) if r[12] is not None else None,
-            "longitude":    float(r[13]) if r[13] is not None else None,
+            "id":              r[0],
+            "camera_id":       r[1],
+            "nome":            r[2],
+            "ativa":           r[3],
+            "criticidade":     (r[4] or "NORMAL").upper(),
+            "peso_score":      float(r[5] or 1.0),
+            "created_at":      r[6].isoformat() if r[6] else None,
+            "ip":              r[7],
+            "last_seen":       r[8].isoformat() if r[8] else None,
+            "total_events":    int(r[9] or 0),
+            "events_today":    int(r[10] or 0),
+            "direcao":         r[11] or None,
+            "latitude":        float(r[12]) if r[12] is not None else None,
+            "longitude":       float(r[13]) if r[13] is not None else None,
+            "modo_integracao": r[14] or "push",
+            "usuario":         r[15] or None,
         })
     return {"items": items, "total": len(items)}
 
@@ -773,10 +778,18 @@ async def create_camera(request: Request):
     nome = (data.get("nome") or "").strip()
     criticidade = (data.get("criticidade") or "NORMAL").strip().upper()
     peso = float(data.get("peso_score") or data.get("peso") or 1.0)
-    ip = (data.get("ip") or "").strip() or None
-    direcao = (data.get("direcao") or "").strip().upper() or None
-    latitude  = float(data["latitude"])  if data.get("latitude")  not in (None, "") else None
-    longitude = float(data["longitude"]) if data.get("longitude") not in (None, "") else None
+    ip              = (data.get("ip") or "").strip() or None
+    direcao         = (data.get("direcao") or "").strip().upper() or None
+    latitude        = float(data["latitude"])  if data.get("latitude")  not in (None, "") else None
+    longitude       = float(data["longitude"]) if data.get("longitude") not in (None, "") else None
+    modo_integracao = (data.get("modo_integracao") or "push").strip().lower()
+    usuario         = (data.get("usuario") or "").strip() or None
+    senha           = (data.get("senha") or "").strip() or None
+
+    if modo_integracao not in ("push", "listen"):
+        raise HTTPException(status_code=400, detail="modo_integracao deve ser 'push' ou 'listen'")
+    if modo_integracao == "listen" and (not usuario or not senha):
+        raise HTTPException(status_code=400, detail="usuario e senha são obrigatórios no modo 'listen'")
 
     if not camera_id or not nome:
         raise HTTPException(status_code=400, detail="camera_id e nome são obrigatórios")
@@ -797,8 +810,8 @@ async def create_camera(request: Request):
                     raise HTTPException(status_code=400, detail=f"IP {ip} já está em uso pela câmera '{dup[0]}'")
             cur.execute(
                 """
-                INSERT INTO cameras (camera_id, nome, ativa, criticidade, peso, peso_score, ip, direcao, latitude, longitude)
-                VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO cameras (camera_id, nome, ativa, criticidade, peso, peso_score, ip, direcao, latitude, longitude, modo_integracao, usuario, senha)
+                VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (camera_id) DO UPDATE SET
                     nome = EXCLUDED.nome,
                     ativa = TRUE,
@@ -808,9 +821,12 @@ async def create_camera(request: Request):
                     ip = COALESCE(EXCLUDED.ip, cameras.ip),
                     direcao = EXCLUDED.direcao,
                     latitude  = COALESCE(EXCLUDED.latitude,  cameras.latitude),
-                    longitude = COALESCE(EXCLUDED.longitude, cameras.longitude)
+                    longitude = COALESCE(EXCLUDED.longitude, cameras.longitude),
+                    modo_integracao = EXCLUDED.modo_integracao,
+                    usuario = COALESCE(EXCLUDED.usuario, cameras.usuario),
+                    senha   = COALESCE(EXCLUDED.senha,   cameras.senha)
                 """,
-                (camera_id, nome, criticidade, peso, peso, ip, direcao, latitude, longitude),
+                (camera_id, nome, criticidade, peso, peso, ip, direcao, latitude, longitude, modo_integracao, usuario, senha),
             )
 
     return {"ok": True, "camera": get_camera_row(camera_id)}
@@ -871,6 +887,15 @@ async def update_camera(cam_id: int, request: Request):
                 if d_val and d_val not in ("CRESCENTE", "DECRESCENTE"):
                     raise HTTPException(status_code=400, detail="direcao deve ser 'CRESCENTE' ou 'DECRESCENTE'")
                 sets.append("direcao=%s"); vals.append(d_val)
+            if "modo_integracao" in data:
+                m_val = str(data["modo_integracao"]).strip().lower()
+                if m_val not in ("push", "listen"):
+                    raise HTTPException(status_code=400, detail="modo_integracao deve ser 'push' ou 'listen'")
+                sets.append("modo_integracao=%s"); vals.append(m_val)
+            if "usuario" in data:
+                sets.append("usuario=%s"); vals.append(str(data["usuario"]).strip() or None)
+            if "senha" in data:
+                sets.append("senha=%s"); vals.append(str(data["senha"]).strip() or None)
             if "latitude" in data:
                 lat_val = float(data["latitude"]) if data["latitude"] not in (None, "") else None
                 sets.append("latitude=%s"); vals.append(lat_val)
@@ -886,7 +911,7 @@ async def update_camera(cam_id: int, request: Request):
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, latitude, longitude FROM cameras WHERE id=%s LIMIT 1",
+                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, latitude, longitude, usuario, modo_integracao FROM cameras WHERE id=%s LIMIT 1",
                 (cam_id,),
             )
             row = cur.fetchone()
@@ -901,6 +926,8 @@ async def update_camera(cam_id: int, request: Request):
         "ip": row[7],
         "latitude":  float(row[8]) if row[8] is not None else None,
         "longitude": float(row[9]) if row[9] is not None else None,
+        "usuario": row[10] or None,
+        "modo_integracao": row[11] or "push",
     }
 
 
@@ -1276,25 +1303,37 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     client_ip = _get_client_ip(request)
     content_type = request.headers.get("content-type", "")
 
-    if "multipart/form-data" not in content_type:
-        body = await request.body()
-        return JSONResponse({"ok": True, "bytes": len(body)})
-
-    try:
-        form = await request.form()
-    except ClientDisconnect:
-        return JSONResponse({"ok": True})
-
-    xml_bytes = None
+    xml_bytes: bytes | None = None
     images: list[tuple[str, bytes]] = []
 
-    for _, v in form.multi_items():
-        if isinstance(v, UploadFile):
-            data = await v.read()
-            if v.filename and v.filename.lower().endswith(".xml"):
-                xml_bytes = data
-            elif len(data) >= 10_000:
-                images.append((v.filename or "image.jpg", data))
+    if "multipart/form-data" in content_type:
+        # ── Formato padrão Hikvision ISAPI / camera-poller ──────────────
+        try:
+            form = await request.form()
+        except ClientDisconnect:
+            return JSONResponse({"ok": True})
+
+        for _, v in form.multi_items():
+            if isinstance(v, UploadFile):
+                data = await v.read()
+                if v.filename and v.filename.lower().endswith(".xml"):
+                    xml_bytes = data
+                elif len(data) >= 10_000:
+                    images.append((v.filename or "image.jpg", data))
+
+    else:
+        # ── Formato alternativo: câmeras Hikvision HTTP Upload (application/xml, text/xml) ─
+        body = await request.body()
+        ct_lower = content_type.lower()
+        is_xml_ct = any(x in ct_lower for x in ("xml", "text/plain"))
+        starts_with_xml = body.lstrip()[:1] == b"<"
+        if (is_xml_ct or starts_with_xml) and body:
+            xml_bytes = body
+            print(f"[WEBHOOK] evento XML direto de {client_ip} ({len(body)} bytes, ct={content_type or 'none'})")
+        else:
+            # Conteúdo não-XML sem multipart — apenas registra (heartbeat, etc.)
+            print(f"[WEBHOOK] body não-XML ignorado de {client_ip} ({len(body)} bytes, ct={content_type})")
+            return JSONResponse({"ok": True, "bytes": len(body)})
 
     plate = "unknown"
     camera_id = None

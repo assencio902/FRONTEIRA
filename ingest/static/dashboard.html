@@ -1306,6 +1306,23 @@
       <div style="font-size:.72rem;color:var(--muted);margin-top:3px">Ex: -12.9714 / -60.1714 &nbsp;(negativo para Sul/Oeste)</div>
     </div>
     <div class="form-group">
+      <label>Modo de Integra&ccedil;&atilde;o</label>
+      <select id="cam-modo-integracao" onchange="_camModoChange()">
+        <option value="push">Push (c&acirc;mera envia eventos)</option>
+        <option value="listen">Listen / HTTP (servidor consulta c&acirc;mera)</option>
+      </select>
+    </div>
+    <div id="cam-listen-creds" style="display:none">
+      <div class="form-group">
+        <label>Usu&aacute;rio da c&acirc;mera</label>
+        <input type="text" id="cam-usuario" placeholder="Ex: admin" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Senha da c&acirc;mera</label>
+        <input type="password" id="cam-senha" placeholder="Senha" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="form-group">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="cam-ativa" checked style="width:auto"> Ativa
       </label>
@@ -3925,6 +3942,12 @@ function _cameraStatusPriority(lastSeenIso) {
   return 2;
 }
 
+function _camModoChange() {
+  var modo   = document.getElementById('cam-modo-integracao').value;
+  var creds  = document.getElementById('cam-listen-creds');
+  creds.style.display = (modo === 'listen') ? '' : 'none';
+}
+
 function openCameraModal(cam) {
   _cameraEditId = cam ? cam.id : null;
   document.getElementById('camera-modal-title').textContent = cam ? 'Editar Câmera' : 'Adicionar Câmera';
@@ -3943,6 +3966,10 @@ function openCameraModal(cam) {
   document.getElementById('cam-latitude').value    = cam ? (cam.latitude  != null ? cam.latitude  : '') : '';
   document.getElementById('cam-longitude').value   = cam ? (cam.longitude != null ? cam.longitude : '') : '';
   document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
+  document.getElementById('cam-modo-integracao').value = cam ? (cam.modo_integracao || 'push') : 'push';
+  document.getElementById('cam-usuario').value     = cam ? (cam.usuario || '') : '';
+  document.getElementById('cam-senha').value       = '';
+  _camModoChange();
   document.getElementById('camera-form-error').textContent = '';
 
   // Barra de status — só exibe ao editar
@@ -4001,13 +4028,19 @@ async function saveCamera() {
   var lngRaw      = document.getElementById('cam-longitude').value.trim();
   var latitude    = latRaw  !== '' ? parseFloat(latRaw)  : null;
   var longitude   = lngRaw  !== '' ? parseFloat(lngRaw) : null;
+  var modo        = document.getElementById('cam-modo-integracao').value;
+  var usuario     = document.getElementById('cam-usuario').value.trim();
+  var senha       = document.getElementById('cam-senha').value;
   var errEl       = document.getElementById('camera-form-error');
   errEl.textContent = '';
   if (!cameraId) { errEl.textContent = 'ID / Nome da câmera é obrigatório.'; return; }
   if (peso_score <= 0) { errEl.textContent = 'Peso Score deve ser maior que 0.'; return; }
+  if (modo === 'listen' && !usuario) { errEl.textContent = 'Usuário é obrigatório no modo Listen.'; return; }
+  if (modo === 'listen' && !_cameraEditId && !senha) { errEl.textContent = 'Senha é obrigatória no modo Listen.'; return; }
   if (latRaw !== '' && (isNaN(latitude)  || latitude  < -90  || latitude  > 90))  { errEl.textContent = 'Latitude inválida (-90 a 90).';   return; }
   if (lngRaw !== '' && (isNaN(longitude) || longitude < -180 || longitude > 180)) { errEl.textContent = 'Longitude inválida (-180 a 180).'; return; }
-  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude };
+  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude, modo_integracao: modo, usuario: usuario || null };
+  if (senha) body.senha = senha;
   try {
     var url    = _cameraEditId ? '/api/cameras/' + _cameraEditId : '/api/cameras';
     var method = _cameraEditId ? 'PUT' : 'POST';
