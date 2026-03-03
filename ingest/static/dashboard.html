@@ -211,12 +211,35 @@
     @media (max-width:640px) { #sidebar { transform:translateX(-100%); } #main { margin-left:0; } }
     /* ---- ALARME ---- */
     #alarm-overlay { display:none; position:fixed; inset:0; z-index:999; pointer-events:none;
-      background:rgba(239,68,68,.18); animation:alarm-flash 0.4s ease-in-out; }
-    @keyframes alarm-flash { 0%,100%{opacity:0} 50%{opacity:1} }
+      background:#ef4444; animation:alarm-flash 1.2s ease-in-out; }
+    @keyframes alarm-flash {
+      0%   { opacity:0 }
+      15%  { opacity:.55 }
+      30%  { opacity:0 }
+      50%  { opacity:.55 }
+      65%  { opacity:0 }
+      80%  { opacity:.45 }
+      100% { opacity:0 }
+    }
     #alarm-toast { display:none; position:fixed; bottom:24px; right:24px; z-index:1000;
-      background:var(--danger); color:#fff; border-radius:12px; padding:14px 20px;
-      box-shadow:0 8px 32px rgba(239,68,68,.5); min-width:260px; max-width:380px;
-      font-size:.88rem; border-left:5px solid #fff; animation:slide-in .3s ease; }
+      background:#ef4444; color:#000; border-radius:14px; padding:18px 22px;
+      box-shadow:0 0 0 4px #b91c1c, 0 12px 40px rgba(185,28,28,.7);
+      min-width:300px; max-width:420px; font-size:.9rem;
+      border-top:6px solid #7f1d1d; animation:alarm-pop .35s cubic-bezier(.2,1.4,.6,1); }
+    @keyframes alarm-pop { from{transform:scale(.7) translateY(40px);opacity:0} to{transform:none;opacity:1} }
+    #alarm-toast .alarm-title { font-weight:900; font-size:1rem; letter-spacing:.04em;
+      color:#000; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+    #alarm-toast .alarm-plate-box { background:#7f1d1d; border-radius:8px; padding:10px 14px;
+      margin:8px 0; text-align:center; }
+    #alarm-toast .alarm-plate-txt { font-size:2rem; font-weight:900; letter-spacing:.14em;
+      color:#fff; text-shadow:0 2px 6px rgba(0,0,0,.5); }
+    #alarm-toast .alarm-lists { font-size:.82rem; color:#000; font-weight:600; margin-top:6px; }
+    #alarm-toast .alarm-dir { display:inline-block; background:#7f1d1d; color:#fff;
+      border-radius:6px; padding:2px 10px; font-size:.8rem; font-weight:700;
+      margin-top:6px; letter-spacing:.04em; }
+    #alarm-toast .alarm-close { float:right; background:rgba(0,0,0,.18); border:none;
+      border-radius:6px; color:#000; font-weight:800; font-size:.85rem; cursor:pointer;
+      padding:2px 9px; margin-left:8px; }
     #abordagem-toast { display:none; position:fixed; bottom:24px; left:24px; z-index:1000;
       background:#d97706; color:#fff; border-radius:12px; padding:16px 20px;
       box-shadow:0 8px 32px rgba(217,119,6,.55); min-width:300px; max-width:420px;
@@ -269,8 +292,6 @@
       font-size:.6rem; font-weight:800; padding:1px 5px; min-width:16px;
       margin-left:3px; vertical-align:middle; }
     @keyframes slide-in { from{transform:translateX(120%);opacity:0} to{transform:none;opacity:1} }
-    #alarm-toast .alarm-title { font-weight:700; font-size:1rem; margin-bottom:4px; }
-    #alarm-toast .alarm-lists { font-size:.8rem; opacity:.9; }
     .alarm-badge { display:inline-flex; align-items:center; gap:3px; font-size:.68rem;
       color:var(--warning); opacity:.9; }
     .toggle-switch { display:flex; align-items:center; gap:10px; cursor:pointer; }
@@ -976,9 +997,15 @@
 <!-- OVERLAY DE ALARME -->
 <div id="alarm-overlay"></div>
 <div id="alarm-toast">
-  <div class="alarm-title">&#128680; ALERTA DE PLACA</div>
-  <div id="alarm-toast-plate" style="font-size:1.1rem;font-weight:800;letter-spacing:.06em;margin:4px 0"></div>
+  <div class="alarm-title">
+    &#128680;&#128680; PLACA MONITORADA DETECTADA
+    <button class="alarm-close" onclick="document.getElementById('alarm-toast').style.display='none'">&#10005;</button>
+  </div>
+  <div class="alarm-plate-box">
+    <div class="alarm-plate-txt" id="alarm-toast-plate">---</div>
+  </div>
   <div class="alarm-lists" id="alarm-toast-lists"></div>
+  <div id="alarm-toast-dir"></div>
 </div>
 <div id="abordagem-toast">
   <div style="font-weight:700;font-size:.95rem;margin-bottom:6px">&#9888;&#65039; VE&Iacute;CULOS EM COMBOIO DETECTADOS</div>
@@ -1054,10 +1081,42 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h2>Detalhes &#8212; <span id="detail-modal-plate"></span></h2>
-      <button id="detail-modal-map-btn" class="btn btn-outline btn-xs" style="display:none;margin-right:10px;font-size:.78rem" onclick="verTrajetoriaNoMapa()">&#127760; Ver Trajet&oacute;ria</button>
+      <button id="detail-modal-map-btn" class="btn btn-outline btn-xs" style="display:none;margin-right:10px;font-size:.78rem" onclick="promptTrajetoria()">&#127760; Ver Trajet&oacute;ria</button>
       <button class="modal-close" onclick="closeModal('detail-modal')">&times;</button>
     </div>
     <div id="detail-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
+  </div>
+</div>
+
+<!-- MODAL JANELA TRAJETÓRIA -->
+<div class="modal-overlay" id="traj-picker-modal" onclick="if(event.target===this)closeModal('traj-picker-modal')">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2>&#127760; Selecione o per&iacute;odo da trajet&oacute;ria</h2>
+      <button class="modal-close" onclick="closeModal('traj-picker-modal')">&times;</button>
+    </div>
+    <div style="padding:20px">
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Placa: <strong id="traj-picker-plate" style="color:var(--text)"></strong></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn btn-outline" onclick="_loadTrajetoria('12h')">&#9200; 12 horas</button>
+        <button class="btn btn-outline" onclick="_loadTrajetoria('24h')">&#9200; 24 horas</button>
+        <button class="btn btn-outline" onclick="_loadTrajetoria('7d')">&#128197; 7 dias</button>
+        <button class="btn btn-outline" onclick="_loadTrajetoria('30d')">&#128197; 30 dias</button>
+      </div>
+      <button class="btn btn-outline" style="width:100%;margin-bottom:12px" onclick="document.getElementById('traj-custom-row').style.display='block';this.style.display='none'">&#9998; Definir per&iacute;odo personalizado&hellip;</button>
+      <div id="traj-custom-row" style="display:none">
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+          <label style="font-size:.82rem;color:var(--muted)">De:
+            <input type="datetime-local" id="traj-custom-from" class="form-input" style="width:100%;margin-top:3px">
+          </label>
+          <label style="font-size:.82rem;color:var(--muted)">At&eacute;:
+            <input type="datetime-local" id="traj-custom-to" class="form-input" style="width:100%;margin-top:3px">
+          </label>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="_loadTrajetoria('custom')">&#9654; Ver no Mapa</button>
+      </div>
+      <p id="traj-picker-status" style="font-size:.8rem;color:var(--muted);margin-top:8px;min-height:18px"></p>
+    </div>
   </div>
 </div>
 
@@ -1621,15 +1680,20 @@ function triggerAlarm(plate, lists, direcao) {
   // Flash na tela
   var ov = document.getElementById('alarm-overlay');
   ov.style.display = 'block';
-  setTimeout(function(){ ov.style.display = 'none'; }, 800);
+  setTimeout(function(){ ov.style.display = 'none'; }, 1200);
   // Toast
   var toast = document.getElementById('alarm-toast');
   document.getElementById('alarm-toast-plate').textContent = plate;
-  document.getElementById('alarm-toast-lists').innerHTML = alarmLists.map(function(l){
-    return '<span style="background:' + l.color + '44;color:' + l.color + ';border-radius:99px;padding:1px 8px;margin-right:4px;font-weight:600">' + l.list_name + '</span>';
-  }).join('')
-    + (direcao ? ' <span style="color:var(--accent);font-weight:700;font-size:.82rem">'
-        + (direcao === 'CRESCENTE' ? '&#8593;' : '&#8595;') + ' ' + direcao + '</span>' : '');
+  document.getElementById('alarm-toast-lists').innerHTML =
+    '&#128247; Lista(s): <strong>' +
+    alarmLists.map(function(l){ return l.list_name || l.name || '?'; }).join(', ') +
+    '</strong>';
+  var dirEl = document.getElementById('alarm-toast-dir');
+  if (direcao) {
+    dirEl.innerHTML = '<span class="alarm-dir">' +
+      (direcao === 'CRESCENTE' ? '&#8593; CRESCENTE' : '&#8595; DECRESCENTE') +
+      '</span>';
+  } else { dirEl.innerHTML = ''; }
   toast.style.display = 'block';
   if (_alarmToastTimer) clearTimeout(_alarmToastTimer);
   _alarmToastTimer = setTimeout(function(){ toast.style.display = 'none'; }, 7000);
@@ -3924,6 +3988,64 @@ function _toggleMapaAutoRefresh() {
   }
 }
 
+function promptTrajetoria() {
+  var plate = _reportCurrentPlate || '';
+  if (!plate) return;
+  document.getElementById('traj-picker-plate').textContent = plate;
+  document.getElementById('traj-picker-status').textContent = '';
+  document.getElementById('traj-custom-row').style.display = 'none';
+  // mostra botão definir novamente caso tenha sido escondido
+  var defBtn = document.querySelector('#traj-picker-modal .btn-outline[onclick*="traj-custom-row"]');
+  if (defBtn) defBtn.style.display = '';
+  openModal('traj-picker-modal');
+}
+
+async function _loadTrajetoria(windowKey) {
+  var plate = _reportCurrentPlate || '';
+  if (!plate) return;
+  var st = document.getElementById('traj-picker-status');
+  st.innerHTML = '<span class="spinner"></span> Buscando passagens…';
+
+  var now = Date.now();
+  var tsFrom, tsTo = new Date(now).toISOString();
+  if (windowKey === '12h')   tsFrom = new Date(now - 12  * 3600000).toISOString();
+  else if (windowKey === '24h')  tsFrom = new Date(now - 24  * 3600000).toISOString();
+  else if (windowKey === '7d')   tsFrom = new Date(now -  7  * 86400000).toISOString();
+  else if (windowKey === '30d')  tsFrom = new Date(now - 30  * 86400000).toISOString();
+  else if (windowKey === 'custom') {
+    var f = document.getElementById('traj-custom-from').value;
+    var t = document.getElementById('traj-custom-to').value;
+    if (!f || !t) { st.textContent = '\u26a0\ufe0f Informe as datas De e At\u00e9.'; return; }
+    tsFrom = new Date(f).toISOString();
+    tsTo   = new Date(t).toISOString();
+  }
+
+  try {
+    var url = '/api/events?plate=' + encodeURIComponent(plate)
+            + '&limit=500'
+            + '&dt_from=' + encodeURIComponent(tsFrom)
+            + '&dt_to='   + encodeURIComponent(tsTo);
+    var r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var events = data.items || [];
+    if (!events.length) { st.textContent = '\u26a0\ufe0f Nenhuma passagem encontrada neste per\u00edodo.'; return; }
+
+    _mapaTrajetoria = { plates: [plate], points: events.map(function(ev) {
+      return { camera_id: ev.camera_id, ts: ev.occurred_at || ev.timestamp || '', plate: plate,
+               cam_nome: ev.camera || ev.channel_name || ev.camera_id || '' };
+    })};
+
+    closeModal('traj-picker-modal');
+    closeModal('detail-modal');
+    var nav = document.querySelector('[onclick*="\'mapa\'"]');
+    if (nav) nav.click();
+    setTimeout(_plotarTrajetoria, 400);
+  } catch(e) {
+    st.textContent = 'Erro: ' + e.message;
+  }
+}
+
 function verTrajetoriaNoMapa() {
   if (!_mapaTrajetoria) return;
   closeModal('detail-modal');
@@ -3936,7 +4058,7 @@ function _plotarTrajetoria() {
   _trajetoriaLayers = [];
   if (!_mapaTrajetoria || !_mapaTrajetoria.points.length) return;
 
-  // Lookup por camera_id e por nome (case-insensitive)
+  // Lookup câmeras por camera_id e por nome
   var camPos = {};
   (_cameraRows || []).forEach(function(c) {
     if (c.latitude == null || c.longitude == null) return;
@@ -3951,48 +4073,113 @@ function _plotarTrajetoria() {
 
   var points = _mapaTrajetoria.points.slice().sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
 
+  // Calcula ângulo (bearing) entre dois pontos lat/lng
+  function bearing(p1, p2) {
+    var dLng = (p2.lng - p1.lng) * Math.PI / 180;
+    var lat1  = p1.lat * Math.PI / 180;
+    var lat2  = p2.lat * Math.PI / 180;
+    var y = Math.sin(dLng) * Math.cos(lat2);
+    var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  // SVG de seta direcional
+  function arrowIcon(color, angle) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
+      + '<circle cx="11" cy="11" r="10" fill="' + color + '" fill-opacity=".85" stroke="#fff" stroke-width="1.5"/>'
+      + '<polygon points="11,3 15.5,16 11,13 6.5,16" fill="#fff" transform="rotate(' + angle + ',11,11)"/>'
+      + '</svg>';
+    return L.divIcon({ html: svg, className: '', iconSize: [22,22], iconAnchor: [11,11] });
+  }
+
+  // Ícone de início/fim
+  function endpointIcon(label, bg) {
+    var html = '<div style="background:' + bg + ';color:#fff;font-weight:900;font-size:.62rem;'
+      + 'border-radius:6px;padding:3px 6px;border:2px solid #fff;white-space:nowrap;'
+      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">' + label + '</div>';
+    return L.divIcon({ html: html, className: '', iconAnchor: [20,12] });
+  }
+
   var byPlate = {};
   var allLL   = [];
-  var seq = 0;
+  var seq     = 0;
   points.forEach(function(pt) {
     var cam = camPos[pt.camera_id] || camPos[(pt.cam_nome || '').toLowerCase()];
     if (!cam) return;
     seq++;
     if (!byPlate[pt.plate]) byPlate[pt.plate] = [];
-    byPlate[pt.plate].push({ lat: cam.lat, lng: cam.lng, ts: pt.ts, cam_nome: cam.nome, seq: seq });
+    byPlate[pt.plate].push({ lat: cam.lat, lng: cam.lng, ts: pt.ts, cam_nome: cam.nome || pt.cam_nome || pt.camera_id, seq: seq });
     allLL.push([cam.lat, cam.lng]);
   });
 
   Object.keys(byPlate).forEach(function(plate) {
     var color = colorMap[plate] || '#facc15';
     var pts   = byPlate[plate];
+
+    // 1. Linha sólida e grossa
     if (pts.length >= 2) {
+      // Sombra (espessura maior, cor escura)
+      var shadow = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
+        color: '#000', weight: 7, opacity: .3
+      }).addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(shadow);
+
+      // Linha principal
       var line = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
-        color: color, weight: 3, opacity: .85, dashArray: '8 6'
+        color: color, weight: 5, opacity: .95
       }).addTo(_mapaLeaflet);
       _trajetoriaLayers.push(line);
+
+      // 2. Setas nos midpoints de cada segmento
+      for (var i = 0; i < pts.length - 1; i++) {
+        var p1 = pts[i], p2 = pts[i+1];
+        var midLat = (p1.lat + p2.lat) / 2;
+        var midLng = (p1.lng + p2.lng) / 2;
+        var ang = bearing(p1, p2);
+        var arrow = L.marker([midLat, midLng], { icon: arrowIcon(color, ang), zIndexOffset: 10 }).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(arrow);
+      }
     }
-    pts.forEach(function(p) {
+
+    // 3. Marcadores numerados com popup
+    pts.forEach(function(p, i) {
       var dt  = new Date(p.ts);
-      var fmt = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) + ' '
-              + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      var mk = L.circleMarker([p.lat, p.lng], {
-        radius: 11, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1
+      var fmt = isNaN(dt) ? '-' : dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+              + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+      var circleBg = color;
+      var circleHtml = '<div style="background:' + circleBg + ';color:#000;font-weight:900;font-size:.75rem;'
+        + 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+        + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p.seq + '</div>';
+      var mk = L.marker([p.lat, p.lng], {
+        icon: L.divIcon({ html: circleHtml, className: '', iconSize: [26,26], iconAnchor: [13,13] }),
+        zIndexOffset: 20
       }).bindPopup(
-        '<div style="font-family:system-ui;min-width:180px">'
-        + '<div style="font-weight:800;font-size:.92rem;color:' + color + ';margin-bottom:4px">' + plate + '</div>'
-        + '<div style="font-size:.8rem;line-height:1.7">'
-        + '<b>Passagem #' + p.seq + '</b><br>'
-        + '<b>C\u00e2mera:</b> ' + p.cam_nome + '<br>'
-        + '<b>Hor\u00e1rio:</b> ' + fmt
+        '<div style="font-family:system-ui;min-width:200px">'
+        + '<div style="font-weight:900;font-size:1rem;color:' + color + ';margin-bottom:6px;letter-spacing:.06em">' + plate + '</div>'
+        + '<div style="font-size:.82rem;line-height:1.9">'
+        + '<b style="color:#64748b">Passagem</b> <b>#' + p.seq + ' de ' + pts.length + '</b><br>'
+        + '<b style="color:#64748b">Câmera:</b> ' + p.cam_nome + '<br>'
+        + '<b style="color:#64748b">Horário:</b> ' + fmt
         + '</div></div>'
-      ).bindTooltip(String(p.seq), { permanent: true, direction: 'center', className: 'traj-num-label' })
-       .addTo(_mapaLeaflet);
+      ).addTo(_mapaLeaflet);
       _trajetoriaLayers.push(mk);
     });
+
+    // 4. Marcadores de INÍCIO e FIM
+    if (pts.length >= 1) {
+      var mStart = L.marker([pts[0].lat, pts[0].lng], { icon: endpointIcon('▶ INÍCIO', '#16a34a'), zIndexOffset: 50 })
+        .addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(mStart);
+    }
+    if (pts.length >= 2) {
+      var mEnd = L.marker([pts[pts.length-1].lat, pts[pts.length-1].lng], { icon: endpointIcon('■ FIM', '#dc2626'), zIndexOffset: 50 })
+        .addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(mEnd);
+    }
   });
 
-  if (allLL.length) _mapaLeaflet.fitBounds(allLL, { padding: [60, 60], maxZoom: 14 });
+  if (allLL.length) _mapaLeaflet.fitBounds(allLL, { padding: [70, 70], maxZoom: 14 });
 
   // Info bar
   var noGps = document.getElementById('map-no-gps');

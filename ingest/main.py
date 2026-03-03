@@ -1575,7 +1575,8 @@ def vehicles_allplates():
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT DISTINCT vli.plate, vl.id, vl.name, vl.color
+                    SELECT DISTINCT vli.plate, vl.id, vl.name, vl.color,
+                                    vl.alarm_enabled, vl.alarm_sound
                     FROM vehicle_list_items vli
                     JOIN vehicle_lists vl ON vl.id = vli.list_id
                     ORDER BY vli.plate
@@ -1583,13 +1584,15 @@ def vehicles_allplates():
                 rows = cur.fetchall()
         
         plates = {}
-        for plate, list_id, list_name, color in rows:
+        for plate, list_id, list_name, color, alarm_enabled, alarm_sound in rows:
             if plate not in plates:
                 plates[plate] = []
             plates[plate].append({
                 "list_id": list_id,
                 "list_name": list_name,
-                "color": color
+                "color": color,
+                "alarm_enabled": alarm_enabled or False,
+                "alarm_sound": alarm_sound or "beep",
             })
         
         return {"plates": plates, "items": list(plates.keys())}
