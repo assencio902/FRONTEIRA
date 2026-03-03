@@ -44,6 +44,11 @@
       POSTGRES_USER: monitor_user
       POSTGRES_PASSWORD: monitor_pass
       REDIS_URL: redis://redis:6379/0
+      # ── Auth / JWT ────────────────────────────────────────────────
+      JWT_SECRET: "bpfron-change-me-in-production"
+      JWT_EXPIRE_HOURS: "8"
+      ADMIN_USER: "admin"
+      ADMIN_PASSWORD: "admin123"
       # ── Retenção / Cleanup ─────────────────────────────────────────
       CLEANUP_ENABLED: "true"
       CLEANUP_INTERVAL_SECONDS: "600"

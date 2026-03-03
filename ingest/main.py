@@ -63,7 +63,8 @@ def _decode_token(token: str) -> dict:
 
 # Paths públicos (não exigem JWT)
 _PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest", "/api/catchall", "/catchall")
-_PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login"}
+_PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login",
+                    "/docs", "/redoc", "/openapi.json"}
 
 # Regex para endpoints de imagem que o browser carrega diretamente (sem JWT header)
 _PUBLIC_RE = re.compile(r'^/api/events/\d+/(image|thumbnail)(\?.*)?$')
@@ -236,11 +237,14 @@ def _init_db():
                 );
             """)
             # Inserir admin padrão se não existir
-            cur.execute("SELECT id FROM users WHERE username='admin' LIMIT 1")
+            # Credenciais lidas do ambiente (defina ADMIN_USER e ADMIN_PASSWORD no .env)
+            _seed_user = os.getenv("ADMIN_USER", "admin")
+            _seed_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+            cur.execute("SELECT id FROM users WHERE username=%s LIMIT 1", (_seed_user,))
             if not cur.fetchone():
                 cur.execute(
                     "INSERT INTO users (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)",
-                    ("admin", _hash_pw("admin123"), "Administrador", "admin")
+                    (_seed_user, _hash_pw(_seed_pass), "Administrador", "admin")
                 )
 
             cur.execute("""
