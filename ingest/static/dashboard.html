@@ -640,6 +640,8 @@
               <option value="300">5 min</option>
             </select>
           </label>
+          <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
+          <button class="btn btn-outline btn-sm" onclick="_resetCenFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
           <button id="btn-cen-live" class="btn btn-outline btn-sm" onclick="toggleCenLive()" style="display:flex;align-items:center;gap:6px">
             &#9654; <span id="cen-live-label">Monitorar</span>
           </button>
@@ -1147,7 +1149,7 @@
   <div class="modal modal-wide">
     <div class="modal-header">
       <h2>Detalhes &#8212; <span id="detail-modal-plate"></span></h2>
-      <button id="detail-modal-map-btn" class="btn btn-outline btn-xs" style="display:none;margin-right:10px;font-size:.78rem" onclick="promptTrajetoria()">&#127760; Ver Trajet&oacute;ria</button>
+      <button id="detail-modal-map-btn" class="btn btn-xs" style="display:none;margin-right:10px;font-size:.78rem;background:#ef4444;color:#fff;border:none;font-weight:700" onclick="verTrajetoriaNoMapa()">&#128663; Ver Trajet&oacute;ria no Mapa</button>
       <button class="modal-close" onclick="closeModal('detail-modal')">&times;</button>
     </div>
     <div id="detail-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
@@ -2523,7 +2525,10 @@ function openConvoyDetail(btn, evidenceJson) {
       + '</tr>';
   }).join('');
   document.getElementById('detail-modal-body').innerHTML =
-    '<div class="table-wrap"><table><thead><tr>'
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+    + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="verTrajetoriaNoMapa()">&#128663; Trajetória no Mapa</button>'
+    + '</div>'
+    + '<div class="table-wrap"><table><thead><tr>'
     + '<th>Camera A</th><th>Camera B</th><th>Delta-t</th><th>Horario</th><th>YOLO A</th><th>YOLO B</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
   // Trajetória no mapa
@@ -2790,7 +2795,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
   document.getElementById('detail-modal-plate').innerHTML = '\uD83D\uDCCB Relat\u00F3rio \u2014 ' + plate + _filterDesc;
   document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Analisando ' + plate + '...</p>';
   var _mb = document.getElementById('detail-modal-map-btn');
-  if (_mb) _mb.style.display = 'none';
+  if (_mb) _mb.style.display = 'inline-flex';
   openModal('detail-modal');
 
   var _url = '/api/vehicle/report?plate=' + encodeURIComponent(plate);
@@ -2860,6 +2865,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
         : '<button class="btn btn-sm btn-danger" onclick="_navigateToAlvos()">&#128065; Ver nos Alvos</button>')
       + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Detalhes do Score</button>'
       + '<button class="btn btn-outline btn-sm" onclick="closeModal(\'detail-modal\');var inp=document.getElementById(\'cen-filter-plate\');if(inp){inp.value=\'' + plate.replace(/'/g,"\'") + '\';cenApplyFilter();}">&#128269; Ver na Central</button>'
+      + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="promptTrajetoria()">&#128663; Trajetória no Mapa</button>'
       + '</div>';
 
     // ---- 3: Decisao Operacional ----
@@ -3372,6 +3378,30 @@ function _applyAlvoRepFilters() {
   }
 }
 
+function _resetCenFilters() {
+  var plate = document.getElementById('cen-filter-plate');
+  if (plate) plate.value = '';
+  var tipo = document.getElementById('cen-tipo');
+  if (tipo) tipo.value = 'todos';
+  var win = document.getElementById('cen-window');
+  if (win) { win.value = '2h'; cenWindowChange(); }
+  var minCam = document.getElementById('cen-min-cameras');
+  if (minCam) minCam.value = '2';
+  var minSin = document.getElementById('cen-min-sinais');
+  if (minSin) minSin.value = '2';
+  var interval = document.getElementById('cen-interval');
+  if (interval) interval.value = '60';
+  var dateRow = document.getElementById('cen-date-row');
+  if (dateRow) dateRow.style.display = 'none';
+  var tsFrom = document.getElementById('cen-ts-from');
+  if (tsFrom) tsFrom.value = '';
+  var tsTo = document.getElementById('cen-ts-to');
+  if (tsTo) tsTo.value = '';
+  // Mostra/oculta filtros de câmeras e sinais conforme tipo padrão
+  cenTipoChange();
+  loadCentral(true);
+}
+
 function _resetAlvoRepFilters() {
   var ids = ['alvo-rep-window','alvo-rep-camera','alvo-rep-direction','alvo-rep-confidence','alvo-rep-min-cameras'];
   ids.forEach(function(id){ var el = document.getElementById(id); if(el){ el.selectedIndex = 0; } });
@@ -3539,9 +3569,11 @@ async function openAlvoDetail(plate, descricao) {
       return;
     }
 
-    var headerHtml = '';
+    var headerHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+      + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="verTrajetoriaNoMapa()">&#128663; Trajetória no Mapa</button>'
+      + '</div>';
     if (descricao) {
-      headerHtml = '<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.82rem;color:var(--muted)">'
+      headerHtml += '<div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.82rem;color:var(--muted)">'
         + '&#128203; <strong>Motivo do rastreamento:</strong> ' + descricao + '</div>';
     }
 
