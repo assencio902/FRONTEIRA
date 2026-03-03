@@ -2364,7 +2364,7 @@ def vehicle_report(
             ev_rows = cur.fetchall()
 
             # ── 2. Parceiros de co-aparecimento ────────────────────────────
-            cur.execute("""
+            cur.execute(f"""
                 SELECT
                     b.plate                                                      AS partner,
                     COUNT(DISTINCT a.camera_id)                                  AS cameras_together,
