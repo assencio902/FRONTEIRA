@@ -47,18 +47,59 @@ PICKUP_MAX_AREA_FRAC   = float(os.getenv("PICKUP_MAX_AREA_FRAC",   "0.28"))
 VAN_MAX_HEIGHT_FRAC    = float(os.getenv("VAN_MAX_HEIGHT_FRAC",    "0.40"))
 VAN_MAX_AREA_FRAC      = float(os.getenv("VAN_MAX_AREA_FRAC",      "0.20"))
 
+# Mapeamento de cor Hikvision (XML vehicleInfo/color) → nome em português
+# Usado como fallback quando YOLO não consegue determinar cor com confiança
+_XML_COLOR_MAP: dict[str, str] = {
+    "black":   "Preto",
+    "white":   "Branco",
+    "silver":  "Prata",
+    "grey":    "Cinza",
+    "gray":    "Cinza",
+    "red":     "Vermelho",
+    "blue":    "Azul",
+    "yellow":  "Amarelo",
+    "green":   "Verde",
+    "brown":   "Marrom",
+    "orange":  "Laranja",
+    "purple":  "Roxo",
+    "pink":    "Rosa",
+    "golden":  "Dourado",
+    "gold":    "Dourado",
+}
+
+# Mapeamento de tipo Hikvision (XML vehicleType) → classe YOLO compatível
+_XML_TYPE_MAP: dict[str, str] = {
+    "car":        "car",
+    "truck":      "truck",
+    "bus":        "bus",
+    "motorcycle": "motorcycle",
+    "bicycle":    "bicycle",
+    "pickup":     "pickup",
+    "van":        "van",
+}
+
 
 def _normalize_rect(rect: dict, img_w: int, img_h: int,
-                    pic_w: int = 10000, pic_h: int = 10000) -> list:
+                    pic_w: int = 10000, pic_h: int = 10000,
+                    coord_type: str = "normalized") -> list:
     """
-    Converte rect normalizado (0-picW x 0-picH) Hikvision para pixels reais.
-    Retorna [x1, y1, x2, y2] em pixels da imagem.
-    Hikvision usa coordenadas 0-10000 por padrão.
+    Converte coordenadas Hikvision para pixels da imagem YOLO.
+    - coord_type="normalized": coords 0-10000 (escala Hikvision legado)
+    - coord_type="pixels":     coords em pixels reais da câmera (escala pic_w x pic_h)
+    Em ambos os casos escala para img_w x img_h (tamanho real da imagem lida pelo YOLO).
     """
-    x1 = int(rect["x"] / pic_w * img_w)
-    y1 = int(rect["y"] / pic_h * img_h)
-    x2 = int((rect["x"] + rect["w"]) / pic_w * img_w)
-    y2 = int((rect["y"] + rect["h"]) / pic_h * img_h)
+    if coord_type == "pixels" and pic_w > 1 and pic_h > 1:
+        # Coords já são pixels da câmera — escala para o tamanho da imagem YOLO
+        x1 = int(rect["x"] / pic_w * img_w)
+        y1 = int(rect["y"] / pic_h * img_h)
+        x2 = int((rect["x"] + rect["w"]) / pic_w * img_w)
+        y2 = int((rect["y"] + rect["h"]) / pic_h * img_h)
+    else:
+        # Coords normalizadas 0-10000 (padrão legado Hikvision)
+        x1 = int(rect["x"] / pic_w * img_w)
+        y1 = int(rect["y"] / pic_h * img_h)
+        x2 = int((rect["x"] + rect["w"]) / pic_w * img_w)
+        y2 = int((rect["y"] + rect["h"]) / pic_h * img_h)
     return [max(0, x1), max(0, y1), min(img_w, x2), min(img_h, y2)]
 
 
@@ -88,13 +129,14 @@ def _find_target_vehicle(vehicle_details: list, lpr_meta: dict,
     if not vehicle_details:
         return None
 
-    pic_w = lpr_meta.get("pic_size", {}).get("w", 10000)
-    pic_h = lpr_meta.get("pic_size", {}).get("h", 10000)
+    pic_w      = lpr_meta.get("pic_size", {}).get("w", 10000)
+    pic_h      = lpr_meta.get("pic_size", {}).get("h", 10000)
+    coord_type = lpr_meta.get("coord_type", "normalized")
 
     # 1. vehicleRect → IoU direto com YOLO
     vrect = lpr_meta.get("vehicle_rect")
     if vrect:
-        ref = _normalize_rect(vrect, img_w, img_h, pic_w, pic_h)
+        ref = _normalize_rect(vrect, img_w, img_h, pic_w, pic_h, coord_type)
         best = max(vehicle_details, key=lambda v: _iou(v["xyxy"], ref))
         if _iou(best["xyxy"], ref) > 0.10:  # IoU mínimo
             return best
@@ -102,9 +144,9 @@ def _find_target_vehicle(vehicle_details: list, lpr_meta: dict,
     # 2. plateRect → qual bbox YOLO contém o centro da placa
     prect = lpr_meta.get("plate_rect")
     if prect:
-        # Centro da placa em pixels
-        cx = int((prect["x"] + prect["w"] / 2) / pic_w * img_w)
-        cy = int((prect["y"] + prect["h"] / 2) / pic_h * img_h)
+        pr_box = _normalize_rect(prect, img_w, img_h, pic_w, pic_h, coord_type)
+        cx = (pr_box[0] + pr_box[2]) // 2
+        cy = (pr_box[1] + pr_box[3]) // 2
         for v in vehicle_details:
             x1, y1, x2, y2 = v["xyxy"]
             if x1 <= cx <= x2 and y1 <= cy <= y2:
@@ -529,6 +571,25 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
         if target_vehicle is not None:
             target_vehicle["cor"]            = _detect_vehicle_color(img_bgr, target_vehicle["xyxy"])
             target_vehicle["plate_analysis"] = _analyze_plate_region(img_bgr, target_vehicle["xyxy"])
+
+            # Fallback: usa cor já detectada pela câmera (vehicleInfo/color) quando YOLO
+            # retorna "Indeterminada" — evita falsos "Indeterminada" por JPEG ruim
+            if target_vehicle["cor"] == "Indeterminada":
+                xml_cor = _XML_COLOR_MAP.get(lpr_meta.get("xml_vehicle_color", ""))
+                if xml_cor:
+                    target_vehicle["cor"] = xml_cor + " (câmera)"
+
+            # Fallback: tipo do veículo já detectado pela câmera
+            # (quando YOLO classifica genérico, o XML pode ser mais específico)
+            xml_type_raw = lpr_meta.get("xml_vehicle_type", "")
+            if xml_type_raw and xml_type_raw in _XML_TYPE_MAP:
+                # Só sobrescreve se a câmera tiver tipo mais específico que o YOLO
+                xml_type = _XML_TYPE_MAP[xml_type_raw]
+                current_type = target_vehicle.get("tipo_raw", "")
+                # Câmera sabe pickup vs truck (YOLO não distingue)
+                if xml_type in ("pickup", "van") and current_type == "truck":
+                    target_vehicle["tipo"]     = VEHICLE_CLASS_PT.get(xml_type, xml_type)
+                    target_vehicle["tipo_raw"] = xml_type
 
         # ── Motivo de falha na leitura da placa ───────────────────────────
         sem_placa_motivo = _compute_sem_placa_motivo(

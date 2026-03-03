@@ -170,6 +170,7 @@ def _init_db():
                 );
             """)
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS yolo_result JSONB;")
+            cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS cam_meta JSONB;")
             # Garante que a coluna ts existe mesmo em tabelas criadas por versões mais antigas
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS ts TIMESTAMPTZ DEFAULT NOW();")
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ;")
@@ -968,7 +969,8 @@ def list_events(
                 SELECT e.id, e.plate, e.camera_id, e.channel_name, e.camera_ip, e.confidence,
                        e.image_path, COALESCE(e.occurred_at, e.ts) AS when_ts, e.yolo_result,
                        c.nome AS cam_nome,
-                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao,
+                       e.cam_meta
                 FROM lpr_events e
                 LEFT JOIN cameras c ON c.id = (
                     SELECT id FROM cameras
@@ -1018,6 +1020,7 @@ def list_events(
             "image_quality":    yolo.get("image_quality")    if yolo else None,
             "cam_nome": r[9] or r[3],
             "direcao": r[10] or None,
+            "cam_meta": (_json_lib.loads(r[11]) if isinstance(r[11], str) else r[11]) if r[11] else None,
         })
 
     return {"items": items, "page": page, "limit": limit, "total": total}
@@ -1318,12 +1321,23 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             channel_id_xml   = x("channelID")           # fallback: "1"
             xml_direction    = (x("direction") or "").lower() or None   # "forward" ou "reverse"
 
-            # Coordenadas da placa/veículo no frame (normalizadas 0-10000 pelo ISAPI)
-            # Hikvision envia <plateRect> ou <vehicleRect> com X, Y, width, height
+            # Cor e tipo do veículo já detectados pela câmera (vehicleInfo)
+            xml_vehicle_color = x("color")       # ex: "black", "white", "silver"
+            xml_vehicle_type  = x("vehicleType") # ex: "truck", "car", "bus"
+            xml_plate_color   = x("plateColor")  # ex: "white", "yellow"
+            xml_speed         = x("speed")        # velocidade do veículo
+            xml_speed_limit   = x("speedLimit")   # limite de velocidade
+            xml_illegal_code  = x("illegalCode")
+            xml_illegal_name  = x("illegalName")  # ex: "Normal", "Excesso de velocidade"
+            xml_plate_chars   = x("plateCharBelieve")  # ex: "99,99,93,99,99,99,99"
+            xml_license_bright = x("licenseBright")
+
+            # Coordenadas da placa/veículo no frame
+            # Atenção: algumas câmeras Hikvision usam pixels reais (ex: 2688x1552)
+            #          outras usam escala normalizada 0-10000
+            # Detectamos o sistema pela tag detectionBackgroundImageResolution
             def _rect(parent_tag: str) -> "dict | None":
                 try:
-                    px = x(parent_tag + "/X") or x("X")
-                    # Tenta buscar dentro da tag pai especifica
                     ns_any = "{*}"
                     el_parent = root.find(f".//{ns_any}{parent_tag}") or root.find(f".//{parent_tag}")
                     if el_parent is None:
@@ -1340,9 +1354,33 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 return None
 
             plate_rect   = _rect("plateRect")   or _rect("PlateRect")
-            vehicle_rect = _rect("vehicleRect")  or _rect("VehicleRect")
-            pic_width    = x("picWidth")   or x("imageWidth")
-            pic_height   = x("picHeight")  or x("imageHeight")
+            # Hikvision tem typo em firmware antigo: vehicelRect (sem 'l' depois de 'h')
+            vehicle_rect = (_rect("vehicleRect") or _rect("VehicleRect")
+                            or _rect("vehicelRect") or _rect("VehicelRect"))
+
+            # Dimensões reais da imagem de detecção (usadas para normalização de coords)
+            pic_width  = (x("picWidth")  or x("imageWidth")
+                          or x("width")  if False else None)  # placeholder
+            pic_height = (x("picHeight") or x("imageHeight")
+                          or x("height") if False else None)
+            # Tenta detectionBackgroundImageResolution (padrão ISAPI moderno)
+            bg_res = root.find(".//{*}detectionBackgroundImageResolution") \
+                     or root.find(".//detectionBackgroundImageResolution")
+            if bg_res is not None:
+                _bw = next((e.text for e in bg_res.iter() if e.tag.split("}")[-1] == "width"  and e.text), None)
+                _bh = next((e.text for e in bg_res.iter() if e.tag.split("}")[-1] == "height" and e.text), None)
+                if _bw and _bh:
+                    pic_width, pic_height = _bw, _bh
+            if not pic_width:  pic_width  = x("picWidth")  or x("imageWidth")
+            if not pic_height: pic_height = x("picHeight") or x("imageHeight")
+
+            # Sistema de coordenadas: "pixels" se temos dims reais E os rects cabem nelas
+            # Câmeras ISAPI modernas enviam pixels; legado usa 0-10000
+            coord_type = "normalized"   # padrão
+            if pic_width and pic_height and plate_rect:
+                pw, ph = int(pic_width), int(pic_height)
+                if (plate_rect["x"] + plate_rect["w"]) <= pw * 1.1:
+                    coord_type = "pixels"
 
             # camera_id = IP real do XML (identificador único por dispositivo)
             # fallback: channelName, depois channelID
@@ -1405,29 +1443,78 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             lpr_meta["vehicle_rect"] = vehicle_rect
         if pic_width and pic_height:
             lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
-    except NameError:
+        # Sistema de coordenadas detectado
+        lpr_meta["coord_type"] = coord_type
+        # Cor e tipo já detectados pela câmera — usados como fallback no YOLO
+        if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
+            lpr_meta["xml_vehicle_color"] = xml_vehicle_color.lower()
+        if xml_vehicle_type and xml_vehicle_type.lower() not in ("unknown", ""):
+            lpr_meta["xml_vehicle_type"] = xml_vehicle_type.lower()
+    except (NameError, Exception):
         pass  # variáveis não definidas (sem XML)
 
-    if images:
-        _, data = images[0]
-        day = _utcnow().strftime("%Y-%m-%d")
-        d = UPLOAD_DIR / day
+    # Monta cam_meta com dados extras do XML para exibição no modal
+    cam_meta: dict | None = None
+    try:
+        _cm: dict = {}
+        if xml_plate_color   and xml_plate_color.lower()   not in ("unknown", ""):
+            _cm["plate_color"]    = xml_plate_color
+        if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
+            _cm["vehicle_color"]  = xml_vehicle_color
+        if xml_vehicle_type  and xml_vehicle_type.lower()  not in ("unknown", ""):
+            _cm["vehicle_type"]   = xml_vehicle_type
+        if xml_speed is not None:
+            try:
+                _cm["speed"] = int(xml_speed)
+            except Exception:
+                pass
+        if xml_speed_limit is not None:
+            try:
+                _cm["speed_limit"] = int(xml_speed_limit)
+            except Exception:
+                pass
+        if xml_illegal_code is not None:
+            try:
+                _cm["illegal_code"] = int(xml_illegal_code)
+            except Exception:
+                pass
+        if xml_illegal_name  and xml_illegal_name.lower()  not in ("unknown", ""):
+            _cm["illegal_name"]   = xml_illegal_name
+        if xml_plate_chars   and xml_plate_chars.strip():
+            _cm["plate_char_confidence"] = xml_plate_chars.strip()
+        if xml_license_bright is not None:
+            try:
+                _cm["license_bright"] = int(xml_license_bright)
+            except Exception:
+                pass
+        if _cm:
+            cam_meta = _cm
+    except NameError:
+        pass  # sem XML
+
+    # ── Salva imagem enviada no POST (se houver) ──────────────────────────
+    for _img_name, data in images:
+        day   = (occurred_at or _utcnow()).strftime("%Y-%m-%d")
+        d     = UPLOAD_DIR / day
         d.mkdir(parents=True, exist_ok=True)
         fname = f"{uuid.uuid4().hex}.jpg"
-        (d / fname).write_bytes(data)
-        image_path = f"/uploads/{day}/{fname}"
-        # Enfileira análise YOLO para esta imagem
         try:
-            abs_path = f"/app/uploads/{day}/{fname}"
-            _get_rq_queue().enqueue(
-                "worker.job_analyze_event",
-                abs_path,
-                plate or "",
-                lpr_meta,
-                job_timeout=120,
-            )
-        except Exception as _rq_err:
-            print(f"[RQ] Falha ao enfileirar job YOLO: {_rq_err}")
+            (d / fname).write_bytes(data)
+            image_path = f"/uploads/{day}/{fname}"
+            # Enfileira análise YOLO para esta imagem
+            try:
+                abs_path = f"/app/uploads/{day}/{fname}"
+                _get_rq_queue().enqueue(
+                    "worker.job_analyze_event",
+                    abs_path,
+                    plate or "",
+                    lpr_meta,
+                    job_timeout=120,
+                )
+            except Exception as _rq_err:
+                print(f"[RQ] Falha ao enfileirar job YOLO: {_rq_err}")
+        except Exception as _img_err:
+            print(f"[INGEST] Erro ao salvar imagem: {_img_err}")
 
     # Deriva direção real do veículo:
     # - Usa direction do XML (forward/reverse) + direcao configurada na câmera
@@ -1440,9 +1527,9 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO lpr_events
-                    (plate, camera_id, channel_name, camera_ip, confidence, image_path, occurred_at, direcao)
+                    (plate, camera_id, channel_name, camera_ip, confidence, image_path, occurred_at, direcao, cam_meta)
                 VALUES
-                    (%s, %s, %s, %s, %s, %s, %s, %s)
+                    (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 plate,
@@ -1453,6 +1540,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 image_path,
                 occurred_at,
                 event_direcao,         # direção derivada: XML direction + direcao da câmera
+                _json_lib.dumps(cam_meta) if cam_meta else None,
             ))
             event_id = cur.fetchone()[0]
 

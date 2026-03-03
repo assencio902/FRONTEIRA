@@ -567,6 +567,14 @@
               style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
             <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('cen-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
           </label>
+          <label>Tipo:
+            <select id="cen-tipo" onchange="cenTipoChange()" style="margin-left:6px">
+              <option value="todos">&#128301; Todos</option>
+              <option value="suspeito">&#128680; Suspeito</option>
+              <option value="comboio">&#128663;&#128663; Comboio</option>
+              <option value="grupos">&#128101; Grupos</option>
+            </select>
+          </label>
           <label>Janela de tempo:
             <select id="cen-window" onchange="cenWindowChange()" style="margin-left:6px">
               <option value="1m">1 minuto</option>
@@ -583,7 +591,7 @@
               <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
             </select>
           </label>
-          <label>M&iacute;n. c&acirc;meras:
+          <span id="cen-filter-cameras"><label>M&iacute;n. c&acirc;meras:
             <select id="cen-min-cameras" style="margin-left:6px" onchange="cenApplyFilter()">
               <option value="0">Todas</option>
               <option value="1">&#8805; 1 c&acirc;mera</option>
@@ -592,15 +600,15 @@
               <option value="4">&#8805; 4 c&acirc;meras</option>
               <option value="5">&#8805; 5 c&acirc;meras</option>
             </select>
-          </label>
-          <label>Min. sinais:
+          </label></span>
+          <span id="cen-filter-sinais"><label>Min. sinais:
             <select id="cen-min-sinais" style="margin-left:6px" onchange="cenApplyFilter()">
               <option value="1">&#8805; 1 (todos)</option>
               <option value="2" selected>&#8805; 2 sinais</option>
               <option value="3">&#8805; 3 sinais</option>
               <option value="4">4 sinais (todos os m&oacute;dulos)</option>
             </select>
-          </label>
+          </label></span>
           <label>Intervalo:
             <select id="cen-interval" style="margin-left:6px">
               <option value="30">30s</option>
@@ -1014,18 +1022,28 @@
         <span id="img-modal-evnum" style="font-size:.8rem;color:var(--muted);font-weight:500">Evento #</span>
         <button class="modal-close" onclick="closeModal('img-modal')">&times;</button>
       </div>
-      <div id="img-modal-plate-title" style="font-size:1.9rem;font-weight:900;letter-spacing:.12em;color:#ffffff;line-height:1.1">—</div>
+      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+        <div id="img-modal-plate-title" style="font-size:1.9rem;font-weight:900;letter-spacing:.12em;color:#ffffff;line-height:1.1">—</div>
+        <div id="img-modal-conf-badge" style="display:none;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)"></div>
+        <div id="img-modal-dir-badge" style="display:none;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(15,118,110,.15);color:var(--accent);border:1px solid rgba(15,118,110,.3)"></div>
+      </div>
     </div>
     <img id="img-modal-img" src="" alt="foto" onerror="this.style.display='none';document.getElementById('img-modal-error').style.display='block'">
     <div id="img-modal-error">&#128247; Imagem nao encontrada.</div>
-    <div id="img-modal-meta" style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;padding:10px 14px;background:rgba(0,0,0,.15);border-radius:8px;font-size:.82rem">
+    <!-- Linha 1: Câmera / Data / Hora -->
+    <div id="img-modal-meta" style="display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;background:rgba(0,0,0,.15);border-radius:8px;font-size:.82rem">
       <div><span style="color:var(--muted)">&#128247; C&acirc;mera:</span> <strong id="img-modal-cam">-</strong></div>
       <div><span style="color:var(--muted)">&#128197; Data:</span> <strong id="img-modal-date">-</strong></div>
       <div><span style="color:var(--muted)">&#128336; Hor&aacute;rio:</span> <strong id="img-modal-time">-</strong></div>
     </div>
-    <!-- Painel YOLO -->
-    <div id="img-modal-yolo" style="display:none;margin-top:12px;padding:12px 14px;background:rgba(0,0,0,.18);border-radius:8px;font-size:.82rem;border-left:3px solid var(--accent)">
-      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#129302; An&aacute;lise YOLO</div>
+    <!-- Linha 2: Dados da câmera (XML) -->
+    <div id="img-modal-camdata" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(0,0,0,.13);border-radius:8px;font-size:.82rem;border-left:3px solid #3b82f6">
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:#93c5fd;margin-bottom:8px">&#128247; Dados da Câmera</div>
+      <div id="img-modal-camdata-body" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+    </div>
+    <!-- Linha 3: Análise YOLO -->
+    <div id="img-modal-yolo" style="display:none;margin-top:8px;padding:12px 14px;background:rgba(0,0,0,.18);border-radius:8px;font-size:.82rem;border-left:3px solid var(--accent)">
+      <div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#129302; An&aacute;lise YOLO / IA</div>
       <div id="img-modal-yolo-body" style="display:flex;flex-wrap:wrap;gap:14px"></div>
     </div>
   </div>
@@ -1871,7 +1889,74 @@ function openImage(evId, plate) {
   var dtObj = meta.ts ? new Date(meta.ts) : null;
   document.getElementById('img-modal-date').textContent = dtObj ? dtObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
   document.getElementById('img-modal-time').textContent = dtObj ? dtObj.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
-  // Painel YOLO
+
+  // --- Badge: Confiança ---
+  var confBadge = document.getElementById('img-modal-conf-badge');
+  if (meta.confidence != null) {
+    var confVal = meta.confidence <= 1 ? Math.round(meta.confidence * 100) : Math.round(meta.confidence);
+    confBadge.textContent = '✓ ' + confVal + '% confiança';
+    confBadge.style.display = 'inline-block';
+    confBadge.style.background  = confVal >= 90 ? 'rgba(34,197,94,.15)' : confVal >= 70 ? 'rgba(234,179,8,.15)' : 'rgba(239,68,68,.15)';
+    confBadge.style.color       = confVal >= 90 ? '#86efac'              : confVal >= 70 ? '#fde047'              : '#fca5a5';
+    confBadge.style.borderColor = confVal >= 90 ? 'rgba(34,197,94,.3)'  : confVal >= 70 ? 'rgba(234,179,8,.3)'  : 'rgba(239,68,68,.3)';
+  } else { confBadge.style.display = 'none'; }
+
+  // --- Badge: Direção ---
+  var dirBadge = document.getElementById('img-modal-dir-badge');
+  if (meta.direcao) {
+    dirBadge.textContent = (meta.direcao === 'CRESCENTE' ? '↑ ' : '↓ ') + meta.direcao;
+    dirBadge.style.display = 'inline-block';
+  } else { dirBadge.style.display = 'none'; }
+
+  // --- Painel Dados da Câmera (XML) ---
+  var camPanel = document.getElementById('img-modal-camdata');
+  var camBody  = document.getElementById('img-modal-camdata-body');
+  var cm = meta.cam_meta;
+  if (cm) {
+    var _xmlTypeMap  = {car:'Carro',truck:'Caminhão',bus:'Ônibus',motorcycle:'Moto',van:'Van',pickup:'Pickup',minibus:'Micro-ônibus',bicycle:'Bicicleta',person:'Pessoa'};
+    var _xmlColorMap = {black:'Preto',white:'Branco',silver:'Prata',gray:'Cinza',red:'Vermelho',blue:'Azul',yellow:'Amarelo',green:'Verde',orange:'Laranja',purple:'Roxo',brown:'Marrom',beige:'Bege',gold:'Dourado'};
+    var _plateCMap   = {white:'Branca',yellow:'Amarela',blue:'Azul',green:'Verde',red:'Vermelha',black:'Preta'};
+    var camParts = [];
+    var _chip = function(label, val, color) {
+      return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 12px;min-width:110px">'
+        + '<div style="font-size:.67rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">' + label + '</div>'
+        + '<div style="font-weight:700;font-size:.86rem;color:' + (color||'#e2e8f0') + '">' + val + '</div></div>';
+    };
+    if (cm.vehicle_type)  camParts.push(_chip('Tipo (câmera)',  _xmlTypeMap[cm.vehicle_type]   || cm.vehicle_type,  '#e2e8f0'));
+    if (cm.vehicle_color) camParts.push(_chip('Cor (câmera)',   _xmlColorMap[cm.vehicle_color] || cm.vehicle_color, '#e2e8f0'));
+    if (cm.plate_color)   camParts.push(_chip('Cor da Placa',   _plateCMap[cm.plate_color]     || cm.plate_color,   '#fde047'));
+    if (cm.speed != null) {
+      var spColor = (cm.speed_limit && cm.speed > cm.speed_limit) ? '#fca5a5' : '#86efac';
+      var spLabel = cm.speed_limit ? cm.speed + ' km/h (lim. ' + cm.speed_limit + ')' : cm.speed + ' km/h';
+      camParts.push(_chip('Velocidade', spLabel, spColor));
+    } else if (cm.speed_limit != null) {
+      camParts.push(_chip('Limite', cm.speed_limit + ' km/h', '#e2e8f0'));
+    }
+    if (cm.illegal_name && cm.illegal_name.toLowerCase() !== 'normal') {
+      camParts.push(_chip('Infração', cm.illegal_name, '#fca5a5'));
+    }
+    if (cm.plate_char_confidence) {
+      var chars    = cm.plate_char_confidence.split(',');
+      var plateStr = plate || '';
+      var charHtml = chars.map(function(c, i) {
+        var pct = parseInt(c, 10);
+        var ch  = plateStr[i] || '?';
+        var col = pct >= 95 ? '#86efac' : pct >= 80 ? '#fde047' : '#fca5a5';
+        return '<span style="display:inline-flex;flex-direction:column;align-items:center;margin:0 3px">'
+          + '<span style="font-size:.82rem;font-weight:800;color:#e2e8f0">' + ch + '</span>'
+          + '<span style="font-size:.62rem;color:' + col + '">' + pct + '%</span></span>';
+      }).join('');
+      camParts.push('<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:6px 12px">'
+        + '<div style="font-size:.67rem;color:#93c5fd;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Confiança por Caractere</div>'
+        + '<div style="display:flex;gap:2px">' + charHtml + '</div></div>');
+    }
+    if (camParts.length) {
+      camBody.innerHTML = camParts.join('');
+      camPanel.style.display = 'block';
+    } else { camPanel.style.display = 'none'; }
+  } else { camPanel.style.display = 'none'; }
+
+  // --- Painel YOLO / IA ---
   var yoloPanel = document.getElementById('img-modal-yolo');
   var yoloBody  = document.getElementById('img-modal-yolo-body');
   var yoloParts = [];
@@ -1879,7 +1964,6 @@ function openImage(evId, plate) {
   if (meta.sem_placa_motivo) {
     yoloParts.push('<div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:7px;padding:6px 10px;min-width:200px"><div style="font-size:.68rem;color:#fca5a5;text-transform:uppercase;margin-bottom:3px">&#9888; Motivo sem placa</div><div style="color:#fecaca;font-weight:600;font-size:.84rem">' + meta.sem_placa_motivo + '</div></div>');
   }
-  // Veículo da placa (destaque principal)
   if (meta.target_vehicle) {
     var tv  = meta.target_vehicle;
     var cor = tv.cor || 'Indeterminada';
@@ -1888,7 +1972,6 @@ function openImage(evId, plate) {
     var pqStr = pq.qualidade ? ' &nbsp;<span style="font-size:.74rem;color:var(--muted)">Placa: ' + pq.qualidade + '</span>' : '';
     yoloParts.push('<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);border-radius:7px;padding:7px 12px;min-width:220px"><div style="font-size:.67rem;color:#86efac;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">&#127919; Ve&iacute;culo da placa</div><div style="font-weight:700;font-size:.9rem">' + (tv.class_pt || tv.class || '-') + ' &nbsp;' + dot + ' ' + cor + pqStr + '</div></div>');
   }
-  // Demais veículos na cena (somente contagem + tipos, sem análise profunda)
   if (meta.vehicle_details && meta.vehicle_details.length) {
     var outros = meta.target_vehicle
       ? meta.vehicle_details.filter(function(vd) { return vd !== meta.target_vehicle; })
@@ -2033,10 +2116,13 @@ function renderEvents(items, newIds) {
     _imgMeta[ev.id] = {
       camName:          ev.cam_nome || ev.channel_name || ev.camera_id || '',
       ts:               ev.ts || ev.occurred_at || '',
+      confidence:       ev.confidence != null ? ev.confidence : null,
+      direcao:          ev.direcao || null,
       sem_placa_motivo: ev.sem_placa_motivo || null,
       target_vehicle:   ev.target_vehicle   || (ev.yolo_result && ev.yolo_result.target_vehicle) || null,
       vehicle_details:  ev.vehicle_details  || null,
       image_quality:    ev.image_quality    || null,
+      cam_meta:         ev.cam_meta         || null,
     };
   });
   tb.innerHTML = items.map(function(ev) {
@@ -2336,6 +2422,21 @@ function _cenScheduleNext() {
   }, sec * 1000);
 }
 
+function cenTipoChange() {
+  var tipo = (document.getElementById('cen-tipo') || {}).value || 'todos';
+  var spanCameras = document.getElementById('cen-filter-cameras');
+  var spanSinais  = document.getElementById('cen-filter-sinais');
+
+  // Suspeito → câmeras visível; Comboio/Grupos → câmeras oculto; Todos → visível
+  var showCameras = (tipo === 'todos' || tipo === 'suspeito');
+  var showSinais  = (tipo === 'todos');
+
+  if (spanCameras) spanCameras.style.display = showCameras ? '' : 'none';
+  if (spanSinais)  spanSinais.style.display  = showSinais  ? '' : 'none';
+
+  cenApplyFilter();
+}
+
 function cenApplyFilter() {
   _cenPage = 0;
   _cenRenderPage();
@@ -2386,16 +2487,21 @@ async function loadCentral(showSpinner) {
 }
 
 function _cenRenderPage() {
+  var tipo    = (document.getElementById('cen-tipo') || {}).value || 'todos';
   var ms      = parseInt(document.getElementById('cen-min-sinais').value, 10) || 1;
   var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);  // 0 = todas
   var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
   var items = _cenAllItems.filter(function(i) {
+    // filtro por tipo
+    if (tipo === 'suspeito' && !i.in_suspeitos) return false;
+    if (tipo === 'comboio'  && !i.in_comboio)   return false;
+    if (tipo === 'grupos'   && (!i.in_grupos || !i.in_grupos.length)) return false;
     // filtro placa
     if (plateFl && i.plate.toUpperCase().indexOf(plateFl) === -1) return false;
-    // filtro mín sinais
-    if (i.sinais < ms) return false;
-    // filtro mín câmeras (0 = sem filtro)
-    if (mc > 0) {
+    // filtro mín sinais (só aplicado em modo "todos")
+    if (tipo === 'todos' && i.sinais < ms) return false;
+    // filtro mín câmeras (0 = sem filtro; só em suspeito ou todos)
+    if (mc > 0 && (tipo === 'todos' || tipo === 'suspeito')) {
       var cams = 0;
       if (i.in_suspeitos && i.in_suspeitos.cameras) cams = Math.max(cams, i.in_suspeitos.cameras);
       if (i.in_comboio   && i.in_comboio.cameras)   cams = Math.max(cams, i.in_comboio.cameras);
@@ -2430,10 +2536,7 @@ function _cenRenderPage() {
 }
 
 function cenPageNav(delta) {
-  var ms    = parseInt(document.getElementById('cen-min-sinais').value, 10) || 1;
-  var total = _cenAllItems.filter(function(i){ return i.sinais >= ms; }).length;
-  var pages = Math.max(1, Math.ceil(total / _cenPageSize));
-  _cenPage  = Math.max(0, Math.min(pages - 1, _cenPage + delta));
+  _cenPage = Math.max(0, _cenPage + delta);
   _cenRenderPage();
 }
 
