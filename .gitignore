@@ -12,6 +12,7 @@ yolo-worker/__pycache__/
 
 # Arquivos XML de passagens
 *.xml
+!flutter_app/**/*.xml
 
 # Variáveis de ambiente
 .env
