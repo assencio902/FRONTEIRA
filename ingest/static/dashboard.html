@@ -698,11 +698,69 @@
           <button class="btn btn-outline btn-sm" onclick="loadAlvos()">&#8635; Atualizar</button>
           <span class="status-line" id="alvos-status"></span>
         </div>
+
+        <!-- Painel de Filtros do Relatório de Veículos -->
+        <div style="background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px">
+          <div style="font-size:.73rem;color:var(--accent2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">&#9881; Filtros do Relat&oacute;rio de Ve&iacute;culos</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center">
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128336; Janela:
+              <select id="alvo-rep-window" onchange="_alvoRepWindowChange()" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="1h">1 hora</option>
+                <option value="2h" selected>2 horas</option>
+                <option value="3h">3 horas</option>
+                <option value="6h">6 horas</option>
+                <option value="12h">12 horas</option>
+                <option value="24h">24 horas</option>
+                <option value="48h">48 horas</option>
+                <option value="7d">7 dias</option>
+                <option value="30d">30 dias</option>
+                <option value="custom">&#128197; Personalizado&hellip;</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#127909; C&acirc;mera:
+              <select id="alvo-rep-camera" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem;min-width:150px">
+                <option value="">&#8212; Todas &#8212;</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#8597; Dire&ccedil;&atilde;o:
+              <select id="alvo-rep-direction" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="">Todas</option>
+                <option value="CRESCENTE">&#8593; CRESCENTE</option>
+                <option value="DECRESCENTE">&#8595; DECRESCENTE</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9989; Conf. m&iacute;n.:
+              <select id="alvo-rep-confidence" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="0">Todas</option>
+                <option value="0.5">&#8805; 50%</option>
+                <option value="0.7">&#8805; 70%</option>
+                <option value="0.8">&#8805; 80%</option>
+                <option value="0.9">&#8805; 90%</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128247; M&iacute;n. c&acirc;meras:
+              <select id="alvo-rep-min-cameras" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="0">Qualquer</option>
+                <option value="2">&#8805; 2 c&acirc;meras</option>
+                <option value="3">&#8805; 3 c&acirc;meras</option>
+                <option value="4">&#8805; 4 c&acirc;meras</option>
+                <option value="5">&#8805; 5 c&acirc;meras</option>
+              </select>
+            </label>
+          </div>
+          <div id="alvo-rep-date-row" style="display:none;margin-top:8px;flex-wrap:wrap;gap:8px;align-items:center">
+            <span style="font-size:.82rem;color:var(--muted)">De:</span>
+            <input type="datetime-local" id="alvo-rep-ts-from" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+            <span style="font-size:.82rem;color:var(--muted)">At&eacute;:</span>
+            <input type="datetime-local" id="alvo-rep-ts-to" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+          </div>
+        </div>
+
         <div class="table-wrap">
           <table><thead><tr>
-            <th>Placa</th><th>Descri&ccedil;&atilde;o / Motivo</th><th>Cadastrado em</th><th>A&ccedil;&otilde;es</th>
+            <th>Placa</th><th>Descri&ccedil;&atilde;o / Motivo</th><th>Cadastrado em</th><th>Relat&oacute;rio de Ve&iacute;culos</th><th>A&ccedil;&otilde;es</th>
           </tr></thead>
-          <tbody id="alvos-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
+          <tbody id="alvos-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
           </table>
         </div>
       </div><!-- /bat-sub-alvos -->
@@ -1905,7 +1963,7 @@ function switchBatTab(name, el) {
   el.setAttribute('data-bat', name);
   document.getElementById('bat-sub-' + name).classList.add('active');
   if (name === 'central')    { /* aguarda clique em Monitorar */ }
-  else if (name === 'alvos') loadAlvos();
+  else if (name === 'alvos') { loadAlvos(); _loadAlvoCameras(); }
 }
 
 function switchSubTab(name, el) {
@@ -2674,7 +2732,7 @@ function renderCentral(items, total) {
 var _reportHistory = [];
 var _reportCurrentPlate = null;
 
-async function openBatedorReport(plate, _fromHistory) {
+async function openBatedorReport(plate, _fromHistory, opts) {
   plate = (plate || '').trim().toUpperCase();
   if (!plate) return;
 
@@ -2685,17 +2743,41 @@ async function openBatedorReport(plate, _fromHistory) {
   }
   _reportCurrentPlate = plate;
 
-  document.getElementById('detail-modal-plate').textContent = '\uD83D\uDCCB Relat\u00F3rio \u2014 ' + plate;
+  var _filterDesc = '';
+  if (opts && typeof opts === 'object') {
+    var _fparts = [];
+    if (opts.window && opts.window !== 'custom') _fparts.push(opts.window);
+    else if (opts.ts_from && opts.ts_to) _fparts.push('per\u00edodo custom');
+    if (opts.camera_id)       _fparts.push('\uD83D\uDCF7 ' + opts.camera_id);
+    if (opts.direction)       _fparts.push(opts.direction === 'CRESCENTE' ? '\u2191' : '\u2193');
+    if (opts.min_confidence > 0) _fparts.push('conf\u2265' + Math.round(opts.min_confidence * 100) + '%');
+    if (opts.min_cameras > 1)    _fparts.push('\u2265' + opts.min_cameras + ' c\u00e2m.');
+    if (_fparts.length) _filterDesc = ' <span style="font-size:.72rem;color:var(--accent2);font-weight:400">(\u00b7 ' + _fparts.join(' \u00b7 ') + ')</span>';
+  }
+
+  document.getElementById('detail-modal-plate').innerHTML = '\uD83D\uDCCB Relat\u00F3rio \u2014 ' + plate + _filterDesc;
   document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Analisando ' + plate + '...</p>';
   var _mb = document.getElementById('detail-modal-map-btn');
   if (_mb) _mb.style.display = 'none';
   openModal('detail-modal');
 
-  var w = '2h';
-  try { var cw = document.getElementById('cen-window').value; if (cw && cw !== 'custom') w = cw; } catch(e) {}
+  var _url = '/api/vehicle/report?plate=' + encodeURIComponent(plate);
+  if (opts && typeof opts === 'object') {
+    if (opts.window && opts.window !== 'custom') _url += '&window=' + encodeURIComponent(opts.window);
+    if (opts.ts_from) _url += '&ts_from=' + encodeURIComponent(opts.ts_from);
+    if (opts.ts_to)   _url += '&ts_to='   + encodeURIComponent(opts.ts_to);
+    if (opts.camera_id)          _url += '&filter_camera='    + encodeURIComponent(opts.camera_id);
+    if (opts.direction)          _url += '&filter_direction='  + encodeURIComponent(opts.direction);
+    if (opts.min_confidence > 0) _url += '&min_confidence='   + opts.min_confidence;
+    if (opts.min_cameras > 1)    _url += '&min_cameras='      + opts.min_cameras;
+  } else {
+    var w = '2h';
+    try { var cw = document.getElementById('cen-window').value; if (cw && cw !== 'custom') w = cw; } catch(e) {}
+    _url += '&window=' + encodeURIComponent(w);
+  }
 
   try {
-    var resp = await fetch('/api/vehicle/report?plate=' + encodeURIComponent(plate) + '&window=' + encodeURIComponent(w));
+    var resp = await fetch(_url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
 
@@ -3238,11 +3320,63 @@ function _stopBgAlarm() {
 }
 
 // ===== ALVOS RASTREADOS =====
+
+function _alvoRepWindowChange() {
+  var v = (document.getElementById('alvo-rep-window') || {}).value || '';
+  var dr = document.getElementById('alvo-rep-date-row');
+  if (dr) dr.style.display = v === 'custom' ? 'flex' : 'none';
+}
+
+function _getAlvoRepFilters() {
+  var w  = (document.getElementById('alvo-rep-window')      || {}).value || '2h';
+  var tsFrom = null, tsTo = null;
+  if (w === 'custom') {
+    tsFrom = (document.getElementById('alvo-rep-ts-from') || {}).value || null;
+    tsTo   = (document.getElementById('alvo-rep-ts-to')   || {}).value || null;
+    if (!tsFrom || !tsTo) w = '24h'; // fallback se não preenchido
+  }
+  var camEl   = document.getElementById('alvo-rep-camera');
+  var dirEl   = document.getElementById('alvo-rep-direction');
+  var confEl  = document.getElementById('alvo-rep-confidence');
+  var minCEl  = document.getElementById('alvo-rep-min-cameras');
+  return {
+    window:         (w !== 'custom') ? w : null,
+    ts_from:        tsFrom,
+    ts_to:          tsTo,
+    camera_id:      camEl  ? (camEl.value  || null) : null,
+    direction:      dirEl  ? (dirEl.value  || null) : null,
+    min_confidence: confEl ? (parseFloat(confEl.value)  || 0)   : 0,
+    min_cameras:    minCEl ? (parseInt(minCEl.value, 10) || 0)   : 0,
+  };
+}
+
+async function _loadAlvoCameras() {
+  var sel = document.getElementById('alvo-rep-camera');
+  if (!sel) return;
+  try {
+    var resp = await fetch('/api/cameras');
+    if (!resp.ok) return;
+    var data = await resp.json();
+    var cameras = data.cameras || data.items || data || [];
+    var current = sel.value;
+    sel.innerHTML = '<option value="">&#8212; Todas &#8212;</option>';
+    cameras.forEach(function(c) {
+      var id   = c.camera_id || c.id || '';
+      var nome = c.nome || c.name || id;
+      var opt  = document.createElement('option');
+      opt.value       = id;
+      opt.textContent = nome;
+      if (id === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* silencioso */ }
+}
+
 async function loadAlvos() {
   var tb = document.getElementById('alvos-tbody');
   var st = document.getElementById('alvos-status');
   if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
+  tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   if (st) st.innerHTML = '<span class="spinner"></span>';
   try {
     var resp = await fetch('/api/alvos');
@@ -3258,7 +3392,7 @@ async function loadAlvos() {
     document.getElementById('alvo-com-comp').textContent = '—';
     if (st) st.textContent = alvos.length + ' alvo(s)';
     if (alvos.length === 0) {
-      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
       return;
     }
     tb.innerHTML = alvos.map(function(a) {
@@ -3269,14 +3403,17 @@ async function loadAlvos() {
         + '<td style="color:var(--muted)">' + (a.descricao || '<em style="color:var(--muted)">sem descri&ccedil;&atilde;o</em>') + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
         + '<td style="white-space:nowrap">'
-          + '<button class="btn btn-primary btn-xs" onclick="openAlvoDetail(\'' + a.plate + '\',\'' + descEsc + '\')" style="margin-right:6px">&#128269; Ver Relat&oacute;rio</button>'
-          + '<button class="btn btn-outline btn-xs" onclick="editAlvo(' + a.id + ',\'' + a.plate + '\',\'' + descEsc + '\')" style="margin-right:6px">&#9998; Editar</button>'
-          + '<button class="btn btn-outline btn-xs" onclick="removeAlvo(' + a.id + ',\'' + a.plate + '\')" style="color:var(--danger)">&#128465;</button>'
+          + '<button class="btn btn-sm" style="background:rgba(59,130,246,.75);color:#fff;margin-right:4px" onclick="openBatedorReport(&#39;' + a.plate + '&#39;,false,_getAlvoRepFilters())">&#128202; Rel. Ve&iacute;culo</button>'
+          + '<button class="btn btn-outline btn-xs" onclick="openAlvoDetail(&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)">&#128269; Companheiros</button>'
+        + '</td>'
+        + '<td style="white-space:nowrap">'
+          + '<button class="btn btn-outline btn-xs" onclick="editAlvo(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" style="margin-right:6px">&#9998; Editar</button>'
+          + '<button class="btn btn-outline btn-xs" onclick="removeAlvo(' + a.id + ',&#39;' + a.plate + '&#39;)" style="color:var(--danger)">&#128465;</button>'
         + '</td>'
         + '</tr>';
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
     if (st) st.textContent = 'Erro';
   }
 }

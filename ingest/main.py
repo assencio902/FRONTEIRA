@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import psycopg2
 import psycopg2.pool
@@ -2271,6 +2271,12 @@ def _parse_window_to_minutes(w: str) -> int:
 def vehicle_report(
     plate: str,
     window: str = "2h",
+    ts_from: Optional[str] = None,
+    ts_to: Optional[str] = None,
+    filter_camera: Optional[str] = None,
+    filter_direction: Optional[str] = None,
+    min_confidence: float = 0.0,
+    min_cameras: int = 0,
 ):
     """
     Relatório completo de veículo.
@@ -2287,9 +2293,40 @@ def vehicle_report(
     if not plate:
         raise HTTPException(status_code=422, detail="plate é obrigatório")
 
-    window_min = _parse_window_to_minutes(window)
-    t_to   = _utcnow()
-    t_from = t_to - timedelta(minutes=window_min)
+    # ── Período ──
+    if ts_from and ts_to:
+        try:
+            t_from = datetime.fromisoformat(ts_from.replace('Z', '')).replace(tzinfo=timezone.utc)
+            t_to   = datetime.fromisoformat(ts_to.replace('Z', '')).replace(tzinfo=timezone.utc)
+        except Exception:
+            window_min = _parse_window_to_minutes(window)
+            t_to   = _utcnow()
+            t_from = t_to - timedelta(minutes=window_min)
+    else:
+        window_min = _parse_window_to_minutes(window)
+        t_to   = _utcnow()
+        t_from = t_to - timedelta(minutes=window_min)
+
+    # ── Filtros dinâmicos ──
+    ev_extra: list = []
+    ev_extra_vals: list = []
+    if filter_camera:
+        ev_extra.append("AND e.camera_id = %s")
+        ev_extra_vals.append(filter_camera)
+    if filter_direction:
+        ev_extra.append("AND COALESCE(NULLIF(e.direcao,''), c.direcao) = %s")
+        ev_extra_vals.append(filter_direction.upper())
+    if min_confidence > 0:
+        ev_extra.append("AND COALESCE(e.confidence, 0.0) >= %s")
+        ev_extra_vals.append(float(min_confidence))
+    ev_extra_sql = "\n                  ".join(ev_extra)
+
+    pt_extra: list = []
+    pt_extra_vals: list = []
+    if filter_camera:
+        pt_extra.append("AND a.camera_id = %s")
+        pt_extra_vals.append(filter_camera)
+    pt_extra_sql = "\n                  ".join(pt_extra)
 
     with _conn() as conn:
         with conn.cursor() as cur:
@@ -2297,7 +2334,7 @@ def vehicle_report(
             # ── 1. Passagens da placa ──────────────────────────────────────
             #    BUG-FIX: JOIN por c.camera_id = e.camera_id (texto), c.nome (não c.name)
             #    DIRECAO: priorizamos e.direcao (quando gravado) senão herdamos c.direcao
-            cur.execute("""
+            cur.execute(f"""
                 SELECT
                     e.id,
                     e.plate,
@@ -2320,9 +2357,10 @@ def vehicle_report(
                 )
                 WHERE e.plate = %s
                   AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                  {ev_extra_sql}
                 ORDER BY ts DESC
                 LIMIT 500
-            """, (plate, t_from, t_to))
+            """, (plate, t_from, t_to, *ev_extra_vals))
             ev_rows = cur.fetchall()
 
             # ── 2. Parceiros de co-aparecimento ────────────────────────────
@@ -2352,10 +2390,11 @@ def vehicle_report(
                   AND b.plate IS NOT NULL
                   AND b.plate != ''
                   AND b.plate NOT IN ('unknown','UNKNOWN')
+                  {pt_extra_sql}
                 GROUP BY b.plate
                 ORDER BY cameras_together DESC, joint_events DESC
                 LIMIT 30
-            """, (plate, t_from, t_to))
+            """, (plate, t_from, t_to, *pt_extra_vals))
             partner_rows = cur.fetchall()
 
             # ── 3. Status alvo ─────────────────────────────────────────────
@@ -2432,6 +2471,10 @@ def vehicle_report(
             "avg_conf":         round(float(r[6]) if r[6] else 0.0, 2),
             "is_alvo":          r[0] in alvo_partners,
         })
+
+    # ── Filtro pós-processamento: mínimo de câmeras juntos ──
+    if min_cameras > 1:
+        partners = [p for p in partners if p["cameras_together"] >= min_cameras]
 
     is_alvo        = alvo_row is not None
     alvo_descricao = alvo_row[1] if alvo_row else None
@@ -2514,6 +2557,15 @@ def vehicle_report(
         "events":          events,
         "convoy_partners": partners,
         "last_decision":   last_decision,
+        "filters_applied": {
+            "window":         window if not (ts_from and ts_to) else None,
+            "ts_from":        ts_from,
+            "ts_to":          ts_to,
+            "camera":         filter_camera,
+            "direction":      filter_direction,
+            "min_confidence": min_confidence if min_confidence > 0 else None,
+            "min_cameras":    min_cameras    if min_cameras > 1   else None,
+        },
     }
 
 
