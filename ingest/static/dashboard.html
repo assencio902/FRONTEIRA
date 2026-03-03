@@ -868,6 +868,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="loadMapa()">&#8635; Atualizar</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border:none;font-weight:700" onclick="promptTrajetoriaMapa()" title="Buscar trajetória de um veículo pelo mapa">&#128663; Trajet&#243;ria</button>
           <button id="btn-mapa-heat" class="btn btn-outline btn-sm" onclick="_toggleHeatMap()" title="Exibe um mapa de calor pela densidade de detecções por câmera">&#128293; Heat Map</button>
           <button id="btn-mapa-auto" class="btn btn-outline btn-sm" onclick="_toggleMapaAutoRefresh()" title="Atualiza o status dos marcadores automaticamente a cada 30 segundos">&#9711; Auto-refresh: OFF</button>
         </div>
@@ -1157,11 +1158,18 @@
 <div class="modal-overlay" id="traj-picker-modal" onclick="if(event.target===this)closeModal('traj-picker-modal')">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <h2>&#127760; Selecione o per&iacute;odo da trajet&oacute;ria</h2>
+      <h2>&#128663; Trajet&#243;ria no Mapa</h2>
       <button class="modal-close" onclick="closeModal('traj-picker-modal')">&times;</button>
     </div>
     <div style="padding:20px">
-      <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Placa: <strong id="traj-picker-plate" style="color:var(--text)"></strong></p>
+      <!-- Campo de placa: visível quando chamado direto do mapa -->
+      <div id="traj-plate-input-row" style="display:none;margin-bottom:14px">
+        <label style="font-size:.82rem;color:var(--muted);font-weight:600">Placa do ve&iacute;culo *</label>
+        <input type="text" id="traj-plate-input" placeholder="Ex: ABC1234 ou ABC1D23" maxlength="8"
+          class="form-input" style="width:100%;margin-top:6px;text-transform:uppercase;font-size:1rem;font-weight:700;letter-spacing:.08em"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <p id="traj-plate-display-row" style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Placa: <strong id="traj-picker-plate" style="color:var(--text)"></strong></p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
         <button class="btn btn-outline" onclick="_loadTrajetoria('12h')">&#9200; 12 horas</button>
         <button class="btn btn-outline" onclick="_loadTrajetoria('24h')">&#9200; 24 horas</button>
@@ -4157,6 +4165,7 @@ var _mapaMarkers      = [];
 var _mapaLayer        = null;
 var _mapaTrajetoria   = null;  // {plates:[], points:[{camera_id,ts,plate,cam_nome}]}
 var _trajetoriaLayers = [];
+var _mapaTrajMode     = false; // true = chamado direto do mapa (exige input de placa)
 var _mapaHeatLayer    = null;
 var _mapaHeatActive   = false;
 var _mapaAutoTimer    = null;
@@ -4237,7 +4246,10 @@ function _toggleMapaAutoRefresh() {
 function promptTrajetoria() {
   var plate = _reportCurrentPlate || '';
   if (!plate) return;
+  _mapaTrajMode = false;
   document.getElementById('traj-picker-plate').textContent = plate;
+  document.getElementById('traj-plate-input-row').style.display  = 'none';
+  document.getElementById('traj-plate-display-row').style.display = '';
   document.getElementById('traj-picker-status').textContent = '';
   document.getElementById('traj-custom-row').style.display = 'none';
   // mostra botão definir novamente caso tenha sido escondido
@@ -4246,9 +4258,31 @@ function promptTrajetoria() {
   openModal('traj-picker-modal');
 }
 
+// Chamado pelo botão Trajetória direto na aba do mapa
+function promptTrajetoriaMapa() {
+  _mapaTrajMode = true;
+  document.getElementById('traj-plate-input-row').style.display  = 'block';
+  document.getElementById('traj-plate-display-row').style.display = 'none';
+  document.getElementById('traj-plate-input').value = '';
+  document.getElementById('traj-picker-status').textContent = '';
+  document.getElementById('traj-custom-row').style.display = 'none';
+  var defBtn = document.querySelector('#traj-picker-modal .btn-outline[onclick*="traj-custom-row"]');
+  if (defBtn) defBtn.style.display = '';
+  openModal('traj-picker-modal');
+}
+
 async function _loadTrajetoria(windowKey) {
-  var plate = _reportCurrentPlate || '';
-  if (!plate) return;
+  var plate;
+  if (_mapaTrajMode) {
+    plate = (document.getElementById('traj-plate-input').value || '').trim().toUpperCase();
+  } else {
+    plate = _reportCurrentPlate || '';
+  }
+  if (!plate) {
+    document.getElementById('traj-picker-status').textContent = '⚠️ Informe a placa do veículo.';
+    if (_mapaTrajMode) document.getElementById('traj-plate-input').focus();
+    return;
+  }
   var st = document.getElementById('traj-picker-status');
   st.innerHTML = '<span class="spinner"></span> Buscando passagens…';
 
@@ -4313,7 +4347,7 @@ function _plotarTrajetoria() {
     if (c.nome) camPos[c.nome.toLowerCase()] = pos;
   });
 
-  var COLORS = ['#facc15','#3b82f6','#f97316','#a855f7','#ef4444','#06b6d4','#4ade80'];
+  var COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#facc15','#06b6d4','#4ade80']; // vermelho como cor padrão da rota
   var colorMap = {};
   (_mapaTrajetoria.plates || []).forEach(function(p, i) { colorMap[p] = COLORS[i % COLORS.length]; });
 
