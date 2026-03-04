@@ -15,10 +15,15 @@ class AuthService {
   /// Remove o token e encerra a sessão.
   Future<void> logout() => ApiClient.instance.logout();
 
+  /// Retorna o token JWT salvo, ou `null` se não houver sessão ativa.
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('jwt_token');
+  }
+
   /// Retorna `true` se há um token salvo (sessão ativa).
   Future<bool> isLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('jwt_token');
+    final token = await getToken();
     return token != null && token.isNotEmpty;
   }
 }

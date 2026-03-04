@@ -10,11 +10,27 @@ dependencies:
     sdk: flutter
   http: ^1.2.1
   shared_preferences: ^2.2.3
+  fl_chart: ^0.70.2
+  image_picker: ^1.1.2
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+  google_mlkit_text_recognition: ^0.15.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo_bpfron.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#021a0d"
+  adaptive_icon_foreground: "assets/logo_bpfron.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/logo_bpfron.png

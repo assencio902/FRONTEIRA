@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// Botão primário com indicador de carregamento integrado.
 class LoadingButton extends StatelessWidget {
   final String label;
@@ -21,8 +23,8 @@ class LoadingButton extends StatelessWidget {
       height: 52,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFEF4444),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.warning,
+          foregroundColor: Colors.black,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),

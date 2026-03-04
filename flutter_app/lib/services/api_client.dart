@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../models/auth_token.dart';
 import '../models/plate_result.dart';
+import 'auth_service.dart';
 
 /// Exceção lançada quando a API retorna um erro HTTP.
 class ApiException implements Exception {
@@ -26,11 +28,6 @@ class ApiClient {
 
   // ─── helpers internos ───────────────────────────────────────────────────────
 
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('jwt_token');
-  }
-
   Map<String, String> _baseHeaders({String? token}) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -42,6 +39,9 @@ class ApiClient {
           .replace(queryParameters: query ?? const {});
 
   void _checkResponse(http.Response res) {
+    if (res.statusCode == 401) {
+      throw ApiException(401, 'Unauthorized: ${res.body}');
+    }
     if (res.statusCode >= 400) {
       String msg;
       try {
@@ -78,13 +78,16 @@ class ApiClient {
 
   // ─── Placas ─────────────────────────────────────────────────────────────────
 
-  /// GET /plates/search?plate=...
+  /// GET /api/events?plate=...&limit=10&page=1
   Future<PlateSearchResult> searchPlate(String plate) async {
-    final token = await _getToken();
+    final token = await AuthService.instance.getToken();
+    final url = _uri('/api/events', {'plate': plate, 'limit': '10', 'page': '1'});
+    debugPrint('REQ: GET $url token=${token != null}');
     final res = await http.get(
-      _uri('/plates/search', {'plate': plate}),
+      url,
       headers: _baseHeaders(token: token),
     );
+    debugPrint('RES: ${res.statusCode} body=${res.body}');
     _checkResponse(res);
     return PlateSearchResult.fromJson(
         jsonDecode(res.body) as Map<String, dynamic>);

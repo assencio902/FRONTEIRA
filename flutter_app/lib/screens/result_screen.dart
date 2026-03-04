@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../models/plate_result.dart';
+import '../theme/app_theme.dart';
 
 class ResultScreen extends StatelessWidget {
   final String plate;
@@ -34,7 +35,7 @@ class ResultScreen extends StatelessWidget {
                 : const Center(
                     child: Text(
                       'Nenhuma passagem encontrada.',
-                      style: TextStyle(color: Color(0xFF94A3B8), fontSize: 15),
+                      style: TextStyle(color: AppColors.muted, fontSize: 15),
                     ),
                   ),
           ),
@@ -57,7 +58,7 @@ class _StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color =
-        found ? const Color(0xFFEF4444) : const Color(0xFF22C55E);
+        found ? AppColors.danger : AppColors.success;
     final icon = found ? Icons.warning_amber_rounded : Icons.check_circle_outline;
     final label =
         found ? '$total passagem(ns) encontrada(s)' : 'Veículo sem registros';
@@ -65,7 +66,7 @@ class _StatusBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-      color: color.withOpacity(0.12),
+      color: color.withValues(alpha: 0.12),
       child: Row(
         children: [
           Icon(icon, color: color, size: 28),
@@ -84,7 +85,7 @@ class _StatusBanner extends StatelessWidget {
                 Text(
                   'Status: $status',
                   style: const TextStyle(
-                      color: Color(0xFF94A3B8), fontSize: 12),
+                      color: AppColors.muted, fontSize: 12),
                 ),
               ],
             ),
@@ -123,11 +124,11 @@ class _HitCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (up ? const Color(0xFF3B82F6) : const Color(0xFFF97316))
-            .withOpacity(0.18),
+        color: (up ? AppColors.primary : AppColors.warning)
+            .withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: up ? const Color(0xFF3B82F6) : const Color(0xFFF97316),
+          color: up ? AppColors.primary : AppColors.warning,
           width: .8,
         ),
       ),
@@ -136,8 +137,27 @@ class _HitCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: up ? const Color(0xFF3B82F6) : const Color(0xFFF97316),
+          color: up ? AppColors.primary : AppColors.warning,
         ),
+      ),
+    );
+  }
+
+  Widget _tag(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: .8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
@@ -145,28 +165,54 @@ class _HitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = hit.imagePath != null && hit.imagePath!.isNotEmpty
-        ? '${AppConfig.baseUrl}/${hit.imagePath}'
+        ? '${AppConfig.baseUrl}${hit.imagePath!.startsWith('/') ? '' : '/'}${hit.imagePath}'
         : null;
 
     return Card(
-      color: const Color(0xFF1E293B),
+      color: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Placa
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.directions_car, size: 16, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Text(
+                    hit.plate.isEmpty ? '—' : hit.plate,
+                    style: const TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // Câmera + direção
             Row(
               children: [
                 const Icon(Icons.videocam_outlined,
-                    size: 15, color: Color(0xFF94A3B8)),
+                    size: 15, color: AppColors.muted),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
                     hit.cameraName ?? hit.cameraId ?? '—',
                     style: const TextStyle(
-                        color: Color(0xFF94A3B8), fontSize: 12),
+                        color: AppColors.muted, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -179,12 +225,12 @@ class _HitCard extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.access_time,
-                    size: 14, color: Color(0xFF64748B)),
+                    size: 14, color: AppColors.muted),
                 const SizedBox(width: 5),
                 Text(
                   _fmtDate(hit.occurredAt),
                   style: const TextStyle(
-                      color: Color(0xFFCBD5E1), fontSize: 13),
+                      color: AppColors.text, fontSize: 13),
                 ),
               ],
             ),
@@ -195,13 +241,37 @@ class _HitCard extends StatelessWidget {
               Row(
                 children: [
                   const Icon(Icons.analytics_outlined,
-                      size: 14, color: Color(0xFF64748B)),
+                      size: 14, color: AppColors.muted),
                   const SizedBox(width: 5),
                   Text(
-                    'Confiança: ${(hit.confidence! * 100).toStringAsFixed(1)} %',
+                    'Confiança: ${(hit.confidence! * (hit.confidence! <= 1.0 ? 100 : 1)).toStringAsFixed(0)}%',
                     style: const TextStyle(
-                        color: Color(0xFF94A3B8), fontSize: 12),
+                        color: AppColors.muted, fontSize: 12),
                   ),
+                ],
+              ),
+            ],
+
+            // Dados do veículo
+            if (hit.vehicleType != null || hit.vehicleColor != null || hit.plateColor != null) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  if (hit.vehicleType != null)
+                    _tag(Icons.directions_car_outlined, hit.vehicleType!.toUpperCase(), AppColors.accent),
+                  if (hit.vehicleColor != null)
+                    _tag(Icons.palette_outlined, hit.vehicleColor!.toUpperCase(), AppColors.muted),
+                  if (hit.plateColor != null)
+                    _tag(Icons.credit_card_outlined, 'PLACA ${hit.plateColor!.toUpperCase()}', AppColors.warning),
+                  if (hit.speed != null && hit.speed! > 0)
+                    _tag(Icons.speed_outlined, '${hit.speed} km/h',
+                        hit.speedLimit != null && hit.speed! > hit.speedLimit!
+                            ? AppColors.danger
+                            : AppColors.success),
+                  if (hit.illegalName != null && hit.illegalName != 'Normal')
+                    _tag(Icons.warning_amber_rounded, hit.illegalName!, AppColors.danger),
                 ],
               ),
             ],
@@ -213,16 +283,16 @@ class _HitCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
                   imageUrl,
-                  height: 130,
+                  height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 60,
-                    color: const Color(0xFF0F172A),
+                    color: AppColors.background,
                     alignment: Alignment.center,
                     child: const Text('Imagem indisponível',
                         style: TextStyle(
-                            color: Color(0xFF64748B), fontSize: 12)),
+                            color: AppColors.muted, fontSize: 12)),
                   ),
                 ),
               ),
