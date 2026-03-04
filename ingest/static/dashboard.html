@@ -565,9 +565,6 @@
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
           &#127919; Alvos Rastreados
         </div>
-        <div class="sub-tab" data-bat="grupos" onclick="switchBatTab('grupos',this)">
-          &#128101; Grupos em Comboio
-        </div>
         <button id="btn-bat-notif" class="btn btn-outline btn-sm" onclick="toggleBatNotif()"
           style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;white-space:nowrap">
           &#128276; <span id="bat-notif-label">Notif. OFF</span>
@@ -720,14 +717,6 @@
           <span id="cen-page-info" style="font-size:.8rem;color:var(--muted)"></span>
           <button class="btn btn-outline btn-xs" id="cen-btn-next" onclick="cenPageNav(1)">Pr&oacute;xima &#8594;</button>
         </div>
-        <!-- GRUPOS EM COMBOIO — seção integrada na Central -->
-        <div style="margin-top:22px;border-top:1px solid var(--border);padding-top:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <span style="font-weight:700;font-size:.9rem;color:var(--accent)">&#128101; Grupos em Comboio detectados na janela</span>
-            <span class="status-line" id="cen-grp-status"></span>
-          </div>
-          <div id="cen-grp-results"><div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem">Clique em &ldquo;Aplicar&rdquo; para detectar grupos.</div></div>
-        </div>
       </div><!-- /bat-sub-central -->
 
       <!-- SUB: ALVOS RASTREADOS -->
@@ -825,87 +814,6 @@
           </table>
         </div>
       </div><!-- /bat-sub-alvos -->
-
-      <!-- SUB: GRUPOS EM COMBOIO -->
-      <div id="bat-sub-grupos" class="sub-pane">
-        <div style="background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#fca5a5">
-          <strong>&#128101; Grupos em Comboio</strong> &mdash;
-          Detecta grupos <strong>reais</strong> de 2, 3, 4 ou mais ve&iacute;culos vistos na <strong>mesma c&acirc;mera</strong> dentro da janela de tempo. Use o filtro <strong>M&iacute;n. ve&iacute;culos</strong> para controlar o tamanho m&iacute;nimo do grupo.
-        </div>
-
-        <!-- Filtros -->
-        <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px;margin-bottom:14px">
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128336; Janela:
-            <select id="grp-window" style="margin-left:4px">
-              <option value="30m">30 min</option>
-              <option value="1h">1 hora</option>
-              <option value="2h" selected>2 horas</option>
-              <option value="6h">6 horas</option>
-              <option value="12h">12 horas</option>
-              <option value="24h">24 horas</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9201; Janela p/ c&acirc;m.:
-            <select id="grp-cowin" style="margin-left:4px">
-              <option value="60">1 min</option>
-              <option value="120">2 min</option>
-              <option value="300" selected>5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;font-weight:700;color:var(--accent)">
-            &#128101; M&iacute;n. ve&iacute;culos no grupo:
-            <select id="grp-minv" style="margin-left:4px;border-color:var(--accent)">
-              <option value="2" selected>2 ve&iacute;culos (par)</option>
-              <option value="3">3 ve&iacute;culos</option>
-              <option value="4">4 ve&iacute;culos</option>
-              <option value="5">5+ ve&iacute;culos</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#8597; Dire&ccedil;&atilde;o:
-            <select id="grp-direcao" style="margin-left:4px">
-              <option value="">Qualquer</option>
-              <option value="CRESCENTE">&#8593; Crescente</option>
-              <option value="DECRESCENTE">&#8595; Decrescente</option>
-              <option value="ENTRADA">&#128673; Entrada</option>
-              <option value="SA&Iacute;DA">&#128674; Sa&iacute;da</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128663; Tipo:
-            <select id="grp-vtype" style="margin-left:4px">
-              <option value="">Qualquer</option>
-              <option value="car">Carro</option>
-              <option value="motorcycle">Moto</option>
-              <option value="pickup">Caminhonete</option>
-              <option value="truck">Caminh&atilde;o</option>
-              <option value="bus">&Ocirc;nibus</option>
-              <option value="van">Van/Kombi</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#127912; Cor:
-            <select id="grp-vcolor" style="margin-left:4px">
-              <option value="">Qualquer</option>
-              <option value="Preto">Preto</option>
-              <option value="Branco">Branco</option>
-              <option value="Prata">Prata</option>
-              <option value="Cinza">Cinza</option>
-              <option value="Vermelho">Vermelho</option>
-              <option value="Azul">Azul</option>
-              <option value="Amarelo">Amarelo</option>
-              <option value="Verde">Verde</option>
-              <option value="Marrom">Marrom</option>
-              <option value="Laranja">Laranja</option>
-            </select>
-          </label>
-          <button class="btn btn-primary btn-sm" onclick="loadGrupos()" style="padding:5px 16px">&#10003; Aplicar</button>
-          <button class="btn btn-outline btn-sm" onclick="_resetGrupos()">&#10007; Limpar</button>
-          <span class="status-line" id="grp-status"></span>
-        </div>
-
-        <!-- Resultados -->
-        <div id="grp-results"><div style="text-align:center;padding:40px;color:var(--muted)">Configure os filtros e clique em <strong>Aplicar</strong> para buscar grupos.</div></div>
-      </div><!-- /bat-sub-grupos -->
 
     </div><!-- /tab-batedor -->
 
@@ -2122,7 +2030,7 @@ function switchBatTab(name, el) {
                   livBtn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
   }
   document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  ['central','alvos','grupos'].forEach(function(n){
+  ['central','alvos'].forEach(function(n){
     var el2 = document.getElementById('bat-sub-'+n);
     if (el2) el2.classList.remove('active');
   });
@@ -2131,92 +2039,6 @@ function switchBatTab(name, el) {
   document.getElementById('bat-sub-' + name).classList.add('active');
   if (name === 'central')    { /* aguarda clique em Monitorar */ }
   else if (name === 'alvos') { loadAlvos(); _loadAlvoCameras(); }
-  else if (name === 'grupos') { /* aguarda clique em Aplicar */ }
-}
-
-// ===== GRUPOS EM COMBOIO =====
-function loadGrupos() {
-  var w      = document.getElementById('grp-window').value;
-  var cowin  = document.getElementById('grp-cowin').value;
-  var minv   = document.getElementById('grp-minv').value;
-  var dir    = document.getElementById('grp-direcao').value;
-  var vtype  = document.getElementById('grp-vtype').value;
-  var vcolor = document.getElementById('grp-vcolor').value;
-
-  var url = '/api/batedor/grupos_comboio?window=' + w
-          + '&co_window=' + cowin
-          + '&min_vehicles=' + minv
-          + '&limit=200';
-  if (dir)    url += '&direcao='       + encodeURIComponent(dir);
-  if (vtype)  url += '&vehicle_type='  + encodeURIComponent(vtype);
-  if (vcolor) url += '&vehicle_color=' + encodeURIComponent(vcolor);
-
-  var st = document.getElementById('grp-status');
-  st.textContent = 'Buscando…';
-  st.style.color = 'var(--muted)';
-  document.getElementById('grp-results').innerHTML =
-    '<div style="text-align:center;padding:40px;color:var(--muted)">&#8987; Analisando grupos…</div>';
-
-  fetch(url).then(function(r){ return r.json(); }).then(function(data) {
-    st.textContent = data.total + ' grupo(s) encontrado(s)';
-    st.style.color = data.total > 0 ? 'var(--accent)' : 'var(--muted)';
-    _renderGrupos(data);
-  }).catch(function(e) {
-    st.textContent = 'Erro: ' + e.message;
-    st.style.color = '#f87171';
-    document.getElementById('grp-results').innerHTML = '';
-  });
-}
-
-function _resetGrupos() {
-  document.getElementById('grp-window').value  = '2h';
-  document.getElementById('grp-cowin').value   = '300';
-  document.getElementById('grp-minv').value    = '2';
-  document.getElementById('grp-direcao').value = '';
-  document.getElementById('grp-vtype').value   = '';
-  document.getElementById('grp-vcolor').value  = '';
-  document.getElementById('grp-status').textContent = '';
-  document.getElementById('grp-results').innerHTML =
-    '<div style="text-align:center;padding:40px;color:var(--muted)">Configure os filtros e clique em <strong>Aplicar</strong> para buscar grupos.</div>';
-}
-
-function _renderGrupos(data) {
-  var box = document.getElementById('grp-results');
-  if (!data.groups || data.groups.length === 0) {
-    box.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Nenhum grupo encontrado com os filtros atuais.</div>';
-    return;
-  }
-  var rows = data.groups.map(function(g, i) {
-    var plateBadges = g.plates.map(function(p) {
-      return '<button class="btn btn-outline btn-xs" style="font-weight:800;letter-spacing:.08em;color:#fbbf24;border-color:#fbbf24" onclick="openBatedorReport(\'' + p + '\')" title="Ver relatório de ' + p + '">' + p + '</button>';
-    }).join(' ');
-    var sizeBadge = g.group_size >= 4
-      ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:2px 8px;font-weight:800;font-size:.78rem">' + g.group_size + ' veículos</span>'
-      : g.group_size === 3
-        ? '<span style="background:#d97706;color:#fff;border-radius:4px;padding:2px 8px;font-weight:700;font-size:.78rem">' + g.group_size + ' veículos</span>'
-        : '<span style="background:#16a34a;color:#fff;border-radius:4px;padding:2px 8px;font-weight:700;font-size:.78rem">2 veículos</span>';
-    var dir = g.direcao ? ' &nbsp;&#8597; ' + g.direcao : '';
-    return '<tr>'
-      + '<td style="color:var(--muted);font-size:.82rem;text-align:center;width:36px">#' + (i+1) + '</td>'
-      + '<td>' + sizeBadge + '</td>'
-      + '<td>' + plateBadges + '</td>'
-      + '<td style="font-size:.82rem;color:var(--accent)">' + (g.cam_nome || g.camera_id) + dir + '</td>'
-      + '<td style="font-size:.78rem;color:var(--muted)">' + (g.first_seen ? g.first_seen.replace('T',' ').slice(0,16) : '—') + '</td>'
-      + '<td style="font-size:.78rem;color:var(--muted)">' + (g.span_sec ? _fmtCenSec(g.span_sec) : '—') + '</td>'
-      + '</tr>';
-  }).join('');
-
-  box.innerHTML = '<div class="table-wrap"><table><thead><tr>'
-    + '<th>#</th><th>Grupo</th><th>Placas</th><th>C&acirc;mera</th>'
-    + '<th>Horário</th><th>Duração</th>'
-    + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
-}
-
-function _fmtCenSec(s) {
-  if (!s || s < 1) return '<1s';
-  if (s < 60) return s + 's';
-  if (s < 3600) return Math.round(s/60) + ' min';
-  return (s/3600).toFixed(1) + 'h';
 }
 
 function switchSubTab(name, el) {
