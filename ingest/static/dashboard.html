@@ -667,11 +667,21 @@
               <option value="Laranja">Laranja</option>
             </select>
           </label>
-            <select id="cen-interval" style="margin-left:6px">
-              <option value="30">30s</option>
-              <option value="60" selected>1 min</option>
+          <label style="font-weight:700;color:var(--accent)">&#128101; M&iacute;n. ve&iacute;culos no grupo:
+            <select id="cen-minv" style="margin-left:4px;border-color:var(--accent)">
+              <option value="2" selected>2 (par)</option>
+              <option value="3">3 ve&iacute;culos</option>
+              <option value="4">4 ve&iacute;culos</option>
+              <option value="5">5+ ve&iacute;culos</option>
+            </select>
+          </label>
+          <label>&#9201; Janela p/ c&acirc;m.:
+            <select id="cen-cowin" style="margin-left:4px">
+              <option value="60">1 min</option>
               <option value="120">2 min</option>
-              <option value="300">5 min</option>
+              <option value="300" selected>5 min</option>
+              <option value="600">10 min</option>
+              <option value="900">15 min</option>
             </select>
           </label>
           <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
@@ -709,6 +719,14 @@
           <button class="btn btn-outline btn-xs" id="cen-btn-prev" onclick="cenPageNav(-1)">&#8592; Anterior</button>
           <span id="cen-page-info" style="font-size:.8rem;color:var(--muted)"></span>
           <button class="btn btn-outline btn-xs" id="cen-btn-next" onclick="cenPageNav(1)">Pr&oacute;xima &#8594;</button>
+        </div>
+        <!-- GRUPOS EM COMBOIO — seção integrada na Central -->
+        <div style="margin-top:22px;border-top:1px solid var(--border);padding-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-weight:700;font-size:.9rem;color:var(--accent)">&#128101; Grupos em Comboio detectados na janela</span>
+            <span class="status-line" id="cen-grp-status"></span>
+          </div>
+          <div id="cen-grp-results"><div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem">Clique em &ldquo;Aplicar&rdquo; para detectar grupos.</div></div>
         </div>
       </div><!-- /bat-sub-central -->
 
@@ -2806,6 +2824,8 @@ async function loadCentral(showSpinner) {
   var direcao = (document.getElementById('cen-direcao') || {}).value || '';
   var vtype   = (document.getElementById('cen-vtype')   || {}).value || '';
   var vcolor  = (document.getElementById('cen-vcolor')  || {}).value || '';
+  var minv    = (document.getElementById('cen-minv')    || {}).value || '2';
+  var cowin   = (document.getElementById('cen-cowin')   || {}).value || '300';
 
   if (showSpinner) {
     document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
@@ -2832,6 +2852,8 @@ async function loadCentral(showSpinner) {
     _cenRenderPage();
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     document.getElementById('central-status').textContent = 'Atualizado às ' + ts;
+    // ---- Grupos em Comboio integrado ----
+    _loadCenGrupos(w, cowin, minv, direcao, vtype, vcolor, tsFrom, tsTo);
   } catch(e) {
     document.getElementById('central-status').textContent = 'Erro: ' + e.message;
     if (showSpinner)
@@ -3585,13 +3607,74 @@ function _resetCenFilters() {
   if (vtype) vtype.value = '';
   var vcolor = document.getElementById('cen-vcolor');
   if (vcolor) vcolor.value = '';
+  var minv = document.getElementById('cen-minv');
+  if (minv) minv.value = '2';
+  var cowin = document.getElementById('cen-cowin');
+  if (cowin) cowin.value = '300';
   var dateRow = document.getElementById('cen-date-row');
   if (dateRow) dateRow.style.display = 'none';
   var tsFrom = document.getElementById('cen-ts-from');
   if (tsFrom) tsFrom.value = '';
   var tsTo = document.getElementById('cen-ts-to');
   if (tsTo) tsTo.value = '';
+  var grpBox = document.getElementById('cen-grp-results');
+  if (grpBox) grpBox.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem">Clique em &ldquo;Aplicar&rdquo; para detectar grupos.</div>';
+  var grpSt = document.getElementById('cen-grp-status');
+  if (grpSt) grpSt.textContent = '';
   loadCentral(true);
+}
+
+async function _loadCenGrupos(w, cowin, minv, direcao, vtype, vcolor, tsFrom, tsTo) {
+  var st  = document.getElementById('cen-grp-status');
+  var box = document.getElementById('cen-grp-results');
+  if (!st || !box) return;
+  st.textContent = 'Buscando grupos…';
+  st.style.color = 'var(--muted)';
+  box.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:.82rem"><span class="spinner"></span> Detectando grupos…</div>';
+  try {
+    var url = '/api/batedor/grupos_comboio?window=' + w + '&co_window=' + cowin + '&min_vehicles=' + minv + '&limit=100';
+    if (direcao) url += '&direcao='       + encodeURIComponent(direcao);
+    if (vtype)   url += '&vehicle_type='  + encodeURIComponent(vtype);
+    if (vcolor)  url += '&vehicle_color=' + encodeURIComponent(vcolor);
+    var r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    st.textContent = (data.total || 0) + ' grupo(s)';
+    st.style.color = data.total > 0 ? 'var(--accent)' : 'var(--muted)';
+    _cenRenderGrupos(data.groups || []);
+  } catch(e) {
+    st.textContent = 'Erro: ' + e.message;
+    st.style.color = '#f87171';
+    box.innerHTML = '<div style="color:#f87171;font-size:.82rem;padding:10px">Erro ao carregar grupos: ' + e.message + '</div>';
+  }
+}
+
+function _cenRenderGrupos(groups) {
+  var box = document.getElementById('cen-grp-results');
+  if (!groups || groups.length === 0) {
+    box.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:.82rem">Nenhum grupo detectado com os filtros atuais.</div>';
+    return;
+  }
+  var rows = groups.map(function(g, i) {
+    var plateBadges = g.plates.map(function(p) {
+      return '<button class="btn btn-outline btn-xs" style="font-weight:800;letter-spacing:.08em;color:#fbbf24;border-color:#fbbf24" onclick="openBatedorReport(\'' + p + '\')" title="Relatório de ' + p + '">' + p + '</button>';
+    }).join(' ');
+    var sizeBadge = g.group_size >= 4
+      ? '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:2px 8px;font-weight:800;font-size:.78rem">' + g.group_size + ' veículos</span>'
+      : g.group_size === 3
+        ? '<span style="background:#d97706;color:#fff;border-radius:4px;padding:2px 8px;font-weight:700;font-size:.78rem">3 veículos</span>'
+        : '<span style="background:#16a34a;color:#fff;border-radius:4px;padding:2px 8px;font-weight:700;font-size:.78rem">2 veículos</span>';
+    var dir = g.direcao ? ' <span style="color:var(--muted)">&#8597; ' + g.direcao + '</span>' : '';
+    return '<tr>'
+      + '<td style="text-align:center;width:32px;color:var(--muted);font-size:.8rem">#' + (i+1) + '</td>'
+      + '<td>' + sizeBadge + '</td>'
+      + '<td>' + plateBadges + '</td>'
+      + '<td style="font-size:.82rem;color:var(--accent)">' + (g.cam_nome || g.camera_id || '—') + dir + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + (g.first_seen ? g.first_seen.replace('T',' ').slice(0,16) : '—') + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + (g.span_sec ? _fmtCenSec(g.span_sec) : '—') + '</td>'
+      + '</tr>';
+  }).join('');
+  box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Grupo</th><th>Placas</th><th>C&acirc;mera</th><th>Hor&aacute;rio</th><th>Dura&ccedil;&atilde;o</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
 function _resetAlvoRepFilters() {
