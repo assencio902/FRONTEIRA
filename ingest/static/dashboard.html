@@ -616,18 +616,6 @@
               <option value="5">&#8805; 5 c&acirc;meras</option>
             </select>
           </label></span>
-          <label>Intervalo:
-            <select id="cen-interval" style="margin-left:6px">
-              <option value="30">30s</option>
-              <option value="60" selected>1 min</option>
-              <option value="120">2 min</option>
-              <option value="300">5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-              <option value="1800">30 min</option>
-              <option value="3600">1 hora</option>
-            </select>
-          </label>
           <!-- Filtros do suspeito -->
           <label>&#8597; Dire&ccedil;&atilde;o:
             <select id="cen-direcao" style="margin-left:6px">
@@ -683,6 +671,18 @@
           </label>
           <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
           <button class="btn btn-outline btn-sm" onclick="_resetCenFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
+            <select id="cen-interval" style="margin-left:4px">
+              <option value="30">30s</option>
+              <option value="60" selected>1 min</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+              <option value="600">10 min</option>
+              <option value="900">15 min</option>
+              <option value="1800">30 min</option>
+              <option value="3600">1 hora</option>
+            </select>
+          </label>
           <button id="btn-cen-live" class="btn btn-outline btn-sm" onclick="toggleCenLive()" style="display:flex;align-items:center;gap:6px">
             &#9654; <span id="cen-live-label">Monitorar</span>
           </button>
