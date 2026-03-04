@@ -4440,20 +4440,47 @@ async function _loadTrajetoria(windowKey) {
   }
 
   try {
-    var url = '/api/events?plate=' + encodeURIComponent(plate)
-            + '&limit=500'
-            + '&dt_from=' + encodeURIComponent(tsFrom)
-            + '&dt_to='   + encodeURIComponent(tsTo);
+    // ── Novo endpoint dedicado de trajetória (já traz lat/lon) ──
+    var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
+            + '?start=' + encodeURIComponent(tsFrom)
+            + '&end=' + encodeURIComponent(tsTo)
+            + '&dedupe_seconds=5';
     var r = await fetch(url);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      var errData = await r.json().catch(function(){ return {detail:'HTTP '+r.status}; });
+      throw new Error(errData.detail || 'HTTP '+r.status);
+    }
     var data = await r.json();
-    var events = data.items || [];
-    if (!events.length) { st.textContent = '\u26a0\ufe0f Nenhuma passagem encontrada neste per\u00edodo.'; return; }
+    
+    if (!data.points || data.points.length === 0) {
+      st.textContent = '\u26a0\ufe0f Nenhuma passagem encontrada neste período.';
+      if (data.cameras_without_gps && data.cameras_without_gps.length > 0) {
+        st.textContent += ' (Câmeras sem GPS: ' + data.cameras_without_gps.join(', ') + ')';
+      }
+      return;
+    }
 
-    _mapaTrajetoria = { plates: [plate], points: events.map(function(ev) {
-      return { camera_id: ev.camera_id, ts: ev.occurred_at || ev.timestamp || '', plate: plate,
-               cam_nome: ev.camera || ev.channel_name || ev.camera_id || '' };
-    })};
+    // Pontos já vêm com lat/lon enriquecidos do backend
+    _mapaTrajetoria = {
+      plates: [plate],
+      points: data.points.map(function(p) {
+        return {
+          lat: p.lat,
+          lng: p.lon,
+          ts: p.ts,
+          plate: plate,
+          camera_id: p.camera_id,
+          cam_nome: p.camera_name,
+          direcao: p.direction,
+          seq: 0  // será preenchido em _plotarTrajetoria
+        };
+      }),
+      stats: {
+        total_points: data.total_points,
+        total_events: data.total_events,
+        cameras_without_gps: data.cameras_without_gps || []
+      }
+    };
 
     closeModal('traj-picker-modal');
     closeModal('detail-modal');
@@ -4472,27 +4499,64 @@ function verTrajetoriaNoMapa() {
   if (nav) nav.click();
 }
 
+// ── Segmentação inteligente: quebra pontos em trechos ────────────────────
+// Retorna array de arrays. Cada sub-array é um trecho contínuo.
+// Quebra quando gap de tempo > maxGapMin OU distância > maxGapMeters.
+function _haversineMeters(lat1, lng1, lat2, lng2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2)
+        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+        * Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function splitPointsIntoSegments(pts, maxGapMinutes, maxGapMeters) {
+  if (!pts || pts.length === 0) return [];
+  maxGapMinutes = maxGapMinutes || 10;
+  maxGapMeters  = maxGapMeters  || 2000;
+  var segments = [];
+  var cur = [pts[0]];
+  for (var i = 1; i < pts.length; i++) {
+    var prev = cur[cur.length - 1];
+    var p    = pts[i];
+    // Ponto duplicado (mesma lat/lng e mesma câmera) → ignora
+    if (p.lat === prev.lat && p.lng === prev.lng && p.cam_nome === prev.cam_nome) {
+      cur.push(p);
+      continue;
+    }
+    var dtPrev = new Date(prev.ts).getTime();
+    var dtCur  = new Date(p.ts).getTime();
+    var gapMin = Math.abs(dtCur - dtPrev) / 60000;
+    var distM  = _haversineMeters(prev.lat, prev.lng, p.lat, p.lng);
+    if (gapMin > maxGapMinutes || distM > maxGapMeters) {
+      if (cur.length > 0) segments.push(cur);
+      cur = [p];
+    } else {
+      cur.push(p);
+    }
+  }
+  if (cur.length > 0) segments.push(cur);
+  return segments;
+}
+
+// ── Cores por trecho (alternando para diferenciar visualmente) ───────────
+var _SEGMENT_COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#06b6d4','#4ade80','#facc15','#ec4899','#14b8a6','#8b5cf6'];
+
 function _plotarTrajetoria() {
   _trajetoriaLayers.forEach(function(l) { l.remove(); });
   _trajetoriaLayers = [];
   if (!_mapaTrajetoria || !_mapaTrajetoria.points.length) return;
 
-  // Lookup câmeras por camera_id e por nome
-  var camPos = {};
-  (_cameraRows || []).forEach(function(c) {
-    if (c.latitude == null || c.longitude == null) return;
-    var pos = { lat: c.latitude, lng: c.longitude, nome: c.nome };
-    camPos[c.camera_id] = pos;
-    if (c.nome) camPos[c.nome.toLowerCase()] = pos;
-  });
-
-  var COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#facc15','#06b6d4','#4ade80']; // vermelho como cor padrão da rota
+  var COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#facc15','#06b6d4','#4ade80'];
   var colorMap = {};
   (_mapaTrajetoria.plates || []).forEach(function(p, i) { colorMap[p] = COLORS[i % COLORS.length]; });
 
-  var points = _mapaTrajetoria.points.slice().sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
+  // Pontos já vêm com lat/lng do backend, ordenados por timestamp
+  var points = _mapaTrajetoria.points.slice();
 
-  // Calcula ângulo (bearing) entre dois pontos lat/lng
+  // Calcula bearing entre dois pontos
   function bearing(p1, p2) {
     var dLng = (p2.lng - p1.lng) * Math.PI / 180;
     var lat1  = p1.lat * Math.PI / 180;
@@ -4502,7 +4566,6 @@ function _plotarTrajetoria() {
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
 
-  // SVG de seta direcional
   function arrowIcon(color, angle) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
       + '<circle cx="11" cy="11" r="10" fill="' + color + '" fill-opacity=".85" stroke="#fff" stroke-width="1.5"/>'
@@ -4511,7 +4574,6 @@ function _plotarTrajetoria() {
     return L.divIcon({ html: svg, className: '', iconSize: [22,22], iconAnchor: [11,11] });
   }
 
-  // Ícone de início/fim
   function endpointIcon(label, bg) {
     var html = '<div style="background:' + bg + ';color:#fff;font-weight:900;font-size:.62rem;'
       + 'border-radius:6px;padding:3px 6px;border:2px solid #fff;white-space:nowrap;'
@@ -4519,99 +4581,157 @@ function _plotarTrajetoria() {
     return L.divIcon({ html: html, className: '', iconAnchor: [20,12] });
   }
 
+  function segmentBadgeIcon(label, bg) {
+    var html = '<div style="background:' + bg + ';color:#fff;font-weight:800;font-size:.58rem;'
+      + 'border-radius:4px;padding:2px 5px;border:1.5px solid #fff;white-space:nowrap;'
+      + 'box-shadow:0 1px 4px rgba(0,0,0,.4);opacity:.9">' + label + '</div>';
+    return L.divIcon({ html: html, className: '', iconAnchor: [16,10] });
+  }
+
+  // ── Agrupa por placa e numera ─────────────────────────────────────────
   var byPlate = {};
   var allLL   = [];
   var seq     = 0;
+  
   points.forEach(function(pt) {
-    var cam = camPos[pt.camera_id] || camPos[(pt.cam_nome || '').toLowerCase()];
-    if (!cam) return;
+    // Pontos já têm lat/lng do backend
+    if (!pt.lat || !pt.lng) return;
     seq++;
+    pt.seq = seq;
     if (!byPlate[pt.plate]) byPlate[pt.plate] = [];
-    byPlate[pt.plate].push({ lat: cam.lat, lng: cam.lng, ts: pt.ts, cam_nome: cam.nome || pt.cam_nome || pt.camera_id, seq: seq });
-    allLL.push([cam.lat, cam.lng]);
+    byPlate[pt.plate].push(pt);
+    allLL.push([pt.lat, pt.lng]);
   });
 
+  var totalSegments = 0;
+  var totalTrechos  = 0;
+
   Object.keys(byPlate).forEach(function(plate) {
-    var color = colorMap[plate] || '#facc15';
-    var pts   = byPlate[plate];
+    var baseColor = colorMap[plate] || '#facc15';
+    var pts       = byPlate[plate];
+    if (!pts.length) return;
 
-    // 1. Linha sólida e grossa
-    if (pts.length >= 2) {
-      // Sombra (espessura maior, cor escura)
-      var shadow = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
-        color: '#000', weight: 7, opacity: .3
-      }).addTo(_mapaLeaflet);
-      _trajetoriaLayers.push(shadow);
+    // ── Segmentar em trechos ──────────────────────────────────────────
+    var segments = splitPointsIntoSegments(pts, 10, 2000);
+    totalTrechos += segments.length;
 
-      // Linha principal
-      var line = L.polyline(pts.map(function(p) { return [p.lat, p.lng]; }), {
-        color: color, weight: 5, opacity: .95
-      }).addTo(_mapaLeaflet);
-      _trajetoriaLayers.push(line);
+    segments.forEach(function(seg, segIdx) {
+      var segColor = segments.length > 1
+        ? _SEGMENT_COLORS[segIdx % _SEGMENT_COLORS.length]
+        : baseColor;
 
-      // 2. Setas nos midpoints de cada segmento
-      for (var i = 0; i < pts.length - 1; i++) {
-        var p1 = pts[i], p2 = pts[i+1];
-        var midLat = (p1.lat + p2.lat) / 2;
-        var midLng = (p1.lng + p2.lng) / 2;
-        var ang = bearing(p1, p2);
-        var arrow = L.marker([midLat, midLng], { icon: arrowIcon(color, ang), zIndexOffset: 10 }).addTo(_mapaLeaflet);
-        _trajetoriaLayers.push(arrow);
+      // ── Polyline por trecho (segmento-a-segmento) ───────────────
+      if (seg.length >= 2) {
+        // Sombra
+        var shadow = L.polyline(seg.map(function(p) { return [p.lat, p.lng]; }), {
+          color: '#000', weight: 7, opacity: .25
+        }).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(shadow);
+
+        // Linha principal do trecho
+        var line = L.polyline(seg.map(function(p) { return [p.lat, p.lng]; }), {
+          color: segColor, weight: 5, opacity: .92, dashArray: segments.length > 1 ? null : null
+        }).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(line);
+
+        // Setas direcionais em cada sub-segmento
+        for (var i = 0; i < seg.length - 1; i++) {
+          var p1 = seg[i], p2 = seg[i+1];
+          // Evita seta se pontos sobrepostos
+          if (p1.lat === p2.lat && p1.lng === p2.lng) continue;
+          var midLat = (p1.lat + p2.lat) / 2;
+          var midLng = (p1.lng + p2.lng) / 2;
+          var ang = bearing(p1, p2);
+          var arrow = L.marker([midLat, midLng], { icon: arrowIcon(segColor, ang), zIndexOffset: 10 }).addTo(_mapaLeaflet);
+          _trajetoriaLayers.push(arrow);
+        }
       }
-    }
 
-    // 3. Marcadores numerados com popup
-    pts.forEach(function(p, i) {
-      var dt  = new Date(p.ts);
-      var fmt = isNaN(dt) ? '-' : dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})
-              + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      // ── Badge do trecho (se há mais de 1 trecho) ───────────────
+      if (segments.length > 1) {
+        var tFirst = new Date(seg[0].ts);
+        var tLast  = new Date(seg[seg.length-1].ts);
+        var fmtT = function(d) { return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); };
+        var badgeLabel = 'Trecho ' + (segIdx+1) + '/' + segments.length + ' (' + fmtT(tFirst) + ' → ' + fmtT(tLast) + ')';
+        var badgeMk = L.marker([seg[0].lat, seg[0].lng], {
+          icon: segmentBadgeIcon(badgeLabel, segColor), zIndexOffset: 45
+        }).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(badgeMk);
+      }
 
-      var circleBg = color;
-      var circleHtml = '<div style="background:' + circleBg + ';color:#000;font-weight:900;font-size:.75rem;'
-        + 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
-        + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p.seq + '</div>';
-      var mk = L.marker([p.lat, p.lng], {
-        icon: L.divIcon({ html: circleHtml, className: '', iconSize: [26,26], iconAnchor: [13,13] }),
-        zIndexOffset: 20
-      }).bindPopup(
-        '<div style="font-family:system-ui;min-width:200px">'
-        + '<div style="font-weight:900;font-size:1rem;color:' + color + ';margin-bottom:6px;letter-spacing:.06em">' + plate + '</div>'
-        + '<div style="font-size:.82rem;line-height:1.9">'
-        + '<b style="color:#64748b">Passagem</b> <b>#' + p.seq + ' de ' + pts.length + '</b><br>'
-        + '<b style="color:#64748b">Câmera:</b> ' + p.cam_nome + '<br>'
-        + '<b style="color:#64748b">Horário:</b> ' + fmt
-        + '</div></div>'
-      ).addTo(_mapaLeaflet);
-      _trajetoriaLayers.push(mk);
+      // ── Marcadores numerados ───────────────────────────────────
+      seg.forEach(function(p) {
+        var dt  = new Date(p.ts);
+        var fmt = isNaN(dt) ? '-' : dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+                + ' ' + dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+        var circleHtml = '<div style="background:' + segColor + ';color:#000;font-weight:900;font-size:.75rem;'
+          + 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+          + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p.seq + '</div>';
+        var mk = L.marker([p.lat, p.lng], {
+          icon: L.divIcon({ html: circleHtml, className: '', iconSize: [26,26], iconAnchor: [13,13] }),
+          zIndexOffset: 20
+        }).bindPopup(
+          '<div style="font-family:system-ui;min-width:220px">'
+          + '<div style="font-weight:900;font-size:1rem;color:' + segColor + ';margin-bottom:6px;letter-spacing:.06em">' + plate + '</div>'
+          + '<div style="font-size:.82rem;line-height:1.9">'
+          + '<b style="color:#64748b">Passagem</b> <b>#' + p.seq + ' de ' + pts.length + '</b>'
+          + (segments.length > 1 ? ' <span style="font-size:.72rem;color:' + segColor + '">(trecho ' + (segIdx+1) + ')</span>' : '') + '<br>'
+          + '<b style="color:#64748b">Câmera:</b> ' + p.cam_nome + '<br>'
+          + '<b style="color:#64748b">Horário:</b> ' + fmt
+          + '</div></div>'
+        ).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(mk);
+      });
+
+      // ── Marca INÍCIO / FIM de cada trecho ──────────────────────
+      if (seg.length >= 1) {
+        var startLabel = segments.length > 1 ? '▶ INÍCIO T' + (segIdx+1) : '▶ INÍCIO';
+        var mStart = L.marker([seg[0].lat, seg[0].lng], { icon: endpointIcon(startLabel, '#16a34a'), zIndexOffset: 50 })
+          .addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(mStart);
+      }
+      if (seg.length >= 2) {
+        var endLabel = segments.length > 1 ? '■ FIM T' + (segIdx+1) : '■ FIM';
+        var mEnd = L.marker([seg[seg.length-1].lat, seg[seg.length-1].lng], { icon: endpointIcon(endLabel, '#dc2626'), zIndexOffset: 50 })
+          .addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(mEnd);
+      }
+
+      // ── Linha tracejada entre fim de um trecho e início do próximo ──
+      if (segIdx < segments.length - 1) {
+        var nextSeg = segments[segIdx + 1];
+        var gapLine = L.polyline(
+          [[seg[seg.length-1].lat, seg[seg.length-1].lng], [nextSeg[0].lat, nextSeg[0].lng]],
+          { color: '#94a3b8', weight: 2, opacity: .5, dashArray: '8,8' }
+        ).addTo(_mapaLeaflet);
+        _trajetoriaLayers.push(gapLine);
+      }
     });
-
-    // 4. Marcadores de INÍCIO e FIM
-    if (pts.length >= 1) {
-      var mStart = L.marker([pts[0].lat, pts[0].lng], { icon: endpointIcon('▶ INÍCIO', '#16a34a'), zIndexOffset: 50 })
-        .addTo(_mapaLeaflet);
-      _trajetoriaLayers.push(mStart);
-    }
-    if (pts.length >= 2) {
-      var mEnd = L.marker([pts[pts.length-1].lat, pts[pts.length-1].lng], { icon: endpointIcon('■ FIM', '#dc2626'), zIndexOffset: 50 })
-        .addTo(_mapaLeaflet);
-      _trajetoriaLayers.push(mEnd);
-    }
   });
 
   if (allLL.length) _mapaLeaflet.fitBounds(allLL, { padding: [70, 70], maxZoom: 14 });
 
-  // Info bar
+  // ──  Info bar ───────────────────────────────────────────────────────────
   var noGps = document.getElementById('map-no-gps');
   if (noGps) {
-    var missing = points.filter(function(pt) {
-      return !(camPos[pt.camera_id] || camPos[(pt.cam_nome || '').toLowerCase()]);
-    }).map(function(pt) { return pt.cam_nome || pt.camera_id; });
-    var uniq = missing.filter(function(v, i, a) { return a.indexOf(v) === i; });
-    var missStr = uniq.length ? ' <span style="color:var(--muted);font-size:.74rem">(sem GPS: ' + uniq.join(', ') + ')</span>' : '';
+    var stats = _mapaTrajetoria.stats || {};
+    var camsNoGps = stats.cameras_without_gps || [];
+    var missStr = camsNoGps.length 
+      ? ' <span style="color:var(--muted);font-size:.74rem">(sem GPS: ' + camsNoGps.join(', ') + ')</span>' 
+      : '';
+    var trechoStr = totalTrechos > 1
+      ? ' &middot; <strong style="color:#f97316">' + totalTrechos + ' trechos</strong> (gap &gt;10min ou &gt;2km)'
+      : '';
+    var pointsShown = stats.total_points || points.length;
+    var pointsTotal = stats.total_events || pointsShown;
+    var pointsInfo = pointsShown === pointsTotal 
+      ? pointsShown + ' passagem(ns)' 
+      : pointsShown + ' de ' + pointsTotal + ' passagem(ns) (filtrado GPS)';
     noGps.innerHTML = '<div style="background:rgba(250,204,21,.1);border:1px solid var(--accent);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
       + '<span style="font-size:1.1rem">&#127760;</span>'
       + '<span style="font-size:.83rem"><strong style="color:var(--accent)">' + _mapaTrajetoria.plates.join(' + ') + '</strong>'
-      + ' &mdash; ' + points.length + ' passagem(ns)' + missStr + '</span>'
+      + ' &mdash; ' + pointsInfo + trechoStr + missStr + '</span>'
       + '<button class="btn btn-outline btn-xs" onclick="_limparTrajetoria()">&#10005; Limpar</button>'
       + '</div>';
   }

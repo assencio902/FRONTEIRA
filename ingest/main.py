@@ -3107,6 +3107,166 @@ def vehicle_report_decisions(
     return {"items": items, "count": len(items)}
 
 
+@app.get("/api/vehicles/{plate}/trajectory")
+def vehicle_trajectory(
+    plate: str,
+    start: str,
+    end: str,
+    dedupe_seconds: int = 5,
+):
+    """
+    Endpoint dedicado para trajetória de veículo.
+    
+    Retorna pontos ordenados cronologicamente com lat/lon enriquecidos das câmeras.
+    
+    Args:
+        plate: Placa do veículo (exata, case-insensitive)
+        start: Data/hora início (ISO 8601: YYYY-MM-DDTHH:mm:ss ou YYYY-MM-DD HH:mm:ss)
+        end: Data/hora fim (ISO 8601)
+        dedupe_seconds: Janela para deduplicar eventos repetidos na mesma câmera (padrão: 5s)
+    
+    Returns:
+        {
+            "plate": "ABC1234",
+            "start": "2026-03-05T10:00:00-03:00",
+            "end": "2026-03-05T18:00:00-03:00",
+            "total_points": 42,
+            "cameras_without_gps": ["CAM07", "CAM12"],
+            "points": [
+                {
+                    "event_id": 123,
+                    "ts": "2026-03-05T10:01:00-03:00",
+                    "lat": -20.12345,
+                    "lon": -63.45678,
+                    "camera_id": "CAM01",
+                    "camera_name": "BR-262 Km 10",
+                    "direction": "CRESCENTE",
+                    "confidence": 0.95,
+                    "vehicle_type": "car"
+                },
+                ...
+            ]
+        }
+    """
+    plate = plate.strip().upper()
+    if not plate:
+        raise HTTPException(status_code=422, detail="plate é obrigatório")
+    
+    # Parse datas
+    try:
+        dt_start = datetime.fromisoformat(start.replace('Z', '').replace(' ', 'T'))
+        dt_end   = datetime.fromisoformat(end.replace('Z', '').replace(' ', 'T'))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Formato de data inválido: {e}")
+    
+    # Garante timezone UTC se não fornecido
+    if dt_start.tzinfo is None:
+        dt_start = dt_start.replace(tzinfo=timezone.utc)
+    if dt_end.tzinfo is None:
+        dt_end = dt_end.replace(tzinfo=timezone.utc)
+    
+    dedupe_seconds = max(0, min(60, int(dedupe_seconds)))
+    
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # Query com JOIN para enriquecer com lat/lon da câmera
+            cur.execute("""
+                SELECT
+                    e.id                                                AS event_id,
+                    COALESCE(e.occurred_at, e.ts)                       AS event_time,
+                    e.plate,
+                    e.camera_id,
+                    e.camera_ip,
+                    COALESCE(c.nome, e.channel_name, e.camera_id)      AS camera_name,
+                    c.latitude,
+                    c.longitude,
+                    COALESCE(NULLIF(e.direcao,''), c.direcao)           AS direction,
+                    COALESCE(e.confidence, 0.0)                         AS confidence,
+                    COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', 
+                             e.cam_meta->>'vehicle_type', '')            AS vehicle_type,
+                    COALESCE(e.yolo_result->'target_vehicle'->>'cor', '') AS vehicle_color,
+                    e.image_path
+                FROM lpr_events e
+                LEFT JOIN cameras c ON (
+                    c.camera_id = e.camera_id
+                    OR c.ip = e.camera_id
+                    OR c.ip = e.camera_ip
+                )
+                WHERE UPPER(e.plate) = %s
+                  AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                ORDER BY COALESCE(e.occurred_at, e.ts) ASC
+                LIMIT 2000
+            """, (plate, dt_start, dt_end))
+            rows = cur.fetchall()
+    
+    if not rows:
+        return {
+            "plate": plate,
+            "start": dt_start.isoformat(),
+            "end": dt_end.isoformat(),
+            "total_points": 0,
+            "cameras_without_gps": [],
+            "points": []
+        }
+    
+    # Processa e deduplica
+    points = []
+    cameras_without_gps = set()
+    last_camera_time = {}  # {camera_id: timestamp} para dedupe
+    
+    for r in rows:
+        event_id      = r[0]
+        event_time    = r[1]
+        cam_id        = r[3] or r[4]  # camera_id ou camera_ip
+        cam_name      = r[5]
+        lat           = r[6]
+        lon           = r[7]
+        direction     = r[8]
+        confidence    = float(r[9] or 0.0)
+        vehicle_type  = r[10] or None
+        vehicle_color = r[11] or None
+        image_path    = r[12]
+        
+        # Pula se não tem GPS
+        if lat is None or lon is None:
+            if cam_name:
+                cameras_without_gps.add(cam_name)
+            continue
+        
+        # Dedupe: ignora se mesmo camera_id em janela de N segundos
+        if dedupe_seconds > 0 and cam_id:
+            last_ts = last_camera_time.get(cam_id)
+            if last_ts:
+                delta = (event_time - last_ts).total_seconds()
+                if abs(delta) < dedupe_seconds:
+                    continue  # Evento duplicado, pula
+            last_camera_time[cam_id] = event_time
+        
+        points.append({
+            "event_id":     event_id,
+            "ts":           event_time.isoformat(),
+            "lat":          float(lat),
+            "lon":          float(lon),
+            "camera_id":    cam_id,
+            "camera_name":  cam_name,
+            "direction":    direction,
+            "confidence":   round(confidence, 2),
+            "vehicle_type": vehicle_type,
+            "vehicle_color": vehicle_color,
+            "image_path":   image_path
+        })
+    
+    return {
+        "plate":                plate,
+        "start":                dt_start.isoformat(),
+        "end":                  dt_end.isoformat(),
+        "total_points":         len(points),
+        "total_events":         len(rows),
+        "cameras_without_gps":  sorted(list(cameras_without_gps)),
+        "points":               points
+    }
+
+
 # ===========================
 # CENTRAL DE AMEAÇAS — consolida suspeitos + comboio + grupos + alvos
 # ===========================
