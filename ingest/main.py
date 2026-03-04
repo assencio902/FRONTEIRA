@@ -2702,6 +2702,8 @@ def vehicle_report(
     filter_direction: Optional[str] = None,
     min_confidence: float = 0.0,
     min_cameras: int = 0,
+    vehicle_type: Optional[str] = None,
+    vehicle_color: Optional[str] = None,
 ):
     """
     Relatório completo de veículo.
@@ -2744,6 +2746,12 @@ def vehicle_report(
     if min_confidence > 0:
         ev_extra.append("AND COALESCE(e.confidence, 0.0) >= %s")
         ev_extra_vals.append(float(min_confidence))
+    if vehicle_type:
+        ev_extra.append("AND COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', '') ILIKE %s")
+        ev_extra_vals.append(vehicle_type)
+    if vehicle_color:
+        ev_extra.append("AND COALESCE(e.yolo_result->'target_vehicle'->>'cor', '') ILIKE %s")
+        ev_extra_vals.append(vehicle_color)
     ev_extra_sql = "\n                  ".join(ev_extra)
 
     pt_extra: list = []

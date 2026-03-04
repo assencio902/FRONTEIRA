@@ -795,6 +795,32 @@
                 <option value="5">&#8805; 5 c&acirc;meras</option>
               </select>
             </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#128663; Tipo ve&iacute;culo:
+              <select id="alvo-rep-vtype" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="">Qualquer</option>
+                <option value="car">Carro</option>
+                <option value="motorcycle">Moto</option>
+                <option value="pickup">Caminhonete</option>
+                <option value="truck">Caminh&atilde;o</option>
+                <option value="bus">&Ocirc;nibus</option>
+                <option value="van">Van/Kombi</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#127912; Cor:
+              <select id="alvo-rep-vcolor" style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:.82rem">
+                <option value="">Qualquer</option>
+                <option value="Preto">Preto</option>
+                <option value="Branco">Branco</option>
+                <option value="Prata">Prata</option>
+                <option value="Cinza">Cinza</option>
+                <option value="Vermelho">Vermelho</option>
+                <option value="Azul">Azul</option>
+                <option value="Amarelo">Amarelo</option>
+                <option value="Verde">Verde</option>
+                <option value="Marrom">Marrom</option>
+                <option value="Laranja">Laranja</option>
+              </select>
+            </label>
             <button id="alvo-rep-apply-btn" class="btn btn-primary btn-sm" onclick="_applyAlvoRepFilters()" style="margin-left:6px;padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
             <button class="btn btn-outline btn-sm" onclick="_resetAlvoRepFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
           </div>
@@ -2825,6 +2851,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     if (opts.direction)       _fparts.push(opts.direction === 'CRESCENTE' ? '\u2191' : '\u2193');
     if (opts.min_confidence > 0) _fparts.push('conf\u2265' + Math.round(opts.min_confidence * 100) + '%');
     if (opts.min_cameras > 1)    _fparts.push('\u2265' + opts.min_cameras + ' c\u00e2m.');
+    if (opts.vehicle_type)  _fparts.push(opts.vehicle_type);
+    if (opts.vehicle_color) _fparts.push(opts.vehicle_color);
     if (_fparts.length) _filterDesc = ' <span style="font-size:.72rem;color:var(--accent2);font-weight:400">(\u00b7 ' + _fparts.join(' \u00b7 ') + ')</span>';
   }
 
@@ -2843,6 +2871,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     if (opts.direction)          _url += '&filter_direction='  + encodeURIComponent(opts.direction);
     if (opts.min_confidence > 0) _url += '&min_confidence='   + opts.min_confidence;
     if (opts.min_cameras > 1)    _url += '&min_cameras='      + opts.min_cameras;
+    if (opts.vehicle_type)       _url += '&vehicle_type='     + encodeURIComponent(opts.vehicle_type);
+    if (opts.vehicle_color)      _url += '&vehicle_color='    + encodeURIComponent(opts.vehicle_color);
   } else {
     var w = '2h';
     try { var cw = document.getElementById('cen-window').value; if (cw && cw !== 'custom') w = cw; } catch(e) {}
@@ -3500,7 +3530,7 @@ function _cenRenderGrupos(groups) {
 }
 
 function _resetAlvoRepFilters() {
-  var ids = ['alvo-rep-window','alvo-rep-camera','alvo-rep-direction','alvo-rep-confidence','alvo-rep-min-cameras'];
+  var ids = ['alvo-rep-window','alvo-rep-camera','alvo-rep-direction','alvo-rep-confidence','alvo-rep-min-cameras','alvo-rep-vtype','alvo-rep-vcolor'];
   ids.forEach(function(id){ var el = document.getElementById(id); if(el){ el.selectedIndex = 0; } });
   var w = document.getElementById('alvo-rep-window');
   if (w) { w.value = '2h'; }
@@ -3520,6 +3550,8 @@ function _updateAlvoRepFilterBadge() {
   if (f.direction) count++;
   if (f.min_confidence > 0) count++;
   if (f.min_cameras > 0) count++;
+  if (f.vehicle_type) count++;
+  if (f.vehicle_color) count++;
   if (count > 0) {
     badge.textContent = count + (count === 1 ? ' filtro ativo' : ' filtros ativos');
     badge.style.display = 'inline-block';
@@ -3541,6 +3573,8 @@ function _restoreAlvoRepFilters() {
     set('alvo-rep-direction',   f.direction   || '');
     set('alvo-rep-confidence',  f.min_confidence != null ? String(f.min_confidence) : '0');
     set('alvo-rep-min-cameras', f.min_cameras != null    ? String(f.min_cameras)    : '0');
+    set('alvo-rep-vtype',       f.vehicle_type  || '');
+    set('alvo-rep-vcolor',      f.vehicle_color || '');
     _alvoRepWindowChange();
     if (f.window === 'custom') {
       set('alvo-rep-ts-from', f.ts_from || '');
@@ -3565,14 +3599,18 @@ function _getAlvoRepFilters() {
   var dirEl   = document.getElementById('alvo-rep-direction');
   var confEl  = document.getElementById('alvo-rep-confidence');
   var minCEl  = document.getElementById('alvo-rep-min-cameras');
+  var vtypeEl = document.getElementById('alvo-rep-vtype');
+  var vcolorEl= document.getElementById('alvo-rep-vcolor');
   return {
     window:         (w !== 'custom') ? w : null,
     ts_from:        tsFrom,
     ts_to:          tsTo,
-    camera_id:      camEl  ? (camEl.value  || null) : null,
-    direction:      dirEl  ? (dirEl.value  || null) : null,
-    min_confidence: confEl ? (parseFloat(confEl.value)  || 0)   : 0,
-    min_cameras:    minCEl ? (parseInt(minCEl.value, 10) || 0)   : 0,
+    camera_id:      camEl   ? (camEl.value   || null) : null,
+    direction:      dirEl   ? (dirEl.value   || null) : null,
+    min_confidence: confEl  ? (parseFloat(confEl.value)  || 0) : 0,
+    min_cameras:    minCEl  ? (parseInt(minCEl.value, 10) || 0) : 0,
+    vehicle_type:   vtypeEl ? (vtypeEl.value  || null) : null,
+    vehicle_color:  vcolorEl? (vcolorEl.value || null) : null,
   };
 }
 
