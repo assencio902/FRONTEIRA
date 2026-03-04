@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_storage.dart';
 import '../theme/app_theme.dart';
+import 'batedor_screen.dart';
 import 'login_screen.dart';
 import 'search_screen.dart';
 
@@ -85,6 +86,18 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const SearchScreen()),
               ),
             ),
+            const SizedBox(height: 12),
+
+            // Atalho: batedor — trajeto conjunto
+            _MenuCard(
+              icon: Icons.route_rounded,
+              label: 'Batedor — Trajeto Conjunto',
+              description: 'Identificar veículos que transitam juntos no mesmo percurso',
+              iconColor: AppColors.warning,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BatedorScreen()),
+              ),
+            ),
           ],
         ),
       ),
@@ -97,16 +110,19 @@ class _MenuCard extends StatelessWidget {
   final String label;
   final String description;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   const _MenuCard({
     required this.icon,
     required this.label,
     required this.description,
     required this.onTap,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = iconColor ?? AppColors.danger;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -115,10 +131,11 @@ class _MenuCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: .20)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.danger, size: 28),
+            Icon(icon, color: color, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

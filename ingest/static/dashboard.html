@@ -590,14 +590,6 @@
               style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
             <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('cen-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
           </label>
-          <label>Tipo:
-            <select id="cen-tipo" onchange="cenTipoChange()" style="margin-left:6px">
-              <option value="todos">&#128301; Todos</option>
-              <option value="suspeito">&#128680; Suspeito</option>
-              <option value="comboio">&#128663;&#128663; Comboio</option>
-              <option value="grupos">&#128101; Grupos</option>
-            </select>
-          </label>
           <label>Janela de tempo:
             <select id="cen-window" onchange="cenWindowChange()" style="margin-left:6px">
               <option value="1m">1 minuto</option>
@@ -624,15 +616,54 @@
               <option value="5">&#8805; 5 c&acirc;meras</option>
             </select>
           </label></span>
-          <span id="cen-filter-sinais"><label>Min. sinais:
-            <select id="cen-min-sinais" style="margin-left:6px" onchange="cenApplyFilter()">
-              <option value="1">&#8805; 1 (todos)</option>
-              <option value="2" selected>&#8805; 2 sinais</option>
-              <option value="3">&#8805; 3 sinais</option>
-              <option value="4">4 sinais (todos os m&oacute;dulos)</option>
-            </select>
-          </label></span>
           <label>Intervalo:
+            <select id="cen-interval" style="margin-left:6px">
+              <option value="30">30s</option>
+              <option value="60" selected>1 min</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+              <option value="600">10 min</option>
+              <option value="900">15 min</option>
+              <option value="1800">30 min</option>
+              <option value="3600">1 hora</option>
+            </select>
+          </label>
+          <!-- Filtros do suspeito -->
+          <label>&#8597; Dire&ccedil;&atilde;o:
+            <select id="cen-direcao" style="margin-left:6px">
+              <option value="">Qualquer</option>
+              <option value="CRESCENTE">&#8593; Crescente</option>
+              <option value="DECRESCENTE">&#8595; Decrescente</option>
+              <option value="ENTRADA">&#128673; Entrada</option>
+              <option value="SA&Iacute;DA">&#128674; Sa&iacute;da</option>
+            </select>
+          </label>
+          <label>&#128663; Tipo ve&iacute;culo:
+            <select id="cen-vtype" style="margin-left:6px">
+              <option value="">Qualquer</option>
+              <option value="car">Carro</option>
+              <option value="motorcycle">Moto</option>
+              <option value="pickup">Caminhonete</option>
+              <option value="truck">Caminh&atilde;o</option>
+              <option value="bus">&Ocirc;nibus</option>
+              <option value="van">Van/Kombi</option>
+            </select>
+          </label>
+          <label>&#127912; Cor:
+            <select id="cen-vcolor" style="margin-left:6px">
+              <option value="">Qualquer</option>
+              <option value="Preto">Preto</option>
+              <option value="Branco">Branco</option>
+              <option value="Prata">Prata</option>
+              <option value="Cinza">Cinza</option>
+              <option value="Vermelho">Vermelho</option>
+              <option value="Azul">Azul</option>
+              <option value="Amarelo">Amarelo</option>
+              <option value="Verde">Verde</option>
+              <option value="Marrom">Marrom</option>
+              <option value="Laranja">Laranja</option>
+            </select>
+          </label>
             <select id="cen-interval" style="margin-left:6px">
               <option value="30">30s</option>
               <option value="60" selected>1 min</option>
@@ -2582,17 +2613,7 @@ function _cenScheduleNext() {
 }
 
 function cenTipoChange() {
-  var tipo = (document.getElementById('cen-tipo') || {}).value || 'todos';
-  var spanCameras = document.getElementById('cen-filter-cameras');
-  var spanSinais  = document.getElementById('cen-filter-sinais');
-
-  // Suspeito → câmeras visível; Comboio/Grupos → câmeras oculto; Todos → visível
-  var showCameras = (tipo === 'todos' || tipo === 'suspeito');
-  var showSinais  = (tipo === 'todos');
-
-  if (spanCameras) spanCameras.style.display = showCameras ? '' : 'none';
-  if (spanSinais)  spanSinais.style.display  = showSinais  ? '' : 'none';
-
+  // filtro Tipo removido — câmeras e sinais sempre visíveis
   cenApplyFilter();
 }
 
@@ -2611,6 +2632,11 @@ async function loadCentral(showSpinner) {
     if (!tsFrom || !tsTo) { alert('Informe o período personalizado (De / Até).'); return; }
     w = '2h';
   }
+  var prefix  = '';
+  var direcao = (document.getElementById('cen-direcao') || {}).value || '';
+  var vtype   = (document.getElementById('cen-vtype')   || {}).value || '';
+  var vcolor  = (document.getElementById('cen-vcolor')  || {}).value || '';
+
   if (showSpinner) {
     document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
     document.getElementById('central-tbody').innerHTML =
@@ -2618,7 +2644,11 @@ async function loadCentral(showSpinner) {
   }
   try {
     var url = '/api/batedor/central?window=' + w + '&limit=300';
-    if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
+    if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
+    if (prefix)  url += '&plate_prefix='  + encodeURIComponent(prefix.trim().toUpperCase());
+    if (direcao) url += '&direcao='       + encodeURIComponent(direcao);
+    if (vtype)   url += '&vehicle_type='  + encodeURIComponent(vtype);
+    if (vcolor)  url += '&vehicle_color=' + encodeURIComponent(vcolor);
     var r = await fetch(url);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
@@ -2646,21 +2676,13 @@ async function loadCentral(showSpinner) {
 }
 
 function _cenRenderPage() {
-  var tipo    = (document.getElementById('cen-tipo') || {}).value || 'todos';
-  var ms      = parseInt(document.getElementById('cen-min-sinais').value, 10) || 1;
-  var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);  // 0 = todas
+  var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);
   var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
   var items = _cenAllItems.filter(function(i) {
-    // filtro por tipo
-    if (tipo === 'suspeito' && !i.in_suspeitos) return false;
-    if (tipo === 'comboio'  && !i.in_comboio)   return false;
-    if (tipo === 'grupos'   && (!i.in_grupos || !i.in_grupos.length)) return false;
     // filtro placa
     if (plateFl && i.plate.toUpperCase().indexOf(plateFl) === -1) return false;
-    // filtro mín sinais (só aplicado em modo "todos")
-    if (tipo === 'todos' && i.sinais < ms) return false;
-    // filtro mín câmeras (0 = sem filtro; só em suspeito ou todos)
-    if (mc > 0 && (tipo === 'todos' || tipo === 'suspeito')) {
+    // filtro mín câmeras
+    if (mc > 0) {
       var cams = 0;
       if (i.in_suspeitos && i.in_suspeitos.cameras) cams = Math.max(cams, i.in_suspeitos.cameras);
       if (i.in_comboio   && i.in_comboio.cameras)   cams = Math.max(cams, i.in_comboio.cameras);
@@ -3381,24 +3403,24 @@ function _applyAlvoRepFilters() {
 function _resetCenFilters() {
   var plate = document.getElementById('cen-filter-plate');
   if (plate) plate.value = '';
-  var tipo = document.getElementById('cen-tipo');
-  if (tipo) tipo.value = 'todos';
   var win = document.getElementById('cen-window');
   if (win) { win.value = '2h'; cenWindowChange(); }
   var minCam = document.getElementById('cen-min-cameras');
   if (minCam) minCam.value = '2';
-  var minSin = document.getElementById('cen-min-sinais');
-  if (minSin) minSin.value = '2';
   var interval = document.getElementById('cen-interval');
   if (interval) interval.value = '60';
+  var direcao = document.getElementById('cen-direcao');
+  if (direcao) direcao.value = '';
+  var vtype = document.getElementById('cen-vtype');
+  if (vtype) vtype.value = '';
+  var vcolor = document.getElementById('cen-vcolor');
+  if (vcolor) vcolor.value = '';
   var dateRow = document.getElementById('cen-date-row');
   if (dateRow) dateRow.style.display = 'none';
   var tsFrom = document.getElementById('cen-ts-from');
   if (tsFrom) tsFrom.value = '';
   var tsTo = document.getElementById('cen-ts-to');
   if (tsTo) tsTo.value = '';
-  // Mostra/oculta filtros de câmeras e sinais conforme tipo padrão
-  cenTipoChange();
   loadCentral(true);
 }
 

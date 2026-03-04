@@ -2283,6 +2283,243 @@ def batedor_companions(
 
 
 # ===========================
+# BATEDOR — TRAJETO (percurso conjunto)
+# ===========================
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Distância em km entre dois pontos geográficos (Haversine)."""
+    import math
+    R = 6371.0
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
+    a = (math.sin(dLat / 2) ** 2
+         + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+         * math.sin(dLon / 2) ** 2)
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+@app.get("/api/batedor/trajeto/{plate}")
+def batedor_trajeto(
+    plate: str,
+    window: str = "24h",
+    co_window: int = 600,
+    min_cameras: int = 2,
+    limit: int = 30,
+    # ── Filtros do suspeito ──────────────────────────────────────────────────
+    direcao: Optional[str] = None,         # CRESCENTE | DECRESCENTE | ENTRADA | SAÍDA
+    vehicle_type: Optional[str] = None,    # car | motorcycle | pickup | truck | bus | van
+    vehicle_color: Optional[str] = None,   # Preto | Branco | Prata | Cinza | Vermelho ...
+    plate_prefix: Optional[str] = None,    # prefixo parcial da placa do suspeito (ex: ABC)
+):
+    """
+    Identifica veículos que fizeram o mesmo percurso junto ao <plate>.
+
+    Filtros do suspeito:
+    - direcao: filtra câmeras com essa direção configurada (CRESCENTE/DECRESCENTE/ENTRADA/SAÍDA)
+    - vehicle_type: tipo de veículo detectado pelo YOLO (car/motorcycle/pickup/truck/bus/van)
+    - vehicle_color: cor detectada pelo YOLO (Preto/Branco/Prata/Cinza/Vermelho/Azul...)
+    - plate_prefix: prefixo parcial da placa do suspeito (ex: "ABC" filtra ABC1234, ABC5E59...)
+    """
+    from collections import defaultdict
+
+    co_win_s   = max(10, int(co_window))
+    window_min = _parse_window_to_minutes(window)
+    min_cam    = max(1, int(min_cameras))
+    lim        = max(1, min(200, int(limit)))
+    t_to       = _utcnow()
+    t_from     = t_to - timedelta(minutes=window_min)
+    plate      = (plate or "").strip().upper()
+    if not plate:
+        raise HTTPException(status_code=400, detail="Placa não informada")
+
+    # ── Monta cláusulas extras de WHERE ─────────────────────────────────────
+    extra_where: list[str] = []
+    extra_vals:  list      = []
+
+    if plate_prefix:
+        prefix_clean = plate_prefix.strip().upper()
+        extra_where.append("AND b.plate ILIKE %s")
+        extra_vals.append(prefix_clean + "%")
+
+    if direcao:
+        extra_where.append("AND UPPER(COALESCE(NULLIF(c.direcao,''), '')) = UPPER(%s)")
+        extra_vals.append(direcao.strip())
+
+    extra_sql = "\n                  ".join(extra_where)
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                SELECT
+                    b.plate                                              AS companion,
+                    a.camera_id                                          AS camera_id,
+                    COALESCE(a.occurred_at, a.ts)                        AS ts_target,
+                    COALESCE(b.occurred_at, b.ts)                        AS ts_companion,
+                    ABS(EXTRACT(EPOCH FROM (
+                        COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
+                    )))::int                                              AS delta_sec,
+                    COALESCE(c.nome, a.camera_id)                        AS cam_nome,
+                    c.latitude                                           AS lat,
+                    c.longitude                                          AS lon,
+                    b.image_path                                         AS companion_image,
+                    COALESCE(b.confidence, 0.0)                          AS companion_confidence,
+                    COALESCE(
+                        NULLIF(b.yolo_result->'target_vehicle'->>'tipo_raw', ''),
+                        NULLIF(b.cam_meta->>'vehicle_type', ''),
+                        ''
+                    )                                                    AS companion_vtype,
+                    COALESCE(
+                        NULLIF(b.yolo_result->'target_vehicle'->>'cor', ''),
+                        ''
+                    )                                                    AS companion_color
+                FROM lpr_events a
+                JOIN lpr_events b
+                    ON  a.camera_id = b.camera_id
+                    AND a.id        != b.id
+                    AND b.plate     != a.plate
+                    AND b.plate     IS NOT NULL
+                    AND b.plate     NOT IN ('', 'unknown', 'UNKNOWN')
+                    AND ABS(EXTRACT(EPOCH FROM (
+                            COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
+                        ))) <= %s
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = a.camera_id
+                       OR ip        = a.camera_id
+                       OR ip        = a.camera_ip
+                    ORDER BY (camera_id = a.camera_id) DESC
+                    LIMIT 1
+                )
+                WHERE a.plate = %s
+                  AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
+                  {extra_sql}
+                ORDER BY COALESCE(a.occurred_at, a.ts) ASC
+                LIMIT 10000
+            """, [co_win_s, plate, t_from, t_to] + extra_vals)
+            rows = cur.fetchall()
+
+    # ── Agrupamento por companheiro ──────────────────────────────────────────
+    comp: dict = defaultdict(lambda: {
+        "passages":   [],
+        "last_image": None,
+        "max_conf":   0.0,
+        "vtypes":     [],   # tipos coletados por passagem
+        "colors":     [],   # cores coletadas por passagem
+    })
+
+    for row in rows:
+        companion, camera_id, ts_t, ts_c, delta_sec, cam_nome, lat, lon, img, conf, vtype, color = row
+        cd = comp[companion]
+        cd["passages"].append({
+            "camera_id":    camera_id,
+            "cam_nome":     cam_nome or camera_id,
+            "ts_target":    ts_t.isoformat() if ts_t else None,
+            "ts_companion": ts_c.isoformat() if ts_c else None,
+            "delta_sec":    int(delta_sec),
+            "lat":          float(lat)   if lat   is not None else None,
+            "lon":          float(lon)   if lon   is not None else None,
+            "vtype":        vtype  or None,
+            "color":        color  or None,
+        })
+        if img:
+            cd["last_image"] = img
+        if float(conf) > cd["max_conf"]:
+            cd["max_conf"] = float(conf)
+        if vtype:
+            cd["vtypes"].append(vtype.lower())
+        if color:
+            cd["colors"].append(color)
+
+    # ── Métricas e pós-filtros por companheiro ───────────────────────────────
+    from collections import Counter
+    result = []
+    for companion, cd in comp.items():
+
+        # ── Pós-filtro: tipo de veículo ──────────────────────────────────────
+        if vehicle_type:
+            vt_clean = vehicle_type.strip().lower()
+            if not any(vt_clean in v for v in cd["vtypes"]):
+                continue
+
+        # ── Pós-filtro: cor do veículo ───────────────────────────────────────
+        if vehicle_color:
+            vc_lower = vehicle_color.strip().lower()
+            if not any(vc_lower in c.lower() for c in cd["colors"]):
+                continue
+
+        # Deduplica câmeras — mantém a de menor delta_sec por câmera
+        best: dict = {}
+        for p in cd["passages"]:
+            cid = p["camera_id"]
+            if cid not in best or p["delta_sec"] < best[cid]["delta_sec"]:
+                best[cid] = p
+        deduped = sorted(best.values(), key=lambda x: x["ts_target"] or "")
+
+        cameras_together = len(deduped)
+        if cameras_together < min_cam:
+            continue
+
+        # Tipo e cor mais frequentes do suspeito
+        dominant_vtype = Counter(cd["vtypes"]).most_common(1)[0][0] if cd["vtypes"] else None
+        dominant_color = Counter(cd["colors"]).most_common(1)[0][0] if cd["colors"] else None
+
+        # Distância total do percurso (Haversine, câmeras com coordenadas)
+        route_distance_km = 0.0
+        pts = [p for p in deduped if p["lat"] is not None and p["lon"] is not None]
+        for i in range(1, len(pts)):
+            route_distance_km += _haversine_km(pts[i-1]["lat"], pts[i-1]["lon"], pts[i]["lat"], pts[i]["lon"])
+
+        # Delta médio entre os dois veículos
+        deltas = [p["delta_sec"] for p in deduped]
+        avg_delta_sec = int(sum(deltas) / len(deltas)) if deltas else 0
+
+        # Tempo de percurso do alvo (primeira→última câmera)
+        ts_target_list = [p["ts_target"] for p in deduped if p["ts_target"]]
+        travel_time_target_sec = 0
+        if len(ts_target_list) >= 2:
+            t0 = datetime.fromisoformat(ts_target_list[0])
+            t1 = datetime.fromisoformat(ts_target_list[-1])
+            travel_time_target_sec = max(0, int((t1 - t0).total_seconds()))
+
+        # Tempo de percurso do companheiro
+        ts_comp_list = [p["ts_companion"] for p in deduped if p["ts_companion"]]
+        travel_time_companion_sec = 0
+        if len(ts_comp_list) >= 2:
+            t0c = datetime.fromisoformat(ts_comp_list[0])
+            t1c = datetime.fromisoformat(ts_comp_list[-1])
+            travel_time_companion_sec = max(0, int((t1c - t0c).total_seconds()))
+
+        # Score de suspeição
+        suspicion_score = cameras_together * 100 - avg_delta_sec // 10
+
+        result.append({
+            "companion":                 companion,
+            "cameras_together":          cameras_together,
+            "route_distance_km":         round(route_distance_km, 2),
+            "avg_delta_sec":             avg_delta_sec,
+            "travel_time_target_sec":    travel_time_target_sec,
+            "travel_time_companion_sec": travel_time_companion_sec,
+            "suspicion_score":           suspicion_score,
+            "vehicle_type":              dominant_vtype,
+            "vehicle_color":             dominant_color,
+            "first_seen":                deduped[0]["ts_target"]  if deduped else None,
+            "last_seen":                 deduped[-1]["ts_target"] if deduped else None,
+            "last_companion_image":      cd["last_image"],
+            "last_confidence":           round(cd["max_conf"], 3),
+            "evidence":                  deduped,
+        })
+
+    result.sort(key=lambda x: x["suspicion_score"], reverse=True)
+    return {
+        "plate":      plate,
+        "window":     window,
+        "co_window":  co_win_s,
+        "companions": result[:lim],
+        "total":      len(result),
+    }
+
+
+# ===========================
 # BATEDOR — ENDPOINTS REAIS
 # ===========================
 
@@ -2727,6 +2964,10 @@ def batedor_central(
     limit: int = 150,
     ts_from: str | None = None,
     ts_to:   str | None = None,
+    plate_prefix:  Optional[str] = None,   # prefixo parcial da placa (ex: ABC)
+    direcao:       Optional[str] = None,   # CRESCENTE | DECRESCENTE | ENTRADA | SAÍDA
+    vehicle_type:  Optional[str] = None,   # car | motorcycle | pickup | truck | bus | van
+    vehicle_color: Optional[str] = None,   # Preto | Branco | Prata | Cinza | Vermelho ...
 ):
     """
     Visão unificada: cruza suspeitos, comboio, grupos e alvos cadastrados.
@@ -2762,11 +3003,51 @@ def batedor_central(
         if ls and (d["last_seen"]  is None or ls > d["last_seen"]):
             d["last_seen"]  = ls
 
+    # ── Pré-filtro: placas que atendem aos filtros de evento ─────────────────
+    allowed_plates: set | None = None
+    prefix_sql  = ""
+    prefix_vals: list = []
+
+    if plate_prefix:
+        prefix_sql  = "AND plate ILIKE %s"
+        prefix_vals = [plate_prefix.strip().upper() + "%"]
+
     with _conn() as conn:
         with conn.cursor() as cur:
 
+            if direcao or vehicle_type or vehicle_color:
+                ev_conds = ["COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s"]
+                ev_vals  = [t_from, t_to]
+                if direcao:
+                    ev_conds.append("UPPER(COALESCE(c.direcao,'')) = UPPER(%s)")
+                    ev_vals.append(direcao.strip())
+                if vehicle_type:
+                    ev_conds.append("e.yolo_result->'target_vehicle'->>'tipo_raw' = %s")
+                    ev_vals.append(vehicle_type.strip())
+                if vehicle_color:
+                    ev_conds.append("LOWER(COALESCE(e.yolo_result->'target_vehicle'->>'cor','')) = LOWER(%s)")
+                    ev_vals.append(vehicle_color.strip())
+                ev_where = " AND ".join(ev_conds)
+                cur.execute(f"""
+                    SELECT DISTINCT e.plate
+                    FROM lpr_events e
+                    LEFT JOIN cameras c ON c.id = (
+                        SELECT id FROM cameras
+                        WHERE camera_id = e.camera_id OR ip = e.camera_id
+                        ORDER BY (camera_id = e.camera_id) DESC LIMIT 1
+                    )
+                    WHERE {ev_where}
+                      AND e.plate IS NOT NULL
+                      AND e.plate NOT IN ('', 'unknown', 'UNKNOWN')
+                      {prefix_sql}
+                """, ev_vals + prefix_vals)
+                allowed_plates = {row[0] for row in cur.fetchall()}
+
+            allow_sql  = "AND plate = ANY(%s)" if allowed_plates is not None else ""
+            allow_vals = [list(allowed_plates)]  if allowed_plates is not None else []
+
             # ── 1. SUSPEITOS ──────────────────────────────────────────────
-            cur.execute("""
+            cur.execute(f"""
                 SELECT plate,
                        COUNT(*)                       AS passes,
                        COUNT(DISTINCT camera_id)      AS cameras,
@@ -2776,11 +3057,12 @@ def batedor_central(
                 WHERE plate IS NOT NULL
                   AND plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                  {prefix_sql} {allow_sql}
                 GROUP BY plate
                 HAVING COUNT(*) >= 2 AND COUNT(DISTINCT camera_id) >= 2
                 ORDER BY COUNT(DISTINCT camera_id) DESC, COUNT(*) DESC
                 LIMIT 300
-            """, (t_from, t_to))
+            """, [t_from, t_to] + prefix_vals + allow_vals)
             for r in cur.fetchall():
                 plate, passes, cameras, fs, ls = r[0], int(r[1]), int(r[2]), r[3], r[4]
                 score = cameras * 10 + passes * 2
@@ -2788,7 +3070,7 @@ def batedor_central(
                 _upd(intel[plate], fs, ls)
 
             # ── 2. COMBOIO (transições entre câmeras dentro de 10–300 s) ──
-            cur.execute("""
+            cur.execute(f"""
                 SELECT a.plate,
                        COUNT(DISTINCT a.camera_id)      AS transitions,
                        MIN(COALESCE(a.occurred_at, a.ts)) AS first_seen,
@@ -2804,11 +3086,12 @@ def batedor_central(
                 WHERE a.plate IS NOT NULL
                   AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
+                  {prefix_sql} {allow_sql}
                 GROUP BY a.plate
                 HAVING COUNT(DISTINCT a.camera_id) >= 2
                 ORDER BY COUNT(DISTINCT a.camera_id) DESC
                 LIMIT 300
-            """, (t_from, t_to))
+            """, [t_from, t_to] + prefix_vals + allow_vals)
             for r in cur.fetchall():
                 plate, transitions, fs, ls = r[0], int(r[1]), r[2], r[3]
                 score = transitions * 5
@@ -2816,7 +3099,7 @@ def batedor_central(
                 _upd(intel[plate], fs, ls)
 
             # ── 3. GRUPOS (pares vistos na mesma câmera em ≤120 s) ────────
-            cur.execute("""
+            cur.execute(f"""
                 SELECT LEAST(a.plate, b.plate)             AS plate_a,
                        GREATEST(a.plate, b.plate)          AS plate_b,
                        COUNT(DISTINCT a.camera_id)         AS cameras_together,
@@ -2834,11 +3117,12 @@ def batedor_central(
                   AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND b.plate NOT IN ('', 'unknown', 'UNKNOWN')
                   AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
+                  {prefix_sql}
                 GROUP BY plate_a, plate_b
                 HAVING COUNT(DISTINCT a.camera_id) >= 1
                 ORDER BY cameras_together DESC
                 LIMIT 300
-            """, (t_from, t_to))
+            """, [t_from, t_to] + prefix_vals)
             for r in cur.fetchall():
                 pa, pb, ct, fs, ls = r[0], r[1], int(r[2]), r[3], r[4]
                 score = ct * 10
@@ -2847,7 +3131,23 @@ def batedor_central(
                 _upd(intel[pa], fs, ls)
                 _upd(intel[pb], fs, ls)
 
-            # ── 4. ALVOS cadastrados ───────────────────────────────────────
+            # ── 4. Enriquecimento: tipo/cor dominante por placa ───────────
+            cur.execute("""
+                SELECT DISTINCT ON (plate)
+                    plate,
+                    yolo_result->'target_vehicle'->>'tipo_raw' AS vtype,
+                    yolo_result->'target_vehicle'->>'cor'       AS vcolor
+                FROM lpr_events
+                WHERE plate IS NOT NULL
+                  AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                ORDER BY plate, COALESCE(occurred_at, ts) DESC
+            """, (t_from, t_to))
+            for row in cur.fetchall():
+                if row[0] in intel:
+                    intel[row[0]]["vehicle_type"]  = row[1] or None
+                    intel[row[0]]["vehicle_color"] = row[2] or None
+
+            # ── 5. ALVOS cadastrados ───────────────────────────────────────
             cur.execute("SELECT plate, descricao FROM alvos")
             for row in cur.fetchall():
                 # marca mesmo que não tenha aparecido na janela (para exibir na central)
@@ -2884,6 +3184,8 @@ def batedor_central(
             "alvo_descricao": d["alvo_descricao"],
             "first_seen":     d["first_seen"].isoformat() if d["first_seen"] else None,
             "last_seen":      d["last_seen"].isoformat()  if d["last_seen"]  else None,
+            "vehicle_type":   d.get("vehicle_type"),
+            "vehicle_color":  d.get("vehicle_color"),
         })
 
     items.sort(key=lambda x: (x["sinais"], x["score_total"]), reverse=True)

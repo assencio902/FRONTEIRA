@@ -83,6 +83,58 @@ class Api {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// GET /api/batedor/trajeto/{plate} — veículos que fizeram o mesmo percurso.
+  static Future<Map<String, dynamic>> getBatedorTrajeto({
+    required String plate,
+    String window = '24h',
+    int coWindow = 600,
+    int minCameras = 2,
+    int limit = 30,
+    // Filtros do suspeito
+    String? direcao,
+    String? vehicleType,
+    String? vehicleColor,
+    String? platePrefix,
+  }) async {
+    final params = <String, String>{
+      'window':      window,
+      'co_window':   '$coWindow',
+      'min_cameras': '$minCameras',
+      'limit':       '$limit',
+    };
+    if (direcao     != null && direcao.isNotEmpty)     params['direcao']       = direcao;
+    if (vehicleType != null && vehicleType.isNotEmpty) params['vehicle_type']  = vehicleType;
+    if (vehicleColor!= null && vehicleColor.isNotEmpty)params['vehicle_color'] = vehicleColor;
+    if (platePrefix != null && platePrefix.isNotEmpty) params['plate_prefix']  = platePrefix;
+
+    final url = Uri.parse('$baseUrl/api/batedor/trajeto/$plate').replace(queryParameters: params);
+    final h = await headers();
+    debugPrint('REQ: GET $url');
+    final res = await http.get(url, headers: h);
+    debugPrint('RES getBatedorTrajeto: ${res.statusCode}');
+    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}: ${res.body}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// GET /api/batedor/plate/{plate} — passagens de uma placa na janela de tempo.
+  static Future<Map<String, dynamic>> getBatedorPlate({
+    required String plate,
+    String windowMinutes = '180',
+    int limit = 50,
+  }) async {
+    final url =
+        Uri.parse('$baseUrl/api/batedor/plate/$plate').replace(queryParameters: {
+      'window_minutes': windowMinutes,
+      'limit': '$limit',
+    });
+    final h = await headers();
+    final res = await http.get(url, headers: h);
+    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// GET /api/events?limit=N&page=1 — últimas passagens sem filtro de placa.
   static Future<List<Map<String, dynamic>>> getRecentEvents(
       {int limit = 15}) async {
