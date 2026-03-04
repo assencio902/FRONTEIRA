@@ -2520,6 +2520,151 @@ def batedor_trajeto(
 
 
 # ===========================
+# BATEDOR — GRUPOS EM COMBOIO
+# ===========================
+
+@app.get("/api/batedor/grupos_comboio")
+def batedor_grupos_comboio(
+    window:        str          = "2h",
+    co_window:     int          = 300,    # segundos: janela de agrupamento por câmera
+    min_vehicles:  int          = 2,      # mínimo de veículos no grupo
+    direcao:       Optional[str] = None,
+    vehicle_type:  Optional[str] = None,
+    vehicle_color: Optional[str] = None,
+    limit:         int          = 100,
+):
+    """
+    Detecta grupos reais de N+ veículos vistos juntos na mesma câmera.
+
+    Para cada câmera, agrupa eventos próximos (≤ co_window segundos do início
+    do cluster) e retorna grupos onde count(placas distintas) >= min_vehicles.
+    Deduplicados pelo conjunto de placas + câmera.
+    """
+    from collections import defaultdict
+
+    window_min = _parse_window_to_minutes(window)
+    co_win_s   = max(10, int(co_window))
+    min_v      = max(2, int(min_vehicles))
+    lim        = max(1, min(500, int(limit)))
+    t_to       = _utcnow()
+    t_from     = t_to - timedelta(minutes=window_min)
+
+    # ── Monta filtros extra de evento ─────────────────────────────────────────
+    ev_conds = ["e.plate IS NOT NULL",
+                "e.plate NOT IN ('', 'unknown', 'UNKNOWN')",
+                "COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s"]
+    ev_vals: list = [t_from, t_to]
+
+    if direcao:
+        ev_conds.append("UPPER(COALESCE(c.direcao,'')) = UPPER(%s)")
+        ev_vals.append(direcao.strip())
+    if vehicle_type:
+        ev_conds.append("COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', e.cam_meta->>'vehicle_type') = %s")
+        ev_vals.append(vehicle_type.strip())
+    if vehicle_color:
+        ev_conds.append("LOWER(COALESCE(e.yolo_result->'target_vehicle'->>'cor','')) = LOWER(%s)")
+        ev_vals.append(vehicle_color.strip())
+
+    where_sql = " AND ".join(ev_conds)
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                SELECT
+                    e.camera_id,
+                    COALESCE(c.nome, e.camera_id)              AS cam_nome,
+                    e.plate,
+                    COALESCE(e.occurred_at, e.ts)              AS event_time,
+                    COALESCE(c.latitude,  0.0)                  AS lat,
+                    COALESCE(c.longitude, 0.0)                  AS lon,
+                    COALESCE(c.direcao, '')                     AS direcao
+                FROM lpr_events e
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip        = e.camera_id
+                       OR ip        = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
+                WHERE {where_sql}
+                ORDER BY e.camera_id, COALESCE(e.occurred_at, e.ts)
+                LIMIT 50000
+            """, ev_vals)
+            rows = cur.fetchall()
+
+    # ── Agrupa por câmera ─────────────────────────────────────────────────────
+    # cam_events: { camera_id -> [(plate, event_time, cam_nome, lat, lon, direcao), ...] }
+    cam_events: dict = defaultdict(list)
+    for cam_id, cam_nome, plate, event_time, lat, lon, direcao_cam in rows:
+        cam_events[cam_id].append((plate, event_time, cam_nome, float(lat or 0), float(lon or 0), direcao_cam))
+
+    # ── Clusteriza em janelas deslizantes ─────────────────────────────────────
+    seen_keys: set = set()
+    groups: list   = []
+
+    for cam_id, events in cam_events.items():
+        # já ordenado por event_time
+        cluster_start_time = None
+        cluster_plates:  list = []
+        cluster_data:    list = []
+
+        def _flush_cluster():
+            nonlocal cluster_start_time, cluster_plates, cluster_data
+            if not cluster_plates:
+                return
+            unique_plates = list(dict.fromkeys(cluster_plates))  # dedup, preserva ordem
+            if len(unique_plates) >= min_v:
+                key = (cam_id, frozenset(unique_plates))
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    first_t = cluster_data[0][1]
+                    last_t  = cluster_data[-1][1]
+                    groups.append({
+                        "camera_id":   cam_id,
+                        "cam_nome":    cluster_data[0][2],
+                        "lat":         cluster_data[0][3],
+                        "lon":         cluster_data[0][4],
+                        "direcao":     cluster_data[0][5] or None,
+                        "plates":      sorted(unique_plates),
+                        "group_size":  len(unique_plates),
+                        "first_seen":  first_t.isoformat() if first_t else None,
+                        "last_seen":   last_t.isoformat()  if last_t  else None,
+                        "span_sec":    int((last_t - first_t).total_seconds()) if first_t and last_t else 0,
+                    })
+            cluster_start_time = None
+            cluster_plates     = []
+            cluster_data       = []
+
+        for plate, event_time, cam_nome, lat, lon, direcao_cam in events:
+            if cluster_start_time is None:
+                cluster_start_time = event_time
+                cluster_plates     = [plate]
+                cluster_data       = [(plate, event_time, cam_nome, lat, lon, direcao_cam)]
+            else:
+                delta = (event_time - cluster_start_time).total_seconds()
+                if delta <= co_win_s:
+                    cluster_plates.append(plate)
+                    cluster_data.append((plate, event_time, cam_nome, lat, lon, direcao_cam))
+                else:
+                    _flush_cluster()
+                    cluster_start_time = event_time
+                    cluster_plates     = [plate]
+                    cluster_data       = [(plate, event_time, cam_nome, lat, lon, direcao_cam)]
+
+        _flush_cluster()
+
+    groups.sort(key=lambda g: (g["group_size"], g["first_seen"] or ""), reverse=True)
+    return {
+        "groups":       groups[:lim],
+        "total":        len(groups),
+        "window":       window,
+        "co_window":    co_win_s,
+        "min_vehicles": min_v,
+    }
+
+
+# ===========================
 # BATEDOR — ENDPOINTS REAIS
 # ===========================
 
