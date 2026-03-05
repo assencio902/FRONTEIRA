@@ -2807,7 +2807,7 @@ function _cenScoreClass(s) {
 function _sinaisBadges(item) {
   var parts = [];
   if (item.in_suspeitos) parts.push('<span class="badge badge-yellow" title="Suspeito — ' + item.in_suspeitos.passes + ' pass. em ' + item.in_suspeitos.cameras + ' câm.">&#128270; S</span>');
-  if (item.in_comboio)   parts.push('<span class="badge badge-red"    title="Comboio — ' + item.in_comboio.transitions + ' transições">&#128663;&#128663; C</span>');
+  if (item.in_comboio)   parts.push('<span class="badge badge-red"    title="Comboio — ' + item.in_comboio.cameras + ' câm. confirmadas, trip ' + (item.in_comboio.trip_span_sec||0) + 's">&#128663;&#128663; C</span>');
   if (item.in_grupos && item.in_grupos.length) {
     var gs = item.in_grupos.map(function(g){ return g.plate + ' (' + g.cameras_together + 'câm)'; }).join(', ');
     parts.push('<span class="badge" style="background:rgba(34,197,94,.2);color:#86efac" title="Grupos — junto com: ' + gs + '">&#128101; G</span>');
@@ -2840,7 +2840,7 @@ function renderCentral(items, total) {
       ? '<span style="font-size:.78rem">&#10003; ' + sc.passes + 'x / ' + sc.cameras + '&#128247;</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
     var ccCell = cc
-      ? '<span style="font-size:.78rem">&#10003; ' + cc.transitions + ' trans.</span>'
+      ? '<span style="font-size:.78rem">&#10003; ' + cc.cameras + ' câm. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
     var alvoCell = item.is_alvo
       ? '<span class="badge" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
@@ -3007,27 +3007,31 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       + '<tr style="font-weight:700;background:rgba(139,92,246,.1)"><td colspan="3">TOTAL</td><td>+' + d.score + '</td><td></td></tr>'
       + '</tbody></table></div></div>';
 
-    // ---- 5: Parceiros ----
+    // ---- 5: Parceiros de Comboio ----
     var partners = d.convoy_partners || [];
     var partnersHtml;
     if (partners.length) {
-      partnersHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#fca5a5">&#128663;&#128101; Parceiros Co-detectados (' + partners.length + ')</h3>'
-        + '<div class="table-wrap"><table><thead><tr><th>Parceiro</th><th>C\u00e2m. juntos</th><th>\u0394t m\u00e9d.</th><th>Ocorr.</th><th>Conf.</th><th>\u00daltimo</th><th>A\u00e7\u00f5es</th></tr></thead><tbody>'
+      partnersHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#fca5a5">&#128663;&#128101; Parceiros em Comboio (' + partners.length + ')</h3>'
+        + '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.76rem;color:#fca5a5">'
+        + '&#9888; S\u00f3 aparece quem passou <strong>junto na mesma c\u00e2mera</strong> (janela \u2264 300s) em <strong>\u22652 c\u00e2meras</strong> distintas, com viagem \u22641 hora.'
+        + '</div>'
+        + '<div class="table-wrap"><table><thead><tr><th>Parceiro</th><th>C\u00e2m. confirmadas</th><th>Trip span</th><th>\u00daltimo</th><th>C\u00e2meras</th><th>A\u00e7\u00f5es</th></tr></thead><tbody>'
         + partners.map(function(p){
             var alvoMark = p.is_alvo ? ' <span class="badge badge-danger" style="font-size:.64rem">ALVO</span>' : '';
+            var camNames = (p.cameras_detail||[]).map(function(c){ return c.cam_nome||c.camera_id; }).join(', ');
+            var tripMin  = Math.round((p.trip_span_sec||0)/60);
             return '<tr>'
               + '<td>' + plateHtml(p.plate) + alvoMark + '</td>'
               + '<td style="text-align:center;font-weight:700;color:var(--accent2)">' + p.cameras_together + '</td>'
-              + '<td style="text-align:center">' + (p.avg_delta_sec||0) + 's</td>'
-              + '<td style="text-align:center">' + (p.joint_events||0) + '</td>'
-              + '<td style="text-align:center;font-size:.75rem">' + (p.avg_conf > 0 ? Math.round(p.avg_conf*100)+'%' : '-') + '</td>'
+              + '<td style="text-align:center">' + (tripMin > 0 ? tripMin + ' min' : (p.trip_span_sec||0) + 's') + '</td>'
               + '<td style="font-size:.75rem">' + fmtTs(p.last_seen) + '</td>'
+              + '<td style="font-size:.73rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="' + camNames + '">' + camNames + '</td>'
               + '<td><button class="btn btn-xs" style="background:rgba(139,92,246,.45);color:#fff" onclick="openBatedorReport(\'' + p.plate.replace(/'/g,"\'") + '\')">\uD83D\uDCC4 Relat\u00f3rio</button></td>'
               + '</tr>';
           }).join('')
         + '</tbody></table></div>';
     } else {
-      partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro co-detectado na janela de ' + w + '.</div>';
+      partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro em comboio confirmado na janela de ' + w + '. <small style="color:var(--muted)">(Requer mesma c\u00e2mera \u00d72+ c\u00e2meras, trip \u22641h)</small></div>';
     }
 
     // ---- 6: Passagens ----

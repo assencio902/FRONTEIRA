@@ -2530,9 +2530,10 @@ def batedor_trajeto(
 @app.get("/api/batedor/grupos_comboio")
 def batedor_grupos_comboio(
     window:              str   = "2h",
-    co_window:           int   = 300,      # segundos: janela por câmera (máx 3600)
+    co_window:           int   = 300,      # segundos: janela por câmera (1..1000)
     group_sizes:         str   = "2",      # "2", "3" ou "2,3"
-    min_cameras:         int   = 1,        # mín câmeras p/ grupo
+    min_cameras:         int   = 2,        # mín câmeras p/ grupo (fixo >= 2)
+    max_trip_gap:        int   = 3600,     # máx span viagem entre câmeras (s)
     order_mode:          str   = "any",    # "any" | "leader_front"
     leader_ratio:        float = 0.7,      # líder 1º em >= 70% das câmeras
     max_front_ratio_other: float = 0.3,    # outro membro 1º em <= 30%
@@ -2543,21 +2544,19 @@ def batedor_grupos_comboio(
     """
     Detecta grupos de veículos em comboio.
 
+    Regras:
+      A) Co-detecção: TODOS do grupo na mesma câmera, span <= co_window.
+      B) Comboio suspeito: válido em >= min_cameras câmeras E trip_span <= max_trip_gap.
+
     order_mode:
       - "any"           → aceita qualquer ordem entre câmeras
       - "leader_front"  → exige líder (batedor) consistente na frente
-
-    Regra leader_front:
-      - líder = placa que mais vezes aparece 1ª na câmera
-      - líder deve ser 1ª em >= leader_ratio das câmeras
-      - outros não podem ser 1ª em > max_front_ratio_other das câmeras
-      - grupo=3: "payload" (placa com menos fronts) deve ser 1ª em ≤ payload_max_front câmeras
     """
-    from collections import defaultdict, Counter
+    from collections import Counter
 
     # ── Valida parâmetros ──────────────────────────────────────────────────────
     allowed_params = {
-        'window', 'co_window', 'group_sizes', 'min_cameras',
+        'window', 'co_window', 'group_sizes', 'min_cameras', 'max_trip_gap',
         'order_mode', 'leader_ratio', 'max_front_ratio_other',
         'payload_max_front', 'limit',
     }
@@ -2588,148 +2587,47 @@ def batedor_grupos_comboio(
     p_max_front  = max(0, int(payload_max_front))
 
     window_min = _parse_window_to_minutes(window)
-    co_win_s   = max(10, min(3600, int(co_window)))
-    min_cam    = max(1, int(min_cameras))
+    co_win_s   = max(1, min(1000, int(co_window)))
+    min_cam    = max(2, int(min_cameras))
+    trip_gap   = max(1, int(max_trip_gap))
     lim        = max(1, min(500, int(limit)))
     t_to       = _utcnow()
     t_from     = t_to - timedelta(minutes=window_min)
 
-    # ── Monta filtros de evento ────────────────────────────────────────────────
-    ev_conds = ["e.plate IS NOT NULL",
-                "e.plate NOT IN ('', 'unknown', 'UNKNOWN')",
-                "COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s"]
-    ev_vals: list = [t_from, t_to]
-
-    where_sql = " AND ".join(ev_conds)
-
     with _conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"""
-                SELECT
-                    e.camera_id,
-                    COALESCE(c.nome, e.camera_id)              AS cam_nome,
-                    e.plate,
-                    COALESCE(e.occurred_at, e.ts)              AS event_time,
-                    COALESCE(c.latitude,  0.0)                  AS lat,
-                    COALESCE(c.longitude, 0.0)                  AS lon,
-                    COALESCE(c.direcao, '')                     AS direcao
-                FROM lpr_events e
-                LEFT JOIN cameras c ON c.id = (
-                    SELECT id FROM cameras
-                    WHERE camera_id = e.camera_id
-                       OR ip        = e.camera_id
-                       OR ip        = e.camera_ip
-                    ORDER BY (camera_id = e.camera_id) DESC
-                    LIMIT 1
-                )
-                WHERE {where_sql}
-                ORDER BY e.camera_id, COALESCE(e.occurred_at, e.ts)
-                LIMIT 50000
-            """, ev_vals)
-            rows = cur.fetchall()
+            raw_groups = _detect_convoy_groups(
+                cur, t_from, t_to,
+                window_s=co_win_s,
+                max_trip_gap_s=trip_gap,
+                min_cameras=min_cam,
+            )
 
-    # ── Agrupa por câmera ─────────────────────────────────────────────────────
-    # cam_events: { camera_id -> [(plate, event_time, cam_nome, lat, lon, direcao), ...] }
-    cam_events: dict = defaultdict(list)
-    for cam_id, cam_nome, plate, event_time, lat, lon, direcao_cam in rows:
-        cam_events[cam_id].append((plate, event_time, cam_nome, float(lat or 0), float(lon or 0), direcao_cam))
+    # ── Filtra por group_sizes ─────────────────────────────────────────────
+    raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes]
 
-    # ── Primeira passada: detecta clusters válidos por câmera ───────────────────
-    # camera_groups: { frozenset(plates) -> [{cam info + ordered_plates}] }
-    camera_groups: dict = defaultdict(list)
-
-    for cam_id, events in cam_events.items():
-        cluster_start_time = None
-        cluster_plates:  list = []
-        cluster_data:    list = []
-
-        def _flush_cluster():
-            nonlocal cluster_start_time, cluster_plates, cluster_data
-            if not cluster_plates:
-                return
-            unique_plates = list(dict.fromkeys(cluster_plates))
-            if len(unique_plates) not in valid_sizes:
-                cluster_start_time = None
-                cluster_plates     = []
-                cluster_data       = []
-                return
-
-            timestamps = [d[1] for d in cluster_data]
-            first_t = min(timestamps)
-            last_t  = max(timestamps)
-            span_sec = (last_t - first_t).total_seconds()
-
-            if span_sec <= co_win_s:
-                # Determina a primeira placa distinta por timestamp nesta câmera
-                plate_first_ts = {}
-                for p, t, *_ in cluster_data:
-                    if p not in plate_first_ts or t < plate_first_ts[p]:
-                        plate_first_ts[p] = t
-                ordered = sorted(plate_first_ts.keys(), key=lambda p: plate_first_ts[p])
-                first_plate = ordered[0]
-
-                plates_key = frozenset(unique_plates)
-                camera_groups[plates_key].append({
-                    "camera_id":    cam_id,
-                    "cam_nome":     cluster_data[0][2],
-                    "lat":          cluster_data[0][3],
-                    "lon":          cluster_data[0][4],
-                    "direcao":      cluster_data[0][5] or None,
-                    "first_seen":   first_t,
-                    "last_seen":    last_t,
-                    "span_sec":     int(span_sec),
-                    "first_plate":  first_plate,
-                    "plate_order":  ordered,
-                })
-
-            cluster_start_time = None
-            cluster_plates     = []
-            cluster_data       = []
-
-        for plate, event_time, cam_nome, lat, lon, direcao_cam in events:
-            if cluster_start_time is None:
-                cluster_start_time = event_time
-                cluster_plates     = [plate]
-                cluster_data       = [(plate, event_time, cam_nome, lat, lon, direcao_cam)]
-            else:
-                delta = (event_time - cluster_start_time).total_seconds()
-                if delta <= co_win_s:
-                    cluster_plates.append(plate)
-                    cluster_data.append((plate, event_time, cam_nome, lat, lon, direcao_cam))
-                else:
-                    _flush_cluster()
-                    cluster_start_time = event_time
-                    cluster_plates     = [plate]
-                    cluster_data       = [(plate, event_time, cam_nome, lat, lon, direcao_cam)]
-
-        _flush_cluster()
-
-    # ── Segunda passada: agrega por grupo + aplica filtro de liderança ─────────
+    # ── Aplica análise de liderança e filtro order_mode ────────────────────
     groups: list = []
+    for g in raw_groups:
+        cameras_confirmed = g["cameras_confirmed"]
+        cameras_count = g["cameras_count"]
+        plates_set = set(g["plates"])
+        gs = g["group_size"]
 
-    for plates_set, cameras_list in camera_groups.items():
-        cameras_count = len(cameras_list)
-        if cameras_count < min_cam:
-            continue
-
-        gs = len(plates_set)
-
-        # -- Análise de liderança (sempre calculada para enriquecer resposta) ──
+        # Contagem de liderança (primeira placa em cada câmera)
         front_count: dict = Counter()
-        for cam in cameras_list:
-            front_count[cam["first_plate"]] += 1
+        for cam in cameras_confirmed:
+            if cam["plate_order"]:
+                front_count[cam["plate_order"][0]] += 1
 
-        leader_plate = front_count.most_common(1)[0][0]
-        leader_front_cnt = front_count[leader_plate]
+        leader_plate = front_count.most_common(1)[0][0] if front_count else g["plates"][0]
+        leader_front_cnt = front_count.get(leader_plate, 0)
         leader_ratio_val = leader_front_cnt / cameras_count if cameras_count else 0
 
-        # -- Filtro leader_front ────────────────────────────────────────────────
+        # Filtro leader_front
         if order == "leader_front":
-            # Verifica ratio do líder
             if leader_ratio_val < lr:
                 continue
-
-            # Verifica que nenhum outro membro excede max_front_ratio_other
             skip = False
             for plate in plates_set:
                 if plate == leader_plate:
@@ -2740,8 +2638,6 @@ def batedor_grupos_comboio(
                     break
             if skip:
                 continue
-
-            # Para grupo=3: verifica payload (placa que menos vezes foi 1ª)
             if gs == 3:
                 payload_plate = min(
                     (p for p in plates_set if p != leader_plate),
@@ -2750,14 +2646,7 @@ def batedor_grupos_comboio(
                 if front_count.get(payload_plate, 0) > p_max_front:
                     continue
 
-        # -- Monta dados do grupo ──────────────────────────────────────────────
-        all_first = [cam["first_seen"] for cam in cameras_list]
-        all_last  = [cam["last_seen"]  for cam in cameras_list]
-        global_first = min(all_first)
-        global_last  = max(all_last)
-        camera_names = [cam["cam_nome"] for cam in cameras_list]
-
-        # Identifica papéis por contagem de fronts
+        # Papéis
         roles = {}
         sorted_by_front = sorted(plates_set, key=lambda p: front_count.get(p, 0), reverse=True)
         roles[sorted_by_front[0]] = "leader"
@@ -2769,7 +2658,6 @@ def batedor_grupos_comboio(
             if mid:
                 roles[mid[0]] = "middle"
 
-        # Detalhe de front_count por placa
         plate_stats = []
         for p in sorted(plates_set):
             plate_stats.append({
@@ -2779,38 +2667,13 @@ def batedor_grupos_comboio(
                 "role":        roles.get(p, "member"),
             })
 
-        # camera_details sem first_plate/plate_order (limpa saída)
-        cam_details = []
-        for cam in cameras_list:
-            cam_details.append({
-                "camera_id":   cam["camera_id"],
-                "cam_nome":    cam["cam_nome"],
-                "lat":         cam["lat"],
-                "lon":         cam["lon"],
-                "direcao":     cam["direcao"],
-                "first_seen":  cam["first_seen"],
-                "last_seen":   cam["last_seen"],
-                "span_sec":    cam["span_sec"],
-                "first_plate": cam["first_plate"],
-                "plate_order": cam["plate_order"],
-            })
+        g["leader"] = leader_plate
+        g["leader_front_count"] = leader_front_cnt
+        g["leader_ratio"] = round(leader_ratio_val, 3)
+        g["plate_stats"] = plate_stats
+        groups.append(g)
 
-        groups.append({
-            "plates":          sorted(list(plates_set)),
-            "group_size":      gs,
-            "cameras_count":   cameras_count,
-            "cameras":         camera_names,
-            "first_seen":      global_first.isoformat(),
-            "last_seen":       global_last.isoformat(),
-            "total_span_sec":  int((global_last - global_first).total_seconds()),
-            "leader":          leader_plate,
-            "leader_front_count": leader_front_cnt,
-            "leader_ratio":    round(leader_ratio_val, 3),
-            "plate_stats":     plate_stats,
-            "camera_details":  cam_details,
-        })
-
-    groups.sort(key=lambda g: (g["cameras_count"], g["leader_ratio"], g["group_size"]), reverse=True)
+    groups.sort(key=lambda g: (g["cameras_count"], g.get("leader_ratio", 0), g["group_size"]), reverse=True)
     return {
         "groups":       groups[:lim],
         "total":        len(groups),
@@ -2818,6 +2681,7 @@ def batedor_grupos_comboio(
         "co_window":    co_win_s,
         "group_sizes":  sorted(list(valid_sizes)),
         "min_cameras":  min_cam,
+        "max_trip_gap_s": trip_gap,
         "order_mode":   order,
         "leader_ratio_threshold": lr,
     }
@@ -2826,6 +2690,236 @@ def batedor_grupos_comboio(
 # ===========================
 # BATEDOR — ENDPOINTS REAIS
 # ===========================
+
+def _detect_convoy_groups(
+    cur,
+    t_from,
+    t_to,
+    window_s: int = 300,
+    max_trip_gap_s: int = 3600,
+    min_cameras: int = 2,
+    target_plate: str | None = None,
+    prefix_sql: str = "",
+    prefix_vals: list | None = None,
+    allow_sql: str = "",
+    allow_vals: list | None = None,
+    limit_events: int = 50000,
+) -> list[dict]:
+    """
+    Algoritmo unificado de detecção de comboio.
+
+    Regras:
+      A) Co-detecção por câmera: TODOS os veículos do grupo devem ter eventos
+         na mesma câmera e span(max_ts - min_ts) <= window_s.
+      B) Comboio suspeito: grupo válido em >= min_cameras câmeras distintas,
+         e trip_span (entre 1ª e última câmera confirmada) <= max_trip_gap_s.
+
+    Parâmetros:
+      - window_s: janela de co-detecção por câmera (1..1000, será clamped)
+      - max_trip_gap_s: máximo span da viagem entre câmeras (default 3600 = 1h)
+      - min_cameras: mínimo de câmeras distintas (default 2)
+      - target_plate: se fornecido, retorna apenas grupos que contêm essa placa
+      - prefix_sql/allow_sql: fragmentos SQL extras para filtro
+
+    Retorna lista de dicts:
+      [{
+        "plates": ["A","B"], "group_size": 2,
+        "cameras_count": 3, "cameras": [...],
+        "cameras_confirmed": [{ "camera_id", "cam_nome", "ts_min", "ts_max",
+                                "span_sec", "plate_order" }],
+        "trip_span_sec": 1800,
+        "first_seen": "...", "last_seen": "...",
+      }]
+    """
+    from collections import defaultdict
+    from itertools import combinations
+
+    window_s = max(1, min(1000, int(window_s)))
+    max_trip_gap_s = max(1, int(max_trip_gap_s))
+    min_cameras = max(2, int(min_cameras))
+    prefix_vals = prefix_vals or []
+    allow_vals = allow_vals or []
+
+    # ── 1. Buscar eventos ──────────────────────────────────────────────────
+    target_sql = ""
+    target_vals: list = []
+    if target_plate:
+        # Busca eventos da placa alvo + de qualquer placa na mesma câmera/período
+        # Para eficiência, primeiro identifica as câmeras onde a placa alvo aparece
+        pass  # Sem filtro de placa — precisamos de todos os veículos para formar clusters
+
+    cur.execute(f"""
+        SELECT
+            e.camera_id,
+            COALESCE(c.nome, e.camera_id)   AS cam_nome,
+            e.plate,
+            COALESCE(e.occurred_at, e.ts)   AS event_time
+        FROM lpr_events e
+        LEFT JOIN cameras c ON c.id = (
+            SELECT id FROM cameras
+            WHERE camera_id = e.camera_id
+               OR ip        = e.camera_id
+               OR ip        = e.camera_ip
+            ORDER BY (camera_id = e.camera_id) DESC
+            LIMIT 1
+        )
+        WHERE e.plate IS NOT NULL
+          AND e.plate NOT IN ('', 'unknown', 'UNKNOWN')
+          AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+          {prefix_sql} {allow_sql}
+        ORDER BY e.camera_id, COALESCE(e.occurred_at, e.ts)
+        LIMIT {int(limit_events)}
+    """, [t_from, t_to] + prefix_vals + allow_vals)
+    rows = cur.fetchall()
+
+    # ── 2. Agrupar por câmera ──────────────────────────────────────────────
+    cam_events: dict = defaultdict(list)
+    for cam_id, cam_nome, plate, event_time in rows:
+        cam_events[cam_id].append((plate, event_time, cam_nome))
+
+    # ── 3. Formar clusters por câmera (janela deslizante) ──────────────────
+    # Para cada câmera, encontra conjuntos de placas onde span <= window_s
+    # Resultado: cam_plate_sets[camera_id] = [{"plates": frozenset, "ts_min", "ts_max", "plate_times"}]
+    cam_plate_sets: dict = defaultdict(list)
+
+    for cam_id, events in cam_events.items():
+        n = len(events)
+        if n < 2:
+            continue
+        cam_nome = events[0][2]
+
+        # Janela deslizante: i=início, j avança enquanto span <= window_s
+        i = 0
+        while i < n:
+            j = i + 1
+            while j < n and (events[j][1] - events[i][1]).total_seconds() <= window_s:
+                j += 1
+            # events[i..j-1] formam um cluster temporal
+            # Extrair placas únicas e seus timestamps
+            plate_times: dict = {}
+            for k in range(i, j):
+                p, t, _ = events[k]
+                if p not in plate_times:
+                    plate_times[p] = {"min": t, "max": t}
+                else:
+                    if t < plate_times[p]["min"]:
+                        plate_times[p]["min"] = t
+                    if t > plate_times[p]["max"]:
+                        plate_times[p]["max"] = t
+
+            unique_plates = set(plate_times.keys())
+            if len(unique_plates) >= 2:
+                all_ts = [t for k in range(i, j) for t in [events[k][1]]]
+                ts_min = min(all_ts)
+                ts_max = max(all_ts)
+                cam_plate_sets[cam_id].append({
+                    "plates": frozenset(unique_plates),
+                    "ts_min": ts_min,
+                    "ts_max": ts_max,
+                    "span_sec": (ts_max - ts_min).total_seconds(),
+                    "cam_nome": cam_nome,
+                    "plate_times": plate_times,
+                })
+            i += 1
+
+    # ── 4. Enumerar subconjuntos de >= 2 placas e contar câmeras ───────────
+    # Para cada subconjunto de placas (tamanho >= 2) que aparece num cluster,
+    # verificar em quantas câmeras distintas aparece.
+    # group_cameras: { frozenset(plates) -> [{ "camera_id", "cam_nome", "ts_rep", ... }] }
+    group_cameras: dict = defaultdict(list)
+
+    for cam_id, clusters in cam_plate_sets.items():
+        for cluster in clusters:
+            all_plates = cluster["plates"]
+            # Para eficiência, gerar subconjuntos de tamanho 2 e 3
+            for size in (2, 3):
+                if len(all_plates) < size:
+                    continue
+                for subset in combinations(sorted(all_plates), size):
+                    subset_key = frozenset(subset)
+                    # Verifica que TODOS os veículos do subset estão no cluster
+                    # (já estão, pois vieram de all_plates)
+                    # Calcula span apenas para o subset
+                    sub_times = []
+                    sub_plate_times = {}
+                    for p in subset:
+                        pt = cluster["plate_times"][p]
+                        sub_times.append(pt["min"])
+                        sub_times.append(pt["max"])
+                        sub_plate_times[p] = pt
+                    sub_ts_min = min(sub_times)
+                    sub_ts_max = max(sub_times)
+                    sub_span = (sub_ts_max - sub_ts_min).total_seconds()
+                    if sub_span > window_s:
+                        continue
+                    # Ordena por primeiro timestamp
+                    plate_order = sorted(subset, key=lambda p: sub_plate_times[p]["min"])
+                    # Timestamp representativo do grupo nesta câmera = min(ts)
+                    ts_rep = sub_ts_min
+                    group_cameras[subset_key].append({
+                        "camera_id": cam_id,
+                        "cam_nome": cluster["cam_nome"],
+                        "ts_min": sub_ts_min,
+                        "ts_max": sub_ts_max,
+                        "span_sec": int(sub_span),
+                        "plate_order": plate_order,
+                        "ts_rep": ts_rep,
+                    })
+
+    # ── 5. Deduplicar câmeras por grupo (manter melhor span por câmera) ────
+    deduped: dict = {}
+    for plates_key, cam_list in group_cameras.items():
+        by_cam: dict = defaultdict(list)
+        for entry in cam_list:
+            by_cam[entry["camera_id"]].append(entry)
+        best: list = []
+        for cam_id, entries in by_cam.items():
+            # Manter o com menor span (mais apertado)
+            best.append(min(entries, key=lambda e: e["span_sec"]))
+        deduped[plates_key] = best
+
+    # ── 6. Filtrar por min_cameras e trip_span ─────────────────────────────
+    result: list = []
+    for plates_key, cam_list in deduped.items():
+        if len(cam_list) < min_cameras:
+            continue
+        # Trip span: ordena câmeras por ts_rep, calcula (última - primeira)
+        sorted_cams = sorted(cam_list, key=lambda c: c["ts_rep"])
+        trip_span_sec = (sorted_cams[-1]["ts_rep"] - sorted_cams[0]["ts_rep"]).total_seconds()
+        if trip_span_sec > max_trip_gap_s:
+            continue
+        # Se target_plate fornecido, filtrar
+        if target_plate and target_plate not in plates_key:
+            continue
+
+        global_first = min(c["ts_min"] for c in cam_list)
+        global_last = max(c["ts_max"] for c in cam_list)
+        camera_names = [c["cam_nome"] for c in sorted_cams]
+        cameras_confirmed = []
+        for c in sorted_cams:
+            cameras_confirmed.append({
+                "camera_id": c["camera_id"],
+                "cam_nome": c["cam_nome"],
+                "ts_min": c["ts_min"].isoformat(),
+                "ts_max": c["ts_max"].isoformat(),
+                "span_sec": c["span_sec"],
+                "plate_order": c["plate_order"],
+            })
+
+        result.append({
+            "plates": sorted(list(plates_key)),
+            "group_size": len(plates_key),
+            "cameras_count": len(cam_list),
+            "cameras": camera_names,
+            "cameras_confirmed": cameras_confirmed,
+            "trip_span_sec": int(trip_span_sec),
+            "first_seen": global_first.isoformat(),
+            "last_seen": global_last.isoformat(),
+        })
+
+    result.sort(key=lambda g: (g["cameras_count"], g["group_size"]), reverse=True)
+    return result
+
 
 def _parse_window_to_minutes(w: str) -> int:
     """Converte '2h', '24h', '7d', '90d', '30m' em minutos."""
@@ -2913,13 +3007,6 @@ def vehicle_report(
         ev_extra_vals.append(vehicle_color)
     ev_extra_sql = "\n                  ".join(ev_extra)
 
-    pt_extra: list = []
-    pt_extra_vals: list = []
-    if filter_camera:
-        pt_extra.append("AND a.camera_id = %s")
-        pt_extra_vals.append(filter_camera)
-    pt_extra_sql = "\n                  ".join(pt_extra)
-
     with _conn() as conn:
         with conn.cursor() as cur:
 
@@ -2955,39 +3042,29 @@ def vehicle_report(
             """, (plate, t_from, t_to, *ev_extra_vals))
             ev_rows = cur.fetchall()
 
-            # ── 2. Parceiros de co-aparecimento ────────────────────────────
-            cur.execute(f"""
-                SELECT
-                    b.plate                                                      AS partner,
-                    COUNT(DISTINCT a.camera_id)                                  AS cameras_together,
-                    AVG(ABS(EXTRACT(EPOCH FROM (
-                        COALESCE(b.occurred_at, b.ts) -
-                        COALESCE(a.occurred_at, a.ts)
-                    ))))::int                                                     AS avg_delta_sec,
-                    MIN(COALESCE(b.occurred_at, b.ts))                           AS first_seen,
-                    MAX(COALESCE(b.occurred_at, b.ts))                           AS last_seen,
-                    COUNT(*)                                                      AS joint_events,
-                    AVG(COALESCE(b.confidence, 0))::float                        AS avg_conf
-                FROM lpr_events a
-                JOIN lpr_events b
-                    ON  a.camera_id = b.camera_id
-                    AND a.id       != b.id
-                    AND b.plate    != a.plate
-                    AND ABS(EXTRACT(EPOCH FROM (
-                            COALESCE(b.occurred_at, b.ts) -
-                            COALESCE(a.occurred_at, a.ts)
-                        ))) <= 300
-                WHERE a.plate = %s
-                  AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
-                  AND b.plate IS NOT NULL
-                  AND b.plate != ''
-                  AND b.plate NOT IN ('unknown','UNKNOWN')
-                  {pt_extra_sql}
-                GROUP BY b.plate
-                ORDER BY cameras_together DESC, joint_events DESC
-                LIMIT 30
-            """, (plate, t_from, t_to, *pt_extra_vals))
-            partner_rows = cur.fetchall()
+            # ── 2. Parceiros de comboio (via algoritmo unificado) ──────────
+            convoy_groups = _detect_convoy_groups(
+                cur, t_from, t_to,
+                window_s=300,
+                max_trip_gap_s=3600,
+                min_cameras=2,
+                target_plate=plate,
+            )
+
+            # Extrai parceiros: placas que fazem parte de grupos suspeitos com a placa-alvo
+            _partner_data: dict = {}
+            for g in convoy_groups:
+                others = [p for p in g["plates"] if p != plate]
+                for op in others:
+                    if op not in _partner_data or g["cameras_count"] > _partner_data[op]["cameras_together"]:
+                        _partner_data[op] = {
+                            "cameras_together": g["cameras_count"],
+                            "cameras_confirmed": [c["camera_id"] for c in g["cameras_confirmed"]],
+                            "trip_span_sec": g["trip_span_sec"],
+                            "first_seen": g["first_seen"],
+                            "last_seen": g["last_seen"],
+                            "cameras_detail": g["cameras_confirmed"],
+                        }
 
             # ── 3. Status alvo ─────────────────────────────────────────────
             #    BUG-FIX: list_id pode não existir — consulta segura
@@ -3002,7 +3079,7 @@ def vehicle_report(
             alvo_row = cur.fetchone()
 
             # ── 4. Alvos entre parceiros ───────────────────────────────────
-            partner_plates = [r[0] for r in partner_rows] if partner_rows else []
+            partner_plates = list(_partner_data.keys())
             alvo_partners: set[str] = set()
             if partner_plates:
                 ph = ",".join(["%s"] * len(partner_plates))
@@ -3050,19 +3127,21 @@ def vehicle_report(
     cameras_count = len(cameras_set)
     avg_conf = round(sum(confidences) / len(confidences), 2) if confidences else 0.0
 
-    # ── Montar parceiros ───────────────────────────────────────────────────
+    # ── Montar parceiros (somente de grupos suspeitos confirmados) ────
     partners: list[dict] = []
-    for r in partner_rows:
+    for pplate, pd in _partner_data.items():
         partners.append({
-            "plate":            r[0],
-            "cameras_together": int(r[1]),
-            "avg_delta_sec":    int(r[2]) if r[2] else 0,
-            "first_seen":       r[3].isoformat() if r[3] else None,
-            "last_seen":        r[4].isoformat() if r[4] else None,
-            "joint_events":     int(r[5]),
-            "avg_conf":         round(float(r[6]) if r[6] else 0.0, 2),
-            "is_alvo":          r[0] in alvo_partners,
+            "plate":              pplate,
+            "cameras_together":   pd["cameras_together"],
+            "cameras_confirmed":  pd["cameras_confirmed"],
+            "trip_span_sec":      pd["trip_span_sec"],
+            "first_seen":         pd["first_seen"],
+            "last_seen":          pd["last_seen"],
+            "cameras_detail":     pd["cameras_detail"],
+            "is_alvo":            pplate in alvo_partners,
         })
+
+    partners.sort(key=lambda p: p["cameras_together"], reverse=True)
 
     # ── Filtro pós-processamento: mínimo de câmeras juntos ──
     if min_cameras > 1:
@@ -3091,7 +3170,7 @@ def vehicle_report(
 
     _add("Câmeras distintas",           cameras_count,        10, "Cada câmera única = +10 pts")
     _add("Total de passagens",          total_passes,          2, "Cada passagem = +2 pts")
-    _add("Parceiros co-detectados",     len(partners),        15, "Cada parceiro simultâneo = +15 pts")
+    _add("Parceiros em comboio",        len(partners),        15, "Parceiro confirmado (mesma câm ×2+, trip ≤1h) = +15 pts")
     alvo_partners_count = sum(1 for p in partners if p["is_alvo"])
     _add("Parceiros já cadastrados como alvo", alvo_partners_count, 30, "Parceiro alvo = +30 pts")
     if is_alvo:
@@ -3101,7 +3180,7 @@ def vehicle_report(
     badges: list[str] = []
     if is_alvo:                      badges.append("ALVO")
     if cameras_count >= 3:           badges.append("MULTI-CÂMERA")
-    if len(partners) >= 2:           badges.append("COMBOIO")
+    if len(partners) >= 1:           badges.append("COMBOIO")
     if alvo_partners_count > 0:      badges.append("PARCEIRO-ALVO")
     if total_passes >= 5:            badges.append("REINCIDENTE")
 
@@ -3748,67 +3827,46 @@ def batedor_central(
                 intel[plate]["in_suspeitos"] = {"score": score, "passes": passes, "cameras": cameras}
                 _upd(intel[plate], fs, ls)
 
-            # ── 2. COMBOIO (transições entre câmeras dentro de 10–300 s) ──
-            cur.execute(f"""
-                SELECT a.plate,
-                       COUNT(DISTINCT a.camera_id)      AS transitions,
-                       MIN(COALESCE(a.occurred_at, a.ts)) AS first_seen,
-                       MAX(COALESCE(a.occurred_at, a.ts)) AS last_seen
-                FROM lpr_events a
-                JOIN lpr_events b
-                    ON  a.plate     = b.plate
-                    AND a.camera_id != b.camera_id
-                    AND a.id        != b.id
-                    AND ABS(EXTRACT(EPOCH FROM (
-                            COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                        ))) BETWEEN 10 AND 300
-                WHERE a.plate IS NOT NULL
-                  AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
-                  AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
-                  {prefix_sql} {allow_sql}
-                GROUP BY a.plate
-                HAVING COUNT(DISTINCT a.camera_id) >= 2
-                ORDER BY COUNT(DISTINCT a.camera_id) DESC
-                LIMIT 300
-            """, [t_from, t_to] + prefix_vals + allow_vals)
-            for r in cur.fetchall():
-                plate, transitions, fs, ls = r[0], int(r[1]), r[2], r[3]
-                score = transitions * 5
-                intel[plate]["in_comboio"] = {"score": score, "transitions": transitions}
-                _upd(intel[plate], fs, ls)
-
-            # ── 3. GRUPOS (pares vistos na mesma câmera em ≤120 s) ────────
-            cur.execute(f"""
-                SELECT LEAST(a.plate, b.plate)             AS plate_a,
-                       GREATEST(a.plate, b.plate)          AS plate_b,
-                       COUNT(DISTINCT a.camera_id)         AS cameras_together,
-                       MIN(COALESCE(a.occurred_at, a.ts))  AS first_seen,
-                       MAX(COALESCE(b.occurred_at, b.ts))  AS last_seen
-                FROM lpr_events a
-                JOIN lpr_events b
-                    ON  a.camera_id = b.camera_id
-                    AND a.plate     < b.plate
-                    AND a.id       != b.id
-                    AND ABS(EXTRACT(EPOCH FROM (
-                            COALESCE(b.occurred_at, b.ts) - COALESCE(a.occurred_at, a.ts)
-                        ))) <= 120
-                WHERE a.plate IS NOT NULL AND b.plate IS NOT NULL
-                  AND a.plate NOT IN ('', 'unknown', 'UNKNOWN')
-                  AND b.plate NOT IN ('', 'unknown', 'UNKNOWN')
-                  AND COALESCE(a.occurred_at, a.ts) BETWEEN %s AND %s
-                  {prefix_sql}
-                GROUP BY plate_a, plate_b
-                HAVING COUNT(DISTINCT a.camera_id) >= 1
-                ORDER BY cameras_together DESC
-                LIMIT 300
-            """, [t_from, t_to] + prefix_vals)
-            for r in cur.fetchall():
-                pa, pb, ct, fs, ls = r[0], r[1], int(r[2]), r[3], r[4]
-                score = ct * 10
-                intel[pa]["in_grupos"].append({"plate": pb, "score": score, "cameras_together": ct})
-                intel[pb]["in_grupos"].append({"plate": pa, "score": score, "cameras_together": ct})
-                _upd(intel[pa], fs, ls)
-                _upd(intel[pb], fs, ls)
+            # ── 2+3. COMBOIO E GRUPOS (algoritmo unificado) ──────────────
+            convoy_groups = _detect_convoy_groups(
+                cur, t_from, t_to,
+                window_s=300,
+                max_trip_gap_s=3600,
+                min_cameras=2,
+                prefix_sql=prefix_sql,
+                prefix_vals=prefix_vals,
+                allow_sql=allow_sql,
+                allow_vals=allow_vals,
+            )
+            # Marca cada placa que participa de grupo suspeito
+            from datetime import datetime as _dt
+            for g in convoy_groups:
+                cams = g["cameras_count"]
+                score = cams * 15
+                fs_str = g["first_seen"]
+                ls_str = g["last_seen"]
+                try:
+                    fs = _dt.fromisoformat(fs_str) if isinstance(fs_str, str) else fs_str
+                    ls = _dt.fromisoformat(ls_str) if isinstance(ls_str, str) else ls_str
+                except Exception:
+                    fs = ls = None
+                for plate in g["plates"]:
+                    # in_comboio: marca como comboio suspeito
+                    if not intel[plate]["in_comboio"] or cams > intel[plate]["in_comboio"].get("cameras", 0):
+                        intel[plate]["in_comboio"] = {
+                            "score": score,
+                            "cameras": cams,
+                            "trip_span_sec": g["trip_span_sec"],
+                        }
+                    # in_grupos: adiciona parceiros do grupo
+                    others = [p for p in g["plates"] if p != plate]
+                    for o in others:
+                        intel[plate]["in_grupos"].append({
+                            "plate": o,
+                            "score": score,
+                            "cameras_together": cams,
+                        })
+                    _upd(intel[plate], fs, ls)
 
             # ── 4. Enriquecimento: tipo/cor dominante por placa ───────────
             cur.execute("""
