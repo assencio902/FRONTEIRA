@@ -617,14 +617,15 @@
             </select>
           </label></span>
           <!-- Filtros de Comboio -->
-          <label style="font-weight:700;color:var(--accent)">&#128101; Tamanho do grupo:
-            <select id="cen-minv" style="margin-left:4px;border-color:var(--accent)">
+          <label style="font-weight:700;color:var(--accent)">&#128101; Grupo:
+            <select id="cen-gsizes" style="margin-left:4px;border-color:var(--accent)" onchange="cenGroupSizeChange()">
               <option value="2" selected>2 ve&iacute;culos</option>
               <option value="3">3 ve&iacute;culos</option>
+              <option value="2,3">2 ou 3</option>
             </select>
           </label>
-          <label>&#9201; Janela p/ c&acirc;m. (m&aacute;x 1h):
-            <select id="cen-cowin" style="margin-left:4px">
+          <label>&#9201; Janela/c&acirc;m (m&aacute;x 1h):
+            <select id="cen-cowin" style="margin-left:4px" onchange="loadCentral(true)">
               <option value="60">1 min</option>
               <option value="120">2 min</option>
               <option value="300" selected>5 min</option>
@@ -634,15 +635,16 @@
               <option value="3600">1 hora</option>
             </select>
           </label>
-          <label>&#128257; M&iacute;n. passes (opcional):
-            <select id="cen-minpass" style="margin-left:4px">
-              <option value="1" selected>1 vez</option>
-              <option value="2">2 vezes</option>
-              <option value="3">3 vezes</option>
-              <option value="4">4 vezes</option>
-              <option value="5">5+ vezes</option>
+          <label>&#128110; Modo:
+            <select id="cen-ordermode" style="margin-left:4px" onchange="cenOrderModeChange()">
+              <option value="any" selected>Qualquer ordem</option>
+              <option value="leader_front">L&iacute;der na frente</option>
             </select>
           </label>
+          <span id="cen-leader-opts" style="display:none">
+            <label>&#127942; L&iacute;der &gt;= <input id="cen-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" style="width:54px;margin-left:2px">%</label>
+            <label id="cen-payload-label" style="display:none">&#128230; Payload 1&ordm; &le; <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" style="width:44px;margin-left:2px"> c&acirc;m.</label>
+          </span>
           <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
           <button class="btn btn-outline btn-sm" onclick="_resetCenFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
           <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
@@ -2457,6 +2459,7 @@ function batWindowChange() {
 function cenWindowChange() {
   var v = document.getElementById('cen-window').value;
   document.getElementById('cen-date-row').classList.toggle('visible', v === 'custom');
+  if (v !== 'custom') loadCentral(true);
 }
 function convWindowChange() {
   var v = document.getElementById('conv-window').value;
@@ -2637,13 +2640,16 @@ function cenApplyFilter() {
   _cenRenderPage();
 }
 
-async function _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo) {
+async function _loadCenGrupos(w, cowin, gsizes, orderMode, leaderRatio, payloadMax, tsFrom, tsTo) {
   try {
+    var mc = (document.getElementById('cen-min-cameras') || {}).value || '1';
     var url = '/api/batedor/grupos_comboio?window=' + encodeURIComponent(w)
             + '&co_window=' + encodeURIComponent(cowin)
-            + '&min_vehicles=' + encodeURIComponent(minv)
-            + '&min_cameras=1'
-            + '&min_passes=' + encodeURIComponent(minpass);
+            + '&group_sizes=' + encodeURIComponent(gsizes)
+            + '&min_cameras=' + encodeURIComponent(mc)
+            + '&order_mode=' + encodeURIComponent(orderMode)
+            + '&leader_ratio=' + encodeURIComponent(leaderRatio)
+            + '&payload_max_front=' + encodeURIComponent(payloadMax);
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom);
     if (tsTo)    url += '&ts_to=' + encodeURIComponent(tsTo);
     var r = await fetch(url);
@@ -2657,13 +2663,12 @@ async function _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo) {
         if (!plateGroups[p]) plateGroups[p] = [];
         var others = (g.plates || []).filter(function(x){ return x !== p; });
         others.forEach(function(o) {
-          plateGroups[p].push({ plate: o, cameras_together: 1 });
+          plateGroups[p].push({ plate: o, cameras_together: g.cameras_count || 1, leader: g.leader || '', role: (g.plate_stats||[]).find(function(s){return s.plate===p;})||{} });
         });
       });
     });
     _cenAllItems.forEach(function(item) {
       if (plateGroups[item.plate]) {
-        // deduplica por placa companheira
         var seen = {};
         var merged = (item.in_grupos || []).concat(plateGroups[item.plate]);
         item.in_grupos = merged.filter(function(g) {
@@ -2675,7 +2680,22 @@ async function _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo) {
       }
     });
     _cenRenderPage();
-  } catch(e) { /* silencioso — dados de grupos são complementares */ }
+  } catch(e) { /* silencioso */ }
+}
+
+function cenOrderModeChange() {
+  var mode = (document.getElementById('cen-ordermode') || {}).value;
+  var opts = document.getElementById('cen-leader-opts');
+  if (opts) opts.style.display = (mode === 'leader_front') ? 'inline' : 'none';
+  cenGroupSizeChange();
+}
+
+function cenGroupSizeChange() {
+  var gs = (document.getElementById('cen-gsizes') || {}).value || '2';
+  var mode = (document.getElementById('cen-ordermode') || {}).value;
+  var plLabel = document.getElementById('cen-payload-label');
+  if (plLabel) plLabel.style.display = (mode === 'leader_front' && (gs === '3' || gs === '2,3')) ? 'inline' : 'none';
+  loadCentral(true);
 }
 
 async function loadCentral(showSpinner) {
@@ -2689,9 +2709,11 @@ async function loadCentral(showSpinner) {
     w = '2h';
   }
   var prefix  = '';
-  var minv    = (document.getElementById('cen-minv')    || {}).value || '2';
-  var cowin   = (document.getElementById('cen-cowin')   || {}).value || '300';
-  var minpass = (document.getElementById('cen-minpass') || {}).value || '1';
+  var gsizes    = (document.getElementById('cen-gsizes')     || {}).value || '2';
+  var cowin     = (document.getElementById('cen-cowin')      || {}).value || '300';
+  var orderMode = (document.getElementById('cen-ordermode')  || {}).value || 'any';
+  var leaderR   = (document.getElementById('cen-leader-ratio')|| {}).value || '0.70';
+  var payloadM  = (document.getElementById('cen-payload-max') || {}).value || '0';
 
   if (showSpinner) {
     document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
@@ -2716,7 +2738,7 @@ async function loadCentral(showSpinner) {
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     document.getElementById('central-status').textContent = 'Atualizado às ' + ts;
     // ---- Grupos em Comboio integrado ----
-    _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo);
+    _loadCenGrupos(w, cowin, gsizes, orderMode, leaderR, payloadM, tsFrom, tsTo);
   } catch(e) {
     document.getElementById('central-status').textContent = 'Erro: ' + e.message;
     if (showSpinner)
@@ -3495,12 +3517,16 @@ function _resetCenFilters() {
   if (minCam) minCam.value = '2';
   var interval = document.getElementById('cen-interval');
   if (interval) interval.value = '60';
-  var minv = document.getElementById('cen-minv');
-  if (minv) minv.value = '2';
+  var gs = document.getElementById('cen-gsizes');
+  if (gs) gs.value = '2';
   var cowin = document.getElementById('cen-cowin');
   if (cowin) cowin.value = '300';
-  var minpass = document.getElementById('cen-minpass');
-  if (minpass) minpass.value = '1';
+  var om = document.getElementById('cen-ordermode');
+  if (om) { om.value = 'any'; cenOrderModeChange(); }
+  var lr = document.getElementById('cen-leader-ratio');
+  if (lr) lr.value = '0.70';
+  var pm = document.getElementById('cen-payload-max');
+  if (pm) pm.value = '0';
 }
 
 function _getAlvoFilters() {

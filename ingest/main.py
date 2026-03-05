@@ -2529,55 +2529,72 @@ def batedor_trajeto(
 
 @app.get("/api/batedor/grupos_comboio")
 def batedor_grupos_comboio(
-    window:        str          = "2h",
-    co_window:     int          = 300,    # segundos: janela de agrupamento por câmera (máx 3600s = 1h)
-    min_vehicles:  int          = 2,      # mínimo de veículos no grupo (2 ou 3)
-    min_cameras:   int          = 1,      # mínimo de câmeras onde o grupo apareceu
-    min_passes:    int          = 1,      # mínimo de repetições do mesmo grupo (opcional)
-    limit:         int          = 100,
-    request:       Request      = None,
+    window:              str   = "2h",
+    co_window:           int   = 300,      # segundos: janela por câmera (máx 3600)
+    group_sizes:         str   = "2",      # "2", "3" ou "2,3"
+    min_cameras:         int   = 1,        # mín câmeras p/ grupo
+    order_mode:          str   = "any",    # "any" | "leader_front"
+    leader_ratio:        float = 0.7,      # líder 1º em >= 70% das câmeras
+    max_front_ratio_other: float = 0.3,    # outro membro 1º em <= 30%
+    payload_max_front:   int   = 0,        # grupo=3: payload 1º em ≤ N câmeras
+    limit:               int   = 100,
+    request:             Request = None,
 ):
     """
-    Detecta grupos reais de N+ veículos vistos juntos (sem ordem fixa).
+    Detecta grupos de veículos em comboio.
 
-    Regra por câmera: se (max_timestamp - min_timestamp do grupo) <= co_window,
-    essa câmera conta como "câmera válida". A ordem entre placas pode variar
-    entre câmeras. Agrupa pelo conjunto de placas (frozenset), conta quantas
-    câmeras distintas viram o grupo e filtra por min_cameras.
-    
-    Parâmetros permitidos:
-    - window: janela temporal (ex: '2h', '24h')
-    - co_window: janela de agrupamento em segundos (máximo 3600s = 1 hora)
-    - min_vehicles: tamanho do grupo (2 ou 3 veículos)
-    - min_cameras: mínimo de câmeras distintas
-    - min_passes: mínimo de repetições do grupo (opcional)
-    - limit: limite de resultados
+    order_mode:
+      - "any"           → aceita qualquer ordem entre câmeras
+      - "leader_front"  → exige líder (batedor) consistente na frente
+
+    Regra leader_front:
+      - líder = placa que mais vezes aparece 1ª na câmera
+      - líder deve ser 1ª em >= leader_ratio das câmeras
+      - outros não podem ser 1ª em > max_front_ratio_other das câmeras
+      - grupo=3: "payload" (placa com menos fronts) deve ser 1ª em ≤ payload_max_front câmeras
     """
-    from collections import defaultdict
-    
-    # Valida parâmetros não suportados
-    allowed_params = {'window', 'co_window', 'min_vehicles', 'min_cameras', 'min_passes', 'limit'}
+    from collections import defaultdict, Counter
+
+    # ── Valida parâmetros ──────────────────────────────────────────────────────
+    allowed_params = {
+        'window', 'co_window', 'group_sizes', 'min_cameras',
+        'order_mode', 'leader_ratio', 'max_front_ratio_other',
+        'payload_max_front', 'limit',
+    }
     if request:
-        query_params = set(request.query_params.keys())
-        unsupported = query_params - allowed_params
+        unsupported = set(request.query_params.keys()) - allowed_params
         if unsupported:
-            from fastapi import HTTPException
             raise HTTPException(
                 status_code=400,
                 detail=f"Parâmetros não suportados: {', '.join(sorted(unsupported))}. "
                        f"Use apenas: {', '.join(sorted(allowed_params))}"
             )
 
+    # ── Parseia group_sizes ────────────────────────────────────────────────────
+    valid_sizes = set()
+    for s in str(group_sizes).split(","):
+        s = s.strip()
+        if s in ("2", "3"):
+            valid_sizes.add(int(s))
+    if not valid_sizes:
+        valid_sizes = {2}
+
+    order = str(order_mode).strip().lower()
+    if order not in ("any", "leader_front"):
+        order = "any"
+
+    lr           = max(0.0, min(1.0, float(leader_ratio)))
+    mfr_other    = max(0.0, min(1.0, float(max_front_ratio_other)))
+    p_max_front  = max(0, int(payload_max_front))
+
     window_min = _parse_window_to_minutes(window)
-    co_win_s   = max(10, min(3600, int(co_window)))  # Limita a 1 hora (3600s)
-    min_v      = max(2, min(3, int(min_vehicles)))   # Apenas 2 ou 3 veículos
+    co_win_s   = max(10, min(3600, int(co_window)))
     min_cam    = max(1, int(min_cameras))
-    min_pass   = max(1, int(min_passes))
     lim        = max(1, min(500, int(limit)))
     t_to       = _utcnow()
     t_from     = t_to - timedelta(minutes=window_min)
 
-    # ── Monta filtros de evento (apenas básicos) ─────────────────────────────
+    # ── Monta filtros de evento ────────────────────────────────────────────────
     ev_conds = ["e.plate IS NOT NULL",
                 "e.plate NOT IN ('', 'unknown', 'UNKNOWN')",
                 "COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s"]
@@ -2617,13 +2634,11 @@ def batedor_grupos_comboio(
     for cam_id, cam_nome, plate, event_time, lat, lon, direcao_cam in rows:
         cam_events[cam_id].append((plate, event_time, cam_nome, float(lat or 0), float(lon or 0), direcao_cam))
 
-    # ── Primeira passada: detecta grupos válidos por câmera ─────────────────────
-    # Para cada câmera, identifica conjuntos de placas onde span <= co_window
-    # camera_groups: { frozenset(plates) -> [{"camera_id", "cam_nome", "first_seen", "last_seen", "span_sec", ...}] }
+    # ── Primeira passada: detecta clusters válidos por câmera ───────────────────
+    # camera_groups: { frozenset(plates) -> [{cam info + ordered_plates}] }
     camera_groups: dict = defaultdict(list)
 
     for cam_id, events in cam_events.items():
-        # Janela deslizante: agrupa eventos onde o span (max-min) <= co_window
         cluster_start_time = None
         cluster_plates:  list = []
         cluster_data:    list = []
@@ -2632,30 +2647,41 @@ def batedor_grupos_comboio(
             nonlocal cluster_start_time, cluster_plates, cluster_data
             if not cluster_plates:
                 return
-            unique_plates = list(dict.fromkeys(cluster_plates))  # dedup, preserva ordem de aparição
-            if len(unique_plates) < min_v:
+            unique_plates = list(dict.fromkeys(cluster_plates))
+            if len(unique_plates) not in valid_sizes:
+                cluster_start_time = None
+                cluster_plates     = []
+                cluster_data       = []
                 return
-            
-            # Calcula span = max - min timestamp
+
             timestamps = [d[1] for d in cluster_data]
             first_t = min(timestamps)
             last_t  = max(timestamps)
             span_sec = (last_t - first_t).total_seconds()
-            
-            # Verifica se o span está dentro da janela
+
             if span_sec <= co_win_s:
+                # Determina a primeira placa distinta por timestamp nesta câmera
+                plate_first_ts = {}
+                for p, t, *_ in cluster_data:
+                    if p not in plate_first_ts or t < plate_first_ts[p]:
+                        plate_first_ts[p] = t
+                ordered = sorted(plate_first_ts.keys(), key=lambda p: plate_first_ts[p])
+                first_plate = ordered[0]
+
                 plates_key = frozenset(unique_plates)
                 camera_groups[plates_key].append({
-                    "camera_id":   cam_id,
-                    "cam_nome":    cluster_data[0][2],
-                    "lat":         cluster_data[0][3],
-                    "lon":         cluster_data[0][4],
-                    "direcao":     cluster_data[0][5] or None,
-                    "first_seen":  first_t,
-                    "last_seen":   last_t,
-                    "span_sec":    int(span_sec),
+                    "camera_id":    cam_id,
+                    "cam_nome":     cluster_data[0][2],
+                    "lat":          cluster_data[0][3],
+                    "lon":          cluster_data[0][4],
+                    "direcao":      cluster_data[0][5] or None,
+                    "first_seen":   first_t,
+                    "last_seen":    last_t,
+                    "span_sec":     int(span_sec),
+                    "first_plate":  first_plate,
+                    "plate_order":  ordered,
                 })
-            
+
             cluster_start_time = None
             cluster_plates     = []
             cluster_data       = []
@@ -2678,49 +2704,122 @@ def batedor_grupos_comboio(
 
         _flush_cluster()
 
-    # ── Segunda passada: agrega por grupo, conta câmeras/passes, filtra ──
+    # ── Segunda passada: agrega por grupo + aplica filtro de liderança ─────────
     groups: list = []
-    
+
     for plates_set, cameras_list in camera_groups.items():
         cameras_count = len(cameras_list)
         if cameras_count < min_cam:
             continue
-        
-        # Conta passes: número de vezes que o grupo foi visto (deduplica por câmera)
-        passes_count = cameras_count  # Cada câmera = 1 passe
-        if passes_count < min_pass:
-            continue
-        
-        # Calcula min/max timestamp global
+
+        gs = len(plates_set)
+
+        # -- Análise de liderança (sempre calculada para enriquecer resposta) ──
+        front_count: dict = Counter()
+        for cam in cameras_list:
+            front_count[cam["first_plate"]] += 1
+
+        leader_plate = front_count.most_common(1)[0][0]
+        leader_front_cnt = front_count[leader_plate]
+        leader_ratio_val = leader_front_cnt / cameras_count if cameras_count else 0
+
+        # -- Filtro leader_front ────────────────────────────────────────────────
+        if order == "leader_front":
+            # Verifica ratio do líder
+            if leader_ratio_val < lr:
+                continue
+
+            # Verifica que nenhum outro membro excede max_front_ratio_other
+            skip = False
+            for plate in plates_set:
+                if plate == leader_plate:
+                    continue
+                other_ratio = front_count.get(plate, 0) / cameras_count if cameras_count else 0
+                if other_ratio > mfr_other:
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            # Para grupo=3: verifica payload (placa que menos vezes foi 1ª)
+            if gs == 3:
+                payload_plate = min(
+                    (p for p in plates_set if p != leader_plate),
+                    key=lambda p: front_count.get(p, 0)
+                )
+                if front_count.get(payload_plate, 0) > p_max_front:
+                    continue
+
+        # -- Monta dados do grupo ──────────────────────────────────────────────
         all_first = [cam["first_seen"] for cam in cameras_list]
-        all_last = [cam["last_seen"] for cam in cameras_list]
+        all_last  = [cam["last_seen"]  for cam in cameras_list]
         global_first = min(all_first)
-        global_last = max(all_last)
-        
-        # Lista de câmeras
+        global_last  = max(all_last)
         camera_names = [cam["cam_nome"] for cam in cameras_list]
-        
+
+        # Identifica papéis por contagem de fronts
+        roles = {}
+        sorted_by_front = sorted(plates_set, key=lambda p: front_count.get(p, 0), reverse=True)
+        roles[sorted_by_front[0]] = "leader"
+        if gs == 2:
+            roles[sorted_by_front[1]] = "follower"
+        elif gs == 3:
+            roles[sorted_by_front[-1]] = "payload"
+            mid = [p for p in sorted_by_front if p not in (sorted_by_front[0], sorted_by_front[-1])]
+            if mid:
+                roles[mid[0]] = "middle"
+
+        # Detalhe de front_count por placa
+        plate_stats = []
+        for p in sorted(plates_set):
+            plate_stats.append({
+                "plate":       p,
+                "front_count": front_count.get(p, 0),
+                "front_ratio": round(front_count.get(p, 0) / cameras_count, 3) if cameras_count else 0,
+                "role":        roles.get(p, "member"),
+            })
+
+        # camera_details sem first_plate/plate_order (limpa saída)
+        cam_details = []
+        for cam in cameras_list:
+            cam_details.append({
+                "camera_id":   cam["camera_id"],
+                "cam_nome":    cam["cam_nome"],
+                "lat":         cam["lat"],
+                "lon":         cam["lon"],
+                "direcao":     cam["direcao"],
+                "first_seen":  cam["first_seen"],
+                "last_seen":   cam["last_seen"],
+                "span_sec":    cam["span_sec"],
+                "first_plate": cam["first_plate"],
+                "plate_order": cam["plate_order"],
+            })
+
         groups.append({
-            "plates":         sorted(list(plates_set)),
-            "group_size":     len(plates_set),
-            "cameras_count":  cameras_count,
-            "passes":         passes_count,
-            "cameras":        camera_names,
-            "first_seen":     global_first.isoformat(),
-            "last_seen":      global_last.isoformat(),
-            "total_span_sec": int((global_last - global_first).total_seconds()),
-            "camera_details": cameras_list,
+            "plates":          sorted(list(plates_set)),
+            "group_size":      gs,
+            "cameras_count":   cameras_count,
+            "cameras":         camera_names,
+            "first_seen":      global_first.isoformat(),
+            "last_seen":       global_last.isoformat(),
+            "total_span_sec":  int((global_last - global_first).total_seconds()),
+            "leader":          leader_plate,
+            "leader_front_count": leader_front_cnt,
+            "leader_ratio":    round(leader_ratio_val, 3),
+            "plate_stats":     plate_stats,
+            "camera_details":  cam_details,
         })
 
-    groups.sort(key=lambda g: (g["cameras_count"], g["group_size"], g["first_seen"]), reverse=True)
+    groups.sort(key=lambda g: (g["cameras_count"], g["leader_ratio"], g["group_size"]), reverse=True)
     return {
         "groups":       groups[:lim],
         "total":        len(groups),
         "window":       window,
         "co_window":    co_win_s,
-        "min_vehicles": min_v,
+        "group_sizes":  sorted(list(valid_sizes)),
         "min_cameras":  min_cam,
-        "min_passes":   min_pass,
+        "order_mode":   order,
+        "leader_ratio_threshold": lr,
     }
 
 
@@ -3550,6 +3649,9 @@ def batedor_central(
     Visão unificada: cruza suspeitos, comboio, grupos e alvos cadastrados.
     Retorna por placa: de quais módulos ela consta, score total e metadados.
     """
+    import logging as _log
+    _log.info("[batedor_central] window=%s limit=%d ts_from=%s ts_to=%s plate_prefix=%s",
+              window, limit, ts_from, ts_to, plate_prefix)
     from collections import defaultdict
 
     window_min = _parse_window_to_minutes(window)
@@ -3766,6 +3868,7 @@ def batedor_central(
         })
 
     items.sort(key=lambda x: (x["sinais"], x["score_total"]), reverse=True)
+    _log.info("[batedor_central] resultado: %d itens (total=%d), window retornado=%s", len(items[:limit]), len(items), window)
     return {"items": items[:limit], "total": len(items), "window": window}
 
 
