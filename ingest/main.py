@@ -2159,6 +2159,7 @@ def batedor_companions(
     plate: str,
     window: str = "24h",
     co_window: int = 600,
+    min_cameras: int = 2,
     limit: int = 20,
 ):
     """
@@ -2178,6 +2179,7 @@ def batedor_companions(
     from collections import defaultdict
 
     co_win_s   = max(10, int(co_window))
+    min_cam    = max(1, int(min_cameras))
     window_min = _parse_window_to_minutes(window)
     lim        = max(1, min(100, int(limit)))
     t_to       = _utcnow()
@@ -2266,6 +2268,8 @@ def batedor_companions(
     result = []
     for companion, cd in comp_data.items():
         ct  = len(cd["cameras"])
+        if ct < min_cam:
+            continue
         avg = int(sum(cd["co_deltas"]) / len(cd["co_deltas"])) if cd["co_deltas"] else 0
         result.append({
             "companion":         companion,
