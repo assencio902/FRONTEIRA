@@ -4059,20 +4059,21 @@ async function loadAlvos() {
 async function openAlvoDetail(plate, descricao) {
   // Abre modal e mostra spinner
   document.getElementById('detail-modal-plate').innerHTML =
-    '&#127919; Alvo: <span style="color:#f87171">' + plate + '</span>';
+    '&#127919; Alvo: <span style="color:#f87171">' + plate + '</span>'
+    + ' <label style="font-size:.72rem;color:var(--muted);margin-left:18px">Janela co-detecção: <input id="alvo-co-window" type="number" min="1" max="1000" value="' + _alvoCoWindow + '" style="width:62px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:.75rem" onchange="var v=Math.max(1,Math.min(1000,parseInt(this.value)||300));this.value=v;_alvoCoWindow=v;openAlvoDetail(\'' + plate.replace(/'/g,"\\'") + '\',\'' + (descricao||'').replace(/'/g,"\\'") + '\')">s</label>';
   document.getElementById('detail-modal-body').innerHTML =
     '<p style="color:var(--muted)"><span class="spinner"></span> Buscando companheiros&hellip;</p>';
   openModal('detail-modal');
 
   try {
-    var resp = await fetch('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=300&min_cameras=2&trip_max=3600&limit=20');
+    var resp = await fetch('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=' + _alvoCoWindow + '&min_cameras=2&trip_max=3600&limit=20');
     var data = await resp.json();
     var companions = data.companions || [];
 
     if (companions.length === 0) {
       document.getElementById('detail-modal-body').innerHTML =
         '<div style="background:rgba(0,0,0,.03);border-radius:8px;padding:24px;text-align:center;color:var(--muted)">'
-        + '&#128269; Nenhum companheiro detectado para <strong>' + plate + '</strong> nas &uacute;ltimas 24h.</div>';
+        + '&#128269; Nenhum comboio confirmado para <strong>' + plate + '</strong> nas &uacute;ltimas 24h.<br><small>(&ge;2 ve&iacute;culos juntos na mesma c&acirc;mera, em &ge;2 c&acirc;meras distintas, viagem &le;1h)</small></div>';
       return;
     }
 
@@ -4164,7 +4165,7 @@ async function openAlvoDetail(plate, descricao) {
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
           + '<span class="plate-tag" style="font-size:1rem">' + c.companion + '</span>'
           + (listBadgesHtml(c.companion) ? listBadgesHtml(c.companion) : '')
-          + '<span style="font-size:.78rem;color:var(--muted)">' + c.cameras_together + ' c&acirc;mera(s) &bull; delta m&eacute;d. ' + c.avg_co_delta_sec + 's &bull; &uacute;ltimo: ' + lastTog + '</span>'
+          + '<span style="font-size:.78rem;color:var(--muted)">' + c.cameras_together + ' c&acirc;mera(s) &bull; trip ' + (c.trip_span_sec != null ? Math.round(c.trip_span_sec/60) + 'min' : '-') + ' &bull; delta m&eacute;d. ' + c.avg_co_delta_sec + 's &bull; &uacute;ltimo: ' + lastTog + '</span>'
           + yoloMultiBadge
         + '</div>'
         + bannerHtml
@@ -4344,6 +4345,7 @@ async function checkBatedorRealtime() {
 // Monitoramento inicia apenas quando o usuário clicar em "Monitor OFF"
 
 var _alvoCompanionSeen = {}; // chave: 'alvoPlate|companionPlate'
+var _alvoCoWindow = 300; // janela co-detecção padrão (1..1000s)
 async function checkAlvosRealtime() {
   try {
     var agora = Date.now();
@@ -4401,7 +4403,7 @@ async function checkAlvosRealtime() {
     if (alvos.length === 0) return;
     for (var i = 0; i < alvos.length; i++) {
       var a = alvos[i];
-      var cr = await fetch('/api/batedor/companions/' + encodeURIComponent(a.plate) + '?window=2h&co_window=300&min_cameras=2&trip_max=3600&limit=10');
+      var cr = await fetch('/api/batedor/companions/' + encodeURIComponent(a.plate) + '?window=2h&co_window=' + _alvoCoWindow + '&min_cameras=2&trip_max=3600&limit=10');
       if (!cr.ok) continue;
       var cd = await cr.json();
       (cd.companions || []).forEach(function(c) {

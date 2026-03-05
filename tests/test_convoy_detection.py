@@ -343,3 +343,125 @@ def test_window_clamping():
         window_s=99999, max_trip_gap_s=3600, min_cameras=2,
     )
     assert len(result2) >= 1
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 10. min_cameras=1 retorna coincidências de 1 câmera (para teste via curl)
+# ══════════════════════════════════════════════════════════════════════════
+def test_min_cameras_1_returns_single_camera():
+    """
+    Com min_cameras=1, basta 1 câmera para formar grupo.
+    A e B juntos em cam1 → deve retornar grupo.
+    """
+    rows = [
+        ("cam1", "Câmera 1", "AAA1111", _dt(0)),
+        ("cam1", "Câmera 1", "BBB2222", _dt(1)),
+    ]
+    cur = FakeCursor(rows)
+    result = _detect(
+        cur,
+        t_from=_dt(-10),
+        t_to=_dt(60),
+        window_s=300,
+        max_trip_gap_s=3600,
+        min_cameras=1,
+    )
+    assert len(result) >= 1, "min_cameras=1 deve retornar grupo de 1 câmera"
+    assert result[0]["cameras_count"] == 1
+
+
+def test_min_cameras_2_rejects_single_camera():
+    """
+    Com min_cameras=2 (padrão), A e B juntos em 1 câmera NÃO basta.
+    """
+    rows = [
+        ("cam1", "Câmera 1", "AAA1111", _dt(0)),
+        ("cam1", "Câmera 1", "BBB2222", _dt(1)),
+    ]
+    cur = FakeCursor(rows)
+    result = _detect(
+        cur,
+        t_from=_dt(-10),
+        t_to=_dt(60),
+        window_s=300,
+        max_trip_gap_s=3600,
+        min_cameras=2,
+    )
+    assert len(result) == 0, "min_cameras=2 rejeita grupo de 1 câmera"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 11. Cameras diferentes ao mesmo tempo NÃO conta como comboio
+# ══════════════════════════════════════════════════════════════════════════
+def test_different_cameras_not_convoy():
+    """
+    A em cam1 e B em cam2 ao mesmo tempo → NÃO são parceiros.
+    Parceiro exige mesma câmera.
+    """
+    rows = [
+        ("cam1", "Câmera 1", "AAA1111", _dt(0)),
+        ("cam2", "Câmera 2", "BBB2222", _dt(0)),
+        ("cam3", "Câmera 3", "AAA1111", _dt(30)),
+        ("cam4", "Câmera 4", "BBB2222", _dt(30)),
+    ]
+    cur = FakeCursor(rows)
+    result = _detect(
+        cur,
+        t_from=_dt(-10),
+        t_to=_dt(60),
+        window_s=300,
+        max_trip_gap_s=3600,
+        min_cameras=2,
+    )
+    assert len(result) == 0, "Câmeras diferentes não formam parceria"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 13. Parceiro diferente por câmera → vazio quando min_cameras=2
+# ══════════════════════════════════════════════════════════════════════════
+def test_different_partner_per_camera():
+    """
+    A+B em cam1, A+C em cam2 (B nunca aparece em cam2, C nunca em cam1).
+    Par (A,B) = 1 câmera, Par (A,C) = 1 câmera → nenhum par atinge 2 câmeras.
+    Deve retornar vazio com min_cameras=2.
+    """
+    rows = [
+        ("cam1", "Câmera 1", "AAA1111", _dt(0)),
+        ("cam1", "Câmera 1", "BBB2222", _dt(1)),
+        ("cam2", "Câmera 2", "AAA1111", _dt(30)),
+        ("cam2", "Câmera 2", "CCC3333", _dt(31)),
+    ]
+    cur = FakeCursor(rows)
+    result = _detect(
+        cur,
+        t_from=_dt(-10),
+        t_to=_dt(60),
+        window_s=300,
+        max_trip_gap_s=3600,
+        min_cameras=2,
+    )
+    assert len(result) == 0, "Parceiro diferente por câmera não forma comboio"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 14. Veículo sozinho em 2+ câmeras NÃO gera resultado
+# ══════════════════════════════════════════════════════════════════════════
+def test_solo_vehicle_multiple_cameras():
+    """
+    A sozinho em cam1 e cam2 → nenhum parceiro → nenhum grupo.
+    """
+    rows = [
+        ("cam1", "Câmera 1", "AAA1111", _dt(0)),
+        ("cam2", "Câmera 2", "AAA1111", _dt(30)),
+        ("cam3", "Câmera 3", "AAA1111", _dt(50)),
+    ]
+    cur = FakeCursor(rows)
+    result = _detect(
+        cur,
+        t_from=_dt(-10),
+        t_to=_dt(60),
+        window_s=300,
+        max_trip_gap_s=3600,
+        min_cameras=2,
+    )
+    assert len(result) == 0, "Veículo sozinho em 2+ câmeras não é comboio"
