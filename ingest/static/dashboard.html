@@ -4065,7 +4065,7 @@ async function openAlvoDetail(plate, descricao) {
   openModal('detail-modal');
 
   try {
-    var resp = await fetch('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=600&limit=20');
+    var resp = await fetch('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=300&min_cameras=2&trip_max=3600&limit=20');
     var data = await resp.json();
     var companions = data.companions || [];
 
@@ -4401,7 +4401,7 @@ async function checkAlvosRealtime() {
     if (alvos.length === 0) return;
     for (var i = 0; i < alvos.length; i++) {
       var a = alvos[i];
-      var cr = await fetch('/api/batedor/companions/' + encodeURIComponent(a.plate) + '?window=2h&co_window=600&limit=10');
+      var cr = await fetch('/api/batedor/companions/' + encodeURIComponent(a.plate) + '?window=2h&co_window=300&min_cameras=2&trip_max=3600&limit=10');
       if (!cr.ok) continue;
       var cd = await cr.json();
       (cd.companions || []).forEach(function(c) {
