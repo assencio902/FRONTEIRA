@@ -1204,6 +1204,17 @@
   </div>
 </div>
 
+<!-- MODAL RELATÓRIO DE COMBOIO -->
+<div class="modal-overlay" id="comboio-modal" onclick="if(event.target===this)closeModal('comboio-modal')">
+  <div class="modal modal-wide" style="max-width:1100px">
+    <div class="modal-header">
+      <h2>&#128663;&#128663; Relat&oacute;rio de Comboio &#8212; <span id="comboio-modal-plate"></span></h2>
+      <button class="modal-close" onclick="closeModal('comboio-modal')">&times;</button>
+    </div>
+    <div id="comboio-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
+  </div>
+</div>
+
 <!-- MODAL JANELA TRAJETÓRIA -->
 <div class="modal-overlay" id="traj-picker-modal" onclick="if(event.target===this)closeModal('traj-picker-modal')">
   <div class="modal" style="max-width:400px">
@@ -2840,7 +2851,7 @@ function renderCentral(items, total) {
       ? '<span style="font-size:.78rem">&#10003; ' + sc.passes + 'x / ' + sc.cameras + '&#128247;</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
     var ccCell = cc
-      ? '<span style="font-size:.78rem">&#10003; ' + cc.cameras + ' câm. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>'
+      ? '<span style="font-size:.78rem;cursor:pointer" onclick="_openComboioFromCentral(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#10003; ' + cc.cameras + ' c\u00e2m. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
     var alvoCell = item.is_alvo
       ? '<span class="badge" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
@@ -3011,6 +3022,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     var partners = d.convoy_partners || [];
     var partnersHtml;
     if (partners.length) {
+      var _allPartnerPlates = partners.map(function(p){ return p.plate; });
+      var _groupForComboio = [plate].concat(_allPartnerPlates);
       partnersHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#fca5a5">&#128663;&#128101; Parceiros em Comboio (' + partners.length + ')</h3>'
         + '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.76rem;color:#fca5a5">'
         + '&#9888; S\u00f3 aparece quem passou <strong>junto na mesma c\u00e2mera</strong> (janela \u2264 300s) em <strong>\u22652 c\u00e2meras</strong> distintas, com viagem \u22641 hora.'
@@ -3029,7 +3042,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
               + '<td><button class="btn btn-xs" style="background:rgba(139,92,246,.45);color:#fff" onclick="openBatedorReport(\'' + p.plate.replace(/'/g,"\'") + '\')">\uD83D\uDCC4 Relat\u00f3rio</button></td>'
               + '</tr>';
           }).join('')
-        + '</tbody></table></div>';
+        + '</tbody></table></div>'
+        + '<div style="margin-top:8px"><button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="openComboioReport(\'' + plate.replace(/'/g,"\\'") + '\',' + JSON.stringify(_groupForComboio).replace(/'/g,"\\'") + ')">&#128663;&#128663; Ver Relat\u00f3rio de Comboio Completo</button></div>';
     } else {
       partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro em comboio confirmado na janela de ' + w + '. <small style="color:var(--muted)">(Requer mesma c\u00e2mera \u00d72+ c\u00e2meras, trip \u22641h)</small></div>';
     }
@@ -3163,6 +3177,390 @@ function _domDir(cameraList) {
   return null;
 }
 function openDetail(plate) { _reportHistory = []; _reportCurrentPlate = null; openBatedorReport(plate); }
+
+// ===== RELATÓRIO DE COMBOIO =====
+var _comboioData = null;
+var _comboioMap = null;
+var _comboioMapLayers = [];
+
+function openComboioReport(targetPlate, groupPlates, opts) {
+  targetPlate = (targetPlate || '').trim().toUpperCase();
+  if (!targetPlate || !groupPlates || groupPlates.length < 1) return;
+
+  var allPlates = groupPlates.slice();
+  if (allPlates.indexOf(targetPlate) < 0) allPlates.unshift(targetPlate);
+
+  document.getElementById('comboio-modal-plate').textContent = targetPlate;
+  document.getElementById('comboio-modal-body').innerHTML =
+    '<div style="text-align:center;padding:40px"><span class="spinner"></span><br><span style="color:var(--muted);font-size:.84rem">Analisando comboio de ' + allPlates.length + ' ve\u00edculos\u2026</span></div>';
+  openModal('comboio-modal');
+
+  loadComboioReport(targetPlate, allPlates, opts || {});
+}
+
+async function loadComboioReport(targetPlate, allPlates, opts) {
+  var url = '/api/comboio/report?target_plate=' + encodeURIComponent(targetPlate)
+          + '&plates=' + encodeURIComponent(allPlates.join(','));
+  if (opts.window_s)       url += '&window_s=' + opts.window_s;
+  if (opts.max_trip_gap_s) url += '&max_trip_gap_s=' + opts.max_trip_gap_s;
+  if (opts.window)         url += '&window=' + encodeURIComponent(opts.window);
+  if (opts.ts_from)        url += '&ts_from=' + encodeURIComponent(opts.ts_from);
+  if (opts.ts_to)          url += '&ts_to='   + encodeURIComponent(opts.ts_to);
+
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    _comboioData = data;
+    _renderComboioReport(data);
+  } catch(e) {
+    document.getElementById('comboio-modal-body').innerHTML =
+      '<div style="padding:20px;color:var(--danger)">&#9888; Erro ao carregar relat\u00f3rio: ' + e.message + '</div>';
+  }
+}
+
+function _renderComboioReport(d) {
+  var html = '';
+
+  // ── 1. CABEÇALHO ──
+  html += _comboioRenderHeader(d);
+
+  // ── 2. VEÍCULOS DO GRUPO ──
+  html += _comboioRenderGroupCards(d.group, d.target_plate);
+
+  // ── 3. EVENTOS CONFIRMADOS ──
+  html += _comboioRenderEvents(d.confirmed_events, d.group.plates);
+
+  // ── 4. MÉTRICAS ──
+  html += _comboioRenderMetrics(d.metrics, d.confirmed_events, d.group.plates);
+
+  // ── 5. TRAJETÓRIA ──
+  html += _comboioRenderTrajectorySection(d.trajectory);
+
+  // ── 6. AÇÕES ──
+  html += _comboioRenderActions(d);
+
+  document.getElementById('comboio-modal-body').innerHTML = html;
+
+  // Inicializar mapa se houver pontos
+  setTimeout(function(){ _comboioInitMap(d.trajectory); }, 100);
+}
+
+function _comboioRenderHeader(d) {
+  var pStart = d.period ? fmtTs(d.period.start) : '-';
+  var pEnd   = d.period ? fmtTs(d.period.end) : '-';
+  var statusLabel = { pending: '\u23F3 Pendente', confirmed: '\u2705 Confirmado', false_positive: '\u274C Falso Positivo' };
+  var statusBg    = { pending: 'rgba(234,179,8,.2)', confirmed: 'rgba(220,38,38,.2)', false_positive: 'rgba(34,197,94,.15)' };
+  var statusBdr   = { pending: 'rgba(234,179,8,.5)', confirmed: 'rgba(220,38,38,.5)', false_positive: 'rgba(34,197,94,.4)' };
+  var st = d.group.status || 'pending';
+
+  return '<div style="margin-bottom:16px">'
+    + '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px">'
+    + '<div style="font-size:1.1rem;font-weight:700;color:var(--text)">&#128663;&#128663; Relat\u00f3rio de Comboio</div>'
+    + '<span class="badge" style="background:' + (statusBg[st]||statusBg.pending) + ';border:1px solid ' + (statusBdr[st]||statusBdr.pending) + ';color:var(--text);font-size:.78rem">' + (statusLabel[st]||st) + '</span>'
+    + '</div>'
+    + '<div style="font-size:.84rem;color:var(--muted);margin-bottom:4px">Placa pesquisada: <strong style="color:var(--text);font-size:.92rem">' + d.target_plate + '</strong></div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:16px;font-size:.76rem;color:var(--muted)">'
+    + '<span>&#128197; ' + pStart + ' \u2014 ' + pEnd + '</span>'
+    + '<span>&#9201; window_s = <strong>' + d.params.window_s + '</strong></span>'
+    + '<span>&#128247; min_cameras = <strong>' + d.params.min_cameras + '</strong></span>'
+    + '<span>&#128336; max_trip_gap = <strong>' + d.params.max_trip_gap_s + 's</strong></span>'
+    + '</div></div>';
+}
+
+function _comboioRenderGroupCards(group, targetPlate) {
+  var plates = group.plates || [];
+  var imgs = group.vehicle_images || {};
+  var alvos = group.alvos || {};
+
+  var cards = plates.map(function(p) {
+    var isTarget = (p === targetPlate);
+    var borderColor = isTarget ? '#ef4444' : 'rgba(255,255,255,.1)';
+    var bgColor = isTarget ? 'rgba(239,68,68,.08)' : 'var(--bg2)';
+    var imgUrl = imgs[p];
+    var imgHtml = imgUrl
+      ? '<img src="' + imgUrl + '" style="width:100%;height:100px;object-fit:cover;border-radius:6px;background:#111" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'" loading="lazy"><div style="display:none;width:100%;height:100px;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border-radius:6px;color:var(--muted);font-size:.75rem">Sem imagem</div>'
+      : '<div style="width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.04);border-radius:6px;color:var(--muted);font-size:.75rem">&#128247; Sem imagem</div>';
+    var alvoTag = alvos[p] ? ' <span class="badge badge-danger" style="font-size:.6rem">ALVO</span>' : '';
+    var targetTag = isTarget ? '<div style="font-size:.62rem;text-transform:uppercase;color:#ef4444;font-weight:700;margin-bottom:3px">&#9733; VE\u00cdCULO PESQUISADO</div>' : '';
+
+    return '<div style="border:2px solid ' + borderColor + ';border-radius:10px;padding:10px;background:' + bgColor + ';min-width:140px;max-width:200px;flex:1">'
+      + targetTag
+      + imgHtml
+      + '<div style="margin-top:8px;text-align:center">'
+      + plateHtml(p) + alvoTag
+      + '</div>'
+      + '<div style="text-align:center;margin-top:6px"><button class="btn btn-xs btn-outline" style="font-size:.68rem" onclick="openBatedorReport(\'' + p.replace(/'/g,"\\'") + '\')">&#128196; Detalhes</button></div>'
+      + '</div>';
+  });
+
+  return '<div style="margin-bottom:18px">'
+    + '<div style="font-size:.85rem;font-weight:700;color:var(--accent2);margin-bottom:8px">&#128101; Ve\u00edculos do Grupo (' + plates.length + ')</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:12px">' + cards.join('') + '</div>'
+    + '</div>';
+}
+
+function _comboioRenderEvents(events, plates) {
+  if (!events || !events.length) {
+    return '<div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:8px;padding:12px;margin-bottom:18px;font-size:.82rem;color:#fde68a">'
+      + '&#9888; Nenhuma c\u00e2mera com co-detec\u00e7\u00e3o confirmada do grupo neste per\u00edodo.</div>';
+  }
+
+  var ths = '<th style="text-align:left">C\u00e2mera</th>';
+  plates.forEach(function(p) { ths += '<th style="text-align:center;min-width:90px">' + p + '</th>'; });
+  ths += '<th style="text-align:center">\u0394 c\u00e2m.</th><th style="text-align:center">Gap m\u00e9d.</th>';
+
+  var rows = events.map(function(ev, i) {
+    var cls = (i % 2 === 0) ? '' : ' style="background:rgba(255,255,255,.02)"';
+    var tr = '<tr' + cls + '><td style="font-weight:600;font-size:.82rem">' + (ev.camera_name || ev.camera_id) + '</td>';
+    plates.forEach(function(p) {
+      var ts = ev.timestamps[p];
+      if (ts) {
+        var dt = new Date(ts);
+        tr += '<td style="text-align:center;font-size:.76rem;white-space:nowrap">' + dt.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) + '</td>';
+      } else {
+        tr += '<td style="text-align:center;color:var(--muted)">-</td>';
+      }
+    });
+    var deltaColor = ev.delta_s <= 60 ? '#86efac' : ev.delta_s <= 180 ? '#fde68a' : '#fca5a5';
+    tr += '<td style="text-align:center;font-weight:700;color:' + deltaColor + '">' + ev.delta_s + 's</td>';
+    tr += '<td style="text-align:center;font-size:.8rem;color:var(--muted)">' + ev.avg_gap_s + 's</td>';
+    tr += '</tr>';
+    return tr;
+  });
+
+  return '<div style="margin-bottom:18px">'
+    + '<div style="font-size:.85rem;font-weight:700;color:var(--accent2);margin-bottom:8px">&#128247; Eventos \u2014 Passaram Juntos (' + events.length + ' c\u00e2meras)</div>'
+    + '<div class="table-wrap"><table><thead><tr>' + ths + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>'
+    + '</div>';
+}
+
+function _comboioRenderMetrics(metrics, events, plates) {
+  // 4.1 Distância temporal por ponto
+  var perPointRows = '';
+  if (events && events.length) {
+    events.forEach(function(ev) {
+      perPointRows += '<tr><td style="font-size:.82rem">' + (ev.camera_name || ev.camera_id) + '</td>'
+        + '<td style="text-align:center;font-weight:700">' + ev.delta_s + 's</td>'
+        + '<td style="text-align:center">' + ev.avg_gap_s + 's</td></tr>';
+    });
+  }
+  var perPointHtml = perPointRows
+    ? '<div style="margin-bottom:12px"><div style="font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px">Dist\u00e2ncia temporal entre ve\u00edculos por ponto</div>'
+      + '<div class="table-wrap"><table style="font-size:.82rem"><thead><tr><th>C\u00e2mera</th><th>Span</th><th>Gap m\u00e9d.</th></tr></thead><tbody>' + perPointRows + '</tbody></table></div></div>'
+    : '';
+
+  // 4.2 Média geral
+  var tripHuman = metrics.trip_span_human || (Math.floor(metrics.trip_span_s/60) + 'm ' + (metrics.trip_span_s%60) + 's');
+
+  return '<div style="margin-bottom:18px;background:var(--bg2);border-radius:10px;padding:14px 18px">'
+    + '<div style="font-size:.85rem;font-weight:700;color:var(--accent2);margin-bottom:10px">&#128202; M\u00e9tricas do Comboio</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:14px">'
+    + '<div style="text-align:center">'
+    + '<div style="font-size:1.4rem;font-weight:700;color:var(--accent)">' + tripHuman + '</div>'
+    + '<div style="font-size:.72rem;color:var(--muted);text-transform:uppercase">Dura\u00e7\u00e3o do percurso</div></div>'
+    + '<div style="text-align:center">'
+    + '<div style="font-size:1.4rem;font-weight:700;color:var(--accent2)">' + metrics.avg_gap_overall_s + 's</div>'
+    + '<div style="font-size:.72rem;color:var(--muted);text-transform:uppercase">Gap m\u00e9dio geral</div></div>'
+    + '<div style="text-align:center">'
+    + '<div style="font-size:1.4rem;font-weight:700">' + metrics.total_cameras_confirmed + '</div>'
+    + '<div style="font-size:.72rem;color:var(--muted);text-transform:uppercase">C\u00e2meras confirmadas</div></div>'
+    + '<div style="text-align:center">'
+    + '<div style="font-size:1.4rem;font-weight:700">' + metrics.total_vehicles + '</div>'
+    + '<div style="font-size:.72rem;color:var(--muted);text-transform:uppercase">Ve\u00edculos</div></div>'
+    + '</div>'
+    + perPointHtml
+    + '</div>';
+}
+
+function _comboioRenderTrajectorySection(traj) {
+  var hasPoints = false;
+  if (traj && traj.target && traj.target.points && traj.target.points.length) hasPoints = true;
+  if (!hasPoints && traj && traj.partners) {
+    traj.partners.forEach(function(p) { if (p.points && p.points.length) hasPoints = true; });
+  }
+
+  return '<div style="margin-bottom:18px">'
+    + '<div style="font-size:.85rem;font-weight:700;color:var(--accent2);margin-bottom:8px">&#128506; Trajet\u00f3ria</div>'
+    + (hasPoints
+      ? '<div id="comboio-map-container" style="height:350px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#111"></div>'
+        + '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center" id="comboio-map-toggles"></div>'
+      : '<div style="background:rgba(255,255,255,.04);border-radius:10px;padding:20px;text-align:center;color:var(--muted);font-size:.82rem">&#128506; Sem dados GPS dispon\u00edveis para as c\u00e2meras deste per\u00edodo.</div>')
+    + '</div>';
+}
+
+function _comboioInitMap(traj) {
+  var container = document.getElementById('comboio-map-container');
+  if (!container) return;
+
+  // Limpar mapa anterior
+  if (_comboioMap) { _comboioMap.remove(); _comboioMap = null; }
+  _comboioMapLayers = [];
+
+  _comboioMap = L.map(container, { zoomControl: true, scrollWheelZoom: true });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 18
+  }).addTo(_comboioMap);
+
+  var allLatLngs = [];
+  var colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899'];
+  var togglesEl = document.getElementById('comboio-map-toggles');
+  var togglesHtml = '';
+
+  // Desenhar target
+  if (traj.target && traj.target.points && traj.target.points.length) {
+    var pts = traj.target.points;
+    var latlngs = pts.map(function(p) { return [p.lat, p.lon]; });
+    allLatLngs = allLatLngs.concat(latlngs);
+    var line = L.polyline(latlngs, { color: colors[0], weight: 3, opacity: 0.9 }).addTo(_comboioMap);
+    _comboioMapLayers.push(line);
+
+    // Marcadores
+    pts.forEach(function(p, i) {
+      var m = L.circleMarker([p.lat, p.lon], { radius: 6, color: colors[0], fillColor: colors[0], fillOpacity: 0.8, weight: 2 })
+        .bindPopup('<strong>' + traj.target.plate + '</strong><br>' + (p.camera_name||p.camera_id) + '<br>' + fmtTs(p.ts))
+        .addTo(_comboioMap);
+      _comboioMapLayers.push(m);
+      if (i === 0) {
+        L.marker([p.lat, p.lon], { icon: L.divIcon({ html: '<div style="background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-size:.7rem;font-weight:700;white-space:nowrap">IN\u00cdCIO</div>', className: '' }) }).addTo(_comboioMap);
+      }
+      if (i === pts.length - 1) {
+        L.marker([p.lat, p.lon], { icon: L.divIcon({ html: '<div style="background:#22c55e;color:#fff;padding:2px 6px;border-radius:4px;font-size:.7rem;font-weight:700;white-space:nowrap">FIM</div>', className: '' }) }).addTo(_comboioMap);
+      }
+    });
+    togglesHtml += '<label style="font-size:.76rem;cursor:pointer;color:' + colors[0] + ';font-weight:700"><input type="checkbox" checked data-comboio-layer="target" onchange="_comboioToggleLayer(this)"> ' + traj.target.plate + ' (alvo)</label>';
+  }
+
+  // Desenhar partners
+  if (traj.partners) {
+    traj.partners.forEach(function(partner, idx) {
+      if (!partner.points || !partner.points.length) return;
+      var c = colors[(idx + 1) % colors.length];
+      var pts = partner.points;
+      var latlngs = pts.map(function(p) { return [p.lat, p.lon]; });
+      allLatLngs = allLatLngs.concat(latlngs);
+      var line = L.polyline(latlngs, { color: c, weight: 2.5, opacity: 0.7, dashArray: '8 4' }).addTo(_comboioMap);
+      _comboioMapLayers.push(line);
+      pts.forEach(function(p) {
+        var m = L.circleMarker([p.lat, p.lon], { radius: 5, color: c, fillColor: c, fillOpacity: 0.7, weight: 1 })
+          .bindPopup('<strong>' + partner.plate + '</strong><br>' + (p.camera_name||p.camera_id) + '<br>' + fmtTs(p.ts))
+          .addTo(_comboioMap);
+        _comboioMapLayers.push(m);
+      });
+      togglesHtml += '<label style="font-size:.76rem;cursor:pointer;color:' + c + ';font-weight:700;margin-left:8px"><input type="checkbox" checked data-comboio-layer="p' + idx + '" onchange="_comboioToggleLayer(this)"> ' + partner.plate + '</label>';
+    });
+  }
+
+  if (togglesEl) togglesEl.innerHTML = togglesHtml;
+
+  if (allLatLngs.length) {
+    _comboioMap.fitBounds(allLatLngs, { padding: [30, 30] });
+  }
+  setTimeout(function(){ if (_comboioMap) _comboioMap.invalidateSize(); }, 200);
+}
+
+function _comboioToggleLayer(checkbox) {
+  // Simplified toggle — redraws entirely
+  if (!_comboioData || !_comboioData.trajectory) return;
+  _comboioInitMap(_comboioData.trajectory);
+}
+
+function _comboioRenderActions(d) {
+  var decLabels = { confirmado: '&#9989; Suspeito confirmado', falso_positivo: '&#10060; Falso positivo', ignorar: '&#9197; Ignorado' };
+  var decBg = { confirmado: 'rgba(220,38,38,.2)', falso_positivo: 'rgba(34,197,94,.1)', ignorar: 'rgba(100,100,100,.15)' };
+  var decBorder = { confirmado: 'rgba(220,38,38,.5)', falso_positivo: 'rgba(34,197,94,.3)', ignorar: 'rgba(120,120,120,.3)' };
+  var lastDec = d.last_decision;
+
+  var decHtml = '';
+  if (lastDec) {
+    decHtml = '<div style="background:' + (decBg[lastDec.decision]||decBg.ignorar) + ';border:1px solid ' + (decBorder[lastDec.decision]||decBorder.ignorar) + ';border-radius:7px;padding:8px 12px;margin-bottom:10px;font-size:.82rem">'
+      + '<strong>' + (decLabels[lastDec.decision]||lastDec.decision) + '</strong>'
+      + (lastDec.note ? ' \u2014 ' + lastDec.note : '')
+      + ' <span style="color:var(--muted);font-size:.72rem">por ' + (lastDec.operator||'sistema') + ' em ' + fmtTs(lastDec.created_at) + '</span></div>';
+  } else {
+    decHtml = '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Nenhuma decis\u00e3o registrada ainda.</div>';
+  }
+
+  var platesJson = _json_escape(JSON.stringify(d.group.plates));
+  var paramsJson = _json_escape(JSON.stringify(d.params));
+
+  return '<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px">'
+    + '<div style="font-size:.85rem;font-weight:700;color:var(--accent2);margin-bottom:10px">&#128203; A\u00e7\u00f5es</div>'
+    + decHtml
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+    + '<button class="btn btn-sm" style="background:rgba(139,92,246,.7);color:#fff;font-size:.84rem;padding:10px 18px" onclick="_comboioAddAlvo(\'' + d.target_plate.replace(/'/g,"\\'") + '\')">&#127919; Cadastrar como Alvo</button>'
+    + '<button class="btn btn-sm" style="background:rgba(220,38,38,.7);color:#fff;font-size:.84rem;padding:10px 18px" onclick="_comboioConfirm(\'' + d.target_plate.replace(/'/g,"\\'") + '\',' + platesJson + ',' + paramsJson + ')">&#9989; Confirmar Suspeito</button>'
+    + '<button class="btn btn-sm" style="background:rgba(34,197,94,.5);color:#fff;font-size:.84rem;padding:10px 18px" onclick="_comboioFalsePositive(\'' + d.target_plate.replace(/'/g,"\\'") + '\',' + platesJson + ',' + paramsJson + ')">&#10060; Falso Positivo</button>'
+    + '</div></div>';
+}
+
+function _json_escape(s) { return s.replace(/'/g, "\\'"); }
+
+function _openComboioFromCentral(plate) {
+  // Buscar parceiros da Central
+  var item = (_cenAllItems || []).find(function(i) { return i.plate === plate; });
+  var groupPlates = [plate];
+  if (item && item.in_grupos && item.in_grupos.length) {
+    item.in_grupos.forEach(function(g) {
+      if (groupPlates.indexOf(g.plate) < 0) groupPlates.push(g.plate);
+    });
+  }
+  if (groupPlates.length < 2) {
+    // Fallback: abrir relatório normal
+    openBatedorReport(plate);
+    return;
+  }
+  var w = '2h';
+  try { w = document.getElementById('cen-window').value || '2h'; } catch(e){}
+  openComboioReport(plate, groupPlates, { window: w });
+}
+
+async function _comboioConfirm(plate, groupPlates, params) {
+  var note = prompt('Observa\u00e7\u00e3o (opcional):', '');
+  if (note === null) return;
+  try {
+    var resp = await fetch('/api/comboio/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_plate: plate, group_plates: groupPlates, params: params, note: note })
+    });
+    if (!resp.ok) { var err = await resp.json().catch(function(){return {};}); alert('Erro: ' + (err.detail||resp.status)); return; }
+    _flashMsg('&#9989; Comboio de ' + plate + ' confirmado!', '#dc2626');
+    // Recarregar
+    if (_comboioData) loadComboioReport(plate, _comboioData.group.plates, { window_s: _comboioData.params.window_s, max_trip_gap_s: _comboioData.params.max_trip_gap_s });
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function _comboioFalsePositive(plate, groupPlates, params) {
+  var note = prompt('Motivo do falso positivo (opcional):', '');
+  if (note === null) return;
+  try {
+    var resp = await fetch('/api/comboio/false_positive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_plate: plate, group_plates: groupPlates, params: params, note: note })
+    });
+    if (!resp.ok) { var err = await resp.json().catch(function(){return {};}); alert('Erro: ' + (err.detail||resp.status)); return; }
+    _flashMsg('&#10060; Comboio de ' + plate + ' marcado como falso positivo.', '#22c55e');
+    if (_comboioData) loadComboioReport(plate, _comboioData.group.plates, { window_s: _comboioData.params.window_s, max_trip_gap_s: _comboioData.params.max_trip_gap_s });
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function _comboioAddAlvo(plate) {
+  var desc = prompt('Descri\u00e7\u00e3o para o alvo (opcional):', 'Alvo de comboio');
+  if (desc === null) return;
+  try {
+    var resp = await fetch('/api/alvos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plate: plate, descricao: desc || 'Alvo de comboio' })
+    });
+    if (!resp.ok) { var err = await resp.json().catch(function(){return {};}); alert('Erro: ' + (err.detail||resp.status)); return; }
+    _flashMsg('&#127919; ' + plate + ' cadastrado como Alvo!', '#6d28d9');
+    if (_comboioData) loadComboioReport(plate, _comboioData.group.plates, { window_s: _comboioData.params.window_s, max_trip_gap_s: _comboioData.params.max_trip_gap_s });
+  } catch(e) { alert('Erro: ' + e.message); }
+}
 
 // ===== LISTAS =====
 async function loadLists() {

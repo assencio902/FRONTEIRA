@@ -3710,6 +3710,342 @@ def get_companions(
 
 
 # ===========================
+# RELATÓRIO DE COMBOIO
+# ===========================
+
+@app.get("/api/comboio/report")
+def comboio_report(
+    target_plate: str,
+    plates: str,
+    window: str = "2h",
+    window_s: int = 300,
+    max_trip_gap_s: int = 3600,
+    ts_from: str | None = None,
+    ts_to: str | None = None,
+):
+    """
+    Relatório detalhado de um grupo de comboio com:
+    - imagens dos veículos
+    - câmeras confirmadas (co-detecção)
+    - métricas (avg gap por câmera + trip span)
+    - pontos de trajetória com lat/lon
+    - status de decisão operacional
+    """
+    target_plate = target_plate.strip().upper()
+    group_plates = sorted(set(
+        p.strip().upper() for p in plates.split(",") if p.strip()
+    ))
+    if target_plate not in group_plates:
+        group_plates = sorted(set([target_plate] + group_plates))
+    if len(group_plates) < 2:
+        raise HTTPException(status_code=422, detail="Necessário pelo menos 2 placas")
+
+    window_s = max(1, min(1000, int(window_s)))
+    max_trip_gap_s = max(1, int(max_trip_gap_s))
+
+    # Parse período
+    minutes = _parse_window_to_minutes(window)
+    now = _utcnow()
+    t_to = now
+    t_from = now - timedelta(minutes=minutes)
+    if ts_from:
+        try:
+            t_from = datetime.fromisoformat(ts_from.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    if ts_to:
+        try:
+            t_to = datetime.fromisoformat(ts_to.replace("Z", "+00:00"))
+        except Exception:
+            pass
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # ── 1. Detectar comboio para este grupo ──
+            convoy = _detect_convoy_groups(
+                cur, t_from, t_to,
+                window_s=window_s,
+                max_trip_gap_s=max_trip_gap_s,
+                min_cameras=2,
+            )
+            # Encontrar o grupo que contém exatamente essas placas
+            group_set = frozenset(group_plates)
+            matched = None
+            for g in convoy:
+                if frozenset(g["plates"]) == group_set:
+                    matched = g
+                    break
+            # Fallback: grupo contendo a target_plate e maior overlap
+            if not matched:
+                for g in convoy:
+                    if target_plate in g["plates"] and set(g["plates"]) <= group_set:
+                        matched = g
+                        break
+
+            # ── 2. Se não achou via _detect, construir dos dados brutos ──
+            # Buscar todos os eventos do grupo no período
+            placeholders = ",".join(["%s"] * len(group_plates))
+            cur.execute(f"""
+                SELECT e.id, UPPER(e.plate) AS plate, e.camera_id,
+                       COALESCE(c.nome, e.channel_name, e.camera_id) AS camera_name,
+                       COALESCE(e.occurred_at, e.ts) AS event_time,
+                       e.image_path, e.confidence,
+                       c.latitude, c.longitude,
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direction,
+                       COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', '') AS vehicle_type,
+                       COALESCE(e.yolo_result->'target_vehicle'->>'cor', '') AS vehicle_color
+                FROM lpr_events e
+                LEFT JOIN cameras c ON (
+                    c.camera_id = e.camera_id
+                    OR c.ip = e.camera_id
+                    OR c.ip = e.camera_ip
+                )
+                WHERE UPPER(e.plate) IN ({placeholders})
+                  AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                ORDER BY COALESCE(e.occurred_at, e.ts) ASC
+                LIMIT 5000
+            """, group_plates + [t_from, t_to])
+            all_events = cur.fetchall()
+
+            # ── 3. Imagem mais recente de cada placa ──
+            vehicle_images: dict = {}
+            for plate_i in group_plates:
+                vehicle_images[plate_i] = None
+            for row in reversed(all_events):
+                p = row[1]
+                if p in vehicle_images and vehicle_images[p] is None and row[5]:
+                    vehicle_images[p] = f"/api/events/{row[0]}/thumbnail"
+
+            # ── 4. Construir confirmed_events ──
+            from collections import defaultdict as _dd
+            cam_plate_events: dict = _dd(lambda: _dd(list))
+            for row in all_events:
+                cam_plate_events[row[2]][row[1]].append(row[4])  # cam_id -> plate -> [ts]
+
+            confirmed_events = []
+            if matched and matched.get("cameras_confirmed"):
+                for cc in matched["cameras_confirmed"]:
+                    cam_id = cc["camera_id"]
+                    cam_name = cc["cam_nome"]
+                    timestamps: dict = {}
+                    for p in group_plates:
+                        ts_list = cam_plate_events.get(cam_id, {}).get(p, [])
+                        if ts_list:
+                            # Pegar o timestamp mais próximo do ts_min/ts_max do cluster
+                            cc_min = datetime.fromisoformat(cc["ts_min"]) if isinstance(cc["ts_min"], str) else cc["ts_min"]
+                            best_ts = min(ts_list, key=lambda t: abs((t - cc_min).total_seconds()))
+                            timestamps[p] = best_ts.isoformat()
+                    if len(timestamps) >= 2:
+                        ts_vals = [datetime.fromisoformat(v) if isinstance(v, str) else v for v in timestamps.values()]
+                        sorted_ts = sorted(ts_vals)
+                        delta_s = int((sorted_ts[-1] - sorted_ts[0]).total_seconds())
+                        gaps = [(sorted_ts[i+1] - sorted_ts[i]).total_seconds() for i in range(len(sorted_ts)-1)]
+                        avg_gap = round(sum(gaps) / len(gaps), 1) if gaps else 0
+                        confirmed_events.append({
+                            "camera_id": cam_id,
+                            "camera_name": cam_name,
+                            "timestamps": timestamps,
+                            "delta_s": delta_s,
+                            "avg_gap_s": avg_gap,
+                        })
+            else:
+                # Fallback sem matched: buscar co-detecções brutas
+                for cam_id, plate_ts_map in cam_plate_events.items():
+                    present = [p for p in group_plates if p in plate_ts_map and plate_ts_map[p]]
+                    if len(present) < 2:
+                        continue
+                    timestamps = {}
+                    base_ts = min(plate_ts_map[present[0]])
+                    for p in present:
+                        best = min(plate_ts_map[p], key=lambda t: abs((t - base_ts).total_seconds()))
+                        timestamps[p] = best.isoformat()
+                    ts_vals = [datetime.fromisoformat(v) for v in timestamps.values()]
+                    sorted_ts = sorted(ts_vals)
+                    span = (sorted_ts[-1] - sorted_ts[0]).total_seconds()
+                    if span > window_s:
+                        continue
+                    gaps = [(sorted_ts[i+1] - sorted_ts[i]).total_seconds() for i in range(len(sorted_ts)-1)]
+                    avg_gap = round(sum(gaps) / len(gaps), 1) if gaps else 0
+                    cam_name = None
+                    for row in all_events:
+                        if row[2] == cam_id:
+                            cam_name = row[3]
+                            break
+                    confirmed_events.append({
+                        "camera_id": cam_id,
+                        "camera_name": cam_name or cam_id,
+                        "timestamps": timestamps,
+                        "delta_s": int(span),
+                        "avg_gap_s": avg_gap,
+                    })
+
+            confirmed_events.sort(key=lambda e: min(e["timestamps"].values()))
+
+            # ── 5. Métricas ──
+            total_cameras = len(confirmed_events)
+            if confirmed_events:
+                first_ts_vals = [min(datetime.fromisoformat(v) if isinstance(v,str) else v for v in ce["timestamps"].values()) for ce in confirmed_events]
+                trip_first = min(first_ts_vals)
+                trip_last = max(first_ts_vals)
+                trip_span_s = int((trip_last - trip_first).total_seconds())
+                all_gaps = [ce["avg_gap_s"] for ce in confirmed_events if ce["avg_gap_s"] > 0]
+                avg_gap_overall = round(sum(all_gaps) / len(all_gaps), 1) if all_gaps else 0
+            else:
+                trip_span_s = matched["trip_span_sec"] if matched else 0
+                avg_gap_overall = 0
+
+            trip_min = trip_span_s // 60
+            trip_sec = trip_span_s % 60
+            trip_human = f"{trip_min}m {trip_sec}s" if trip_min else f"{trip_sec}s"
+
+            # ── 6. Trajetória com lat/lon ──
+            traj: dict = {}
+            for p in group_plates:
+                traj[p] = []
+            for row in all_events:
+                p = row[1]
+                if p in traj and row[7] is not None and row[8] is not None:
+                    traj[p].append({
+                        "ts": row[4].isoformat(),
+                        "camera_id": row[2],
+                        "camera_name": row[3],
+                        "lat": float(row[7]),
+                        "lon": float(row[8]),
+                        "direction": row[9],
+                        "image_path": row[5],
+                        "event_id": row[0],
+                    })
+
+            target_traj = {"plate": target_plate, "points": traj.get(target_plate, [])}
+            partner_trajs = [{"plate": p, "points": traj.get(p, [])} for p in group_plates if p != target_plate]
+
+            # ── 7. Alvos ──
+            cur.execute("SELECT plate FROM alvos WHERE UPPER(plate) IN ({})".format(
+                ",".join(["%s"] * len(group_plates))
+            ), group_plates)
+            alvo_plates = set(r[0].upper() for r in cur.fetchall())
+
+            # ── 8. Última decisão ──
+            cur.execute("""
+                SELECT id, decision, decision_note, operator, created_at
+                FROM vehicle_report_decisions
+                WHERE plate = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (target_plate,))
+            dec_row = cur.fetchone()
+            last_decision = None
+            if dec_row:
+                last_decision = {
+                    "id": dec_row[0],
+                    "decision": dec_row[1],
+                    "note": dec_row[2],
+                    "operator": dec_row[3],
+                    "created_at": dec_row[4].isoformat() if dec_row[4] else None,
+                }
+
+    # ── Build response ──
+    status = "pending"
+    if last_decision:
+        dm = {"confirmado": "confirmed", "falso_positivo": "false_positive", "ignorar": "pending"}
+        status = dm.get(last_decision["decision"], "pending")
+
+    return {
+        "target_plate": target_plate,
+        "period": {"start": t_from.isoformat(), "end": t_to.isoformat()},
+        "params": {"window_s": window_s, "min_cameras": 2, "max_trip_gap_s": max_trip_gap_s},
+        "group": {
+            "plates": group_plates,
+            "vehicle_images": vehicle_images,
+            "status": status,
+            "alvos": {p: (p in alvo_plates) for p in group_plates},
+        },
+        "confirmed_events": confirmed_events,
+        "metrics": {
+            "total_cameras_confirmed": total_cameras,
+            "total_vehicles": len(group_plates),
+            "trip_span_s": trip_span_s,
+            "trip_span_human": trip_human,
+            "avg_gap_overall_s": avg_gap_overall,
+        },
+        "trajectory": {
+            "target": target_traj,
+            "partners": partner_trajs,
+        },
+        "last_decision": last_decision,
+    }
+
+
+@app.post("/api/comboio/confirm", status_code=201)
+async def comboio_confirm(request: Request):
+    """Confirma suspeito de comboio — salva decisão + registra como alvo."""
+    data = await request.json()
+    plate = (data.get("target_plate") or "").strip().upper()
+    if not plate:
+        raise HTTPException(status_code=422, detail="target_plate obrigatório")
+    note = str(data.get("note") or "")[:1000]
+    group_plates = data.get("group_plates") or []
+    params = data.get("params") or {}
+    try:
+        operator = request.state.user.get("sub", "") if isinstance(request.state.user, dict) else ""
+    except Exception:
+        operator = ""
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO vehicle_report_decisions
+                    (plate, score_total, level, badges, sinais_principais, decision, decision_note, operator, report_window)
+                VALUES (%s, 0, 'alerta', '["COMBOIO"]'::jsonb, %s::jsonb, 'confirmado', %s, %s, '2h')
+                RETURNING id, created_at
+            """, (
+                plate,
+                _json_lib.dumps({"comboio": group_plates, "params": params}),
+                note, operator,
+            ))
+            row = cur.fetchone()
+            # Cadastrar como alvo
+            desc = note or f"Comboio confirmado — grupo: {', '.join(group_plates)}"
+            cur.execute("""
+                INSERT INTO alvos (plate, descricao)
+                VALUES (%s, %s)
+                ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
+            """, (plate, desc))
+    return {"ok": True, "id": row[0], "decision": "confirmado", "created_at": row[1].isoformat() if row[1] else None}
+
+
+@app.post("/api/comboio/false_positive", status_code=201)
+async def comboio_false_positive(request: Request):
+    """Marca grupo de comboio como falso positivo."""
+    data = await request.json()
+    plate = (data.get("target_plate") or "").strip().upper()
+    if not plate:
+        raise HTTPException(status_code=422, detail="target_plate obrigatório")
+    note = str(data.get("note") or "")[:1000]
+    group_plates = data.get("group_plates") or []
+    params = data.get("params") or {}
+    try:
+        operator = request.state.user.get("sub", "") if isinstance(request.state.user, dict) else ""
+    except Exception:
+        operator = ""
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO vehicle_report_decisions
+                    (plate, score_total, level, badges, sinais_principais, decision, decision_note, operator, report_window)
+                VALUES (%s, 0, 'normal', '["COMBOIO"]'::jsonb, %s::jsonb, 'falso_positivo', %s, %s, '2h')
+                RETURNING id, created_at
+            """, (
+                plate,
+                _json_lib.dumps({"comboio": group_plates, "params": params}),
+                note, operator,
+            ))
+            row = cur.fetchone()
+    return {"ok": True, "id": row[0], "decision": "falso_positivo", "created_at": row[1].isoformat() if row[1] else None}
+
+
+# ===========================
 # CENTRAL DE AMEAÇAS — consolida suspeitos + comboio + grupos + alvos
 # ===========================
 
