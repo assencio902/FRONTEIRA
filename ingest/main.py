@@ -2530,44 +2530,58 @@ def batedor_trajeto(
 @app.get("/api/batedor/grupos_comboio")
 def batedor_grupos_comboio(
     window:        str          = "2h",
-    co_window:     int          = 300,    # segundos: janela de agrupamento por câmera
-    min_vehicles:  int          = 2,      # mínimo de veículos no grupo
-    direcao:       Optional[str] = None,
-    vehicle_type:  Optional[str] = None,
-    vehicle_color: Optional[str] = None,
+    co_window:     int          = 300,    # segundos: janela de agrupamento por câmera (máx 3600s = 1h)
+    min_vehicles:  int          = 2,      # mínimo de veículos no grupo (2 ou 3)
+    min_cameras:   int          = 1,      # mínimo de câmeras onde o grupo apareceu
+    min_passes:    int          = 1,      # mínimo de repetições do mesmo grupo (opcional)
     limit:         int          = 100,
+    request:       Request      = None,
 ):
     """
-    Detecta grupos reais de N+ veículos vistos juntos na mesma câmera.
+    Detecta grupos reais de N+ veículos vistos juntos (sem ordem fixa).
 
-    Para cada câmera, agrupa eventos próximos (≤ co_window segundos do início
-    do cluster) e retorna grupos onde count(placas distintas) >= min_vehicles.
-    Deduplicados pelo conjunto de placas + câmera.
+    Regra por câmera: se (max_timestamp - min_timestamp do grupo) <= co_window,
+    essa câmera conta como "câmera válida". A ordem entre placas pode variar
+    entre câmeras. Agrupa pelo conjunto de placas (frozenset), conta quantas
+    câmeras distintas viram o grupo e filtra por min_cameras.
+    
+    Parâmetros permitidos:
+    - window: janela temporal (ex: '2h', '24h')
+    - co_window: janela de agrupamento em segundos (máximo 3600s = 1 hora)
+    - min_vehicles: tamanho do grupo (2 ou 3 veículos)
+    - min_cameras: mínimo de câmeras distintas
+    - min_passes: mínimo de repetições do grupo (opcional)
+    - limit: limite de resultados
     """
     from collections import defaultdict
+    
+    # Valida parâmetros não suportados
+    allowed_params = {'window', 'co_window', 'min_vehicles', 'min_cameras', 'min_passes', 'limit'}
+    if request:
+        query_params = set(request.query_params.keys())
+        unsupported = query_params - allowed_params
+        if unsupported:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=400,
+                detail=f"Parâmetros não suportados: {', '.join(sorted(unsupported))}. "
+                       f"Use apenas: {', '.join(sorted(allowed_params))}"
+            )
 
     window_min = _parse_window_to_minutes(window)
-    co_win_s   = max(10, int(co_window))
-    min_v      = max(2, int(min_vehicles))
+    co_win_s   = max(10, min(3600, int(co_window)))  # Limita a 1 hora (3600s)
+    min_v      = max(2, min(3, int(min_vehicles)))   # Apenas 2 ou 3 veículos
+    min_cam    = max(1, int(min_cameras))
+    min_pass   = max(1, int(min_passes))
     lim        = max(1, min(500, int(limit)))
     t_to       = _utcnow()
     t_from     = t_to - timedelta(minutes=window_min)
 
-    # ── Monta filtros extra de evento ─────────────────────────────────────────
+    # ── Monta filtros de evento (apenas básicos) ─────────────────────────────
     ev_conds = ["e.plate IS NOT NULL",
                 "e.plate NOT IN ('', 'unknown', 'UNKNOWN')",
                 "COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s"]
     ev_vals: list = [t_from, t_to]
-
-    if direcao:
-        ev_conds.append("UPPER(COALESCE(c.direcao,'')) = UPPER(%s)")
-        ev_vals.append(direcao.strip())
-    if vehicle_type:
-        ev_conds.append("COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', e.cam_meta->>'vehicle_type') = %s")
-        ev_vals.append(vehicle_type.strip())
-    if vehicle_color:
-        ev_conds.append("LOWER(COALESCE(e.yolo_result->'target_vehicle'->>'cor','')) = LOWER(%s)")
-        ev_vals.append(vehicle_color.strip())
 
     where_sql = " AND ".join(ev_conds)
 
@@ -2603,12 +2617,13 @@ def batedor_grupos_comboio(
     for cam_id, cam_nome, plate, event_time, lat, lon, direcao_cam in rows:
         cam_events[cam_id].append((plate, event_time, cam_nome, float(lat or 0), float(lon or 0), direcao_cam))
 
-    # ── Clusteriza em janelas deslizantes ─────────────────────────────────────
-    seen_keys: set = set()
-    groups: list   = []
+    # ── Primeira passada: detecta grupos válidos por câmera ─────────────────────
+    # Para cada câmera, identifica conjuntos de placas onde span <= co_window
+    # camera_groups: { frozenset(plates) -> [{"camera_id", "cam_nome", "first_seen", "last_seen", "span_sec", ...}] }
+    camera_groups: dict = defaultdict(list)
 
     for cam_id, events in cam_events.items():
-        # já ordenado por event_time
+        # Janela deslizante: agrupa eventos onde o span (max-min) <= co_window
         cluster_start_time = None
         cluster_plates:  list = []
         cluster_data:    list = []
@@ -2617,25 +2632,30 @@ def batedor_grupos_comboio(
             nonlocal cluster_start_time, cluster_plates, cluster_data
             if not cluster_plates:
                 return
-            unique_plates = list(dict.fromkeys(cluster_plates))  # dedup, preserva ordem
-            if len(unique_plates) >= min_v:
-                key = (cam_id, frozenset(unique_plates))
-                if key not in seen_keys:
-                    seen_keys.add(key)
-                    first_t = cluster_data[0][1]
-                    last_t  = cluster_data[-1][1]
-                    groups.append({
-                        "camera_id":   cam_id,
-                        "cam_nome":    cluster_data[0][2],
-                        "lat":         cluster_data[0][3],
-                        "lon":         cluster_data[0][4],
-                        "direcao":     cluster_data[0][5] or None,
-                        "plates":      sorted(unique_plates),
-                        "group_size":  len(unique_plates),
-                        "first_seen":  first_t.isoformat() if first_t else None,
-                        "last_seen":   last_t.isoformat()  if last_t  else None,
-                        "span_sec":    int((last_t - first_t).total_seconds()) if first_t and last_t else 0,
-                    })
+            unique_plates = list(dict.fromkeys(cluster_plates))  # dedup, preserva ordem de aparição
+            if len(unique_plates) < min_v:
+                return
+            
+            # Calcula span = max - min timestamp
+            timestamps = [d[1] for d in cluster_data]
+            first_t = min(timestamps)
+            last_t  = max(timestamps)
+            span_sec = (last_t - first_t).total_seconds()
+            
+            # Verifica se o span está dentro da janela
+            if span_sec <= co_win_s:
+                plates_key = frozenset(unique_plates)
+                camera_groups[plates_key].append({
+                    "camera_id":   cam_id,
+                    "cam_nome":    cluster_data[0][2],
+                    "lat":         cluster_data[0][3],
+                    "lon":         cluster_data[0][4],
+                    "direcao":     cluster_data[0][5] or None,
+                    "first_seen":  first_t,
+                    "last_seen":   last_t,
+                    "span_sec":    int(span_sec),
+                })
+            
             cluster_start_time = None
             cluster_plates     = []
             cluster_data       = []
@@ -2658,13 +2678,49 @@ def batedor_grupos_comboio(
 
         _flush_cluster()
 
-    groups.sort(key=lambda g: (g["group_size"], g["first_seen"] or ""), reverse=True)
+    # ── Segunda passada: agrega por grupo, conta câmeras/passes, filtra ──
+    groups: list = []
+    
+    for plates_set, cameras_list in camera_groups.items():
+        cameras_count = len(cameras_list)
+        if cameras_count < min_cam:
+            continue
+        
+        # Conta passes: número de vezes que o grupo foi visto (deduplica por câmera)
+        passes_count = cameras_count  # Cada câmera = 1 passe
+        if passes_count < min_pass:
+            continue
+        
+        # Calcula min/max timestamp global
+        all_first = [cam["first_seen"] for cam in cameras_list]
+        all_last = [cam["last_seen"] for cam in cameras_list]
+        global_first = min(all_first)
+        global_last = max(all_last)
+        
+        # Lista de câmeras
+        camera_names = [cam["cam_nome"] for cam in cameras_list]
+        
+        groups.append({
+            "plates":         sorted(list(plates_set)),
+            "group_size":     len(plates_set),
+            "cameras_count":  cameras_count,
+            "passes":         passes_count,
+            "cameras":        camera_names,
+            "first_seen":     global_first.isoformat(),
+            "last_seen":      global_last.isoformat(),
+            "total_span_sec": int((global_last - global_first).total_seconds()),
+            "camera_details": cameras_list,
+        })
+
+    groups.sort(key=lambda g: (g["cameras_count"], g["group_size"], g["first_seen"]), reverse=True)
     return {
         "groups":       groups[:lim],
         "total":        len(groups),
         "window":       window,
         "co_window":    co_win_s,
         "min_vehicles": min_v,
+        "min_cameras":  min_cam,
+        "min_passes":   min_pass,
     }
 
 

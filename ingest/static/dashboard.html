@@ -609,64 +609,38 @@
           <span id="cen-filter-cameras"><label>M&iacute;n. c&acirc;meras:
             <select id="cen-min-cameras" style="margin-left:6px" onchange="cenApplyFilter()">
               <option value="0">Todas</option>
-              <option value="1">&#8805; 1 c&acirc;mera</option>
-              <option value="2" selected>&#8805; 2 c&acirc;meras</option>
-              <option value="3">&#8805; 3 c&acirc;meras</option>
-              <option value="4">&#8805; 4 c&acirc;meras</option>
-              <option value="5">&#8805; 5 c&acirc;meras</option>
+              <option value="1">&gt;= 1 c&acirc;mera</option>
+              <option value="2" selected>&gt;= 2 c&acirc;meras</option>
+              <option value="3">&gt;= 3 c&acirc;meras</option>
+              <option value="4">&gt;= 4 c&acirc;meras</option>
+              <option value="5">&gt;= 5 c&acirc;meras</option>
             </select>
           </label></span>
-          <!-- Filtros do suspeito -->
-          <label>&#8597; Dire&ccedil;&atilde;o:
-            <select id="cen-direcao" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="CRESCENTE">&#8593; Crescente</option>
-              <option value="DECRESCENTE">&#8595; Decrescente</option>
-              <option value="ENTRADA">&#128673; Entrada</option>
-              <option value="SA&Iacute;DA">&#128674; Sa&iacute;da</option>
-            </select>
-          </label>
-          <label>&#128663; Tipo ve&iacute;culo:
-            <select id="cen-vtype" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="car">Carro</option>
-              <option value="motorcycle">Moto</option>
-              <option value="pickup">Caminhonete</option>
-              <option value="truck">Caminh&atilde;o</option>
-              <option value="bus">&Ocirc;nibus</option>
-              <option value="van">Van/Kombi</option>
-            </select>
-          </label>
-          <label>&#127912; Cor:
-            <select id="cen-vcolor" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="Preto">Preto</option>
-              <option value="Branco">Branco</option>
-              <option value="Prata">Prata</option>
-              <option value="Cinza">Cinza</option>
-              <option value="Vermelho">Vermelho</option>
-              <option value="Azul">Azul</option>
-              <option value="Amarelo">Amarelo</option>
-              <option value="Verde">Verde</option>
-              <option value="Marrom">Marrom</option>
-              <option value="Laranja">Laranja</option>
-            </select>
-          </label>
-          <label style="font-weight:700;color:var(--accent)">&#128101; M&iacute;n. ve&iacute;culos no grupo:
+          <!-- Filtros de Comboio -->
+          <label style="font-weight:700;color:var(--accent)">&#128101; Tamanho do grupo:
             <select id="cen-minv" style="margin-left:4px;border-color:var(--accent)">
-              <option value="2" selected>2 (par)</option>
+              <option value="2" selected>2 ve&iacute;culos</option>
               <option value="3">3 ve&iacute;culos</option>
-              <option value="4">4 ve&iacute;culos</option>
-              <option value="5">5+ ve&iacute;culos</option>
             </select>
           </label>
-          <label>&#9201; Janela p/ c&acirc;m.:
+          <label>&#9201; Janela p/ c&acirc;m. (m&aacute;x 1h):
             <select id="cen-cowin" style="margin-left:4px">
               <option value="60">1 min</option>
               <option value="120">2 min</option>
               <option value="300" selected>5 min</option>
               <option value="600">10 min</option>
               <option value="900">15 min</option>
+              <option value="1800">30 min</option>
+              <option value="3600">1 hora</option>
+            </select>
+          </label>
+          <label>&#128257; M&iacute;n. passes (opcional):
+            <select id="cen-minpass" style="margin-left:4px">
+              <option value="1" selected>1 vez</option>
+              <option value="2">2 vezes</option>
+              <option value="3">3 vezes</option>
+              <option value="4">4 vezes</option>
+              <option value="5">5+ vezes</option>
             </select>
           </label>
           <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
@@ -2663,14 +2637,13 @@ function cenApplyFilter() {
   _cenRenderPage();
 }
 
-async function _loadCenGrupos(w, cowin, minv, direcao, vtype, vcolor, tsFrom, tsTo) {
+async function _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo) {
   try {
     var url = '/api/batedor/grupos_comboio?window=' + encodeURIComponent(w)
             + '&co_window=' + encodeURIComponent(cowin)
-            + '&min_vehicles=' + encodeURIComponent(minv);
-    if (direcao) url += '&direcao=' + encodeURIComponent(direcao);
-    if (vtype)   url += '&vehicle_type=' + encodeURIComponent(vtype);
-    if (vcolor)  url += '&vehicle_color=' + encodeURIComponent(vcolor);
+            + '&min_vehicles=' + encodeURIComponent(minv)
+            + '&min_cameras=1'
+            + '&min_passes=' + encodeURIComponent(minpass);
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom);
     if (tsTo)    url += '&ts_to=' + encodeURIComponent(tsTo);
     var r = await fetch(url);
@@ -2716,11 +2689,9 @@ async function loadCentral(showSpinner) {
     w = '2h';
   }
   var prefix  = '';
-  var direcao = (document.getElementById('cen-direcao') || {}).value || '';
-  var vtype   = (document.getElementById('cen-vtype')   || {}).value || '';
-  var vcolor  = (document.getElementById('cen-vcolor')  || {}).value || '';
   var minv    = (document.getElementById('cen-minv')    || {}).value || '2';
   var cowin   = (document.getElementById('cen-cowin')   || {}).value || '300';
+  var minpass = (document.getElementById('cen-minpass') || {}).value || '1';
 
   if (showSpinner) {
     document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
@@ -2731,9 +2702,6 @@ async function loadCentral(showSpinner) {
     var url = '/api/batedor/central?window=' + w + '&limit=300';
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
     if (prefix)  url += '&plate_prefix='  + encodeURIComponent(prefix.trim().toUpperCase());
-    if (direcao) url += '&direcao='       + encodeURIComponent(direcao);
-    if (vtype)   url += '&vehicle_type='  + encodeURIComponent(vtype);
-    if (vcolor)  url += '&vehicle_color=' + encodeURIComponent(vcolor);
     var r = await fetch(url);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
@@ -2748,7 +2716,7 @@ async function loadCentral(showSpinner) {
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     document.getElementById('central-status').textContent = 'Atualizado às ' + ts;
     // ---- Grupos em Comboio integrado ----
-    _loadCenGrupos(w, cowin, minv, direcao, vtype, vcolor, tsFrom, tsTo);
+    _loadCenGrupos(w, cowin, minv, minpass, tsFrom, tsTo);
   } catch(e) {
     document.getElementById('central-status').textContent = 'Erro: ' + e.message;
     if (showSpinner)
@@ -3527,8 +3495,12 @@ function _resetCenFilters() {
   if (minCam) minCam.value = '2';
   var interval = document.getElementById('cen-interval');
   if (interval) interval.value = '60';
-  var direcao = document.getElementById('cen-direcao');
-  if (direcao) direcao.value = '';
+  var minv = document.getElementById('cen-minv');
+  if (minv) minv.value = '2';
+  var cowin = document.getElementById('cen-cowin');
+  if (cowin) cowin.value = '300';
+  var minpass = document.getElementById('cen-minpass');
+  if (minpass) minpass.value = '1';
 }
 
 function _getAlvoFilters() {
