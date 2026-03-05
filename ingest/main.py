@@ -3267,6 +3267,210 @@ def vehicle_trajectory(
     }
 
 
+@app.get("/api/vehicles/{plate}/companions")
+def get_companions(
+    plate: str,
+    start: str,
+    end: str,
+    delta_sec: int = 90,
+    min_cameras: int = 2,
+):
+    """
+    Encontra veículos que andavam em companhia com o {plate} especificado.
+    
+    Um "companheiro" é confirmado quando:
+    1. Passou na MESMA câmera com diferença de tempo <= delta_sec segundos
+    2. E o mesmo par (plate A + plate B) apareceu em >= min_cameras câmeras diferentes
+    
+    Args:
+        plate: Placa do veículo investigado (ex: "ABC1234")
+        start: ISO 8601 (ex: "2026-03-01T00:00:00")
+        end: ISO 8601 (ex: "2026-03-05T23:59:59")
+        delta_sec: Janela de tempo máx. na mesma câmera (padrão: 90s)
+        min_cameras: Mínimo de câmeras distintas onde par foi visto junto (padrão: 2)
+    
+    Returns:
+        {
+            "plate": "ABC1234",
+            "period": {"start": "...", "end": "..."},
+            "params": {"delta_sec": 90, "min_cameras": 2},
+            "total_companions": 5,
+            "companions": [
+                {
+                    "companion_plate": "DEF5678",
+                    "cameras_together": 3,
+                    "matches": 5,
+                    "first_seen": "2026-03-01T10:15:30+00:00",
+                    "last_seen": "2026-03-05T14:45:00+00:00",
+                    "examples": [
+                        {
+                            "camera_id": "CAM01",
+                            "camera_name": "BR-262 Km 10",
+                            "t_a": "2026-03-01T10:15:30+00:00",
+                            "t_b": "2026-03-01T10:16:15+00:00",
+                            "dt_sec": 45
+                        }
+                    ]
+                }
+            ]
+        }
+    """
+    plate = plate.strip().upper()
+    if not plate:
+        raise HTTPException(status_code=422, detail="plate é obrigatório")
+    
+    # Parse datas
+    try:
+        dt_start = datetime.fromisoformat(start.replace('Z', '').replace(' ', 'T'))
+        dt_end   = datetime.fromisoformat(end.replace('Z', '').replace(' ', 'T'))
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Formato de data inválido: {e}")
+    
+    if dt_start.tzinfo is None:
+        dt_start = dt_start.replace(tzinfo=timezone.utc)
+    if dt_end.tzinfo is None:
+        dt_end = dt_end.replace(tzinfo=timezone.utc)
+    
+    delta_sec = max(1, min(600, int(delta_sec)))
+    min_cameras = max(1, min(50, int(min_cameras)))
+    
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # ── Passo 1: Busca todos os eventos do plate-alvo no período ──
+            cur.execute("""
+                SELECT
+                    e.id,
+                    e.plate,
+                    e.camera_id,
+                    e.camera_ip,
+                    COALESCE(e.occurred_at, e.ts) AS event_time,
+                    c.nome AS camera_name
+                FROM lpr_events e
+                LEFT JOIN cameras c ON (
+                    c.camera_id = e.camera_id
+                    OR c.ip = e.camera_id
+                    OR c.ip = e.camera_ip
+                )
+                WHERE UPPER(e.plate) = %s
+                  AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                ORDER BY COALESCE(e.occurred_at, e.ts) ASC
+            """, (plate, dt_start, dt_end))
+            
+            my_events = cur.fetchall()
+            if not my_events:
+                return {
+                    "plate": plate,
+                    "period": {"start": dt_start.isoformat(), "end": dt_end.isoformat()},
+                    "params": {"delta_sec": delta_sec, "min_cameras": min_cameras},
+                    "total_companions": 0,
+                    "companions": []
+                }
+            
+            # ── Passo 2: Agrupar eventos do plate-alvo por câmera ──
+            my_by_camera = {}  # {camera_id: [(id, plate, ts, cam_name), ...]}
+            for row in my_events:
+                cam_id = row[2] or row[3]
+                ts = row[4]
+                cam_name = row[5]
+                if not cam_id:
+                    continue
+                if cam_id not in my_by_camera:
+                    my_by_camera[cam_id] = []
+                my_by_camera[cam_id].append((row[0], row[1], ts, cam_name))
+            
+            # ── Passo 3: Para cada câmera, buscar OUTROS veículos detectados ──
+            companion_pairs = {}  # {companion_plate: {camera_id: [{t_a, t_b, dt_sec, ...}, ...], ...}}
+            
+            for cam_id, my_events_in_cam in my_by_camera.items():
+                # Busca eventos de OUTROS veículos nesta MESMA câmera
+                cur.execute("""
+                    SELECT
+                        e.id,
+                        e.plate,
+                        COALESCE(e.occurred_at, e.ts) AS event_time,
+                        c.nome AS camera_name
+                    FROM lpr_events e
+                    LEFT JOIN cameras c ON (
+                        c.camera_id = e.camera_id
+                        OR c.ip = e.camera_id
+                        OR c.ip = e.camera_ip
+                    )
+                    WHERE (e.camera_id = %s OR e.camera_ip = %s)
+                      AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                      AND UPPER(e.plate) != %s
+                    ORDER BY COALESCE(e.occurred_at, e.ts) ASC
+                """, (cam_id, cam_id, dt_start, dt_end, plate))
+                
+                other_events = cur.fetchall()
+                
+                # Compara timestamps: encontra pares dentro de delta_sec
+                for my_id, my_plate, my_ts, my_cam_name in my_events_in_cam:
+                    for other_id, other_plate, other_ts, other_cam_name in other_events:
+                        dt_diff = abs((other_ts - my_ts).total_seconds())
+                        
+                        # Se dentro da janela de tempo, registra este par
+                        if dt_diff <= delta_sec:
+                            if other_plate not in companion_pairs:
+                                companion_pairs[other_plate] = {}
+                            if cam_id not in companion_pairs[other_plate]:
+                                companion_pairs[other_plate][cam_id] = []
+                            
+                            companion_pairs[other_plate][cam_id].append({
+                                "t_a": my_ts.isoformat(),
+                                "t_b": other_ts.isoformat(),
+                                "dt_sec": int(dt_diff),
+                                "camera_name": my_cam_name or cam_id
+                            })
+            
+            # ── Passo 4: Filtra apenas companions que apareceram em >= min_cameras câmeras ──
+            final_companions = []
+            
+            for companion_plate, by_camera in companion_pairs.items():
+                # Só conta se apareceram JUNTOS em >= min_cameras câmeras
+                if len(by_camera) >= min_cameras:
+                    total_matches = sum(len(v) for v in by_camera.values())
+                    all_examples = []
+                    all_times = []
+                    
+                    for cam_id, examples in by_camera.items():
+                        for ex in examples:
+                            all_examples.append({
+                                "camera_id": cam_id,
+                                "camera_name": ex["camera_name"],
+                                "t_a": ex["t_a"],
+                                "t_b": ex["t_b"],
+                                "dt_sec": ex["dt_sec"]
+                            })
+                            # Rastreia min/max timestamps
+                            t_a = datetime.fromisoformat(ex["t_a"])
+                            t_b = datetime.fromisoformat(ex["t_b"])
+                            all_times.append(t_a)
+                            all_times.append(t_b)
+                    
+                    final_companions.append({
+                        "companion_plate": companion_plate,
+                        "cameras_together": len(by_camera),
+                        "matches": total_matches,
+                        "first_seen": min(all_times).isoformat() if all_times else None,
+                        "last_seen": max(all_times).isoformat() if all_times else None,
+                        "examples": all_examples[:5]  # Só primeiros 5 para não ficar muito grande
+                    })
+            
+            # Ordena por quantidade de câmeras e depois por matches
+            final_companions.sort(
+                key=lambda x: (x["cameras_together"], x["matches"]),
+                reverse=True
+            )
+    
+    return {
+        "plate": plate,
+        "period": {"start": dt_start.isoformat(), "end": dt_end.isoformat()},
+        "params": {"delta_sec": delta_sec, "min_cameras": min_cameras},
+        "total_companions": len(final_companions),
+        "companions": final_companions
+    }
+
+
 # ===========================
 # CENTRAL DE AMEAÇAS — consolida suspeitos + comboio + grupos + alvos
 # ===========================
