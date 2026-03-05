@@ -562,6 +562,9 @@
         <div class="sub-tab active" data-bat="central" onclick="switchBatTab('central',this)" id="bat-subtab-central">
           &#9889; Central de Amea&ccedil;as
         </div>
+        <div class="sub-tab" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
+          &#128101; Grupos de Comboio
+        </div>
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
           &#127919; Alvos Rastreados
         </div>
@@ -585,7 +588,8 @@
         <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px">
           <label style="display:flex;align-items:center;gap:6px">&#128269; Placa:
             <input type="text" id="cen-filter-plate" placeholder="ex: ABC1234"
-              oninput="cenApplyFilter()"
+              maxlength="7"
+              oninput="_cenPlateInput(this)"
               onkeydown="if(event.key==='Enter'&&this.value.trim())openBatedorReport(this.value.trim().toUpperCase())"
               style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
             <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('cen-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
@@ -695,7 +699,81 @@
         </div>
       </div><!-- /bat-sub-central -->
 
-      <!-- SUB: ALVOS RASTREADOS -->
+      <!-- SUB: GRUPOS DE COMBOIO -->
+      <div id="bat-sub-grupos" class="sub-pane">
+        <div style="background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#6ee7a0">
+          <strong>&#128101; Grupos de Comboio</strong> &mdash; Detecta veículos andando juntos em <strong>2+ câmaras</strong> distintas. Utiliza análise de liderança, gap de tempo e padrão de trajeto.
+        </div>
+        <div class="cards-row">
+          <div class="card"><div class="card-icon">&#128101;</div><div class="card-label">Grupos detectados</div><div class="card-value" id="grupos-total">&#8212;</div></div>
+          <div class="card"><div class="card-icon">👥</div><div class="card-label">Total de ve&iacute;culos</div><div class="card-value" id="grupos-veiculos">&#8212;</div></div>
+          <div class="card"><div class="card-icon">📷</div><div class="card-label">M&eacute;dia de câmeras</div><div class="card-value" id="grupos-cam-media">&#8212;</div></div>
+          <div class="card"><div class="card-icon">🕐</div><div class="card-label">Maior trajeto</div><div class="card-value" id="grupos-max-trip">&#8212;</div></div>
+        </div>
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px">
+          <label>Janela de tempo:
+            <select id="grupos-window" onchange="loadGruposComboio(true)" style="margin-left:6px">
+              <option value="30m">30 minutos</option>
+              <option value="1h">1 hora</option>
+              <option value="2h" selected>2 horas</option>
+              <option value="6h">6 horas</option>
+              <option value="12h">12 horas</option>
+              <option value="24h">24 horas</option>
+            </select>
+          </label>
+          <label>Tamanho do grupo:
+            <select id="grupos-sizes" onchange="loadGruposComboio(true)" style="margin-left:6px">
+              <option value="2">2 ve&iacute;culos</option>
+              <option value="3">3 ve&iacute;culos</option>
+              <option value="2,3" selected>2 ou 3</option>
+            </select>
+          </label>
+          <label>M&iacute;n. câmeras:
+            <select id="grupos-min-cameras" onchange="loadGruposComboio(true)" style="margin-left:6px">
+              <option value="2" selected>&gt;= 2</option>
+              <option value="3">&gt;= 3</option>
+              <option value="4">&gt;= 4</option>
+              <option value="5">&gt;= 5</option>
+            </select>
+          </label>
+          <label>Modo de liderança:
+            <select id="grupos-order-mode" onchange="loadGruposComboio(true)" style="margin-left:6px">
+              <option value="any" selected>Qualquer ordem</option>
+              <option value="leader_front">L&iacute;der na frente</option>
+            </select>
+          </label>
+          <button class="btn btn-primary btn-sm" onclick="loadGruposComboio(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
+          <button class="btn btn-outline btn-sm" onclick="_resetGruposFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
+            <select id="grupos-interval" style="margin-left:4px">
+              <option value="30">30s</option>
+              <option value="60" selected>1 min</option>
+              <option value="120">2 min</option>
+              <option value="300">5 min</option>
+              <option value="600">10 min</option>
+            </select>
+          </label>
+          <button id="btn-grupos-live" class="btn btn-outline btn-sm" onclick="toggleGruposLive()" style="display:flex;align-items:center;gap:6px">
+            &#9654; <span id="grupos-live-label">Monitorar</span>
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="loadGruposComboio(true)">&#8635; Agora</button>
+          <span class="status-line" id="grupos-status"></span>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>ID Grupo</th>
+            <th>Placas</th>
+            <th>Tamanho</th>
+            <th>Câmeras Juntas</th>
+            <th>Câmeras</th>
+            <th>Trip Span</th>
+            <th>Visto</th>
+            <th>A&#231;&otilde;es</th>
+          </tr></thead>
+          <tbody id="grupos-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em &ldquo;&#9654; Monitorar&rdquo; para carregar grupos de comboio.</td></tr></tbody>
+          </table>
+        </div>
+      </div><!-- /bat-sub-grupos -->
       <div id="bat-sub-alvos" class="sub-pane">
         <div style="background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#c4b5fd">
           <strong>&#127919; Alvos Rastreados &mdash; Quem est&aacute; andando com o suspeito?</strong> &mdash;
@@ -2646,6 +2724,13 @@ function cenTipoChange() {
   cenApplyFilter();
 }
 
+function _cenPlateInput(el) {
+  if (!el) return;
+  var v = (el.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  if (el.value !== v) el.value = v;
+  cenApplyFilter();
+}
+
 function cenApplyFilter() {
   _cenPage = 0;
   _cenRenderPage();
@@ -2838,21 +2923,31 @@ function _grupoLinks(grupos) {
 
 function renderCentral(items, total) {
   var tb = document.getElementById('central-tbody');
+  var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
   if (!items.length) {
+    var emptyMsg = (total === 0 ? 'Nenhuma ameaça encontrada com os filtros atuais.' : 'Sem resultados nesta página.');
+    if (plateFl) emptyMsg = 'Parceiro não encontrado para a placa informada.';
     tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">'
-      + (total === 0 ? 'Nenhuma ameaça encontrada com os filtros atuais.' : 'Sem resultados nesta página.')
+      + emptyMsg
       + '</td></tr>';
     return;
   }
   tb.innerHTML = items.map(function(item) {
     var sc = item.in_suspeitos;
     var cc = item.in_comboio;
+    var hasPair = !!cc || ((item.in_grupos || []).length > 0);
     var scCell = sc
       ? '<span style="font-size:.78rem">&#10003; ' + sc.passes + 'x / ' + sc.cameras + '&#128247;</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
-    var ccCell = cc
-      ? '<span style="font-size:.78rem;cursor:pointer" onclick="_openComboioFromCentral(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#10003; ' + cc.cameras + ' c\u00e2m. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>'
-      : '<span style="color:var(--muted)">&#8212;</span>';
+    var ccCell = '<span style="color:var(--muted)">&#8212;</span>';
+    if (cc) {
+      ccCell = '<span style="font-size:.78rem;cursor:pointer" onclick="_openComboioFromCentral(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#10003; ' + cc.cameras + ' c\u00e2m. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>';
+    } else if (plateFl) {
+      var pares = (item.in_grupos || []).map(function(g){ return g.plate + ' (' + g.cameras_together + ' câm.)'; }).join(', ');
+      ccCell = pares
+        ? '<span style="font-size:.76rem;color:#86efac">Par: ' + pares + '</span>'
+        : '<span style="font-size:.76rem;color:#fca5a5">Parceiro não encontrado</span>';
+    }
     var alvoCell = item.is_alvo
       ? '<span class="badge" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
@@ -5283,6 +5378,219 @@ async function loadMapa() {
     var noGps = document.getElementById('map-no-gps');
     if (noGps) noGps.innerHTML = '<div style="color:var(--danger);font-size:.82rem">Erro ao carregar c\u00e2meras: ' + e.message + '</div>';
   }
+}
+
+// ===== GRUPOS DE COMBOIO =====
+var _gruposLiveEnabled = false;
+var _gruposLiveTimer   = null;
+
+function toggleGruposLive() {
+  _gruposLiveEnabled = !_gruposLiveEnabled;
+  var btn = document.getElementById('btn-grupos-live');
+  if (_gruposLiveEnabled) {
+    btn.classList.remove('btn-outline'); btn.classList.add('btn-success');
+    btn.innerHTML = '<span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 1s infinite;margin-right:4px"></span> AO VIVO';
+    loadGruposComboio(false);
+    _gruposScheduleNext();
+  } else {
+    _gruposStopTimer();
+    btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
+    btn.innerHTML = '&#9654; <span id="grupos-live-label">Monitorar</span>';
+  }
+}
+
+function _gruposStopTimer() {
+  if (_gruposLiveTimer) { clearTimeout(_gruposLiveTimer); _gruposLiveTimer = null; }
+}
+
+function _gruposScheduleNext() {
+  if (!_gruposLiveEnabled) return;
+  var sec = parseInt(document.getElementById('grupos-interval').value, 10) || 60;
+  _gruposLiveTimer = setTimeout(function() {
+    loadGruposComboio(false).then(function() { _gruposScheduleNext(); });
+  }, sec * 1000);
+}
+
+async function loadGruposComboio(showSpinner) {
+  if (showSpinner === undefined) showSpinner = true;
+  
+  var w = document.getElementById('grupos-window').value || '2h';
+  var gs = document.getElementById('grupos-sizes').value || '2,3';
+  var mc = document.getElementById('grupos-min-cameras').value || '2';
+  var om = document.getElementById('grupos-order-mode').value || 'any';
+  
+  if (showSpinner) {
+    document.getElementById('grupos-status').innerHTML = '<span class="spinner"></span>';
+    document.getElementById('grupos-tbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando grupos…</td></tr>';
+  }
+  
+  try {
+    var url = '/api/batedor/grupos_comboio?window=' + encodeURIComponent(w)
+            + '&group_sizes=' + encodeURIComponent(gs)
+            + '&min_cameras=' + encodeURIComponent(mc)
+            + '&order_mode=' + encodeURIComponent(om)
+            + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=100';
+    
+    var r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var groups = data.groups || [];
+    
+    // Atualiza cards
+    var totalGroups = groups.length;
+    var totalVehicles = 0;
+    var totalCameras = 0;
+    var maxTrip = 0;
+    
+    groups.forEach(function(g) {
+      totalVehicles += (g.plates || []).length;
+      totalCameras += g.cameras_count || 0;
+      var trip = g.trip_span_sec || 0;
+      maxTrip = Math.max(maxTrip, trip);
+    });
+    
+    document.getElementById('grupos-total').textContent = totalGroups;
+    document.getElementById('grupos-veiculos').textContent = totalVehicles;
+    document.getElementById('grupos-cam-media').textContent = totalGroups > 0 ? Math.round(totalCameras / totalGroups) : '—';
+    document.getElementById('grupos-max-trip').textContent = maxTrip > 0 ? _formatDuration(maxTrip) : '—';
+    
+    // Renderiza tabela
+    renderGruposComboio(groups);
+    
+    var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('grupos-status').textContent = 'Atualizado às ' + ts;
+  } catch(e) {
+    document.getElementById('grupos-status').textContent = 'Erro: ' + e.message;
+    if (showSpinner)
+      document.getElementById('grupos-tbody').innerHTML =
+        '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    // para o live se der erro
+    _gruposLiveEnabled = false; _gruposStopTimer();
+    var btn = document.getElementById('btn-grupos-live');
+    if (btn) { btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
+               btn.innerHTML = '&#9654; <span id="grupos-live-label">Monitorar</span>'; }
+  }
+}
+
+function _formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '—';
+  if (seconds < 60) return seconds + 's';
+  if (seconds < 3600) return Math.round(seconds / 60) + 'm';
+  var h = Math.floor(seconds / 3600);
+  var m = Math.round((seconds % 3600) / 60);
+  return h + 'h' + (m > 0 ? m + 'm' : '');
+}
+
+function renderGruposComboio(groups) {
+  var tb = document.getElementById('grupos-tbody');
+  if (!groups || !groups.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:40px">'
+      + 'Nenhum grupo de comboio detectado com os filtros atuais.'
+      + '</td></tr>';
+    return;
+  }
+  
+  tb.innerHTML = groups.map(function(g, idx) {
+    var plates = g.plates || [];
+    var placasHtml = plates.map(function(p) { return plateHtml(p); }).join(' + ');
+    var cameras = g.cameras || [];
+    var camHtml = '<div style="font-size:.75rem;color:var(--muted)">' 
+      + (cameras.length ? cameras.slice(0, 3).join(', ') + (cameras.length > 3 ? '...' : '') : 'N/A')
+      + '</div>';
+    var firstSeen = g.first_seen ? fmtTs(g.first_seen) : '—';
+    var lastSeen = g.last_seen ? fmtTs(g.last_seen) : '—';
+    var tripSpan = _formatDuration(g.trip_span_sec || 0);
+    
+    return '<tr>'
+      + '<td style="color:var(--muted);font-size:.78rem">#' + (idx + 1) + '</td>'
+      + '<td>' + placasHtml + '</td>'
+      + '<td><span class="badge badge-yellow">' + plates.length + '</span></td>'
+      + '<td><span class="badge badge-green" title="Câmeras onde viram juntos">' + (g.cameras_count || 0) + '</span></td>'
+      + '<td style="font-size:.78rem;max-width:180px;overflow-x:auto">' + camHtml + '</td>'
+      + '<td style="white-space:nowrap"><span class="badge badge-yellow">' + tripSpan + '</span></td>'
+      + '<td style="white-space:nowrap;font-size:.76rem">' 
+      + '<div>' + firstSeen + '</div>'
+      + '<div style="color:var(--muted)">' + lastSeen + '</div>'
+      + '</td>'
+      + '<td style="white-space:nowrap">'
+      + '<button class="btn btn-outline btn-xs" onclick="openGrupoDetail(' + idx + ',' + JSON.stringify(g).replace(/'/g, "&#39;") + ')">&#128269; Ver</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openGrupoDetail(idx, grupoJson) {
+  var grupo = typeof grupoJson === 'string' ? JSON.parse(grupoJson.replace(/&#39;/g, "'")) : grupoJson;
+  var plates = (grupo.plates || []).join(' + ');
+  
+  document.getElementById('detail-modal-plate').textContent = 'Grupo #' + (idx + 1) + ' — ' + plates;
+  
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px">'
+    + '<div style="background:var(--bg2);border-radius:8px;padding:12px;min-width:140px">'
+    + '<div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Placas</div>'
+    + '<div style="font-weight:700;font-size:.95rem">' + (grupo.plates || []).length + ' veículos</div>'
+    + '</div>'
+    + '<div style="background:var(--bg2);border-radius:8px;padding:12px;min-width:140px">'
+    + '<div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Câmeras juntas</div>'
+    + '<div style="font-weight:700;font-size:.95rem;color:#4ade80">' + (grupo.cameras_count || 0) + '</div>'
+    + '</div>'
+    + '<div style="background:var(--bg2);border-radius:8px;padding:12px;min-width:140px">'
+    + '<div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Duração</div>'
+    + '<div style="font-weight:700;font-size:.95rem">' + _formatDuration(grupo.trip_span_sec || 0) + '</div>'
+    + '</div>'
+    + '</div>';
+  
+  // Placas
+  if (grupo.plates && grupo.plates.length) {
+    html += '<div style="margin-bottom:14px">'
+      + '<div style="font-size:.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700">Placas do Grupo</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+      + grupo.plates.map(function(p) { return '<span style="background:rgba(59,130,246,.15);color:var(--accent);border:1px solid rgba(59,130,246,.3);border-radius:6px;padding:4px 12px;font-weight:700;font-size:.82rem;letter-spacing:.04em">' + p + '</span>'; }).join('')
+      + '</div>'
+      + '</div>';
+  }
+  
+  // Câmeras
+  if (grupo.cameras && grupo.cameras.length) {
+    html += '<div style="margin-bottom:14px">'
+      + '<div style="font-size:.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700">Câmeras (' + grupo.cameras.length + ')</div>'
+      + '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:.8rem;max-height:120px;overflow-y:auto">'
+      + grupo.cameras.join(', ')
+      + '</div>'
+      + '</div>';
+  }
+  
+  // Timeline
+  if (grupo.first_seen || grupo.last_seen) {
+    html += '<div>'
+      + '<div style="font-size:.75rem;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:700">Timeline</div>'
+      + '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;font-size:.8rem">'
+      + (grupo.first_seen ? '<div><span style="color:var(--muted)">Primeiro visto:</span> ' + fmtTs(grupo.first_seen) + '</div>' : '')
+      + (grupo.last_seen ? '<div style="margin-top:3px"><span style="color:var(--muted)">Último visto:</span> ' + fmtTs(grupo.last_seen) + '</div>' : '')
+      + '</div>'
+      + '</div>';
+  }
+  
+  document.getElementById('detail-modal-body').innerHTML = html;
+  openModal('detail-modal');
+}
+
+function _resetGruposFilters() {
+  var ids = [
+    'grupos-window', 'grupos-sizes', 'grupos-min-cameras', 'grupos-order-mode', 'grupos-interval'
+  ];
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      if (id === 'grupos-window') el.value = '2h';
+      else if (id === 'grupos-sizes') el.value = '2,3';
+      else if (id === 'grupos-min-cameras') el.value = '2';
+      else if (id === 'grupos-order-mode') el.value = 'any';
+      else if (id === 'grupos-interval') el.value = '60';
+    }
+  });
+  loadGruposComboio(true);
 }
 
 // ===== AUTH =====
