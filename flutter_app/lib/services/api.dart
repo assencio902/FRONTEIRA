@@ -81,9 +81,9 @@ class Api {
         jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  /// GET /api/v1/cameras — retorna lista de câmeras cadastradas.
+  /// GET /api/cameras — retorna lista de câmeras cadastradas.
   static Future<List<Map<String, dynamic>>> getCameras() async {
-    final url = Uri.parse('$baseUrl/api/v1/cameras');
+    final url = Uri.parse('$baseUrl/api/cameras');
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
     if (res.statusCode == 401) throw Exception('Não autenticado (401)');
@@ -92,9 +92,9 @@ class Api {
     return List<Map<String, dynamic>>.from(data['items'] as List);
   }
 
-  /// GET /api/v1/stats/overview — estatísticas gerais do sistema.
+  /// GET /api/stats/overview — estatísticas gerais do sistema.
   static Future<Map<String, dynamic>> getStats() async {
-    final url = Uri.parse('$baseUrl/api/v1/stats/overview');
+    final url = Uri.parse('$baseUrl/api/stats/overview');
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
     if (res.statusCode == 401) throw Exception('Não autenticado (401)');
@@ -266,5 +266,20 @@ class Api {
       throw Exception('Erro ${res.statusCode}: ${res.body}');
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// POST genérico autenticado.
+  static Future<http.Response> post(
+    String path,
+    Map<String, dynamic> payload, {
+    bool auth = true,
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final url = Uri.parse('$baseUrl$normalizedPath');
+    final h = await headers(auth: auth);
+    return http
+        .post(url, headers: h, body: jsonEncode(payload))
+        .timeout(timeout);
   }
 }

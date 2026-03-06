@@ -133,6 +133,97 @@
     select option:hover, select option:checked { background:#1a9448; color:#ffffff; }
     .toolbar input:focus, .toolbar select:focus { border-color:var(--accent); }
     .toolbar label { font-size:.8rem; color:var(--muted); white-space:nowrap; }
+    /* ---- Aba Mapa (layout) ---- */
+    .mapa-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .mapa-actions {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .mapa-legend {
+      display:flex;
+      gap:18px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+      font-size:.79rem;
+      color:var(--muted);
+    }
+    .mapa-main {
+      width:100%;
+      height:min(72vh, 760px);
+      min-height:560px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      background:#0a1f0f;
+      margin-bottom:16px;
+    }
+    .mapa-filters {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .mapa-filters-title {
+      font-weight:700;
+      font-size:.95rem;
+      margin-bottom:12px;
+      color:var(--accent);
+    }
+    .mapa-filters-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:12px;
+      align-items:end;
+      margin-bottom:12px;
+    }
+    .mapa-filter-field label {
+      font-size:.78rem;
+      color:var(--muted);
+      font-weight:600;
+      display:block;
+      margin-bottom:4px;
+    }
+    .mapa-filter-field input {
+      width:100%;
+      min-width:0;
+    }
+    .mapa-filter-actions {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    @media (max-width:980px) {
+      .mapa-main {
+        height:62vh;
+        min-height:480px;
+      }
+      .mapa-filters-grid {
+        grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+      }
+    }
+    @media (max-width:640px) {
+      .mapa-main {
+        height:52vh;
+        min-height:360px;
+      }
+      .mapa-filters {
+        padding:12px;
+      }
+      .mapa-filters-grid {
+        grid-template-columns:1fr;
+      }
+    }
     .table-wrap { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font-size:.83rem; }
     thead tr { background:rgba(0,0,0,.035); }
@@ -989,12 +1080,12 @@
 
     <!-- ===== ABA MAPA ===== -->
     <div id="tab-mapa" class="tab-pane">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="mapa-header">
         <div>
           <div style="font-weight:700;font-size:.97rem">&#127760; Mapa de C&#226;meras</div>
           <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Posi&#231;&#227;o geogr&#225;fica das c&#226;meras com coordenadas GPS cadastradas.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="mapa-actions">
           <button class="btn btn-outline btn-sm" onclick="loadMapa()">&#8635; Atualizar</button>
           <button class="btn btn-sm" style="background:#ef4444;color:#fff;border:none;font-weight:700" onclick="promptTrajetoriaMapa()" title="Buscar trajetória de um veículo pelo mapa">&#128663; Trajet&#243;ria</button>
           <button id="btn-mapa-heat" class="btn btn-outline btn-sm" onclick="_toggleHeatMap()" title="Exibe um mapa de calor pela densidade de detecções por câmera">&#128293; Heat Map</button>
@@ -1002,40 +1093,43 @@
         </div>
       </div>
       <!-- Legenda de status -->
-      <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;font-size:.79rem;color:var(--muted)">
+      <div class="mapa-legend">
         <span><span style="color:#22c55e;font-size:1rem">&#9679;</span> Online (&lt;15 min)</span>
         <span><span style="color:#f59e0b;font-size:1rem">&#9679;</span> Aguardando (15&#8211;60 min)</span>
         <span><span style="color:#ef4444;font-size:1rem">&#9679;</span> Offline (&gt;60 min)</span>
         <span><span style="color:#6b7280;font-size:1rem">&#9679;</span> Nunca detectado</span>
         <span><span style="color:#a855f7;font-size:1rem">&#9679;</span> Inativa</span>
       </div>
-      <!-- Painel de Busca de Trajetória -->
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-weight:700;font-size:.95rem;margin-bottom:12px;color:var(--accent)">&#128663; Buscar Trajet&#243;ria de Ve&#237;culo</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px">
-          <div>
-            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Placa *</label>
+
+      <!-- Mapa Leaflet (destaque visual no topo) -->
+      <div id="map-container" class="mapa-main"></div>
+      
+      <!-- Filtros abaixo do mapa -->
+      <div class="mapa-filters">
+        <div class="mapa-filters-title">&#128663; Buscar Trajet&#243;ria de Ve&#237;culo</div>
+        <div class="mapa-filters-grid">
+          <div class="mapa-filter-field">
+            <label>Placa *</label>
             <input type="text" id="traj-plate-field" placeholder="ABC1234" maxlength="7" class="form-input" 
               style="width:100%;text-transform:uppercase;font-weight:700;letter-spacing:.1em"
               oninput="this.value=this.value.toUpperCase()">
           </div>
-          <div>
-            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">In&#237;cio *</label>
+          <div class="mapa-filter-field">
+            <label>In&#237;cio *</label>
             <input type="datetime-local" id="traj-start-field" class="form-input" style="width:100%">
           </div>
-          <div>
-            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Fim *</label>
+          <div class="mapa-filter-field">
+            <label>Fim *</label>
             <input type="datetime-local" id="traj-end-field" class="form-input" style="width:100%">
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="mapa-filter-actions">
           <button class="btn btn-primary btn-sm" onclick="loadVehicleTrajectory()">&#128270; Buscar Trajet&#243;ria</button>
           <button class="btn btn-outline btn-sm" onclick="clearVehicleTrajectory()">&#10060; Limpar</button>
         </div>
         <div id="traj-map-status" style="font-size:.78rem;color:var(--muted);margin-top:8px;min-height:16px"></div>
       </div>
-      <!-- Mapa Leaflet -->
-      <div id="map-container" style="width:100%;height:520px;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:#0a1f0f"></div>
+      
       <!-- Câmeras sem GPS na trajetória -->
       <div id="traj-no-gps-container" style="margin-top:16px;display:none">
         <div style="background:rgba(255,193,7,.1);border:1px solid var(--warning);border-radius:8px;padding:12px;margin-bottom:12px">
@@ -5314,17 +5408,9 @@ async function loadMapa() {
       attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
       maxZoom: 19
     });
-    var baseSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles \u00a9 Esri \u2014 Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
-      maxZoom: 19
-    });
-
-    // Abre com satélite ativo e mantém mapa padrão como opção.
-    baseSatellite.addTo(_mapaLeaflet);
-    L.control.layers({
-      'Satélite': baseSatellite,
-      'Mapa padrão': baseDefault
-    }, {}, { position: 'topright', collapsed: false }).addTo(_mapaLeaflet);
+    
+    // Usa OpenStreetMap como padrão
+    baseDefault.addTo(_mapaLeaflet);
   }
 
   // Remove marcadores anteriores
@@ -5638,7 +5724,7 @@ function renderVehicleTrajectory(data) {
 
 function clearVehicleTrajectory() {
   // Remove camadas de trajetória do mapa
-  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers.forEach(function(l) { if (l && l.remove) l.remove(); });
   _trajetoriaLayers = [];
   
   // Limpa dados

@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/alert.dart';
+import '../screens/alert_detail_screen.dart';
+import '../screens/alert_modal.dart';
 import '../services/alarm_service.dart';
 import '../services/alarm_history_service.dart';
 import '../services/api.dart';
 import '../services/auth_storage.dart';
+import '../services/notification_service.dart';
 import '../services/watchlist_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
@@ -157,6 +161,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     
     // ── Inicializar WebSocket e Watchlist ──────────────────────────────────
     _initializeWebSocketAndWatchlist();
+    
+    // ── Configurar callback para alertas críticos ──────────────────────────
+    NotificationService().onAlertReceived = (AlertModel alert) {
+      if (mounted) {
+        // Mostrar modal de alerta
+        AlertModal.show(context, alert);
+      }
+    };
+    NotificationService().onAlertOpened = (AlertModel alert) {
+      if (mounted) {
+        _openAlertDetail(alert);
+      }
+    };
+
+    final pending = NotificationService().consumePendingOpenedAlert();
+    if (pending != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openAlertDetail(pending);
+        }
+      });
+    }
+  }
+
+  void _openAlertDetail(AlertModel alert) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AlertDetailScreen(alert: alert),
+      ),
+    );
   }
 
   Future<void> _initializeWebSocketAndWatchlist() async {
@@ -298,6 +332,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
+    NotificationService().onAlertReceived = null;
+    NotificationService().onAlertOpened = null;
     _clock.cancel();
     _refreshTimer?.cancel();
     _wsSubscription?.cancel();
@@ -1573,24 +1609,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const Text('admin • BPFRON',
                 style: TextStyle(color: _kMuted, fontSize: 10)),
             const SizedBox(height: 4),
-            GestureDetector(
-              onTap: _logout,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _kRed.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border:
-                      Border.all(color: _kRed.withValues(alpha: 0.5)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Botão de teste de alerta
+                GestureDetector(
+                  onTap: () async {
+                    try {
+                      final result = await NotificationService().triggerBackendTestAlert();
+                      if (!mounted) return;
+                      final sent = result['sent'] ?? 0;
+                      final failed = result['failed'] ?? 0;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Teste push enviado: $sent sucesso, $failed falhas'),
+                          backgroundColor: sent > 0 ? _kGreen : _kRed,
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Falha no teste push: $e'),
+                          backgroundColor: _kRed,
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border:
+                          Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                    ),
+                    child: const Text('TESTE',
+                        style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1)),
+                  ),
                 ),
-                child: const Text('SAIR',
-                    style: TextStyle(
-                        color: _kRed,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5)),
-              ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: _logout,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _kRed.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border:
+                          Border.all(color: _kRed.withValues(alpha: 0.5)),
+                    ),
+                    child: const Text('SAIR',
+                        style: TextStyle(
+                            color: _kRed,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5)),
+                  ),
+                ),
+              ],
             ),
           ]),
         ],

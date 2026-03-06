@@ -5,6 +5,7 @@
 import os
 import re
 import uuid
+import logging
 import xml.etree.ElementTree as ET
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timedelta, timezone
@@ -28,7 +29,16 @@ from jose import JWTError, jwt as _jwt
 from passlib.context import CryptContext
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from services.fcm_service import (
+    register_fcm_token,
+    send_alert_for_detected_plate,
+    send_alert_to_all_active_tokens,
+    FCMAlert,
+)
+
 from cleanup_background import start_cleanup_background, stop_cleanup_background
+
+logger = logging.getLogger(__name__)
 
 # ===========================
 # CONFIG
@@ -301,6 +311,46 @@ def _init_db():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_vrd_plate ON vehicle_report_decisions(plate);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_vrd_created ON vehicle_report_decisions(created_at);")
+
+            # Tokens FCM por dispositivo
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS fcm_device_tokens (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    device_id TEXT NOT NULL,
+                    fcm_token TEXT NOT NULL,
+                    active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at TIMESTAMPTZ DEFAULT NOW(),
+                    last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+                    UNIQUE(user_id, device_id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user_active ON fcm_device_tokens(user_id, active);")
+
+            # Log de alertas críticos enviados
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alertas_criticos (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id TEXT,
+                    alvo_id INTEGER,
+                    evento_id TEXT,
+                    placa TEXT,
+                    camera_name TEXT,
+                    target_name TEXT,
+                    detected_at TIMESTAMPTZ DEFAULT NOW(),
+                    image_url TEXT,
+                    city TEXT,
+                    risk_level TEXT,
+                    alert_type TEXT DEFAULT 'critical_alert',
+                    criado_em TIMESTAMPTZ DEFAULT NOW(),
+                    enviado_em TIMESTAMPTZ,
+                    lido BOOLEAN DEFAULT FALSE,
+                    error_message TEXT
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_alertas_criticos_usuario ON alertas_criticos(usuario_id, criado_em DESC);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_alertas_criticos_evento ON alertas_criticos(evento_id);")
 
 
 # ===========================
@@ -1586,6 +1636,20 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 _json_lib.dumps(cam_meta) if cam_meta else None,
             ))
             event_id = cur.fetchone()[0]
+
+            # Disparo automático de push quando a placa detectada está monitorada.
+            try:
+                await send_alert_for_detected_plate(
+                    db_cur=cur,
+                    plate=plate or "",
+                    camera_name=(cam.get("nome") if isinstance(cam, dict) else None) or (camera_id or channel_name or "Camera"),
+                    image_url=image_path or "",
+                    confidence=float(confidence or 0),
+                    event_id=str(event_id),
+                    city="N/A",
+                )
+            except Exception as _fcm_err:
+                logger.exception("[FCM] Falha no auto-disparo do alerta: %s", _fcm_err)
 
     # Se não chegou imagem pelo POST, tenta buscar snapshot da câmera via ISAPI
     if not image_path and cam.get("ip") and cam.get("usuario") and cam.get("senha"):
@@ -4164,13 +4228,159 @@ async def catchall_root(request: Request):
     return await _catchall_handler(request)
 
 
-# Rota /api/catchall — mantida por compatibilidade
-@app.api_route(
-    "/api/catchall",
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    include_in_schema=True,
-    tags=["debug"],
-    summary="Catch-all público (com prefixo /api)",
-)
-async def catchall_api(request: Request):
-    return await _catchall_handler(request)
+# ===========================
+# NOTIFICAÇÕES - FCM / ALERTAS CRÍTICOS
+# ===========================
+
+@app.post("/api/fcm/register-token")
+async def fcm_register_token(request: Request):
+    """
+    Registrar token FCM do dispositivo mobile
+    
+    Payload esperado:
+    {
+        "fcm_token": "string",
+        "device_id": "string (opcional)"
+    }
+    """
+    try:
+        user_id = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Não autenticado")
+        
+        data = await request.json()
+        fcm_token = (data.get("fcm_token") or "").strip()
+        device_id = (data.get("device_id") or "default").strip()
+        
+        if not fcm_token:
+            raise HTTPException(status_code=422, detail="fcm_token obrigatório")
+        
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                success = register_fcm_token(str(user_id), device_id, fcm_token, db_cur=cur)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Erro ao registrar token")
+        
+        return {
+            "ok": True,
+            "message": "Token FCM registrado com sucesso",
+            "user_id": user_id,
+            "device_id": device_id,
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[FCM] Erro ao registrar token: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno ao registrar token")
+
+
+@app.post("/api/fcm/send-alert")
+async def fcm_send_alert(request: Request):
+    """Endpoint manual para teste/firing de alerta push ponta a ponta."""
+    try:
+        data = await request.json()
+        plate = str(data.get("plate") or "").strip().upper()
+        target_name = str(data.get("target_name") or "Alvo monitorado").strip()
+        camera_name = str(data.get("camera_name") or "Camera teste").strip()
+        detected_at = str(data.get("detected_at") or datetime.now(timezone.utc).isoformat()).strip()
+        image_url = str(data.get("image_url") or "").strip()
+        event_id = str(data.get("event_id") or f"manual-{uuid.uuid4().hex[:12]}").strip()
+        city = str(data.get("city") or "N/A").strip()
+        risk_level = str(data.get("risk_level") or "high").strip().lower()
+        alert_type = str(data.get("alert_type") or "critical_alert").strip().lower()
+
+        if not plate:
+            raise HTTPException(status_code=422, detail="plate é obrigatório")
+
+        alert = FCMAlert(
+            plate=plate,
+            target_name=target_name,
+            camera_name=camera_name,
+            detected_at=detected_at,
+            image_url=image_url,
+            event_id=event_id,
+            city=city,
+            risk_level=risk_level,
+            alert_type=alert_type,
+        )
+
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                stats = await send_alert_to_all_active_tokens(cur, alert)
+                cur.execute(
+                    """
+                    INSERT INTO alertas_criticos (
+                        usuario_id, alvo_id, evento_id, placa, camera_name,
+                        target_name, detected_at, image_url, city, risk_level,
+                        alert_type, enviado_em, lido, error_message
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, NOW(), FALSE, %s)
+                    """,
+                    (
+                        "broadcast",
+                        None,
+                        event_id,
+                        plate,
+                        camera_name,
+                        target_name,
+                        image_url,
+                        city,
+                        risk_level,
+                        alert_type,
+                        None if stats["sent"] > 0 else "no_active_tokens_or_send_failed",
+                    ),
+                )
+
+        return {
+            "ok": True,
+            "sent": stats["sent"],
+            "failed": stats["failed"],
+            "invalid_tokens": stats["invalid"],
+            "users": stats.get("users", 0),
+            "event_id": event_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[FCM] Erro ao enviar alerta manual: %s", e)
+        raise HTTPException(status_code=500, detail="Erro interno ao enviar alerta push")
+
+
+@app.get("/api/fcm/status")
+async def fcm_status(request: Request):
+    """Verificar status de alertas FCM"""
+    try:
+        user_id = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Não autenticado")
+        
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                # Contar alertas criticos não lidos
+                cur.execute("""
+                    SELECT COUNT(*) FROM alertas_criticos
+                    WHERE usuario_id = %s
+                    AND NOT lido
+                    AND criado_em > NOW() - INTERVAL '24 hours'
+                """, (user_id,))
+                count = cur.fetchone()[0]
+        
+        return {
+            "ok": True,
+            "unread_alerts": count,
+            "timestamp": datetime.now().isoformat(),
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[FCM] Erro ao verificar status: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao verificar status")
+
+
+# ===========================
+# ROTA CATCHALL
+# ===========================
+

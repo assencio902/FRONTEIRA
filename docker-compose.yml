@@ -44,6 +44,8 @@
       POSTGRES_USER: monitor_user
       POSTGRES_PASSWORD: monitor_pass
       REDIS_URL: redis://redis:6379/0
+      FCM_PROJECT_ID: "bpfron-monitoramento"
+      FCM_CREDENTIALS_PATH: "/app/secrets/firebase-adminsdk.json"
       # ── Auth / JWT ────────────────────────────────────────────────
       JWT_SECRET: "bpfron-change-me-in-production"
       JWT_EXPIRE_HOURS: "8"
@@ -72,6 +74,7 @@
       - ./data:/data
       - ./uploads:/app/uploads
       - ./ingest/static:/app/static
+      - ./secrets:/app/secrets:ro
 
   yolo-worker:
     build: ./yolo-worker

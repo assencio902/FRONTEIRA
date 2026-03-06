@@ -1,0 +1,167 @@
+═══════════════════════════════════════════════════════════════════
+  🗺️ GOOGLE MAPS - GUIA RÁPIDO DE INSTALAÇÃO
+  Sistema BPFRON - Monitoramento Veicular
+═══════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ✅ ARQUIVOS CRIADOS/MODIFICADOS                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+  1. 📄 ingest/static/google-maps-styles.css       [NOVO]
+  2. 📄 ingest/static/google-maps-manager.js       [NOVO]
+  3. 📄 ingest/static/dashboard.html               [MODIFICADO]
+  4. 📄 GOOGLE_MAPS_INSTALACAO.md                  [DOCUMENTAÇÃO]
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔑 PASSO 1: OBTER SUA API KEY                                   │
+└─────────────────────────────────────────────────────────────────┘
+
+  1. Acesse: https://console.cloud.google.com/
+  2. Crie um projeto novo
+  3. Ative a API: "Maps JavaScript API"
+  4. Vá em: APIs e serviços > Credenciais
+  5. Clique: + CRIAR CREDENCIAIS > Chave de API
+  6. COPIE a chave gerada (ex: AIzaSyBxxx...)
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🛠️ PASSO 2: CONFIGURAR NO SISTEMA                               │
+└─────────────────────────────────────────────────────────────────┘
+
+  📁 ARQUIVO: d:\monitoramento\ingest\static\dashboard.html
+  
+  📍 LOCALIZAÇÃO: Linha 12 (dentro da tag <head>)
+  
+  🔍 PROCURE POR:
+  
+    key=YOUR_API_KEY
+  
+  ✏️ SUBSTITUA POR:
+  
+    key=SUA_CHAVE_AQUI
+  
+  📝 EXEMPLO COMPLETO:
+  
+    <script src="https://maps.googleapis.com/maps/api/js
+    ?key=AIzaSyBxxxYYYzzz1234567890abcdefGHIJKL
+    &callback=Function.prototype" async defer></script>
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚠️ IMPORTANTE - SEGURANÇA                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+  Após criar a API Key, configure restrições:
+  
+  🌐 Restrições de Aplicativo:
+     ✓ Tipo: Referenciadores HTTP (sites)
+     ✓ Adicione: http://104.236.104.79:8000/*
+     ✓ Adicione: http://localhost:8000/*
+  
+  🔒 Restrições de API:
+     ✓ Marque apenas: Maps JavaScript API
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🚀 PASSO 3: TESTAR                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+  1. Reinicie o servidor Python:
+     
+     cd d:\monitoramento\ingest
+     python main.py
+  
+  2. Acesse: http://localhost:8000
+  
+  3. Faça login no sistema
+  
+  4. Clique no menu lateral: 🗺️ Mapa de Câmeras
+  
+  5. Verifique:
+     ✓ Mapa carrega sem erros
+     ✓ Controles de tipo aparecem no canto superior direito
+     ✓ Possível alternar entre: Ruas, Satélite, Híbrido, Terreno
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🎨 TIPOS DE MAPA DISPONÍVEIS                                    │
+└─────────────────────────────────────────────────────────────────┘
+
+  🛣️  RUAS (roadmap)     → Mapa tradicional com vias
+  🛰️  SATÉLITE (satellite) → Imagem aérea pura
+  🌍  HÍBRIDO (hybrid)     → Satélite + rótulos [PADRÃO]
+  ⛰️  TERRENO (terrain)    → Relevo e topografia
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🎯 FUNCIONALIDADES IMPLEMENTADAS                                │
+└─────────────────────────────────────────────────────────────────┘
+
+  ✅ Mapa Google Maps totalmente integrado
+  ✅ Seletor visual de 4 tipos de mapa
+  ✅ Marcadores de câmeras com cores por status:
+     🟢 Verde  - Online (< 15 min)
+     🟡 Amarelo - Aguardando (15-60 min)
+     🔴 Vermelho - Offline (> 60 min)
+     ⚪ Cinza  - Nunca detectado
+     🟣 Roxo   - Inativa
+  
+  ✅ Popup informativo ao clicar no marcador
+  ✅ Sistema de trajetória de veículos
+  ✅ Design profissional e limpo
+  ✅ Totalmente responsivo (mobile/tablet/desktop)
+  ✅ Preparado para funcionalidades futuras
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🐛 PROBLEMAS COMUNS                                             │
+└─────────────────────────────────────────────────────────────────┘
+
+  ❌ Mapa não carrega (tela cinza):
+     → Verifique se API Key está correta
+     → Certifique que Maps JavaScript API está ativa
+     → Abra Console do navegador (F12) para ver erros
+  
+  ❌ Marcadores não aparecem:
+     → Verifique se câmeras têm coordenadas GPS cadastradas
+  
+  ❌ Erro "RefererNotAllowedMapError":
+     → Adicione seu domínio nas restrições da API Key
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 💰 CUSTOS                                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+  Google oferece $200 de crédito gratuito por mês
+  
+  Isso equivale a aproximadamente:
+  📊 28.000 carregamentos de mapa/mês
+  📊 933 carregamentos por dia
+  
+  Para monitoramento interno, geralmente fica dentro do free tier.
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTAÇÃO COMPLETA                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+  Leia o guia completo em:
+  📄 d:\monitoramento\GOOGLE_MAPS_INSTALACAO.md
+  
+  Documentação oficial Google:
+  🌐 https://developers.google.com/maps/documentation/javascript
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ✅ RESUMO DA ENTREGA                                            │
+└─────────────────────────────────────────────────────────────────┘
+
+  ✔️ Google Maps totalmente integrado na aba "Função Mapas"
+  ✔️ Seletor de 4 tipos de mapa (roadmap, satellite, hybrid, terrain)
+  ✔️ Layout responsivo e profissional
+  ✔️ Marcador de teste incluído
+  ✔️ Sistema preparado para trajetórias e rotas
+  ✔️ Código limpo, comentado e modular
+  ✔️ Compatibilidade com sistema existente mantida
+  ✔️ Documentação completa fornecida
+
+═══════════════════════════════════════════════════════════════════
+
+  🎉 TUDO PRONTO!
+  
+  Só falta você colocar sua API KEY no arquivo dashboard.html
+  e o sistema estará 100% funcional!
+
+═══════════════════════════════════════════════════════════════════

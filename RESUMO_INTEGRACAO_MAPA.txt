@@ -1,0 +1,173 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║          🎯 INTEGRAÇÃO DO MAPA FLUTTER COM BACKEND - RESUMO            ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 📡 ENDPOINT IDENTIFICADO                                                │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  GET /api/v1/cameras?include_inactive=true                            │
+│                                                                         │
+│  Arquivo web: ingest/static/dashboard.html (linha 5421)               │
+│  Backend:     ingest/api/camera_router.py (linha 9-64)                │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 📄 EXEMPLO DE JSON RETORNADO                                           │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  {                                                                      │
+│    "items": [                                                           │
+│      {                                                                  │
+│        "id": 1,                                                         │
+│        "camera_id": "CAM_BR101_KM350",                                  │
+│        "nome": "Câmera BR-101 Norte",                                   │
+│        "ativa": true,                                                   │
+│        "criticidade": "CRITICA",                                        │
+│        "ip": "192.168.1.100",                                           │
+│        "last_seen": "2026-03-06T14:25:30",                              │
+│        "total_events": 15420,                                           │
+│        "events_today": 234,                                             │
+│        "direcao": "CRESCENTE",                                          │
+│        "latitude": -15.123456,  ← COORDENADAS GPS                      │
+│        "longitude": -52.654321, ←                                       │
+│        "modo_integracao": "push"                                        │
+│      }                                                                  │
+│    ],                                                                   │
+│    "total": 1                                                           │
+│  }                                                                      │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ ✨ ARQUIVOS CRIADOS                                                     │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. flutter_app/lib/models/camera.dart                                 │
+│     └─ Model Flutter para representar câmera do backend                │
+│        • Camera.fromJson() para parsing                                │
+│        • Getters: hasGps, status, statusColor                          │
+│        • CameraListResponse para envelope {items, total}               │
+│                                                                         │
+│  2. flutter_app/lib/services/camera_service.dart                       │
+│     └─ Service para consumir API de câmeras                            │
+│        • getCameras(includeInactive: true)                             │
+│        • getCameraStatus()                                             │
+│        • getCamerasWithGps()                                           │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 🔧 ARQUIVOS MODIFICADOS                                                 │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  flutter_app/lib/screens/trajectory_screen.dart                        │
+│  ├─ ✅ Imports adicionados (camera.dart, camera_service.dart)          │
+│  ├─ ✅ Estado: List<Camera> _cameras                                   │
+│  ├─ ✅ initState() → carrega câmeras automaticamente                   │
+│  ├─ ✅ _loadCameras() → busca do backend                               │
+│  ├─ ✅ _buildMap() → adiciona marcadores de câmeras (azul/roxo)        │
+│  ├─ ✅ _showCameraDetails() → popup com informações da câmera          │
+│  └─ ✅ Switch UI para mostrar/ocultar câmeras no mapa                  │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 🎨 DIFERENCIAÇÃO VISUAL NO MAPA                                         │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Tipo                         Cor          Significado                 │
+│  ────────────────────────────────────────────────────────────────────  │
+│  🟢 Início da Trajetória      Verde        Primeiro ponto              │
+│  🟠 Fim da Trajetória         Laranja      Último ponto                │
+│  🔴 Pontos Intermediários     Vermelho     Passagens                   │
+│  🔵 Câmera Online             Azul         Ativa < 5 min               │
+│  🟣 Câmera Offline/Inativa    Roxo         Sem comunicação             │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 📱 INFORMAÇÕES EXIBIDAS NO MARCADOR DE CÂMERA                           │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Ao clicar em um marcador azul/roxo, o popup mostra:                   │
+│                                                                         │
+│  📹 Nome da câmera                                                      │
+│  🆔 ID da câmera (camera_id)                                            │
+│  🖥️ Endereço IP                                                         │
+│  🟢 Status (Online/Recente/Offline/Inativa)                             │
+│  🧭 Direção (CRESCENTE/DECRESCENTE)                                     │
+│  ⚠️ Criticidade (CRITICA/NORMAL)                                        │
+│  📊 Eventos hoje                                                        │
+│  📈 Total de eventos                                                    │
+│  🕒 Última comunicação (timestamp)                                      │
+│  📍 Coordenadas GPS (lat, lng)                                          │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 🚀 COMO TESTAR NO APP                                                   │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. Certifique-se que o backend está rodando:                          │
+│     docker-compose up -d                                               │
+│                                                                         │
+│  2. Execute o app Flutter:                                             │
+│     cd flutter_app                                                     │
+│     flutter run -d chrome   (ou windows, android, etc)                │
+│                                                                         │
+│  3. Navegue para a tela "Mapas & Rotas"                                │
+│                                                                         │
+│  4. Observe:                                                            │
+│     • Câmeras carregam automaticamente ao abrir a tela                 │
+│     • Switch mostra quantas câmeras foram carregadas                   │
+│     • Marcadores azuis/roxos aparecem no mapa                          │
+│                                                                         │
+│  5. Interaja:                                                           │
+│     • Clique em um marcador → veja detalhes da câmera                  │
+│     • Use o switch para mostrar/ocultar câmeras                        │
+│     • Busque uma trajetória → veja câmeras + pontos no mesmo mapa     │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ ✅ VALIDAÇÃO                                                            │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ✅ Sem coordenadas fixas no código - 100% do backend                  │
+│  ✅ Mesma API usada pelo sistema web                                   │
+│  ✅ Model e Service implementados                                      │
+│  ✅ Marcadores renderizados no GoogleMap                               │
+│  ✅ Popup de detalhes ao clicar                                        │
+│  ✅ Toggle show/hide câmeras                                           │
+│  ✅ Status calculado (Online/Offline) baseado em last_seen            │
+│  ✅ Compilação sem erros                                               │
+│  ✅ Estrutura do app preservada                                        │
+│  ✅ Documentação completa criada                                       │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 📚 DOCUMENTAÇÃO GERADA                                                  │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  INTEGRACAO_MAPA_FLUTTER.md                                            │
+│  └─ Documentação completa com:                                         │
+│     • Endpoints utilizados                                             │
+│     • Exemplos de JSON                                                 │
+│     • Código dos models/services                                       │
+│     • Explicação das modificações                                      │
+│     • Guia de uso                                                      │
+│     • Troubleshooting                                                  │
+│     • Próximos passos sugeridos                                        │
+│                                                                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════╗
+║  🎉 INTEGRAÇÃO CONCLUÍDA COM SUCESSO!                                   ║
+║                                                                         ║
+║  O app Flutter agora consome a mesma API que o sistema web para        ║
+║  exibir câmeras no mapa. Adicione/edite/remova câmeras no web e        ║
+║  elas aparecerão automaticamente no mobile/desktop.                    ║
+╚════════════════════════════════════════════════════════════════════════╝

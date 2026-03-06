@@ -283,6 +283,19 @@ class _SearchPanel extends StatelessWidget {
     required this.onVehicleColorChanged,
   });
 
+  String _buildFilterSummary() {
+    final parts = <String>[
+      'janela $window',
+      '${_fmtDur(coWindow)}/cam',
+      'min. $minCameras',
+    ];
+    if (direcao != null) parts.add(direcao!);
+    if (vehicleType != null) parts.add(_kTypeLabel[vehicleType] ?? vehicleType!);
+    if (vehicleColor != null) parts.add(vehicleColor!);
+    if (prefixCtrl.text.isNotEmpty) parts.add('placa: ${prefixCtrl.text.toUpperCase()}');
+    return parts.join('  |  ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -618,21 +631,6 @@ class _SearchPanel extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-  // ── Resumo dos filtros ativos para o label ──────────────────────────────
-  String _buildFilterSummary() {
-    final parts = <String>[
-      'janela $_window',
-      '${_fmtDur(coWindow)}/câm',
-      'mín. $minCameras',
-    ];
-    if (direcao     != null) parts.add(direcao!);
-    if (vehicleType != null) parts.add(_kTypeLabel[vehicleType] ?? vehicleType!);
-    if (vehicleColor!= null) parts.add(vehicleColor!);
-    if (prefixCtrl.text.isNotEmpty) parts.add('placa: ${prefixCtrl.text.toUpperCase()}');
-    return parts.join('  •  ');
   }
 }
 

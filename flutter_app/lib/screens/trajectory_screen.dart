@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:latlong2/latlong.dart';
 
+import '../models/camera.dart';
 import '../services/api.dart';
+import '../services/camera_service.dart';
 import '../theme/app_theme.dart';
 
 const _kBg = AppColors.background;
@@ -23,7 +24,7 @@ class TrajectoryScreen extends StatefulWidget {
 
 class _TrajectoryScreenState extends State<TrajectoryScreen> {
   final _plateController = TextEditingController();
-  final _mapController = MapController();
+  GoogleMapController? _googleMapController;
   
   DateTime? _startDate;
   DateTime? _endDate;
@@ -31,12 +32,40 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
   bool _loading = false;
   String? _errorMsg;
   Map<String, dynamic>? _trajectoryData;
+  
+  // Câmeras carregadas da API
+  List<Camera> _cameras = [];
+  bool _loadingCameras = false;
+  bool _showCamerasOnMap = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCameras();
+  }
 
   @override
   void dispose() {
     _plateController.dispose();
-    _mapController.dispose();
+    _googleMapController?.dispose();
     super.dispose();
+  }
+
+  /// Carrega câmeras do backend
+  Future<void> _loadCameras() async {
+    setState(() => _loadingCameras = true);
+    try {
+      final response = await CameraService.instance.getCameras(includeInactive: true);
+      if (!mounted) return;
+      setState(() {
+        _cameras = response.withGps;
+        _loadingCameras = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loadingCameras = false);
+      debugPrint('[TrajectoryScreen] Erro ao carregar câmeras: $e');
+    }
   }
 
   Future<void> _selectStartDate() async {
@@ -155,19 +184,7 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
       });
 
       // Auto-zoom para os pontos
-      final points = (data['points'] as List?) ?? [];
-      if (points.isNotEmpty) {
-        final bounds = LatLngBounds.fromPoints(
-          points.map((p) => LatLng(p['lat'], p['lng'])).toList(),
-        );
-        _mapController.fitCamera(
-          CameraFit.bounds(
-            bounds: bounds,
-            padding: const EdgeInsets.all(50),
-            maxZoom: 14,
-          ),
-        );
-      }
+      _fitTrajectoryOnMap(points: (data['points'] as List?) ?? []);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -185,6 +202,14 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
       _trajectoryData = null;
       _errorMsg = null;
     });
+    
+    // Retorna mapa para posição padrão (Brasil central)
+    _googleMapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        const LatLng(-15.0, -52.0),
+        5.0,
+      ),
+    );
   }
 
   @override
@@ -309,6 +334,36 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
                   ],
                 ),
 
+                // Switch para mostrar câmeras no mapa
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0a3820),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.videocam, color: _kMuted, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Exibir câmeras no mapa ${_loadingCameras ? "..." : "(${_cameras.length} câmeras)"}',
+                          style: const TextStyle(color: _kMuted, fontSize: 12),
+                        ),
+                      ),
+                      Switch(
+                        value: _showCamerasOnMap,
+                        onChanged: (value) {
+                          setState(() => _showCamerasOnMap = value);
+                        },
+                        activeColor: _kYellow,
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Mensagem de erro
                 if (_errorMsg != null)
                   Padding(
@@ -360,17 +415,9 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
             ),
           ),
 
-          // Mapa
+          // Mapa (sempre visível)
           Expanded(
-            child: _trajectoryData == null
-                ? const Center(
-                    child: Text(
-                      '📍 Informe a placa e período\npara buscar a trajetória',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: _kMuted, fontSize: 14),
-                    ),
-                  )
-                : _buildMap(),
+            child: _buildMap(),
           ),
 
           // Câmeras sem GPS
@@ -399,143 +446,211 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
   }
 
   Widget _buildMap() {
-    final points = (_trajectoryData!['points'] as List?) ?? [];
-    if (points.isEmpty) {
-      return const Center(
-        child: Text(
-          '⚠️ Nenhum ponto com GPS encontrado',
-          style: TextStyle(color: _kRed, fontSize: 14),
-        ),
+    // Coordenadas padrão (Brasil central) quando não houver dados
+    const defaultLat = -15.0;
+    const defaultLng = -52.0;
+    const defaultZoom = 5.0;
+
+    // Processa pontos de trajetória (se houver)
+    final points = (_trajectoryData?['points'] as List?) ?? [];
+    final validEntries = points.asMap().entries.where((entry) {
+      final lat = _toDouble(entry.value['lat']);
+      final lng = _toDouble(entry.value['lng']);
+      return lat != null && lng != null;
+    }).toList();
+
+    // Define posição inicial do mapa
+    final LatLng initialPosition;
+    final double initialZoom;
+    
+    if (validEntries.isNotEmpty) {
+      final firstPoint = validEntries.first.value;
+      initialPosition = LatLng(
+        _toDouble(firstPoint['lat'])!,
+        _toDouble(firstPoint['lng'])!,
       );
+      initialZoom = 10.0;
+    } else {
+      initialPosition = const LatLng(defaultLat, defaultLng);
+      initialZoom = defaultZoom;
     }
 
-    final latLngs = points.map((p) => LatLng(p['lat'], p['lng'])).toList();
+    // Cria marcadores de trajetória
+    final trajectoryMarkers = <Marker>{
+      if (validEntries.isNotEmpty)
+        for (var i = 0; i < validEntries.length; i++)
+          Marker(
+            markerId: MarkerId('pt_${validEntries[i].key}'),
+            position: LatLng(
+              _toDouble(validEntries[i].value['lat'])!,
+              _toDouble(validEntries[i].value['lng'])!,
+            ),
+            icon: i == 0
+                ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
+                : (i == validEntries.length - 1
+                    ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange)
+                    : BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed)),
+            onTap: () => _showPointDetails(validEntries[i].value, i + 1),
+          ),
+    };
 
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: latLngs.first,
-        initialZoom: 10,
-        minZoom: 5,
-        maxZoom: 18,
-      ),
+    // Cria marcadores de câmeras
+    final cameraMarkers = <Marker>{
+      if (_showCamerasOnMap)
+        ...(_cameras.map((camera) {
+          return Marker(
+            markerId: MarkerId('cam_${camera.cameraId}'),
+            position: LatLng(camera.latitude!, camera.longitude!),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              camera.status == 'Online' 
+                ? BitmapDescriptor.hueAzure
+                : BitmapDescriptor.hueViolet
+            ),
+            onTap: () => _showCameraDetails(camera),
+            infoWindow: InfoWindow(
+              title: '📹 ${camera.nome}',
+              snippet: camera.status,
+            ),
+          );
+        })),
+    };
+
+    // Combina todos os marcadores
+    final allMarkers = {...trajectoryMarkers, ...cameraMarkers};
+
+    // Cria polyline se houver pontos
+    final Set<Polyline> polylines;
+    if (validEntries.isNotEmpty) {
+      final polylinePoints = validEntries
+          .map((entry) => LatLng(
+                _toDouble(entry.value['lat'])!,
+                _toDouble(entry.value['lng'])!,
+              ))
+          .toList();
+      
+      polylines = {
+        Polyline(
+          polylineId: const PolylineId('trajectory_line'),
+          points: polylinePoints,
+          color: _kRed,
+          width: 5,
+        ),
+      };
+    } else {
+      polylines = {};
+    }
+
+    // Determina mensagem informativa (se houver)
+    String? infoMessage;
+    if (_trajectoryData == null) {
+      infoMessage = '📍 Informe a placa e período para buscar a trajetória';
+    } else if (validEntries.isEmpty) {
+      infoMessage = '⚠️ Nenhum ponto com GPS encontrado para essa busca';
+    }
+
+    return Stack(
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.bpfron.monitoramento',
-        ),
-        
-        // Polyline da rota
-        PolylineLayer(
-          polylines: [
-            Polyline(
-              points: latLngs,
-              color: _kRed,
-              strokeWidth: 4,
-            ),
-          ],
+        // Mapa (sempre visível)
+        GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: initialPosition,
+            zoom: initialZoom,
+          ),
+          onMapCreated: (controller) {
+            _googleMapController = controller;
+            if (validEntries.isNotEmpty) {
+              _fitTrajectoryOnMap(points: points);
+            }
+          },
+          mapType: MapType.hybrid,
+          myLocationButtonEnabled: false,
+          mapToolbarEnabled: false,
+          zoomControlsEnabled: true,
+          markers: allMarkers,
+          polylines: polylines,
         ),
 
-        // Marcadores numerados
-        MarkerLayer(
-          markers: points.asMap().entries.map((entry) {
-            final idx = entry.key;
-            final point = entry.value;
-            final position = LatLng(point['lat'], point['lng']);
-
-            return Marker(
-              point: position,
-              width: 30,
-              height: 30,
-              child: GestureDetector(
-                onTap: () => _showPointDetails(point, idx + 1),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _kRed,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black45,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+        // Mensagem informativa (quando não há dados ou pontos)
+        if (infoMessage != null)
+          Positioned(
+            top: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: _kCard.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _kBorder),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Center(
-                    child: Text(
-                      '${idx + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
+                ],
               ),
-            );
-          }).toList(),
-        ),
-
-        // Marcador de início
-        MarkerLayer(
-          markers: [
-            Marker(
-              point: latLngs.first,
-              width: 80,
-              height: 30,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _kGreen,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-                child: const Center(
-                  child: Text(
-                    '▶ INÍCIO',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+              child: Text(
+                infoMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _kMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-          ],
-        ),
-
-        // Marcador de fim
-        if (latLngs.length > 1)
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: latLngs.last,
-                width: 70,
-                height: 30,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _kRed,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      '■ FIM',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
       ],
     );
+  }
+
+  Future<void> _fitTrajectoryOnMap({required List points}) async {
+    final controller = _googleMapController;
+    if (controller == null || points.isEmpty) return;
+
+    final valid = points.where((p) {
+      final lat = _toDouble(p['lat']);
+      final lng = _toDouble(p['lng']);
+      return lat != null && lng != null;
+    }).toList();
+    if (valid.isEmpty) return;
+
+    var minLat = _toDouble(valid.first['lat'])!;
+    var maxLat = minLat;
+    var minLng = _toDouble(valid.first['lng'])!;
+    var maxLng = minLng;
+
+    for (final p in valid.skip(1)) {
+      final lat = _toDouble(p['lat'])!;
+      final lng = _toDouble(p['lng'])!;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
+
+    if ((maxLat - minLat).abs() < 0.0001 && (maxLng - minLng).abs() < 0.0001) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(minLat, minLng), 15),
+      );
+      return;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+
+    await controller.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 56),
+    );
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   void _showPointDetails(Map<String, dynamic> point, int index) {
@@ -600,6 +715,101 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     } catch (e) {
       return isoString;
     }
+  }
+
+  /// Exibe detalhes da câmera ao clicar no marcador
+  void _showCameraDetails(Camera camera) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _kCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  '📹',
+                  style: TextStyle(fontSize: 24),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    camera.nome,
+                    style: const TextStyle(
+                      color: _kYellow,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              camera.cameraId,
+              style: const TextStyle(color: _kMuted, fontSize: 12),
+            ),
+            const Divider(height: 24, color: _kBorder),
+            
+            _DetailRow(
+              icon: Icons.router,
+              label: 'IP',
+              value: camera.ip ?? '—',
+            ),
+            _DetailRow(
+              icon: Icons.circle,
+              label: 'Status',
+              value: camera.status,
+            ),
+            if (camera.direcao != null)
+              _DetailRow(
+                icon: Icons.navigation,
+                label: 'Direção',
+                value: camera.direcao!,
+              ),
+            _DetailRow(
+              icon: Icons.warning_amber,
+              label: 'Criticidade',
+              value: camera.criticidade,
+            ),
+            const Divider(height: 20, color: _kBorder),
+            _DetailRow(
+              icon: Icons.event,
+              label: 'Eventos Hoje',
+              value: camera.eventsToday.toString(),
+            ),
+            _DetailRow(
+              icon: Icons.analytics,
+              label: 'Total de Eventos',
+              value: camera.totalEvents.toString(),
+            ),
+            if (camera.lastSeen != null) ...[
+              const Divider(height: 20, color: _kBorder),
+              _DetailRow(
+                icon: Icons.access_time,
+                label: 'Última Comunicação',
+                value: _formatDateTime(camera.lastSeen!),
+              ),
+            ],
+            const Divider(height: 20, color: _kBorder),
+            Text(
+              '📍 ${camera.latitude?.toStringAsFixed(6)}, ${camera.longitude?.toStringAsFixed(6)}',
+              style: const TextStyle(
+                color: _kMuted,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
