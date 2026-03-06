@@ -1009,9 +1009,41 @@
         <span><span style="color:#6b7280;font-size:1rem">&#9679;</span> Nunca detectado</span>
         <span><span style="color:#a855f7;font-size:1rem">&#9679;</span> Inativa</span>
       </div>
+      <!-- Painel de Busca de Trajetória -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:.95rem;margin-bottom:12px;color:var(--accent)">&#128663; Buscar Trajet&#243;ria de Ve&#237;culo</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px">
+          <div>
+            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Placa *</label>
+            <input type="text" id="traj-plate-field" placeholder="ABC1234" maxlength="7" class="form-input" 
+              style="width:100%;text-transform:uppercase;font-weight:700;letter-spacing:.1em"
+              oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div>
+            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">In&#237;cio *</label>
+            <input type="datetime-local" id="traj-start-field" class="form-input" style="width:100%">
+          </div>
+          <div>
+            <label style="font-size:.78rem;color:var(--muted);font-weight:600;display:block;margin-bottom:4px">Fim *</label>
+            <input type="datetime-local" id="traj-end-field" class="form-input" style="width:100%">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="loadVehicleTrajectory()">&#128270; Buscar Trajet&#243;ria</button>
+          <button class="btn btn-outline btn-sm" onclick="clearVehicleTrajectory()">&#10060; Limpar</button>
+        </div>
+        <div id="traj-map-status" style="font-size:.78rem;color:var(--muted);margin-top:8px;min-height:16px"></div>
+      </div>
       <!-- Mapa Leaflet -->
       <div id="map-container" style="width:100%;height:520px;border-radius:10px;border:1px solid var(--border);overflow:hidden;background:#0a1f0f"></div>
-      <!-- C&#226;meras sem GPS -->
+      <!-- Câmeras sem GPS na trajetória -->
+      <div id="traj-no-gps-container" style="margin-top:16px;display:none">
+        <div style="background:rgba(255,193,7,.1);border:1px solid var(--warning);border-radius:8px;padding:12px;margin-bottom:12px">
+          <div style="font-weight:600;font-size:.82rem;color:var(--accent);margin-bottom:6px">⚠️ Câmeras sem Coordenadas GPS</div>
+          <div id="traj-no-gps-list" style="font-size:.78rem;color:var(--muted)"></div>
+        </div>
+      </div>
+      <!-- Câmeras sem GPS (mapa geral) -->
       <div id="map-no-gps" style="margin-top:16px"></div>
     </div><!-- /tab-mapa -->
 
@@ -5278,10 +5310,21 @@ async function loadMapa() {
   // Inicializa Leaflet na primeira chamada
   if (!_mapaLeaflet) {
     _mapaLeaflet = L.map('map-container', { zoomControl: true }).setView([-15.0, -52.0], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    var baseDefault = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
       maxZoom: 19
-    }).addTo(_mapaLeaflet);
+    });
+    var baseSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles \u00a9 Esri \u2014 Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+      maxZoom: 19
+    });
+
+    // Abre com satélite ativo e mantém mapa padrão como opção.
+    baseSatellite.addTo(_mapaLeaflet);
+    L.control.layers({
+      'Satélite': baseSatellite,
+      'Mapa padrão': baseDefault
+    }, {}, { position: 'topright', collapsed: false }).addTo(_mapaLeaflet);
   }
 
   // Remove marcadores anteriores
@@ -5378,6 +5421,241 @@ async function loadMapa() {
     var noGps = document.getElementById('map-no-gps');
     if (noGps) noGps.innerHTML = '<div style="color:var(--danger);font-size:.82rem">Erro ao carregar c\u00e2meras: ' + e.message + '</div>';
   }
+}
+
+// ===== TRAJETÓRIA DE VEÍCULO (Painel no Mapa) =====
+var _vehicleTrajData = null;
+
+async function loadVehicleTrajectory() {
+  var plate = (document.getElementById('traj-plate-field').value || '').trim().toUpperCase();
+  var start = document.getElementById('traj-start-field').value;
+  var end = document.getElementById('traj-end-field').value;
+  var status = document.getElementById('traj-map-status');
+
+  if (!plate || !start || !end) {
+    status.innerHTML = '⚠️ Informe placa, data/hora de início e fim.';
+    return;
+  }
+
+  status.innerHTML = '<span class="spinner" style="margin-right:6px;vertical-align:middle"></span>Buscando...';
+
+  try {
+    // Converte datetime-local para ISO 8601 com timezone UTC
+    var dtStart = new Date(start);
+    var dtEnd = new Date(end);
+    var startIso = dtStart.toISOString();
+    var endIso = dtEnd.toISOString();
+
+    var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
+            + '?start=' + encodeURIComponent(startIso)
+            + '&end=' + encodeURIComponent(endIso)
+            + '&dedupe_seconds=5';
+    
+    var resp = await fetch(url);
+    if (!resp.ok) {
+      var errData = await resp.json().catch(() => ({detail: 'HTTP ' + resp.status}));
+      throw new Error(errData.detail || 'HTTP ' + resp.status);
+    }
+
+    var data = await resp.json();
+    renderVehicleTrajectory(data);
+    status.innerHTML = '';
+  } catch(e) {
+    status.innerHTML = '❌ Erro: ' + e.message;
+    console.error('[loadVehicleTrajectory]', e);
+  }
+}
+
+function renderVehicleTrajectory(data) {
+  if (!data || !data.points || data.points.length === 0) {
+    var msg = '⚠️ Nenhum ponto com coordenadas GPS encontrado';
+    if (data && data.cameras_without_gps && data.cameras_without_gps.length > 0) {
+      msg += ' (câmeras sem GPS: ' + data.cameras_without_gps.join(', ') + ')';
+    }
+    document.getElementById('traj-map-status').innerHTML = msg;
+    return;
+  }
+
+  _vehicleTrajData = data;
+
+  var plate = data.plate;
+  var points = data.points;
+  
+  // Guarda dados para limpeza posterior
+  if (!_mapaLeaflet) return;
+
+  // Remove camadas anteriores de trajetória
+  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers = [];
+
+  // Cores
+  var COLORS = ['#ef4444', '#f97316', '#a855f7', '#3b82f6', '#facc15', '#06b6d4', '#4ade80'];
+  var mainColor = COLORS[0];
+
+  // Coleta bounds para zoom
+  var bounds = [];
+  var ptsToProcess = points.filter(function(p) {
+    return p.lat != null && p.lng != null;
+  });
+
+  if (!ptsToProcess.length) {
+    document.getElementById('traj-map-status').innerHTML = '⚠️ Nenhum ponto com GPS';
+    return;
+  }
+
+  ptsToProcess.forEach(function(p, idx) {
+    p._index = idx + 1; // numeração começa de 1
+    bounds.push([p.lat, p.lng]);
+  });
+
+  // Desenha polyline ligando os pontos
+  if (ptsToProcess.length >= 2) {
+    // Sombra
+    var shadow = L.polyline(ptsToProcess.map(function(p) { return [p.lat, p.lng]; }), {
+      color: '#000',
+      weight: 7,
+      opacity: 0.25
+    }).addTo(_mapaLeaflet);
+    _trajetoriaLayers.push(shadow);
+
+    // Linha principal
+    var line = L.polyline(ptsToProcess.map(function(p) { return [p.lat, p.lng]; }), {
+      color: mainColor,
+      weight: 4,
+      opacity: 0.9
+    }).addTo(_mapaLeaflet);
+    _trajetoriaLayers.push(line);
+
+    // Setas direcionais
+    function bearing(p1, p2) {
+      var dLng = (p2.lng - p1.lng) * Math.PI / 180;
+      var lat1 = p1.lat * Math.PI / 180;
+      var lat2 = p2.lat * Math.PI / 180;
+      var y = Math.sin(dLng) * Math.cos(lat2);
+      var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function arrowIcon(color, angle) {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
+        + '<circle cx="10" cy="10" r="9" fill="' + color + '" fill-opacity=".85" stroke="#fff" stroke-width="1.2"/>'
+        + '<polygon points="10,3 13.5,14 10,11 6.5,14" fill="#fff" transform="rotate(' + angle + ',10,10)"/>'
+        + '</svg>';
+      return L.divIcon({html: svg, className: '', iconSize: [20, 20], iconAnchor: [10, 10]});
+    }
+
+    for (var i = 0; i < ptsToProcess.length - 1; i++) {
+      var p1 = ptsToProcess[i];
+      var p2 = ptsToProcess[i + 1];
+      if (p1.lat === p2.lat && p1.lng === p2.lng) continue;
+      var midLat = (p1.lat + p2.lat) / 2;
+      var midLng = (p1.lng + p2.lng) / 2;
+      var ang = bearing(p1, p2);
+      var arrow = L.marker([midLat, midLng], {icon: arrowIcon(mainColor, ang), zIndexOffset: 10})
+        .addTo(_mapaLeaflet);
+      _trajetoriaLayers.push(arrow);
+    }
+  }
+
+  // Marcadores numerados
+  ptsToProcess.forEach(function(p) {
+    var dt = new Date(p.ts);
+    var fmt = dt.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'})
+            + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+    var circleHtml = '<div style="background:' + mainColor + ';color:#fff;font-weight:900;font-size:.7rem;'
+      + 'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
+      + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p._index + '</div>';
+    
+    var markerContent = '<div style="font-family:system-ui;min-width:240px">'
+      + '<div style="font-weight:900;font-size:.95rem;color:' + mainColor + ';margin-bottom:8px;letter-spacing:.05em">' + plate + '</div>'
+      + '<div style="font-size:.82rem;line-height:1.9;color:#ccc">'
+      + '<b style="color:#64748b">Evento #' + p._index + '</b> de ' + ptsToProcess.length + '<br>'
+      + '<b style="color:#64748b">Data/Hora:</b> ' + fmt + '<br>'
+      + '<b style="color:#64748b">Câmera:</b> ' + (p.camera_name || p.camera_id) + '<br>'
+      + '<b style="color:#64748b">Direção:</b> ' + (p.direction || '—') + '<br>'
+      + '<b style="color:#64748b">Confiança:</b> ' + (p.confidence ? (p.confidence * 100).toFixed(0) + '%' : '—') + '<br>'
+      + (p.vehicle_type ? '<b style="color:#64748b">Tipo:</b> ' + p.vehicle_type + '<br>' : '')
+      + (p.vehicle_color ? '<b style="color:#64748b">Cor:</b> ' + p.vehicle_color + '<br>' : '')
+      + '</div>'
+      + '</div>';
+
+    var mk = L.marker([p.lat, p.lng], {
+      icon: L.divIcon({html: circleHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14]}),
+      zIndexOffset: 20
+    }).bindPopup(markerContent)
+     .addTo(_mapaLeaflet);
+    _trajetoriaLayers.push(mk);
+  });
+
+  // Marcadores de início e fim
+  if (ptsToProcess.length >= 1) {
+    var startHtml = '<div style="background:#16a34a;color:#fff;font-weight:900;font-size:.68rem;'
+      + 'border-radius:6px;padding:4px 8px;border:2px solid #fff;white-space:nowrap;'
+      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">▶ INÍCIO</div>';
+    var mStart = L.marker([ptsToProcess[0].lat, ptsToProcess[0].lng], {
+      icon: L.divIcon({html: startHtml, className: '', iconAnchor: [24, 8]}),
+      zIndexOffset: 50
+    }).addTo(_mapaLeaflet);
+    _trajetoriaLayers.push(mStart);
+  }
+
+  if (ptsToProcess.length >= 2) {
+    var endHtml = '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:.68rem;'
+      + 'border-radius:6px;padding:4px 8px;border:2px solid #fff;white-space:nowrap;'
+      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">■ FIM</div>';
+    var mEnd = L.marker([ptsToProcess[ptsToProcess.length - 1].lat, ptsToProcess[ptsToProcess.length - 1].lng], {
+      icon: L.divIcon({html: endHtml, className: '', iconAnchor: [24, 8]}),
+      zIndexOffset: 50
+    }).addTo(_mapaLeaflet);
+    _trajetoriaLayers.push(mEnd);
+  }
+
+  // Ajusta zoom para caber toda a rota
+  if (bounds.length > 0) {
+    _mapaLeaflet.fitBounds(bounds, {padding: [70, 70], maxZoom: 14});
+  }
+
+  // Mostra câmeras sem GPS se houver
+  var noGpsContainer = document.getElementById('traj-no-gps-container');
+  var noGpsList = document.getElementById('traj-no-gps-list');
+  if (data.cameras_without_gps && data.cameras_without_gps.length > 0) {
+    noGpsList.textContent = data.cameras_without_gps.join(', ');
+    noGpsContainer.style.display = 'block';
+  } else {
+    noGpsContainer.style.display = 'none';
+  }
+
+  // Status final
+  var totalEvents = data.total_events || 0;
+  var totalPoints = data.total_points || 0;
+  var statusMsg = '✓ ' + totalPoints + ' ponto(s) com GPS';
+  if (totalEvents > totalPoints) {
+    statusMsg += ' (+ ' + (totalEvents - totalPoints) + ' sem coordenadas)';
+  }
+  document.getElementById('traj-map-status').innerHTML = statusMsg;
+}
+
+function clearVehicleTrajectory() {
+  // Remove camadas de trajetória do mapa
+  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers = [];
+  
+  // Limpa dados
+  _vehicleTrajData = null;
+  
+  // Limpa campos de entrada
+  document.getElementById('traj-plate-field').value = '';
+  document.getElementById('traj-start-field').value = '';
+  document.getElementById('traj-end-field').value = '';
+  document.getElementById('traj-map-status').innerHTML = '';
+  
+  // Esconde painel de câmeras sem GPS
+  var noGpsContainer = document.getElementById('traj-no-gps-container');
+  if (noGpsContainer) noGpsContainer.style.display = 'none';
+  
+  // Recarrega mapa de câmeras
+  loadMapa();
 }
 
 // ===== GRUPOS DE COMBOIO =====

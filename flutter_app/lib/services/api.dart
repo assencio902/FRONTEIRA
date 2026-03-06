@@ -241,4 +241,30 @@ class Api {
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
+
+  /// GET /api/vehicles/{plate}/trajectory — Trajetória de um veículo com GPS.
+  /// Retorna pontos ordenados cronologicamente com lat/lon.
+  static Future<Map<String, dynamic>> getVehicleTrajectory(
+    String plate,
+    String start,
+    String end, {
+    int dedupeSeconds = 5,
+  }) async {
+    final params = <String, String>{
+      'start': start,
+      'end': end,
+      'dedupe_seconds': '$dedupeSeconds',
+    };
+    final url = Uri.parse('$baseUrl/api/vehicles/$plate/trajectory')
+        .replace(queryParameters: params);
+    final h = await headers();
+    debugPrint('REQ: GET $url');
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 15));
+    debugPrint('RES getVehicleTrajectory: ${res.statusCode}');
+    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode >= 400) {
+      throw Exception('Erro ${res.statusCode}: ${res.body}');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 }

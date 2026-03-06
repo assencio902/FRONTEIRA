@@ -14,6 +14,7 @@ import '../widgets/alarm_overlay.dart';
 import 'alarm_history_screen.dart';
 import 'login_screen.dart';
 import 'search_screen.dart';
+import 'trajectory_screen.dart';
 import 'watchlist_screen.dart';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -332,6 +333,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildAlarmeTab(),
           const SearchScreen(),
           _buildCentralAmeacasTab(),
+          const TrajectoryScreen(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -395,6 +397,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
+          // Mapas
+          ListTile(
+            leading: const Icon(Icons.map, color: _kYellow),
+            title: const Text('Mapas & Rotas', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() => _tab = 4);
+            },
+          ),
+
           // Watchlist (NOVO)
           ListTile(
             leading: const Icon(Icons.warning_amber_rounded, color: _kRed),
@@ -428,6 +440,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const AlarmHistoryScreen(),
+                ),
+              );
+            },
+          ),
+
+          // Trajetória de Veículo (NOVO)
+          ListTile(
+            leading: const Icon(Icons.map, color: Colors.green),
+            title: const Text('🗺️ Trajetória', style: TextStyle(color: Colors.green)),
+            subtitle: const Text(
+              'Buscar rota de veículo',
+              style: TextStyle(color: _kMuted, fontSize: 11),
+            ),
+            onTap: () {
+              Navigator.pop(context); // Fechar drawer
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TrajectoryScreen(),
                 ),
               );
             },
@@ -497,6 +528,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icon(Icons.search_rounded), label: 'Pesquisa'),
           BottomNavigationBarItem(
               icon: Icon(Icons.crisis_alert_rounded), label: 'Ameaças'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.map_rounded), label: 'Mapas'),
         ],
       ),
     );
