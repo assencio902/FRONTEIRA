@@ -3855,42 +3855,121 @@ async function _comboioAddAlvo(plate) {
 const API_VEHICLE_LISTS = '/api/vehicles/lists';
 
 async function fetchVehicleLists() {
-  var r = await fetch(API_VEHICLE_LISTS);
-  if (!r.ok) {
-    throw new Error('Falha ao carregar listas (' + r.status + ')');
+  try {
+    console.log('[Veículos] Chamando endpoint:', API_VEHICLE_LISTS);
+    var r = await fetch(API_VEHICLE_LISTS);
+    
+    console.log('[Veículos] Status HTTP:', r.status);
+    
+    // Verificar autenticação
+    if (r.status === 401) {
+      throw new Error('Sessão expirada — faça login novamente');
+    }
+    
+    if (r.status === 403) {
+      throw new Error('Acesso negado a listas de veículos');
+    }
+    
+    if (!r.ok) {
+      throw new Error('Erro ' + r.status + ' ao carregar listas');
+    }
+    
+    var d = null;
+    try {
+      d = await r.json();
+    } catch (parseErr) {
+      console.error('[Veículos] Erro ao parsear JSON:', parseErr);
+      throw new Error('Resposta inválida do servidor (JSON malformado)');
+    }
+    
+    console.log('[Veículos] Resposta recebida:', d);
+    
+    // Validar estrutura da resposta
+    if (!d || typeof d !== 'object') {
+      console.error('[Veículos] Resposta não é um objeto:', d);
+      throw new Error('Formato de resposta inválido');
+    }
+    
+    var items = d.items || [];
+    if (!Array.isArray(items)) {
+      console.error('[Veículos] Campo "items" não é um array:', items);
+      throw new Error('Estrutura de resposta inválida (items não é array)');
+    }
+    
+    console.log('[Veículos] Carregadas ' + items.length + ' lista(s)');
+    return items;
+  } catch(err) {
+    console.error('[Veículos] Erro em fetchVehicleLists:', err.message);
+    throw err;
   }
-  var d = await r.json();
-  return d.items || [];
 }
 
 async function loadLists() {
+  var listGrid = document.getElementById('lists-grid');
   try {
+    // Mostrar estado de carregamento inicial
+    listGrid.innerHTML = '<div class="empty-state"><div class="icon">&#128193;</div>Carregando listas...</div>';
+    
     listsCache = await fetchVehicleLists();
+    console.log('[Veículos] loadLists() sucesso, renderizando', listsCache.length, 'lista(s)');
     renderLists(listsCache);
-  } catch(e) {
-    document.getElementById('lists-grid').innerHTML = '<div class="empty-state"><div class="icon">&#10060;</div>Erro ao carregar listas.</div>';
+  } catch(err) {
+    console.error('[Veículos] Erro em loadLists():', err.message);
+    
+    var errorMsg = err.message || 'Erro desconhecido ao carregar listas';
+    var errorHtml = '<div class="empty-state" style="color:#ef4444">' +
+      '<div class="icon">⚠️</div>' +
+      '<div style="font-weight:600;margin-top:8px">' + errorMsg + '</div>' +
+      '<small style="margin-top:6px;display:block;color:var(--muted);opacity:.8">Verifique o console (F12) para mais detalhes</small>' +
+      '<button class="btn btn-outline btn-xs" onclick="loadLists()" style="margin-top:10px">🔄 Tentar novamente</button>' +
+      '</div>';
+    listGrid.innerHTML = errorHtml;
+  } finally {
+    // Garantir que o spinner nunca fica preso
+    console.log('[Veículos] loadLists() finalizado');
   }
 }
 
 function renderLists(lists) {
   var g = document.getElementById('lists-grid');
-  if (!lists.length) {
-    g.innerHTML = '<div class="empty-state"><div class="icon">&#128193;</div>Nenhuma lista criada ainda.<br><small style="margin-top:6px;display:block;opacity:.7">Clique em "Nova Lista" para comecar.</small></div>';
+  
+  if (!lists || !Array.isArray(lists)) {
+    console.error('[Veículos] renderLists recebeu valor inválido:', lists);
+    g.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>Erro ao renderizar listas (dados inválidos)</div>';
     return;
   }
-  g.innerHTML = lists.map(function(l) {
-    return '<div class="list-card" onclick="goToCadastro(' + l.id + ')">' +
-      '<div class="list-card-actions">' +
-        '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa">&#127919;</button>' +
-        '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar nome">&#9998;</button>' +
-        '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>' +
-      '</div>' +
-      '<div><span class="list-card-name" style="font-size:.94rem">' + l.name + '</span></div>' +
-      '<div style="margin-top:10px">' +
-        '<div class="list-card-count">' + (l.vehicle_count||0) + ' veiculo(s)</div>' +
-      '</div>' +
-      '</div>';
-  }).join('');
+  
+  if (lists.length === 0) {
+    console.log('[Veículos] Nenhuma lista encontrada');
+    g.innerHTML = '<div class="empty-state"><div class="icon">📋</div>Nenhuma lista criada ainda.<br><small style="margin-top:6px;display:block;opacity:.7">Clique em "+ Nova Lista" para começar.</small></div>';
+    return;
+  }
+  
+  console.log('[Veículos] Renderizando', lists.length, 'lista(s)');
+  
+  try {
+    g.innerHTML = lists.map(function(l) {
+      if (!l || typeof l !== 'object' || !l.id || !l.name) {
+        console.warn('[Veículos] Item de lista inválido:', l);
+        return ''; // Ignorar item inválido
+      }
+      
+      return '<div class="list-card" onclick="goToCadastro(' + l.id + ')">' +
+        '<div class="list-card-actions">' +
+          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa">&#127919;</button>' +
+          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar nome">&#9998;</button>' +
+          '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>' +
+        '</div>' +
+        '<div><span class="list-card-name" style="font-size:.94rem">' + (l.name || 'Lista sem nome') + '</span></div>' +
+        '<div style="margin-top:10px">' +
+          '<div class="list-card-count">' + (l.vehicle_count || 0) + ' veiculo(s)</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  } catch(err) {
+    console.error('[Veículos] Erro ao renderizar listas:', err);
+    g.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div>Erro ao exibir listas</div>';
+  }
 }
 
 async function importListToAlvos(listId, listName) {
@@ -6426,12 +6505,27 @@ function _renderAlarmesTable(items) {
 
 async function _preloadAlarmSelects() {
   try {
+    console.log('[Alarmes] Pré-carregando listas...');
     _almListsCache = await fetchVehicleLists();
-  } catch(e) {}
+    console.log('[Alarmes] Listas pré-carregadas:', _almListsCache.length);
+  } catch(e) {
+    console.warn('[Alarmes] Erro ao pré-carregar listas:', e.message);
+    _almListsCache = []; // Fallback para array vazio
+  }
   try {
+    console.log('[Alarmes] Pré-carregando usuários...');
     var r2 = await fetch('/api/users');
-    if (r2.ok) { var d2 = await r2.json(); _almUsersCache = d2.items || []; }
-  } catch(e) {}
+    if (r2.ok) {
+      var d2 = await r2.json();
+      _almUsersCache = d2.items || [];
+      console.log('[Alarmes] Usuários pré-carregados:', _almUsersCache.length);
+    } else {
+      throw new Error('HTTP ' + r2.status);
+    }
+  } catch(e) {
+    console.warn('[Alarmes] Erro ao pré-carregar usuários:', e.message);
+    _almUsersCache = []; // Fallback para array vazio
+  }
 }
 
 var _almEditId = null;

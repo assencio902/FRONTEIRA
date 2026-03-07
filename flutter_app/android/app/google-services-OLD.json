@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1092534615144",
-    "project_id": "bpfron",
-    "storage_bucket": "bpfron.firebasestorage.app"
+    "project_number": "123456789012",
+    "project_id": "bpfron-monitoramento",
+    "storage_bucket": "bpfron-monitoramento.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1092534615144:android:68a6c2515fdaa4ee228fdd",
+        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
         "android_client_info": {
           "package_name": "br.gov.bpfron.monitoramento"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCxm1SF5PaqoTMC6ed9yIeFFhzPsR5J8_0"
+          "current_key": "AIzaSyDummyKeyForBuildPurposes1234567890"
         }
       ],
       "services": {
