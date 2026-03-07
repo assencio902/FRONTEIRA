@@ -20,13 +20,15 @@ class LoadingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 52,
-      child: ElevatedButton.icon(
+      height: 50,
+      child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.warning,
           foregroundColor: Colors.black,
+          disabledBackgroundColor: AppColors.warning.withValues(alpha: 0.35),
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 15,
@@ -35,17 +37,24 @@ class LoadingButton extends StatelessWidget {
           ),
         ),
         onPressed: loading ? null : onPressed,
-        icon: loading
-            ? const SizedBox(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (loading)
+              const SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: Colors.black,
                   strokeWidth: 2.5,
                 ),
               )
-            : Icon(icon ?? Icons.arrow_forward_rounded, size: 20),
-        label: Text(loading ? 'Aguarde...' : label),
+            else
+              Icon(icon ?? Icons.arrow_forward_rounded, size: 20),
+            const SizedBox(width: 8),
+            Text(loading ? 'Aguarde...' : label),
+          ],
+        ),
       ),
     );
   }

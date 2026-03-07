@@ -269,40 +269,62 @@ class _AlertModalState extends State<AlertModal> with TickerProviderStateMixin {
             child: Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      widget.onDismiss();
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white54),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: SizedBox(
+                    height: 50,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        widget.onDismiss();
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      child: const Text('Fechar'),
                     ),
-                    child: const Text('Fechar'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AlertDetailScreen(
-                            alert: widget.alert,
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AlertDetailScreen(
+                              alert: widget.alert,
+                            ),
                           ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.alert.isCritical 
+                          ? Colors.red 
+                          : const Color(0xFFFACC15),
+                        foregroundColor: widget.alert.isCritical
+                          ? Colors.white
+                          : Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.alert.isCritical 
-                        ? Colors.red 
-                        : Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      child: const Text('Ver detalhes'),
                     ),
-                    child: const Text('Ver detalhes'),
                   ),
                 ),
               ],

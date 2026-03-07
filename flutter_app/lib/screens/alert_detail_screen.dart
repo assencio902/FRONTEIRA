@@ -322,30 +322,52 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
       child: Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close),
-              label: const Text('Fechar'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[700],
-                padding: const EdgeInsets.symmetric(vertical: 12),
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                label: const Text('Fechar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A3828),
+                  foregroundColor: const Color(0xFF8FA89A),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Color(0xFF1A3828)),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Abrir detalhes completo do evento
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Abrindo detalhes completo...')),
-                );
-              },
-              icon: const Icon(Icons.info),
-              label: const Text('Ver evento'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Abrindo detalhes completo...')),
+                  );
+                },
+                icon: const Icon(Icons.info),
+                label: const Text('Ver evento'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFACC15),
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ),

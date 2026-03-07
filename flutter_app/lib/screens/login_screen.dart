@@ -250,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Botão ENTRAR
           SizedBox(
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
               style: ElevatedButton.styleFrom(
@@ -258,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 foregroundColor: Colors.black,
                 disabledBackgroundColor: _kYellow.withValues(alpha: 0.35),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
               child: _loading

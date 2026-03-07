@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/api.dart';
 import '../theme/app_theme.dart';
+import '../widgets/plate_search_field.dart';
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 
@@ -308,53 +309,29 @@ class _SearchPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: TextField(
+                child: PlateSearchField(
                   controller: plateCtrl,
                   focusNode: focusNode,
-                  textCapitalization: TextCapitalization.characters,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                    LengthLimitingTextInputFormatter(8),
-                  ],
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    letterSpacing: 2,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'PLACA ALVO',
-                    hintStyle: const TextStyle(color: AppColors.muted, letterSpacing: 1),
-                    prefixIcon: const Icon(Icons.directions_car_rounded, color: AppColors.warning),
-                    filled: true,
-                    fillColor: AppColors.background,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: AppColors.warning, width: 1.6),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onSubmitted: (_) => onSearch(),
+                  hintText: 'PLACA ALVO',
+                  maxLength: 8,
+                  onSubmitted: onSearch,
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
-                height: 54,
+                height: 50,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.warning,
                     foregroundColor: Colors.black,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                   ),
                   onPressed: loading ? null : onSearch,
                   child: loading
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : const Icon(Icons.search_rounded, size: 24),
+                      : const Icon(Icons.search_rounded, size: 22),
                 ),
               ),
             ],

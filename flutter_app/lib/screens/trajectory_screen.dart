@@ -6,6 +6,7 @@ import '../models/camera.dart';
 import '../services/api.dart';
 import '../services/camera_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/plate_search_field.dart';
 
 const _kBg = AppColors.background;
 const _kCard = AppColors.surface;
@@ -234,34 +235,10 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Campo de placa
-                TextField(
+                PlateSearchField(
                   controller: _plateController,
-                  maxLength: 7,
-                  textCapitalization: TextCapitalization.characters,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    letterSpacing: 1.2,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Placa *',
-                    hintText: 'ABC1234',
-                    counterText: '',
-                    filled: true,
-                    fillColor: const Color(0xFF0a3820),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _kBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _kBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: _kYellow, width: 2),
-                    ),
-                  ),
+                  hintText: 'ABC1234',
+                  onSubmitted: _loading ? null : _loadTrajectory,
                 ),
                 const SizedBox(height: 12),
 
@@ -299,7 +276,7 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: Colors.black,
                                 ),
                               )
                             : const Icon(Icons.search),
@@ -307,9 +284,15 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kYellow,
                           foregroundColor: Colors.black,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .4,
                           ),
                         ),
                       ),
@@ -320,14 +303,21 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
                       icon: const Icon(Icons.clear),
                       label: const Text('Limpar'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kBorder,
-                        foregroundColor: Colors.white,
+                        backgroundColor: _kCard,
+                        foregroundColor: _kMuted,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(
                           vertical: 14,
                           horizontal: 16,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: _kBorder),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: .4,
                         ),
                       ),
                     ),

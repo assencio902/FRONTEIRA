@@ -15,6 +15,7 @@ import '../services/watchlist_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/alarm_overlay.dart';
+import '../widgets/plate_search_field.dart';
 import 'alarm_history_screen.dart';
 import 'login_screen.dart';
 import 'search_screen.dart';
@@ -98,7 +99,7 @@ class _MetricBadge extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: _kMuted,
-              fontSize: 8,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               height: 1.2,
             )),
@@ -841,47 +842,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Filtrar por placa',
                       style: TextStyle(
                         color: _kMuted,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    TextField(
+                    PlateSearchField(
                       controller: _gruposPlateController,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      maxLength: 7,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Digite a placa (ex: ABC1234)',
-                        hintStyle: const TextStyle(color: _kMuted, fontSize: 12),
-                        filled: true,
-                        fillColor: _kBg2,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        counterText: '',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: _kBorder),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: _kBorder),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: _kYellow, width: 2),
-                        ),
-                      ),
+                      hintText: 'Digite a placa (ex: ABC1234)',
                       onChanged: (v) {
                         final upperText = v.trim().toUpperCase();
                         setState(() => _gruposPlate = upperText);
-                        if (upperText != v.trim()) {
-                          _gruposPlateController.text = upperText;
-                          _gruposPlateController.selection = TextSelection.fromPosition(
-                            TextPosition(offset: upperText.length),
-                          );
-                        }
                       },
                     ),
                   ],
@@ -1000,7 +971,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 52,
+                        height: 50,
                         child: ElevatedButton.icon(
                           onPressed: _loadGruposComboio,
                           icon: const Icon(Icons.search, size: 20),
@@ -1010,7 +981,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             foregroundColor: Colors.black,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             textStyle: const TextStyle(
                               fontSize: 15,
@@ -1023,7 +994,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 8),
                     SizedBox(
-                      height: 52,
+                      height: 50,
                       child: ElevatedButton.icon(
                         onPressed: () => setState(() {
                           _gruposWindow = '2h';
@@ -1043,7 +1014,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           foregroundColor: _kMuted,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                             side: const BorderSide(color: _kBorder),
                           ),
                           textStyle: const TextStyle(
@@ -1196,7 +1167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'GRUPO #$groupSize',
                   style: const TextStyle(
                     color: _kYellow,
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1,
                   ),
@@ -1256,7 +1227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               'CÂMARAS',
               style: TextStyle(
                 color: _kMuted,
-                fontSize: 8,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
               ),
@@ -1289,14 +1260,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 4),
               Text(
                 _formatTs(firstSeen),
-                style: const TextStyle(color: _kMuted, fontSize: 9),
+                style: const TextStyle(color: _kMuted, fontSize: 12),
               ),
               const SizedBox(width: 4),
-              Text('→', style: TextStyle(color: _kMuted.withValues(alpha: 0.5), fontSize: 9)),
+              Text('→', style: TextStyle(color: _kMuted.withValues(alpha: 0.5), fontSize: 12)),
               const SizedBox(width: 4),
               Text(
                 _formatTs(lastSeen),
-                style: const TextStyle(color: _kMuted, fontSize: 9),
+                style: const TextStyle(color: _kMuted, fontSize: 12),
               ),
             ],
           ),
@@ -1392,7 +1363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'ALVO',
                     style: TextStyle(
                       color: _kRed,
-                      fontSize: 8,
+                      fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1,
                     ),
@@ -1430,7 +1401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'PARCEIRO/COMBOIO',
                         style: TextStyle(
                           color: hasParceiro ? _kYellow : _kMuted,
-                          fontSize: 8,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1,
                         ),
@@ -1587,7 +1558,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Text('AO VIVO',
                       style: TextStyle(
                           color: _kGreen,
-                          fontSize: 9,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1)),
                   const SizedBox(width: 10),
@@ -1600,7 +1571,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 6),
                   Text(_dateStr,
                       style:
-                          const TextStyle(color: _kMuted, fontSize: 9)),
+                          const TextStyle(color: _kMuted, fontSize: 12)),
                 ]),
               ],
             ),
@@ -1648,7 +1619,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: const Text('TESTE',
                         style: TextStyle(
                             color: Colors.red,
-                            fontSize: 8,
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1)),
                   ),
@@ -1668,7 +1639,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: const Text('SAIR',
                         style: TextStyle(
                             color: _kRed,
-                            fontSize: 8,
+                            fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.5)),
                   ),
@@ -1815,7 +1786,7 @@ class _StatCard extends StatelessWidget {
         Text(label,
             style: const TextStyle(
                 color: _kMuted,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5)),
         const SizedBox(height: 6),
@@ -1984,7 +1955,7 @@ class _Badge extends StatelessWidget {
       child: Text(label,
           style: TextStyle(
               color: color,
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8)),
     );

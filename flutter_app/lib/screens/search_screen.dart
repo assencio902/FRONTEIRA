@@ -8,6 +8,7 @@ import '../services/api.dart';
 import '../services/auth_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/loading_button.dart';
+import '../widgets/plate_search_field.dart';
 import 'login_screen.dart';
 import 'result_screen.dart';
 
@@ -287,7 +288,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 'FILTROS DE PESQUISA',
                 style: TextStyle(
                   color: _kYellow,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
                 ),
@@ -307,7 +308,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: const Text('Limpar',
                       style: TextStyle(
                         color: _kMuted,
-                        fontSize: 11,
+                        fontSize: 13,
                         decoration: TextDecoration.underline,
                         decorationColor: _kMuted,
                       )),
@@ -402,7 +403,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         '${_fmtDt(_filterDateFrom!)}  —  ${_fmtDt(_filterDateTo ?? _filterDateFrom!)}',
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -456,7 +457,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: active ? _kYellow.withValues(alpha: 0.14) : _kBg,
           borderRadius: BorderRadius.circular(20),
@@ -473,7 +474,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(label,
                 style: TextStyle(
                   color: active ? _kYellow : _kMuted,
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                 )),
           ],
@@ -492,7 +493,7 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: active
               ? _kYellow.withValues(alpha: 0.08)
@@ -514,7 +515,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active ? Colors.white : _kMuted,
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: active ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
@@ -724,7 +725,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: const Text('Todas',
                         style: TextStyle(
                             color: _kMuted,
-                            fontSize: 11,
+                            fontSize: 13,
                             decoration: TextDecoration.underline,
                             decorationColor: _kMuted)),
                   ),
@@ -770,7 +771,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           Text(label,
                               style: TextStyle(
                                   color: sel ? Colors.white : _kMuted,
-                                  fontSize: 11,
+                                  fontSize: 13,
                                   fontWeight: sel
                                       ? FontWeight.w700
                                       : FontWeight.normal)),
@@ -937,56 +938,37 @@ class _SearchScreenState extends State<SearchScreen> {
           'PLACA DO VEÍCULO',
           style: TextStyle(
             color: _kMuted,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 2.5,
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        PlateSearchField(
           controller: _plateCtrl,
-          textCapitalization: TextCapitalization.characters,
-          maxLength: 7,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 6,
-          ),
-          decoration: InputDecoration(
-            hintText: 'ABC1234',
-            counterText: '',
-            hintStyle: TextStyle(
-              color: _kMuted.withValues(alpha: 0.3),
-              fontSize: 22,
-              letterSpacing: 6,
-            ),
-            prefixIcon: const Icon(Icons.directions_car_rounded, color: _kYellow),
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Botão câmera — atalho rápido no campo
-                IconButton(
-                  icon: const Icon(Icons.camera_alt_rounded, color: _kYellow),
-                  tooltip: 'Fotografar placa',
-                  onPressed: _scanning || _loading ? null : _scanPlate,
-                ),
-                // Botão limpar
-                IconButton(
-                  icon: const Icon(Icons.clear_rounded, color: _kMuted),
-                  tooltip: 'Limpar',
-                  onPressed: () {
-                    _plateCtrl.clear();
-                    setState(() { _scanResult = null; _capturedImage = null; });
-                  },
-                ),
-              ],
-            ),
-          ),
-          onSubmitted: (_) => _search(),
+          hintText: 'ABC1234',
+          onSubmitted: _search,
           onChanged: (_) {
             if (_scanResult != null) setState(() => _scanResult = null);
           },
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.camera_alt_rounded, color: _kYellow),
+                tooltip: 'Fotografar placa',
+                onPressed: _scanning || _loading ? null : _scanPlate,
+              ),
+              IconButton(
+                icon: const Icon(Icons.clear_rounded, color: _kMuted),
+                tooltip: 'Limpar',
+                onPressed: () {
+                  _plateCtrl.clear();
+                  setState(() { _scanResult = null; _capturedImage = null; });
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
