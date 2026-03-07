@@ -357,6 +357,20 @@ class NotificationService {
     }
   }
 
+  /// Força sincronização do token atual com o backend (usar após login/restauração de sessão).
+  Future<void> syncTokenWithBackend() async {
+    try {
+      final token = await _firebaseMessaging.getToken();
+      if (token == null || token.isEmpty) {
+        developer.log('[NotificationService] Sem token FCM disponível para sincronizar');
+        return;
+      }
+      await _registerTokenInBackend(token);
+    } catch (e) {
+      developer.log('[NotificationService] Erro ao sincronizar token FCM: $e');
+    }
+  }
+
   /// Obter token FCM
   Future<String?> getFcmToken() async {
     return await _firebaseMessaging.getToken();
@@ -382,7 +396,7 @@ class NotificationService {
   }
 
   /// Dispara alerta de teste pelo backend (fluxo completo push + app).
-  Future<Map<String, dynamic>> triggerBackendTestAlert() async {
+  Future<Map<String, dynamic>> triggerBackendTestAlert({required int alarmeId}) async {
     // Verificar se sessão está válida antes de chamar
     final sessionValid = await Api.isSessionValid();
     if (!sessionValid) {
@@ -391,6 +405,7 @@ class NotificationService {
     }
 
     final payload = {
+      'alarme_id': alarmeId,
       'plate': 'ABC1234',
       'target_name': 'Teste Alvo Monitorado',
       'camera_name': 'Camera Teste',

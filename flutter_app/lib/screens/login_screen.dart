@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/api.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 
@@ -56,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await Api.login(user, pass);
+      await NotificationService().syncTokenWithBackend();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),

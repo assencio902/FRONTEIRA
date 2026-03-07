@@ -156,6 +156,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) setState(() => _now = DateTime.now());
     });
     _loadDashboard();
+    // Garante registro do token FCM no backend após sessão ativa.
+    NotificationService().syncTokenWithBackend();
     // Atualiza a cada 30 segundos
     _refreshTimer = Timer.periodic(
         const Duration(seconds: 30), (_) => _loadDashboard());
@@ -1562,16 +1564,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1)),
                   const SizedBox(width: 10),
-                  Text(_timeStr,
-                      style: const TextStyle(
-                          color: _kYellow,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5)),
-                  const SizedBox(width: 6),
-                  Text(_dateStr,
-                      style:
-                          const TextStyle(color: _kMuted, fontSize: 12)),
+                  Flexible(
+                    child: Text('$_timeStr  $_dateStr',
+                        style: const TextStyle(
+                            color: _kMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis),
+                  ),
                 ]),
               ],
             ),
@@ -1587,7 +1587,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 GestureDetector(
                   onTap: () async {
                     try {
-                      final result = await NotificationService().triggerBackendTestAlert();
+                      final alarmesData = await Api.getAlarmes();
+                      final items = List<Map<String, dynamic>>.from((alarmesData['items'] ?? []) as List);
+                      final active = items.where((a) => a['ativo'] == true).toList();
+                      if (active.isEmpty) {
+                        throw Exception('Nenhum alarme ativo para teste de push.');
+                      }
+                      final alarmeId = (active.first['id'] as num).toInt();
+                      final result = await NotificationService().triggerBackendTestAlert(alarmeId: alarmeId);
                       if (!mounted) return;
                       final sent = result['sent'] ?? 0;
                       final failed = result['failed'] ?? 0;

@@ -263,6 +263,39 @@ async def send_alert_to_all_active_tokens(db_cur, alert: FCMAlert) -> dict[str, 
     return totals
 
 
+def _priority_score(priority: str | None) -> int:
+    order = {"baixa": 1, "media": 2, "alta": 3, "critica": 4}
+    return order.get((priority or "").strip().lower(), 2)
+
+
+def _priority_to_risk(priority: str | None) -> str:
+    val = (priority or "").strip().lower()
+    return val if val in {"baixa", "media", "alta", "critica"} else "media"
+
+
+async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> dict[str, int]:
+    """Envia alerta apenas para usuários vinculados a um alarme."""
+    db_cur.execute(
+        """
+        SELECT DISTINCT au.usuario_id
+        FROM alarme_usuarios au
+        JOIN alarmes a ON a.id = au.alarme_id
+        WHERE au.alarme_id = %s
+          AND a.ativo = TRUE
+        """,
+        (int(alarme_id),),
+    )
+    users = [str(row[0]) for row in db_cur.fetchall()]
+
+    totals = {"sent": 0, "failed": 0, "invalid": 0, "users": len(users)}
+    for user_id in users:
+        stats = await send_alert_to_user_tokens(db_cur, user_id, alert)
+        totals["sent"] += stats["sent"]
+        totals["failed"] += stats["failed"]
+        totals["invalid"] += stats["invalid"]
+    return totals
+
+
 async def send_alert_for_detected_plate(
     db_cur,
     plate: str,
@@ -272,97 +305,123 @@ async def send_alert_for_detected_plate(
     event_id: str,
     city: str = "N/A",
 ) -> bool:
-    """Dispara push automaticamente quando placa monitorada é detectada."""
+    """Dispara push apenas para usuários vinculados a alarmes ativos da(s) lista(s) da placa."""
     plate_normalized = (plate or "").strip().upper()
     if not plate_normalized:
         return False
 
     try:
-        # Prioridade 1: alvo rastreado explícito
         db_cur.execute(
             """
-            SELECT a.id,
-                   COALESCE(NULLIF(a.descricao, ''), a.plate) AS target_name,
-                   COALESCE(vl.color, 'high') AS risk_level
-            FROM alvos a
-            LEFT JOIN vehicle_lists vl ON vl.id = a.list_id
-            WHERE UPPER(a.plate) = %s
-            LIMIT 1
+            SELECT a.id AS alarme_id,
+                   a.nome AS alarme_nome,
+                   a.prioridade,
+                   vl.id AS lista_id,
+                   vl.name AS lista_nome,
+                   au.usuario_id
+            FROM vehicle_list_items vli
+            JOIN vehicle_lists vl ON vl.id = vli.list_id
+            JOIN alarme_listas al ON al.lista_id = vl.id
+            JOIN alarmes a ON a.id = al.alarme_id AND a.ativo = TRUE
+            JOIN alarme_usuarios au ON au.alarme_id = a.id
+            WHERE UPPER(vli.plate) = %s
             """,
             (plate_normalized,),
         )
-        target_row = db_cur.fetchone()
+        rows = db_cur.fetchall()
 
-        # Prioridade 2: placa em lista com alarme habilitado
-        if not target_row:
-            db_cur.execute(
-                """
-                SELECT NULL::INTEGER AS alvo_id,
-                       COALESCE(vl.name, %s) AS target_name,
-                       COALESCE(vl.color, 'high') AS risk_level
-                FROM vehicle_list_items vli
-                JOIN vehicle_lists vl ON vl.id = vli.list_id
-                WHERE UPPER(vli.plate) = %s
-                  AND COALESCE(vl.alarm_enabled, FALSE) = TRUE
-                LIMIT 1
-                """,
-                (plate_normalized, plate_normalized),
-            )
-            target_row = db_cur.fetchone()
-
-        if not target_row:
-            logger.debug("[FCM] Placa %s não monitorada", plate_normalized)
+        if not rows:
+            logger.debug("[FCM] Placa %s sem alarme ativo vinculado", plate_normalized)
             return False
 
-        alvo_id, target_name, risk_level = target_row
-        alert = FCMAlert(
-            plate=plate_normalized,
-            target_name=str(target_name or plate_normalized),
-            camera_name=camera_name or "Camera desconhecida",
-            detected_at=datetime.now(timezone.utc).isoformat(),
-            image_url=image_url or "",
-            event_id=str(event_id),
-            city=city or "N/A",
-            risk_level=(risk_level or "high"),
-            alert_type="critical_alert",
-        )
+        alarms: dict[int, dict[str, Any]] = {}
+        users: dict[str, dict[str, Any]] = {}
+        for alarme_id, alarme_nome, prioridade, _lista_id, lista_nome, usuario_id in rows:
+            aid = int(alarme_id)
+            uid = str(usuario_id)
+            pr = (prioridade or "media").strip().lower()
 
-        stats = await send_alert_to_all_active_tokens(db_cur, alert)
+            if aid not in alarms:
+                alarms[aid] = {
+                    "nome": str(alarme_nome or f"Alarme {aid}"),
+                    "prioridade": pr,
+                    "listas": set(),
+                }
+            alarms[aid]["listas"].add(str(lista_nome or "Lista"))
 
-        db_cur.execute(
-            """
-            INSERT INTO alertas_criticos (
-                usuario_id, alvo_id, evento_id, placa, camera_name,
-                target_name, detected_at, image_url, city, risk_level,
-                alert_type, enviado_em, lido, error_message
+            if uid not in users:
+                users[uid] = {"max_priority": pr, "alarm_names": set(), "list_names": set()}
+            if _priority_score(pr) > _priority_score(users[uid]["max_priority"]):
+                users[uid]["max_priority"] = pr
+            users[uid]["alarm_names"].add(str(alarme_nome or f"Alarme {aid}"))
+            users[uid]["list_names"].add(str(lista_nome or "Lista"))
+
+        sent_total = 0
+        failed_total = 0
+        invalid_total = 0
+
+        for uid, meta in users.items():
+            alarm_names = sorted(meta["alarm_names"])
+            list_names = sorted(meta["list_names"])
+            risk_level = _priority_to_risk(meta["max_priority"])
+            target_name = (
+                f"{', '.join(alarm_names)} | Lista(s): {', '.join(list_names)}"
+                if alarm_names or list_names
+                else plate_normalized
             )
-            VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, NOW(), FALSE, %s)
-            """,
-            (
-                "broadcast",
-                alvo_id,
-                str(event_id),
-                plate_normalized,
-                alert.camera_name,
-                alert.target_name,
-                alert.image_url,
-                alert.city,
-                alert.risk_level,
-                alert.alert_type,
-                None if stats["sent"] > 0 else "no_active_tokens_or_send_failed",
-            ),
-        )
+
+            alert = FCMAlert(
+                plate=plate_normalized,
+                target_name=target_name,
+                camera_name=camera_name or "Camera desconhecida",
+                detected_at=datetime.now(timezone.utc).isoformat(),
+                image_url=image_url or "",
+                event_id=str(event_id),
+                city=city or "N/A",
+                risk_level=risk_level,
+                alert_type="critical_alert",
+            )
+
+            stats = await send_alert_to_user_tokens(db_cur, uid, alert)
+            sent_total += stats["sent"]
+            failed_total += stats["failed"]
+            invalid_total += stats["invalid"]
+
+            db_cur.execute(
+                """
+                INSERT INTO alertas_criticos (
+                    usuario_id, alvo_id, evento_id, placa, camera_name,
+                    target_name, detected_at, image_url, city, risk_level,
+                    alert_type, enviado_em, lido, error_message
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, NOW(), FALSE, %s)
+                """,
+                (
+                    uid,
+                    None,
+                    str(event_id),
+                    plate_normalized,
+                    alert.camera_name,
+                    alert.target_name,
+                    alert.image_url,
+                    alert.city,
+                    alert.risk_level,
+                    alert.alert_type,
+                    None if stats["sent"] > 0 else "no_active_tokens_or_send_failed",
+                ),
+            )
 
         logger.info(
-            "[FCM] Auto-alerta plate=%s cam=%s conf=%.2f sent=%s failed=%s invalid=%s",
+            "[FCM] Auto-alerta plate=%s cam=%s conf=%.2f users=%s sent=%s failed=%s invalid=%s",
             plate_normalized,
             camera_name,
             confidence,
-            stats["sent"],
-            stats["failed"],
-            stats["invalid"],
+            len(users),
+            sent_total,
+            failed_total,
+            invalid_total,
         )
-        return stats["sent"] > 0
+        return sent_total > 0
     except Exception as exc:
         logger.exception("[FCM] Erro no auto-alerta da placa %s: %s", plate_normalized, exc)
         return False

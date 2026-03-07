@@ -107,6 +107,16 @@ class Api {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// GET /api/alarmes — retorna lista de alarmes configurados.
+  static Future<Map<String, dynamic>> getAlarmes() async {
+    final url = Uri.parse('$baseUrl/api/alarmes');
+    final h = await headers();
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
+    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}: ${res.body}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// GET /api/batedor/trajeto/{plate} — veículos que fizeram o mesmo percurso.
   static Future<Map<String, dynamic>> getBatedorTrajeto({
     required String plate,

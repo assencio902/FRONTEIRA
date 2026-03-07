@@ -32,7 +32,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from services.fcm_service import (
     register_fcm_token,
     send_alert_for_detected_plate,
-    send_alert_to_all_active_tokens,
+    send_alert_to_alarm_users,
     FCMAlert,
 )
 
@@ -107,6 +107,20 @@ def _safe_sub(token_str: str) -> str:
         return payload.get("sub", "?")
     except Exception:
         return "?"
+
+
+def _resolve_user_numeric_id_from_sub(sub: str | None) -> str | None:
+    """Converte `sub` (username do JWT) para id numérico de `users`, se existir."""
+    if not sub:
+        return None
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE username=%s LIMIT 1", (str(sub),))
+                row = cur.fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+    except Exception:
+        return None
 
 # ===========================
 # DB
@@ -1150,6 +1164,69 @@ def list_events(
     return {"items": items, "page": page, "limit": limit, "total": total}
 
 
+@app.get("/api/events/{event_id}")
+def get_event_detail(event_id: int):
+    """Retorna detalhes completos de um evento para visualização no modal de alerta."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT e.id, e.plate, e.camera_id, e.channel_name, e.camera_ip, e.confidence,
+                       e.image_path, COALESCE(e.occurred_at, e.ts) AS when_ts, e.yolo_result,
+                       c.nome AS cam_nome,
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao,
+                       e.cam_meta
+                FROM lpr_events e
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip        = e.camera_id
+                       OR ip        = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
+                WHERE e.id = %s
+                LIMIT 1
+                """,
+                (event_id,),
+            )
+            r = cur.fetchone()
+    if not r:
+        raise HTTPException(status_code=404, detail="evento não encontrado")
+
+    ts = r[7].isoformat() if r[7] else None
+    raw_yolo = r[8]
+    if raw_yolo is None:
+        yolo = None
+    elif isinstance(raw_yolo, dict):
+        yolo = raw_yolo
+    else:
+        yolo = _json_lib.loads(raw_yolo)
+
+    return {
+        "id": r[0],
+        "plate": r[1],
+        "camera_id": r[2],
+        "channel_name": r[3],
+        "camera_ip": r[4],
+        "confidence": float(r[5] or 0.0),
+        "image_path": r[6],
+        "occurred_at": ts,
+        "camera": r[9] or r[3],
+        "timestamp": ts,
+        "image": r[6],
+        "thumb": r[6],
+        "yolo_result": yolo,
+        "sem_placa_motivo": yolo.get("sem_placa_motivo") if yolo else None,
+        "vehicle_details": yolo.get("vehicle_details") if yolo else None,
+        "target_vehicle": yolo.get("target_vehicle") if yolo else None,
+        "image_quality": yolo.get("image_quality") if yolo else None,
+        "cam_nome": r[9] or r[3],
+        "direcao": r[10] or None,
+        "cam_meta": (_json_lib.loads(r[11]) if isinstance(r[11], str) else r[11]) if r[11] else None,
+    }
+
+
 @app.get("/api/events/{event_id}/image")
 def get_event_image(event_id: int):
     """Redireciona para image_path do evento (usado pelo modal do dashboard)."""
@@ -1720,29 +1797,46 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
 @app.get("/api/vehicles/allplates")
 def vehicles_allplates():
-    """Retorna todos os veículos cadastrados agrupados por placa com suas listas."""
+    """Retorna todos os veículos cadastrados agrupados por placa com suas listas.
+    Alarme é determinado pela tabela 'alarmes' (via alarme_listas), não por vehicle_lists."""
     try:
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT DISTINCT vli.plate, vl.id, vl.name, vl.color,
-                                    vl.alarm_enabled, vl.alarm_sound
+                    SELECT DISTINCT vli.plate, vl.id, vl.name
                     FROM vehicle_list_items vli
                     JOIN vehicle_lists vl ON vl.id = vli.list_id
                     ORDER BY vli.plate
                 """)
                 rows = cur.fetchall()
-        
+
+                # Buscar listas que possuem alarmes ativos (alarmes.ativo = TRUE)
+                cur.execute("""
+                    SELECT al.lista_id, a.prioridade
+                    FROM alarme_listas al
+                    JOIN alarmes a ON a.id = al.alarme_id
+                    WHERE a.ativo = TRUE
+                """)
+                alarm_map = {}
+                for lista_id, prioridade in cur.fetchall():
+                    # Mapear prioridade para som
+                    sound = {"critica": "urgent", "alta": "siren", "media": "beep", "baixa": "bell"}.get(prioridade, "beep")
+                    # Manter a maior prioridade por lista
+                    prio_order = {"critica": 4, "alta": 3, "media": 2, "baixa": 1}
+                    existing = alarm_map.get(lista_id)
+                    if not existing or prio_order.get(prioridade, 0) > prio_order.get(existing[0], 0):
+                        alarm_map[lista_id] = (prioridade, sound)
+
         plates = {}
-        for plate, list_id, list_name, color, alarm_enabled, alarm_sound in rows:
+        for plate, list_id, list_name in rows:
             if plate not in plates:
                 plates[plate] = []
+            alarm_info = alarm_map.get(list_id)
             plates[plate].append({
                 "list_id": list_id,
                 "list_name": list_name,
-                "color": color,
-                "alarm_enabled": alarm_enabled or False,
-                "alarm_sound": alarm_sound or "beep",
+                "alarm_enabled": alarm_info is not None,
+                "alarm_sound": alarm_info[1] if alarm_info else "beep",
             })
         
         return {"plates": plates, "items": list(plates.keys())}
@@ -1758,8 +1852,8 @@ def vehicles_lists():
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT vl.id, vl.name, vl.description, vl.color, vl.alarm_enabled, 
-                           vl.alarm_sound, vl.created_at, vl.updated_at,
+                    SELECT vl.id, vl.name,
+                           vl.created_at, vl.updated_at,
                            COUNT(vli.id) as vehicle_count
                     FROM vehicle_lists vl
                     LEFT JOIN vehicle_list_items vli ON vli.list_id = vl.id
@@ -1773,13 +1867,9 @@ def vehicles_lists():
             items.append({
                 "id": r[0],
                 "name": r[1],
-                "description": r[2],
-                "color": r[3],
-                "alarm_enabled": r[4],
-                "alarm_sound": r[5],
-                "created_at": r[6].isoformat() if r[6] else None,
-                "updated_at": r[7].isoformat() if r[7] else None,
-                "vehicle_count": int(r[8] or 0)
+                "created_at": r[2].isoformat() if r[2] else None,
+                "updated_at": r[3].isoformat() if r[3] else None,
+                "vehicle_count": int(r[4] or 0)
             })
         return {"items": items}
     except Exception as e:
@@ -1792,10 +1882,6 @@ async def vehicles_lists_create(request: Request):
     try:
         data = await request.json()
         name = (data.get("name") or "").strip()
-        description = (data.get("description") or "").strip()
-        color = data.get("color") or "#000000"
-        alarm_enabled = data.get("alarm_enabled", False)
-        alarm_sound = data.get("alarm_sound")
         
         if not name:
             raise HTTPException(status_code=400, detail="name é obrigatório e não pode ser vazio")
@@ -1803,19 +1889,15 @@ async def vehicles_lists_create(request: Request):
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO vehicle_lists (name, description, color, alarm_enabled, alarm_sound)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO vehicle_lists (name)
+                    VALUES (%s)
                     RETURNING id, created_at, updated_at
-                """, (name, description if description else None, color, alarm_enabled, alarm_sound))
+                """, (name,))
                 r = cur.fetchone()
         
         return {
             "id": r[0],
             "name": name,
-            "description": description if description else None,
-            "color": color,
-            "alarm_enabled": alarm_enabled,
-            "alarm_sound": alarm_sound,
             "created_at": r[1].isoformat() if r[1] else None,
             "updated_at": r[2].isoformat() if r[2] else None,
             "vehicle_count": 0
@@ -1832,10 +1914,6 @@ async def vehicles_lists_update(list_id: int, request: Request):
     try:
         data = await request.json()
         name = (data.get("name") or "").strip()
-        description = (data.get("description") or "").strip()
-        color = data.get("color") or "#000000"
-        alarm_enabled = data.get("alarm_enabled", False)
-        alarm_sound = data.get("alarm_sound")
         
         if not name:
             raise HTTPException(status_code=400, detail="name é obrigatório e não pode ser vazio")
@@ -1848,12 +1926,10 @@ async def vehicles_lists_update(list_id: int, request: Request):
                 
                 cur.execute("""
                     UPDATE vehicle_lists
-                    SET name = %s, description = %s, color = %s, alarm_enabled = %s, 
-                        alarm_sound = %s, updated_at = NOW()
+                    SET name = %s, updated_at = NOW()
                     WHERE id = %s
-                    RETURNING id, name, description, color, alarm_enabled, alarm_sound, created_at, updated_at
-                """, (name, description if description else None, color, alarm_enabled, 
-                      alarm_sound, list_id))
+                    RETURNING id, name, created_at, updated_at
+                """, (name, list_id))
                 r = cur.fetchone()
                 if not r:
                     raise HTTPException(status_code=404, detail="Lista não encontrada")
@@ -1861,12 +1937,8 @@ async def vehicles_lists_update(list_id: int, request: Request):
         return {
             "id": r[0],
             "name": r[1],
-            "description": r[2],
-            "color": r[3],
-            "alarm_enabled": r[4],
-            "alarm_sound": r[5],
-            "created_at": r[6].isoformat() if r[6] else None,
-            "updated_at": r[7].isoformat() if r[7] else None,
+            "created_at": r[2].isoformat() if r[2] else None,
+            "updated_at": r[3].isoformat() if r[3] else None,
             "vehicle_count": 0
         }
     except HTTPException:
@@ -1899,7 +1971,7 @@ def vehicles_query(list_id: int | None = None, plate: str | None = None):
     """Lista veículos com filtros opcionais."""
     try:
         query = """
-            SELECT vli.id, vli.plate, vli.list_id, vl.name as list_name, vl.color as list_color, 
+            SELECT vli.id, vli.plate, vli.list_id, vl.name as list_name, 
                    vli.notes, vli.created_at
             FROM vehicle_list_items vli
             JOIN vehicle_lists vl ON vl.id = vli.list_id
@@ -1929,9 +2001,8 @@ def vehicles_query(list_id: int | None = None, plate: str | None = None):
                 "plate": r[1],
                 "list_id": r[2],
                 "list_name": r[3],
-                "list_color": r[4],
-                "notes": r[5],
-                "created_at": r[6].isoformat() if r[6] else None
+                "notes": r[4],
+                "created_at": r[5].isoformat() if r[5] else None
             })
         
         return {"items": items, "total": len(items)}
@@ -1996,6 +2067,66 @@ async def vehicles_create(request: Request):
             "notes": notes,
             "created_at": r[1].isoformat() if r[1] else None
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}. Traceback: {tb}")
+
+
+@app.put("/api/vehicles/{vid}")
+async def vehicles_update(vid: int, request: Request):
+    """Atualiza um veículo (placa e/ou notas)."""
+    try:
+        data = await request.json()
+        plate_raw = data.get("plate")
+        notes_raw = data.get("notes")
+        
+        plate = None
+        if plate_raw is not None:
+            plate = str(plate_raw).strip().upper()
+            if not plate:
+                raise HTTPException(status_code=400, detail="plate não pode ser vazio")
+        
+        notes = None
+        if notes_raw:
+            notes = str(notes_raw).strip()
+            if not notes:
+                notes = None
+        
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, list_id, plate FROM vehicle_list_items WHERE id = %s", (vid,))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Veículo não encontrado")
+                
+                list_id, old_plate = row[1], row[2]
+                
+                # Se a placa mudou, verifica duplicação
+                if plate and plate != old_plate:
+                    cur.execute("SELECT id FROM vehicle_list_items WHERE list_id = %s AND plate = %s AND id != %s", 
+                               (list_id, plate, vid))
+                    if cur.fetchone():
+                        raise HTTPException(status_code=409, detail="Placa já existe nesta lista")
+                
+                updates = []
+                params = []
+                if plate:
+                    updates.append("plate = %s")
+                    params.append(plate)
+                if notes_raw is not None:
+                    updates.append("notes = %s")
+                    params.append(notes)
+                
+                if not updates:
+                    raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
+                
+                params.append(vid)
+                cur.execute(f"UPDATE vehicle_list_items SET {', '.join(updates)} WHERE id = %s", params)
+        
+        return {"ok": True, "id": vid}
     except HTTPException:
         raise
     except Exception as e:
@@ -4287,9 +4418,14 @@ async def fcm_register_token(request: Request):
     }
     """
     try:
-        user_id = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
-        if not user_id:
+        user_sub = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_sub:
             raise HTTPException(status_code=401, detail="Não autenticado")
+
+        # Tokens FCM devem ficar vinculados ao ID numérico do usuário (alarme_usuarios.usuario_id).
+        user_id = _resolve_user_numeric_id_from_sub(str(user_sub))
+        if not user_id:
+            raise HTTPException(status_code=422, detail="Usuário do token não mapeado no cadastro")
         
         data = await request.json()
         fcm_token = (data.get("fcm_token") or "").strip()
@@ -4300,7 +4436,7 @@ async def fcm_register_token(request: Request):
         
         with _conn() as conn:
             with conn.cursor() as cur:
-                success = register_fcm_token(str(user_id), device_id, fcm_token, db_cur=cur)
+                success = register_fcm_token(user_id, device_id, fcm_token, db_cur=cur)
         
         if not success:
             raise HTTPException(status_code=500, detail="Erro ao registrar token")
@@ -4309,6 +4445,7 @@ async def fcm_register_token(request: Request):
             "ok": True,
             "message": "Token FCM registrado com sucesso",
             "user_id": user_id,
+            "user_sub": user_sub,
             "device_id": device_id,
         }
     
@@ -4321,9 +4458,10 @@ async def fcm_register_token(request: Request):
 
 @app.post("/api/fcm/send-alert")
 async def fcm_send_alert(request: Request):
-    """Endpoint manual para teste/firing de alerta push ponta a ponta."""
+    """Endpoint manual para teste de push para usuários vinculados a um alarme."""
     try:
         data = await request.json()
+        alarme_id_raw = data.get("alarme_id")
         plate = str(data.get("plate") or "").strip().upper()
         target_name = str(data.get("target_name") or "Alvo monitorado").strip()
         camera_name = str(data.get("camera_name") or "Camera teste").strip()
@@ -4334,6 +4472,12 @@ async def fcm_send_alert(request: Request):
         risk_level = str(data.get("risk_level") or "high").strip().lower()
         alert_type = str(data.get("alert_type") or "critical_alert").strip().lower()
 
+        if alarme_id_raw is None:
+            raise HTTPException(status_code=422, detail="alarme_id é obrigatório")
+        try:
+            alarme_id = int(alarme_id_raw)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="alarme_id inválido")
         if not plate:
             raise HTTPException(status_code=422, detail="plate é obrigatório")
 
@@ -4351,30 +4495,21 @@ async def fcm_send_alert(request: Request):
 
         with _conn() as conn:
             with conn.cursor() as cur:
-                stats = await send_alert_to_all_active_tokens(cur, alert)
-                cur.execute(
-                    """
-                    INSERT INTO alertas_criticos (
-                        usuario_id, alvo_id, evento_id, placa, camera_name,
-                        target_name, detected_at, image_url, city, risk_level,
-                        alert_type, enviado_em, lido, error_message
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s, %s, %s, %s, NOW(), FALSE, %s)
-                    """,
-                    (
-                        "broadcast",
-                        None,
-                        event_id,
-                        plate,
-                        camera_name,
-                        target_name,
-                        image_url,
-                        city,
-                        risk_level,
-                        alert_type,
-                        None if stats["sent"] > 0 else "no_active_tokens_or_send_failed",
-                    ),
-                )
+                cur.execute("SELECT ativo FROM alarmes WHERE id=%s LIMIT 1", (alarme_id,))
+                alarm_row = cur.fetchone()
+                if not alarm_row:
+                    raise HTTPException(status_code=404, detail="Alarme não encontrado")
+                if not bool(alarm_row[0]):
+                    raise HTTPException(status_code=422, detail="Alarme inativo")
+
+                cur.execute("SELECT COUNT(*) FROM alarme_usuarios WHERE alarme_id=%s", (alarme_id,))
+                linked_users = int(cur.fetchone()[0] or 0)
+                if linked_users == 0:
+                    raise HTTPException(status_code=422, detail="Alarme sem usuários vinculados")
+
+                stats = await send_alert_to_alarm_users(cur, alarme_id, alert)
+                if int(stats.get("users") or 0) == 0:
+                    raise HTTPException(status_code=422, detail="Sem usuários elegíveis para envio")
 
         return {
             "ok": True,
@@ -4382,6 +4517,7 @@ async def fcm_send_alert(request: Request):
             "failed": stats["failed"],
             "invalid_tokens": stats["invalid"],
             "users": stats.get("users", 0),
+            "alarme_id": alarme_id,
             "event_id": event_id,
         }
     except HTTPException:
@@ -4395,19 +4531,23 @@ async def fcm_send_alert(request: Request):
 async def fcm_status(request: Request):
     """Verificar status de alertas FCM"""
     try:
-        user_id = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
-        if not user_id:
+        user_sub = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_sub:
             raise HTTPException(status_code=401, detail="Não autenticado")
+
+        user_id = _resolve_user_numeric_id_from_sub(str(user_sub))
+        if not user_id:
+            raise HTTPException(status_code=422, detail="Usuário do token não mapeado no cadastro")
         
         with _conn() as conn:
             with conn.cursor() as cur:
                 # Contar alertas criticos não lidos
                 cur.execute("""
                     SELECT COUNT(*) FROM alertas_criticos
-                    WHERE usuario_id = %s
+                    WHERE usuario_id IN (%s, %s)
                     AND NOT lido
                     AND criado_em > NOW() - INTERVAL '24 hours'
-                """, (user_id,))
+                """, (user_id, str(user_sub)))
                 count = cur.fetchone()[0]
         
         return {
@@ -4460,30 +4600,30 @@ async def create_alarme(request: Request):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
     data = await request.json()
-    nome = str(data.get("nome") or "").strip()
-    if not nome:
-        raise HTTPException(status_code=400, detail="nome é obrigatório")
-    descricao = str(data.get("descricao") or "").strip()
-    tipo = str(data.get("tipo") or "placa_monitorada").strip()
+    lista_id = data.get("lista_id")
+    if not lista_id:
+        raise HTTPException(status_code=400, detail="lista_id é obrigatório")
+    lista_id = int(lista_id)
     prioridade = str(data.get("prioridade") or "media").strip()
-    if tipo not in ("placa_monitorada", "comboio", "velocidade", "direcao", "personalizado"):
-        raise HTTPException(status_code=400, detail="tipo inválido")
     if prioridade not in ("baixa", "media", "alta", "critica"):
         raise HTTPException(status_code=400, detail="prioridade inválida")
     ativo = bool(data.get("ativo", True))
-    mensagem = str(data.get("mensagem") or "").strip()
-    listas = data.get("listas") or []
     usuarios = data.get("usuarios") or []
     with _conn() as conn:
         with conn.cursor() as cur:
+            # Buscar nome da lista para usar como nome do alarme
+            cur.execute("SELECT name FROM vehicle_lists WHERE id=%s", (lista_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=400, detail="Lista não encontrada")
+            nome = f"Alarme - {row[0]}"
             cur.execute(
                 """INSERT INTO alarmes (nome, descricao, tipo, prioridade, ativo, mensagem)
                    VALUES (%s,%s,%s,%s,%s,%s) RETURNING id""",
-                (nome, descricao, tipo, prioridade, ativo, mensagem),
+                (nome, "", "placa_monitorada", prioridade, ativo, ""),
             )
             aid = cur.fetchone()[0]
-            for lid in listas:
-                cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(lid)))
+            cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, lista_id))
             for uid in usuarios:
                 cur.execute("INSERT INTO alarme_usuarios (alarme_id, usuario_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(uid)))
     return {"id": aid, "ok": True}
@@ -4496,42 +4636,36 @@ async def update_alarme(aid: int, request: Request):
         raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
     data = await request.json()
     sets, vals = [], []
-    if "nome" in data:
-        n = str(data["nome"]).strip()
-        if not n: raise HTTPException(status_code=400, detail="nome não pode ser vazio")
-        sets.append("nome=%s"); vals.append(n)
-    if "descricao" in data: sets.append("descricao=%s"); vals.append(str(data["descricao"]).strip())
-    if "tipo" in data:
-        t = str(data["tipo"]).strip()
-        if t not in ("placa_monitorada", "comboio", "velocidade", "direcao", "personalizado"):
-            raise HTTPException(status_code=400, detail="tipo inválido")
-        sets.append("tipo=%s"); vals.append(t)
+    lista_id = data.get("lista_id")
+    if lista_id:
+        lista_id = int(lista_id)
     if "prioridade" in data:
         p = str(data["prioridade"]).strip()
         if p not in ("baixa", "media", "alta", "critica"):
             raise HTTPException(status_code=400, detail="prioridade inválida")
         sets.append("prioridade=%s"); vals.append(p)
     if "ativo" in data: sets.append("ativo=%s"); vals.append(bool(data["ativo"]))
-    if "mensagem" in data: sets.append("mensagem=%s"); vals.append(str(data["mensagem"]).strip())
-    if sets:
-        sets.append("atualizado_em=NOW()")
-        vals.append(aid)
-        with _conn() as conn:
-            with conn.cursor() as cur:
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # Atualizar nome automaticamente se a lista mudou
+            if lista_id:
+                cur.execute("SELECT name FROM vehicle_lists WHERE id=%s", (lista_id,))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=400, detail="Lista não encontrada")
+                sets.append("nome=%s"); vals.append(f"Alarme - {row[0]}")
+            if sets:
+                sets.append("atualizado_em=NOW()")
+                vals.append(aid)
                 cur.execute(f"UPDATE alarmes SET {', '.join(sets)} WHERE id=%s", tuple(vals))
                 if cur.rowcount == 0:
                     raise HTTPException(status_code=404, detail="Alarme não encontrado")
-    # Atualizar vínculos de listas
-    if "listas" in data:
-        with _conn() as conn:
-            with conn.cursor() as cur:
+            # Atualizar vínculo de lista
+            if lista_id:
                 cur.execute("DELETE FROM alarme_listas WHERE alarme_id=%s", (aid,))
-                for lid in (data["listas"] or []):
-                    cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(lid)))
-    # Atualizar vínculos de usuários
-    if "usuarios" in data:
-        with _conn() as conn:
-            with conn.cursor() as cur:
+                cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, lista_id))
+            # Atualizar vínculos de usuários
+            if "usuarios" in data:
                 cur.execute("DELETE FROM alarme_usuarios WHERE alarme_id=%s", (aid,))
                 for uid in (data["usuarios"] or []):
                     cur.execute("INSERT INTO alarme_usuarios (alarme_id, usuario_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(uid)))
@@ -4571,7 +4705,7 @@ async def test_alarme(aid: int, request: Request):
                 risk_level=prioridade,
                 alert_type=tipo,
             )
-            stats = await send_alert_to_all_active_tokens(cur, alert)
+            stats = await send_alert_to_alarm_users(cur, aid, alert)
     return {"ok": True, "sent": stats["sent"], "failed": stats["failed"], "alarm_name": nome}
 
 
@@ -4581,7 +4715,7 @@ async def alarmes_historico(request: Request):
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, usuario_id, placa, camera_name, target_name,
+                SELECT id, usuario_id, evento_id, placa, camera_name, target_name,
                        detected_at, risk_level, alert_type, criado_em, lido, error_message
                 FROM alertas_criticos
                 ORDER BY criado_em DESC LIMIT 200
@@ -4589,14 +4723,39 @@ async def alarmes_historico(request: Request):
             items = []
             for r in cur.fetchall():
                 items.append({
-                    "id": r[0], "usuario_id": r[1], "placa": r[2],
-                    "camera_name": r[3], "target_name": r[4],
-                    "detected_at": r[5].isoformat() if r[5] else None,
-                    "risk_level": r[6], "alert_type": r[7],
-                    "criado_em": r[8].isoformat() if r[8] else None,
-                    "lido": r[9], "error_message": r[10],
+                    "id": r[0], "usuario_id": r[1], "event_id": r[2], "placa": r[3],
+                    "camera_name": r[4], "target_name": r[5],
+                    "detected_at": r[6].isoformat() if r[6] else None,
+                    "risk_level": r[7], "alert_type": r[8],
+                    "criado_em": r[9].isoformat() if r[9] else None,
+                    "lido": r[10], "error_message": r[11],
                 })
     return {"items": items}
+
+
+@app.post("/api/alarmes/historico/{alert_id}/read")
+async def alarmes_historico_mark_read(alert_id: int, request: Request):
+    """Marca um alerta do histórico como lido (admin marca qualquer; usuário marca o próprio)."""
+    user = getattr(request.state, "user", {}) or {}
+    user_sub = str(user.get("sub") or "")
+    role = str(user.get("role") or "")
+    if not user_sub:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+
+    user_id = _resolve_user_numeric_id_from_sub(user_sub)
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            if role == "admin":
+                cur.execute("UPDATE alertas_criticos SET lido=TRUE WHERE id=%s", (alert_id,))
+            else:
+                cur.execute(
+                    "UPDATE alertas_criticos SET lido=TRUE WHERE id=%s AND usuario_id IN (%s, %s)",
+                    (alert_id, user_sub, user_id or user_sub),
+                )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Alerta não encontrado")
+    return {"ok": True, "id": alert_id, "lido": True}
 
 
 # ===========================
