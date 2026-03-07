@@ -275,6 +275,7 @@ def _priority_to_risk(priority: str | None) -> str:
 
 async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> dict[str, int]:
     """Envia alerta apenas para usuários vinculados a um alarme."""
+    # Buscar usuários vinculados ao alarme
     db_cur.execute(
         """
         SELECT DISTINCT au.usuario_id
@@ -286,13 +287,61 @@ async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> 
         (int(alarme_id),),
     )
     users = [str(row[0]) for row in db_cur.fetchall()]
+    
+    logger.info("[FCM] send_alert_to_alarm_users: alarme_id=%s encontrados %d usuários vinculados", alarme_id, len(users))
+    
+    if not users:
+        logger.warning("[FCM] Alarme %s tem 0 usuários vinculados", alarme_id)
+        return {
+            "sent": 0,
+            "failed": 0,
+            "invalid": 0,
+            "users": 0,
+            "users_found": 0,
+            "users_with_tokens": 0,
+            "tokens_attempted": 0,
+        }
 
-    totals = {"sent": 0, "failed": 0, "invalid": 0, "users": len(users)}
+    totals = {
+        "sent": 0,
+        "failed": 0,
+        "invalid": 0,
+        "users": len(users),
+        "users_found": len(users),
+        "users_with_tokens": 0,
+        "tokens_attempted": 0,
+    }
+    
     for user_id in users:
+        # Contar tokens ativos para este usuário ANTES de enviar
+        db_cur.execute(
+            "SELECT COUNT(*) FROM fcm_device_tokens WHERE user_id = %s AND active = TRUE",
+            (user_id,),
+        )
+        tokens_count = int(db_cur.fetchone()[0] or 0)
+        
+        if tokens_count > 0:
+            totals["users_with_tokens"] += 1
+            totals["tokens_attempted"] += tokens_count
+            logger.debug("[FCM] user_id=%s tem %d token(s) ativo(s)", user_id, tokens_count)
+        else:
+            logger.warning("[FCM] user_id=%s tem 0 tokens ativos", user_id)
+        
         stats = await send_alert_to_user_tokens(db_cur, user_id, alert)
         totals["sent"] += stats["sent"]
         totals["failed"] += stats["failed"]
         totals["invalid"] += stats["invalid"]
+    
+    logger.info(
+        "[FCM] send_alert_to_alarm_users resultado: users=%d found=%d with_tokens=%d tokens_attempted=%d sent=%d failed=%d",
+        totals["users"],
+        totals["users_found"],
+        totals["users_with_tokens"],
+        totals["tokens_attempted"],
+        totals["sent"],
+        totals["failed"],
+    )
+    
     return totals
 
 

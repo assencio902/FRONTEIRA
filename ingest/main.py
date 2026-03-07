@@ -4706,7 +4706,19 @@ async def test_alarme(aid: int, request: Request):
                 alert_type=tipo,
             )
             stats = await send_alert_to_alarm_users(cur, aid, alert)
-    return {"ok": True, "sent": stats["sent"], "failed": stats["failed"], "alarm_name": nome}
+    
+    # Retornar informações detalhadas do resultado
+    return {
+        "ok": True,
+        "alarm_id": aid,
+        "alarm_name": nome,
+        "sent": stats["sent"],
+        "failed": stats["failed"],
+        "invalid": stats["invalid"],
+        "users_found": stats.get("users_found", 0),
+        "users_with_tokens": stats.get("users_with_tokens", 0),
+        "tokens_attempted": stats.get("tokens_attempted", 0),
+    }
 
 
 @app.get("/api/alarmes/historico")

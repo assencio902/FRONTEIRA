@@ -6606,14 +6606,65 @@ async function deleteAlarme(id) {
 }
 
 async function testAlarme(id) {
-  if (!confirm('Enviar notifica\u00e7\u00e3o push de TESTE para este alarme?')) return;
+  if (!confirm('Enviar notificação push de TESTE para este alarme?')) return;
   try {
-    var r = await fetch('/api/alarmes/' + id + '/test', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
-    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    console.log('[Alarmes] Testando alarme id=' + id);
+    var r = await fetch('/api/alarmes/' + id + '/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}'
+    });
+    
+    if (!r.ok) {
+      var ed = await r.json().catch(function() { return {}; });
+      console.error('[Alarmes] Erro no teste:', ed);
+      throw new Error(ed.detail || 'HTTP ' + r.status);
+    }
+    
     var d = await r.json();
-    alert('\u2705 Teste enviado!\nEnviados: ' + d.sent + '\nFalhas: ' + d.failed);
+    console.log('[Alarmes] Resultado do teste:', d);
+    
+    // Montar mensagem de resultado detalhada
+    var msg = '📢 Teste: ' + (d.alarm_name || 'Alarme ' + id) + '\n\n';
+    
+    // Mostrar usuários encontrados
+    msg += '👥 Usuários vinculados: ' + (d.users_found || 0) + '\n';
+    
+    // Mostrar quantos tinham tokens
+    if (d.users_found > 0) {
+      msg += '📱 Com tokens válidos: ' + (d.users_with_tokens || 0) + '/' + d.users_found + '\n';
+    }
+    
+    // Mostrar resultado final
+    msg += '\n';
+    if (d.sent > 0) {
+      msg += '✅ Enviados com sucesso: ' + d.sent + '\n';
+    }
+    if (d.failed > 0) {
+      msg += '❌ Falhas no envio: ' + d.failed + '\n';
+    }
+    if (d.invalid > 0) {
+      msg += '⚠️ Tokens inválidos: ' + d.invalid + '\n';
+    }
+    
+    // Se nada foi enviado, mostrar motivo claro
+    if (d.sent === 0) {
+      if (d.users_found === 0) {
+        msg += '⚠️ Nenhum usuário vinculado a este alarme.\n';
+        msg += 'Configure usuários na tela de edição do alarme.';
+      } else if (d.users_with_tokens === 0) {
+        msg += '⚠️ Nenhum usuário tem token push válido registrado.\n';
+        msg += 'Verifique se os usuários executaram login no app mobile.';
+      } else {
+        msg += '⚠️ Não foi possível enviar push para nenhum usuário.\n';
+        msg += 'Verifique o Firebase e logs do servidor (F12 no servidor).';
+      }
+    }
+    
+    alert(msg);
   } catch(e) {
-    alert('\u274C Erro ao testar: ' + e.message);
+    console.error('[Alarmes] Erro ao testar alarme:', e.message);
+    alert('❌ Erro ao testar: ' + e.message);
   }
 }
 
