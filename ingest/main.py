@@ -366,6 +366,35 @@ def _init_db():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_alertas_criticos_usuario ON alertas_criticos(usuario_id, criado_em DESC);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_alertas_criticos_evento ON alertas_criticos(evento_id);")
 
+            # Alarmes configuráveis
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alarmes (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    descricao TEXT,
+                    tipo TEXT NOT NULL DEFAULT 'placa_monitorada',
+                    prioridade TEXT NOT NULL DEFAULT 'media',
+                    ativo BOOLEAN DEFAULT TRUE,
+                    mensagem TEXT,
+                    criado_em TIMESTAMPTZ DEFAULT NOW(),
+                    atualizado_em TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alarme_listas (
+                    alarme_id INTEGER NOT NULL REFERENCES alarmes(id) ON DELETE CASCADE,
+                    lista_id INTEGER NOT NULL REFERENCES vehicle_lists(id) ON DELETE CASCADE,
+                    PRIMARY KEY (alarme_id, lista_id)
+                );
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS alarme_usuarios (
+                    alarme_id INTEGER NOT NULL REFERENCES alarmes(id) ON DELETE CASCADE,
+                    usuario_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    PRIMARY KEY (alarme_id, usuario_id)
+                );
+            """)
+
 
 # ===========================
 # HELPERS
@@ -4392,6 +4421,182 @@ async def fcm_status(request: Request):
     except Exception as e:
         logger.error(f"[FCM] Erro ao verificar status: {e}")
         raise HTTPException(status_code=500, detail="Erro ao verificar status")
+
+
+# ===========================
+# ALARMES (CRUD)
+# ===========================
+
+@app.get("/api/alarmes")
+async def list_alarmes(request: Request):
+    """Listar todos os alarmes com listas e usuários vinculados."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT a.id, a.nome, a.descricao, a.tipo, a.prioridade, a.ativo,
+                       a.mensagem, a.criado_em, a.atualizado_em
+                FROM alarmes a ORDER BY a.id DESC
+            """)
+            alarmes = []
+            for r in cur.fetchall():
+                aid = r[0]
+                cur.execute("SELECT lista_id FROM alarme_listas WHERE alarme_id=%s", (aid,))
+                listas = [row[0] for row in cur.fetchall()]
+                cur.execute("SELECT usuario_id FROM alarme_usuarios WHERE alarme_id=%s", (aid,))
+                usuarios = [row[0] for row in cur.fetchall()]
+                alarmes.append({
+                    "id": aid, "nome": r[1], "descricao": r[2], "tipo": r[3],
+                    "prioridade": r[4], "ativo": r[5], "mensagem": r[6],
+                    "criado_em": r[7].isoformat() if r[7] else None,
+                    "atualizado_em": r[8].isoformat() if r[8] else None,
+                    "listas": listas, "usuarios": usuarios,
+                })
+    return {"items": alarmes}
+
+
+@app.post("/api/alarmes", status_code=201)
+async def create_alarme(request: Request):
+    user = getattr(request.state, "user", {})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    data = await request.json()
+    nome = str(data.get("nome") or "").strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="nome é obrigatório")
+    descricao = str(data.get("descricao") or "").strip()
+    tipo = str(data.get("tipo") or "placa_monitorada").strip()
+    prioridade = str(data.get("prioridade") or "media").strip()
+    if tipo not in ("placa_monitorada", "comboio", "velocidade", "direcao", "personalizado"):
+        raise HTTPException(status_code=400, detail="tipo inválido")
+    if prioridade not in ("baixa", "media", "alta", "critica"):
+        raise HTTPException(status_code=400, detail="prioridade inválida")
+    ativo = bool(data.get("ativo", True))
+    mensagem = str(data.get("mensagem") or "").strip()
+    listas = data.get("listas") or []
+    usuarios = data.get("usuarios") or []
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO alarmes (nome, descricao, tipo, prioridade, ativo, mensagem)
+                   VALUES (%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (nome, descricao, tipo, prioridade, ativo, mensagem),
+            )
+            aid = cur.fetchone()[0]
+            for lid in listas:
+                cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(lid)))
+            for uid in usuarios:
+                cur.execute("INSERT INTO alarme_usuarios (alarme_id, usuario_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(uid)))
+    return {"id": aid, "ok": True}
+
+
+@app.put("/api/alarmes/{aid}")
+async def update_alarme(aid: int, request: Request):
+    user = getattr(request.state, "user", {})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    data = await request.json()
+    sets, vals = [], []
+    if "nome" in data:
+        n = str(data["nome"]).strip()
+        if not n: raise HTTPException(status_code=400, detail="nome não pode ser vazio")
+        sets.append("nome=%s"); vals.append(n)
+    if "descricao" in data: sets.append("descricao=%s"); vals.append(str(data["descricao"]).strip())
+    if "tipo" in data:
+        t = str(data["tipo"]).strip()
+        if t not in ("placa_monitorada", "comboio", "velocidade", "direcao", "personalizado"):
+            raise HTTPException(status_code=400, detail="tipo inválido")
+        sets.append("tipo=%s"); vals.append(t)
+    if "prioridade" in data:
+        p = str(data["prioridade"]).strip()
+        if p not in ("baixa", "media", "alta", "critica"):
+            raise HTTPException(status_code=400, detail="prioridade inválida")
+        sets.append("prioridade=%s"); vals.append(p)
+    if "ativo" in data: sets.append("ativo=%s"); vals.append(bool(data["ativo"]))
+    if "mensagem" in data: sets.append("mensagem=%s"); vals.append(str(data["mensagem"]).strip())
+    if sets:
+        sets.append("atualizado_em=NOW()")
+        vals.append(aid)
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(f"UPDATE alarmes SET {', '.join(sets)} WHERE id=%s", tuple(vals))
+                if cur.rowcount == 0:
+                    raise HTTPException(status_code=404, detail="Alarme não encontrado")
+    # Atualizar vínculos de listas
+    if "listas" in data:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM alarme_listas WHERE alarme_id=%s", (aid,))
+                for lid in (data["listas"] or []):
+                    cur.execute("INSERT INTO alarme_listas (alarme_id, lista_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(lid)))
+    # Atualizar vínculos de usuários
+    if "usuarios" in data:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM alarme_usuarios WHERE alarme_id=%s", (aid,))
+                for uid in (data["usuarios"] or []):
+                    cur.execute("INSERT INTO alarme_usuarios (alarme_id, usuario_id) VALUES (%s,%s) ON CONFLICT DO NOTHING", (aid, int(uid)))
+    return {"ok": True}
+
+
+@app.delete("/api/alarmes/{aid}", status_code=204)
+async def delete_alarme(aid: int, request: Request):
+    user = getattr(request.state, "user", {})
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM alarmes WHERE id=%s", (aid,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Alarme não encontrado")
+
+
+@app.post("/api/alarmes/{aid}/test")
+async def test_alarme(aid: int, request: Request):
+    """Dispara um alerta de teste para os usuários vinculados ao alarme."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT nome, tipo, prioridade, mensagem FROM alarmes WHERE id=%s", (aid,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Alarme não encontrado")
+            nome, tipo, prioridade, mensagem = row
+            alert = FCMAlert(
+                plate="TESTE-0000",
+                target_name=nome,
+                camera_name="Teste de alarme",
+                detected_at=datetime.now(timezone.utc).isoformat(),
+                image_url="",
+                event_id=f"alarm-test-{aid}-{uuid.uuid4().hex[:8]}",
+                city="N/A",
+                risk_level=prioridade,
+                alert_type=tipo,
+            )
+            stats = await send_alert_to_all_active_tokens(cur, alert)
+    return {"ok": True, "sent": stats["sent"], "failed": stats["failed"], "alarm_name": nome}
+
+
+@app.get("/api/alarmes/historico")
+async def alarmes_historico(request: Request):
+    """Retorna últimos 200 registros de alertas enviados (tabela alertas_criticos)."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, usuario_id, placa, camera_name, target_name,
+                       detected_at, risk_level, alert_type, criado_em, lido, error_message
+                FROM alertas_criticos
+                ORDER BY criado_em DESC LIMIT 200
+            """)
+            items = []
+            for r in cur.fetchall():
+                items.append({
+                    "id": r[0], "usuario_id": r[1], "placa": r[2],
+                    "camera_name": r[3], "target_name": r[4],
+                    "detected_at": r[5].isoformat() if r[5] else None,
+                    "risk_level": r[6], "alert_type": r[7],
+                    "criado_em": r[8].isoformat() if r[8] else None,
+                    "lido": r[9], "error_message": r[10],
+                })
+    return {"items": items}
 
 
 # ===========================

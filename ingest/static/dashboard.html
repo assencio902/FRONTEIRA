@@ -440,6 +440,11 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
     Mapa de C&#226;meras
   </div>
+  <div class="sidebar-section">Alertas</div>
+  <div class="nav-item" onclick="switchTab('alarmes',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    Alarmes
+  </div>
   <div class="sidebar-section nav-admin-only">Sistema</div>
   <div class="nav-item nav-admin-only" onclick="switchTab('usuarios',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1142,6 +1147,101 @@
     </div><!-- /tab-mapa -->
 
     <!-- ===== ABA USUÁRIOS ===== -->
+    <!-- ===== ABA ALARMES ===== -->
+    <div id="tab-alarmes" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128276; Gerenciamento de Alarmes</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Configure alarmes, vincule listas e usu&#225;rios, e teste notifica&#231;&#245;es push.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="loadAlarmes()" title="Atualizar">&#8635; Atualizar</button>
+          <button class="btn btn-primary btn-sm nav-admin-only" onclick="openAlarmeModal(null)">+ Novo Alarme</button>
+        </div>
+      </div>
+
+      <!-- Sub-tabs: Alarmes / Histórico -->
+      <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border)">
+        <button class="sub-tab active" data-almsub="config" onclick="_switchAlarmSub('config',this)" style="padding:8px 18px;background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:.85rem;font-weight:600;border-bottom:2px solid var(--accent);margin-bottom:-2px">&#9881;&#65039; Configura&#231;&#227;o</button>
+        <button class="sub-tab" data-almsub="historico" onclick="_switchAlarmSub('historico',this)" style="padding:8px 18px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;font-weight:600;border-bottom:2px solid transparent;margin-bottom:-2px">&#128203; Hist&#243;rico</button>
+      </div>
+
+      <!-- SUB: Configuração de Alarmes -->
+      <div id="alarm-sub-config" class="active">
+        <!-- Cards resumo -->
+        <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap" id="alarmes-cards">
+          <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total</div>
+            <div id="alc-total" style="font-size:1.6rem;font-weight:800;color:var(--text)">&#8212;</div>
+          </div>
+          <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Ativos</div>
+            <div id="alc-ativos" style="font-size:1.6rem;font-weight:800;color:#4ade80">&#8212;</div>
+          </div>
+          <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Cr&#237;ticos</div>
+            <div id="alc-criticos" style="font-size:1.6rem;font-weight:800;color:#f87171">&#8212;</div>
+          </div>
+          <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Inativos</div>
+            <div id="alc-inativos" style="font-size:1.6rem;font-weight:800;color:var(--muted)">&#8212;</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <input id="alarmes-search" type="text" placeholder="&#128269; Buscar alarme por nome..." oninput="_filterAlarmesTable()" style="max-width:320px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
+        </div>
+
+        <div class="form-error" id="alarmes-error" style="margin-bottom:12px"></div>
+        <div class="table-wrap">
+          <table id="alarmes-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Prioridade</th>
+                <th>Listas</th>
+                <th>Usu&#225;rios</th>
+                <th>Status</th>
+                <th style="text-align:center">A&#231;&#245;es</th>
+              </tr>
+            </thead>
+            <tbody id="alarmes-tbody">
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB: Histórico de Alertas -->
+      <div id="alarm-sub-historico" style="display:none">
+        <div style="margin-bottom:12px">
+          <input id="hist-search" type="text" placeholder="&#128269; Buscar por placa, c&#226;mera ou alvo..." oninput="_filterHistTable()" style="max-width:320px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
+        </div>
+        <div class="form-error" id="hist-error" style="margin-bottom:12px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Placa</th>
+                <th>Alvo</th>
+                <th>C&#226;mera</th>
+                <th>Risco</th>
+                <th>Tipo</th>
+                <th>Data/Hora</th>
+                <th>Lido</th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody">
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="tab-usuarios" class="tab-pane">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
         <div>
@@ -1657,6 +1757,71 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('user-modal')">Cancelar</button>
       <button class="btn btn-primary btn-sm" id="um-save-btn" onclick="saveUser()">&#128190; Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ALARME -->
+<div class="modal-overlay" id="alarme-modal" onclick="if(event.target===this)closeModal('alarme-modal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2 id="alarme-modal-title">Novo Alarme</h2>
+      <button class="modal-close" onclick="closeModal('alarme-modal')">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
+      <div class="form-group" style="grid-column:1/3">
+        <label>Nome do Alarme *</label>
+        <input type="text" id="alm-nome" placeholder="Ex: Alerta Veículos Roubados" maxlength="100">
+      </div>
+      <div class="form-group" style="grid-column:1/3">
+        <label>Descrição</label>
+        <input type="text" id="alm-descricao" placeholder="Descrição breve" maxlength="200">
+      </div>
+      <div class="form-group">
+        <label>Tipo *</label>
+        <select id="alm-tipo">
+          <option value="placa_monitorada">&#128663; Placa Monitorada</option>
+          <option value="comboio">&#128666; Comboio</option>
+          <option value="velocidade">&#9889; Velocidade</option>
+          <option value="direcao">&#8644; Direção</option>
+          <option value="personalizado">&#128295; Personalizado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Prioridade *</label>
+        <select id="alm-prioridade">
+          <option value="baixa">&#9898; Baixa</option>
+          <option value="media" selected>&#128992; Média</option>
+          <option value="alta">&#128993; Alta</option>
+          <option value="critica">&#128308; Crítica</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/3">
+        <label>Mensagem do Alerta</label>
+        <input type="text" id="alm-mensagem" placeholder="Mensagem enviada na notificação push" maxlength="300">
+      </div>
+      <div class="form-group" style="grid-column:1/3">
+        <label>Listas Vinculadas</label>
+        <div id="alm-listas-container" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:.78rem">Carregando...</span>
+        </div>
+      </div>
+      <div class="form-group" style="grid-column:1/3">
+        <label>Usuários Notificados</label>
+        <div id="alm-usuarios-container" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:.78rem">Carregando...</span>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+        <input type="checkbox" id="alm-ativo" checked style="width:auto"> Alarme ativo
+      </label>
+    </div>
+    <div class="form-error" id="alarme-form-error"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('alarme-modal')">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="alm-save-btn" onclick="saveAlarme()">&#128190; Salvar</button>
     </div>
   </div>
 </div>
@@ -2213,7 +2378,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', config: 'Configura\u00e7\u00f5es' };
+var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 
 function switchTab(name, el) {
@@ -2240,6 +2405,7 @@ function switchTab(name, el) {
   if (name === 'mapa')     loadMapa();
   else                     _stopMapaAutoRefresh();
   if (name === 'usuarios') loadUsers();
+  if (name === 'alarmes')  loadAlarmes();
   if (name === 'config')   initConfigTab();
 }
 
@@ -2282,6 +2448,7 @@ function refreshCurrent() {
     else loadCentral();
   }
   else if (currentTab === 'cameras') loadCameras();
+  else if (currentTab === 'alarmes') loadAlarmes();
   else { loadLists(); loadVehicles(); }
 }
 
@@ -2291,7 +2458,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal'].forEach(closeModal);
   }
 });
 
@@ -6230,6 +6397,272 @@ async function deleteUser(id, username) {
     else alert('Erro: ' + e.message);
   }
 }
+
+
+// ===== ALARMES (CRUD + Histórico) =====
+var _almCache = [];
+var _almListsCache = [];
+var _almUsersCache = [];
+
+function _switchAlarmSub(name, el) {
+  document.querySelectorAll('#tab-alarmes .sub-tab').forEach(function(t){ t.classList.remove('active'); t.style.borderBottomColor = 'transparent'; t.style.color = 'var(--muted)'; });
+  el.classList.add('active'); el.style.borderBottomColor = 'var(--accent)'; el.style.color = 'var(--accent)';
+  document.getElementById('alarm-sub-config').style.display = (name === 'config') ? '' : 'none';
+  document.getElementById('alarm-sub-historico').style.display = (name === 'historico') ? '' : 'none';
+  if (name === 'historico') _loadHistorico();
+}
+
+async function loadAlarmes() {
+  var tbody = document.getElementById('alarmes-tbody');
+  var err = document.getElementById('alarmes-error');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/alarmes');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    _almCache = d.items || [];
+    _renderAlarmesTable(_almCache);
+    document.getElementById('alc-total').textContent = _almCache.length;
+    document.getElementById('alc-ativos').textContent = _almCache.filter(function(a){ return a.ativo; }).length;
+    document.getElementById('alc-criticos').textContent = _almCache.filter(function(a){ return a.prioridade === 'critica'; }).length;
+    document.getElementById('alc-inativos').textContent = _almCache.filter(function(a){ return !a.ativo; }).length;
+    // Pré-carregar listas e usuários para o modal
+    _preloadAlarmSelects();
+  } catch(e) {
+    if (err) err.textContent = 'Erro ao carregar alarmes: ' + e.message;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
+  }
+}
+
+function _filterAlarmesTable() {
+  var q = (document.getElementById('alarmes-search').value || '').toLowerCase();
+  var filtered = q ? _almCache.filter(function(a){
+    return (a.nome||'').toLowerCase().includes(q) || (a.tipo||'').toLowerCase().includes(q);
+  }) : _almCache;
+  _renderAlarmesTable(filtered);
+}
+
+function _renderAlarmesTable(items) {
+  var tbody = document.getElementById('alarmes-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Nenhum alarme cadastrado.</td></tr>';
+    return;
+  }
+  var tipoInfo = {
+    placa_monitorada: { lbl:'Placa Monitorada', icon:'\u{1F697}' },
+    comboio:          { lbl:'Comboio',           icon:'\u{1F69A}' },
+    velocidade:       { lbl:'Velocidade',        icon:'\u26A1' },
+    direcao:          { lbl:'Dire\u00e7\u00e3o', icon:'\u21C4' },
+    personalizado:    { lbl:'Personalizado',     icon:'\u{1F527}' }
+  };
+  var prioInfo = {
+    baixa:  { lbl:'Baixa',   cls:'',            icon:'\u26AA' },
+    media:  { lbl:'M\u00e9dia',   cls:'badge-green', icon:'\u{1F7E0}' },
+    alta:   { lbl:'Alta',    cls:'badge-yellow', icon:'\u{1F7E1}' },
+    critica:{ lbl:'Cr\u00edtica', cls:'badge-red',   icon:'\u{1F534}' }
+  };
+  var isAdmin = (window._authRole === 'admin');
+  tbody.innerHTML = items.map(function(a){
+    var ti = tipoInfo[a.tipo] || { lbl: a.tipo, icon:'' };
+    var pi = prioInfo[a.prioridade] || { lbl: a.prioridade, cls:'', icon:'' };
+    var enc = encodeURIComponent(JSON.stringify(a));
+    var listNames = (a.listas||[]).map(function(lid){
+      var found = _almListsCache.find(function(l){ return l.id === lid; });
+      return found ? found.name : '#' + lid;
+    }).join(', ') || '<span style="color:var(--muted)">\u2014</span>';
+    var userNames = (a.usuarios||[]).map(function(uid){
+      var found = _almUsersCache.find(function(u){ return u.id === uid; });
+      return found ? found.username : '#' + uid;
+    }).join(', ') || '<span style="color:var(--muted)">\u2014</span>';
+    return '<tr>'
+      + '<td style="color:var(--muted);font-size:.8rem">' + a.id + '</td>'
+      + '<td><span style="font-weight:700;color:var(--accent)">' + (a.nome||'') + '</span>'
+        + (a.descricao ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + a.descricao + '</div>' : '') + '</td>'
+      + '<td><span class="badge">' + ti.icon + ' ' + ti.lbl + '</span></td>'
+      + '<td><span class="badge ' + pi.cls + '">' + pi.icon + ' ' + pi.lbl + '</span></td>'
+      + '<td style="font-size:.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + ((a.listas||[]).join(', ')) + '">' + listNames + '</td>'
+      + '<td style="font-size:.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + userNames + '</td>'
+      + '<td>' + (a.ativo
+        ? '<span class="badge badge-green">\u25CF Ativo</span>'
+        : '<span class="badge badge-red">\u25CF Inativo</span>') + '</td>'
+      + '<td style="text-align:center;white-space:nowrap">'
+        + '<button class="btn btn-outline btn-xs" onclick="testAlarme(' + a.id + ')" title="Testar push">\u{1F514} Testar</button> '
+        + (isAdmin
+          ? '<button class="btn btn-outline btn-xs" onclick="openAlarmeModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">\u270E Editar</button> '
+            + '<button class="btn btn-danger btn-xs" onclick="deleteAlarme(' + a.id + ',\'' + (a.nome||'').replace(/'/g, "\\'") + '\')" title="Excluir">\u{1F5D1} Excluir</button>'
+          : '')
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function _preloadAlarmSelects() {
+  try {
+    var r1 = await fetch('/api/vehicles/lists');
+    if (r1.ok) { var d1 = await r1.json(); _almListsCache = d1.items || d1 || []; }
+  } catch(e) {}
+  try {
+    var r2 = await fetch('/api/users');
+    if (r2.ok) { var d2 = await r2.json(); _almUsersCache = d2.items || []; }
+  } catch(e) {}
+}
+
+var _almEditId = null;
+function openAlarmeModal(encodedOrObj) {
+  var a = encodedOrObj ? (typeof encodedOrObj === 'string' ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj) : null;
+  _almEditId = a ? a.id : null;
+  document.getElementById('alarme-modal-title').textContent = a ? 'Editar Alarme' : 'Novo Alarme';
+  document.getElementById('alm-nome').value = a ? (a.nome||'') : '';
+  document.getElementById('alm-descricao').value = a ? (a.descricao||'') : '';
+  document.getElementById('alm-tipo').value = a ? (a.tipo||'placa_monitorada') : 'placa_monitorada';
+  document.getElementById('alm-prioridade').value = a ? (a.prioridade||'media') : 'media';
+  document.getElementById('alm-mensagem').value = a ? (a.mensagem||'') : '';
+  document.getElementById('alm-ativo').checked = a ? !!a.ativo : true;
+  document.getElementById('alarme-form-error').textContent = '';
+  // Render listas checkboxes
+  var lc = document.getElementById('alm-listas-container');
+  var selListas = a ? (a.listas||[]) : [];
+  if (_almListsCache.length) {
+    lc.innerHTML = _almListsCache.map(function(l){
+      var chk = selListas.indexOf(l.id) >= 0 ? ' checked' : '';
+      return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer;padding:3px 8px;background:rgba(255,255,255,.06);border-radius:4px">'
+        + '<input type="checkbox" value="' + l.id + '"' + chk + ' style="width:auto"> ' + (l.name||l.nome||'Lista #'+l.id) + '</label>';
+    }).join('');
+  } else {
+    lc.innerHTML = '<span style="color:var(--muted);font-size:.78rem">Nenhuma lista cadastrada</span>';
+  }
+  // Render usuários checkboxes
+  var uc = document.getElementById('alm-usuarios-container');
+  var selUsers = a ? (a.usuarios||[]) : [];
+  if (_almUsersCache.length) {
+    uc.innerHTML = _almUsersCache.map(function(u){
+      var chk = selUsers.indexOf(u.id) >= 0 ? ' checked' : '';
+      return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer;padding:3px 8px;background:rgba(255,255,255,.06);border-radius:4px">'
+        + '<input type="checkbox" value="' + u.id + '"' + chk + ' style="width:auto"> ' + u.username + (u.full_name ? ' (' + u.full_name + ')' : '') + '</label>';
+    }).join('');
+  } else {
+    uc.innerHTML = '<span style="color:var(--muted);font-size:.78rem">Nenhum usu\u00e1rio cadastrado</span>';
+  }
+  openModal('alarme-modal');
+  setTimeout(function(){ document.getElementById('alm-nome').focus(); }, 80);
+}
+
+async function saveAlarme() {
+  var errEl = document.getElementById('alarme-form-error');
+  var saveBtn = document.getElementById('alm-save-btn');
+  errEl.textContent = '';
+  var nome = document.getElementById('alm-nome').value.trim();
+  var descricao = document.getElementById('alm-descricao').value.trim();
+  var tipo = document.getElementById('alm-tipo').value;
+  var prioridade = document.getElementById('alm-prioridade').value;
+  var mensagem = document.getElementById('alm-mensagem').value.trim();
+  var ativo = document.getElementById('alm-ativo').checked;
+  if (!nome) { errEl.textContent = 'Nome \u00e9 obrigat\u00f3rio.'; return; }
+  var listas = [];
+  document.querySelectorAll('#alm-listas-container input[type=checkbox]:checked').forEach(function(cb){
+    listas.push(parseInt(cb.value));
+  });
+  var usuarios = [];
+  document.querySelectorAll('#alm-usuarios-container input[type=checkbox]:checked').forEach(function(cb){
+    usuarios.push(parseInt(cb.value));
+  });
+  var body = { nome: nome, descricao: descricao, tipo: tipo, prioridade: prioridade, mensagem: mensagem, ativo: ativo, listas: listas, usuarios: usuarios };
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Salvando...';
+  try {
+    var url = _almEditId ? '/api/alarmes/' + _almEditId : '/api/alarmes';
+    var method = _almEditId ? 'PUT' : 'POST';
+    var r = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    closeModal('alarme-modal');
+    await loadAlarmes();
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '\u{1F4BE} Salvar';
+  }
+}
+
+async function deleteAlarme(id, nome) {
+  if (!confirm('Excluir o alarme "' + nome + '"?\nEsta a\u00e7\u00e3o n\u00e3o pode ser desfeita.')) return;
+  var err = document.getElementById('alarmes-error');
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/alarmes/' + id, { method: 'DELETE' });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    await loadAlarmes();
+  } catch(e) {
+    if (err) err.textContent = 'Erro: ' + e.message;
+    else alert('Erro: ' + e.message);
+  }
+}
+
+async function testAlarme(id) {
+  if (!confirm('Enviar notifica\u00e7\u00e3o push de TESTE para este alarme?')) return;
+  try {
+    var r = await fetch('/api/alarmes/' + id + '/test', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+    if (!r.ok) { var ed = await r.json().catch(function(){ return {}; }); throw new Error(ed.detail || 'HTTP ' + r.status); }
+    var d = await r.json();
+    alert('\u2705 Teste enviado!\nEnviados: ' + d.sent + '\nFalhas: ' + d.failed);
+  } catch(e) {
+    alert('\u274C Erro ao testar: ' + e.message);
+  }
+}
+
+// --- Histórico ---
+var _histCache = [];
+async function _loadHistorico() {
+  var tbody = document.getElementById('hist-tbody');
+  var err = document.getElementById('hist-error');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  if (err) err.textContent = '';
+  try {
+    var r = await fetch('/api/alarmes/historico');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    _histCache = d.items || [];
+    _renderHistTable(_histCache);
+  } catch(e) {
+    if (err) err.textContent = 'Erro: ' + e.message;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar hist\u00f3rico.</td></tr>';
+  }
+}
+
+function _filterHistTable() {
+  var q = (document.getElementById('hist-search').value || '').toLowerCase();
+  var filtered = q ? _histCache.filter(function(h){
+    return (h.placa||'').toLowerCase().includes(q) || (h.camera_name||'').toLowerCase().includes(q) || (h.target_name||'').toLowerCase().includes(q);
+  }) : _histCache;
+  _renderHistTable(filtered);
+}
+
+function _renderHistTable(items) {
+  var tbody = document.getElementById('hist-tbody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Nenhum alerta no hist\u00f3rico.</td></tr>';
+    return;
+  }
+  var riskBadge = { high:'badge-red', critica:'badge-red', alta:'badge-yellow', media:'badge-green', baixa:'' };
+  tbody.innerHTML = items.map(function(h){
+    var dt = h.criado_em ? new Date(h.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
+    var cls = riskBadge[h.risk_level] || '';
+    return '<tr>'
+      + '<td style="color:var(--muted);font-size:.8rem">' + h.id + '</td>'
+      + '<td><span style="font-weight:700;color:var(--accent)">' + (h.placa||'\u2014') + '</span></td>'
+      + '<td>' + (h.target_name||'\u2014') + '</td>'
+      + '<td>' + (h.camera_name||'\u2014') + '</td>'
+      + '<td><span class="badge ' + cls + '">' + (h.risk_level||'\u2014') + '</span></td>'
+      + '<td style="font-size:.78rem">' + (h.alert_type||'\u2014') + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + dt + '</td>'
+      + '<td>' + (h.lido ? '<span class="badge badge-green">\u2713</span>' : '<span class="badge badge-yellow">\u2022</span>') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
 
 // ===== INIT =====
 (async function() {
