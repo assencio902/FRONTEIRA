@@ -349,7 +349,7 @@ class _SearchPanel extends StatelessWidget {
               filtersOpen
                   ? 'Ocultar filtros'
                   : _buildFilterSummary(),
-              style: const TextStyle(fontSize: 11),
+              style: const TextStyle(fontSize: 13),
             ),
           ),
 
@@ -458,7 +458,7 @@ class _SearchPanel extends StatelessWidget {
             Text('FILTROS DO SUSPEITO',
                 style: TextStyle(
                     color: AppColors.danger,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2)),
             const SizedBox(height: 10),
@@ -648,7 +648,7 @@ class _FilterSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 11, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         child,
       ],
@@ -803,7 +803,7 @@ class _CompanionCard extends StatelessWidget {
                           '#${index + 1}',
                           style: const TextStyle(
                             color: AppColors.muted,
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -889,7 +889,7 @@ class _CompanionCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Alvo: ${_fmtDur(travelTarget)}   Suspeito: ${_fmtDur(travelComp)}',
-                            style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                            style: const TextStyle(color: AppColors.muted, fontSize: 13),
                           ),
                         ),
                       ],
@@ -904,7 +904,7 @@ class _CompanionCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${_fmtTs(firstSeen)} → ${_fmtTs(lastSeen)}',
-                          style: const TextStyle(color: AppColors.muted, fontSize: 11),
+                          style: const TextStyle(color: AppColors.muted, fontSize: 13),
                         ),
                       ],
                     ),
@@ -978,7 +978,7 @@ class _CompanionCard extends StatelessWidget {
                         '${i + 1}',
                         style: const TextStyle(
                           color: AppColors.accent,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1014,7 +1014,7 @@ class _CompanionCard extends StatelessWidget {
                               const SizedBox(width: 3),
                               Text(
                                 'Alvo: ${_fmtTs(tsTarget)}',
-                                style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                                style: const TextStyle(color: AppColors.muted, fontSize: 12),
                               ),
                             ],
                           ),
@@ -1024,7 +1024,7 @@ class _CompanionCard extends StatelessWidget {
                               const SizedBox(width: 3),
                               Text(
                                 'Suspeito: ${_fmtTs(tsComp)}',
-                                style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                                style: const TextStyle(color: AppColors.muted, fontSize: 12),
                               ),
                               const Spacer(),
                               Container(
@@ -1037,7 +1037,7 @@ class _CompanionCard extends StatelessWidget {
                                   '∆ ${_fmtDur(deltaSec)}',
                                   style: const TextStyle(
                                     color: AppColors.muted,
-                                    fontSize: 9,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1083,7 +1083,7 @@ class _MetricChip extends StatelessWidget {
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       ),
     );

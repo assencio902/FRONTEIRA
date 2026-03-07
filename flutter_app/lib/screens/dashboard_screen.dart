@@ -554,8 +554,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         selectedItemColor: _kYellow,
         unselectedItemColor: _kMuted,
         selectedLabelStyle: const TextStyle(
-            fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-        unselectedLabelStyle: const TextStyle(fontSize: 10),
+            fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.home_rounded), label: 'Início'),
@@ -616,7 +616,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Text('${suspeitos.length}',
                         style: const TextStyle(
                             color: _kRed,
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900)),
                   ),
               ],
@@ -802,7 +802,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'FILTROS DE AMEAÇAS',
                         style: TextStyle(
                           color: _kYellow,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 2,
                         ),
@@ -933,7 +933,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           const Text('Líder ≥',
                               style: TextStyle(
                                   color: _kMuted,
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600)),
                           const SizedBox(height: 3),
                           Row(
@@ -1068,7 +1068,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(label,
             style: const TextStyle(
-                color: _kMuted, fontSize: 10, fontWeight: FontWeight.w600)),
+                color: _kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
         const SizedBox(height: 3),
         Container(
           decoration: BoxDecoration(
@@ -1246,7 +1246,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Text(
                           cam,
-                          style: const TextStyle(color: _kMuted, fontSize: 10),
+                          style: const TextStyle(color: _kMuted, fontSize: 12),
                         ),
                       ))
                   .toList(),
@@ -1431,7 +1431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(
                 child: Text(
                   camera,
-                  style: const TextStyle(color: _kMuted, fontSize: 10),
+                  style: const TextStyle(color: _kMuted, fontSize: 12),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1440,7 +1440,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 4),
               Text(
                 _formatTs(timestamp),
-                style: const TextStyle(color: _kMuted, fontSize: 10),
+                style: const TextStyle(color: _kMuted, fontSize: 12),
               ),
             ],
           ),
@@ -1454,17 +1454,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(width: 4),
                   Text(
                     vehicleType,
-                    style: const TextStyle(color: _kMuted, fontSize: 10),
+                    style: const TextStyle(color: _kMuted, fontSize: 12),
                   ),
                 ],
                 if (vehicleType != null && vehicleColor != null)
-                  const Text(' • ', style: TextStyle(color: _kMuted, fontSize: 10)),
+                  const Text(' • ', style: TextStyle(color: _kMuted, fontSize: 12)),
                 if (vehicleColor != null) ...[
                   Icon(Icons.palette_rounded, color: _kMuted, size: 12),
                   const SizedBox(width: 4),
                   Text(
                     vehicleColor,
-                    style: const TextStyle(color: _kMuted, fontSize: 10),
+                    style: const TextStyle(color: _kMuted, fontSize: 12),
                   ),
                 ],
               ],
@@ -1578,7 +1578,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             const Text('admin • BPFRON',
-                style: TextStyle(color: _kMuted, fontSize: 10)),
+                style: TextStyle(color: _kMuted, fontSize: 12)),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -1797,7 +1797,7 @@ class _StatCard extends StatelessWidget {
                 fontWeight: FontWeight.w900,
                 height: 1)),
         const SizedBox(height: 4),
-        Text(sub, style: const TextStyle(color: _kMuted, fontSize: 10)),
+        Text(sub, style: const TextStyle(color: _kMuted, fontSize: 12)),
       ]),
     );
   }
@@ -1838,7 +1838,7 @@ class _Panel extends StatelessWidget {
               Text(title,
                   style: const TextStyle(
                       color: _kYellow,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 2)),
               if (action != null) ...[const Spacer(), action!],
@@ -1913,19 +1913,19 @@ class _PassagemRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(camNome,
-                  style: const TextStyle(color: _kMuted, fontSize: 10),
+                  style: const TextStyle(color: _kMuted, fontSize: 12),
                   overflow: TextOverflow.ellipsis),
               const SizedBox(height: 2),
               Row(children: [
                 Text(ts,
-                    style: const TextStyle(color: _kMuted, fontSize: 10)),
+                    style: const TextStyle(color: _kMuted, fontSize: 12)),
                 if (dir != null && dir.isNotEmpty) ...
                   [
                     const SizedBox(width: 8),
                     Text(dir,
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600)),
                   ],
               ]),
