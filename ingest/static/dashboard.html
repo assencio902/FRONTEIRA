@@ -477,18 +477,6 @@
       <button id="btn-alerts" class="btn btn-outline btn-sm" onclick="openAlertsPanel()" title="Hist&#243;rico de alertas">
         &#128276;<span id="alerts-badge" class="notif-badge" style="display:none">0</span>
       </button>
-      <button id="btn-camera-alarm-toggle" class="btn btn-outline btn-sm" onclick="toggleCameraAlarm()"
-        title="Ativar/desativar alarme de c&#226;mera das listas de monitoramento">
-        &#128247; Alarme C&#226;m. <span id="camera-alarm-label">OFF</span>
-      </button>
-      <button id="btn-mute-alarm" class="btn btn-outline btn-sm" onclick="toggleMuteAlarm()"
-        title="Silenciar/ativar som das notifica&#231;&#245;es">
-        &#128276; Som: <span id="mute-alarm-label">ON</span>
-      </button>
-      <button id="btn-monitor-toggle" class="btn btn-outline btn-sm" onclick="toggleRealtime()"
-        title="Ativar/desativar monitoramento autom&#225;tico de batedor em tempo real">
-        &#127919; Monitor <span id="monitor-toggle-label">OFF</span>
-      </button>
       <button class="btn btn-outline btn-sm" onclick="refreshCurrent()">&#8635; Atualizar</button>
     </div>
   </div>
@@ -1000,17 +988,12 @@
 
     <!-- ===== ABA VEICULOS ===== -->
     <div id="tab-veiculos" class="tab-pane">
-      <div class="sub-tabs">
-        <div class="sub-tab active" onclick="switchSubTab('listas',this)">&#128193; Listas de Monitoramento</div>
-        <div class="sub-tab" onclick="switchSubTab('cadastro',this)">&#128663; Cadastro de Veiculos</div>
-      </div>
-
-      <!-- SUB LISTAS -->
-      <div id="sub-listas" class="sub-pane active">
+      <!-- VIEW: LISTA DE LISTAS -->
+      <div id="view-listas">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
           <div>
             <div style="font-weight:700;font-size:.97rem">Listas de Monitoramento</div>
-            <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Crie categorias para classificar veiculos (ex: Roubados, Furtados, Investigados, VIPs...)</div>
+            <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Crie listas para classificar veiculos (ex: Roubados, Furtados, Investigados...)</div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="openListModal()">+ Nova Lista</button>
         </div>
@@ -1019,29 +1002,31 @@
         </div>
       </div>
 
-      <!-- SUB CADASTRO -->
-      <div id="sub-cadastro" class="sub-pane">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <select id="cad-list-filter" style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius);font-size:.84rem;min-width:210px" onchange="loadVehicles()">
-              <option value="">&#8212; Todas as listas &#8212;</option>
-            </select>
-            <input type="text" id="cad-plate-search" placeholder="Buscar placa..." style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius);font-size:.84rem;width:165px" onkeydown="if(event.key==='Enter')loadVehicles()">
-            <button class="btn btn-outline btn-sm" onclick="loadVehicles()">Filtrar</button>
+      <!-- VIEW: DETALHE DE UMA LISTA (veiculos dentro) -->
+      <div id="view-list-detail" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="backToLists()" title="Voltar">&larr; Voltar</button>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:1rem" id="list-detail-name"></div>
+            <div style="font-size:.79rem;color:var(--muted);margin-top:2px" id="list-detail-count"></div>
           </div>
-          <button class="btn btn-success btn-sm" onclick="openAddVehicleModal()">+ Cadastrar Placa</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="list-detail-search" placeholder="Buscar placa..." style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius);font-size:.84rem;width:160px" onkeydown="if(event.key==='Enter')loadListVehicles()">
+            <button class="btn btn-outline btn-sm" onclick="loadListVehicles()">Filtrar</button>
+            <button class="btn btn-success btn-sm" onclick="openAddVehicleModal()">+ Adicionar Placa</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>#</th><th>Placa</th><th>Lista</th><th>Observacoes</th><th>Cadastrado em</th><th>Acoes</th></tr>
+              <tr><th>#</th><th>Placa</th><th>Observacoes</th><th>Cadastrado em</th><th style="text-align:center">Acoes</th></tr>
             </thead>
-            <tbody id="vehicles-tbody">
-              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Selecione uma lista para visualizar.</td></tr>
+            <tbody id="list-detail-tbody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="status-line" id="vehicles-status" style="padding:7px 0"></div>
+        <div class="status-line" id="list-detail-status" style="padding:7px 0"></div>
       </div>
     </div>
 
@@ -1179,7 +1164,7 @@
             <div id="alc-ativos" style="font-size:1.6rem;font-weight:800;color:#4ade80">&#8212;</div>
           </div>
           <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
-            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Cr&#237;ticos</div>
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Alta Prioridade</div>
             <div id="alc-criticos" style="font-size:1.6rem;font-weight:800;color:#f87171">&#8212;</div>
           </div>
           <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
@@ -1189,7 +1174,7 @@
         </div>
 
         <div style="margin-bottom:12px">
-          <input id="alarmes-search" type="text" placeholder="&#128269; Buscar alarme por nome..." oninput="_filterAlarmesTable()" style="max-width:320px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
+          <input id="alarmes-search" type="text" placeholder="&#128269; Buscar por lista ou usu&#225;rio..." oninput="_filterAlarmesTable()" style="max-width:320px;background:rgba(0,0,0,.25);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
         </div>
 
         <div class="form-error" id="alarmes-error" style="margin-bottom:12px"></div>
@@ -1198,17 +1183,15 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Nome</th>
-                <th>Tipo</th>
+                <th>Lista</th>
                 <th>Prioridade</th>
-                <th>Listas</th>
                 <th>Usu&#225;rios</th>
                 <th>Status</th>
                 <th style="text-align:center">A&#231;&#245;es</th>
               </tr>
             </thead>
             <tbody id="alarmes-tbody">
-              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1482,6 +1465,9 @@
       <div><span style="color:var(--muted)">&#128247; C&acirc;mera:</span> <strong id="img-modal-cam">-</strong></div>
       <div><span style="color:var(--muted)">&#128197; Data:</span> <strong id="img-modal-date">-</strong></div>
       <div><span style="color:var(--muted)">&#128336; Hor&aacute;rio:</span> <strong id="img-modal-time">-</strong></div>
+      <div><span style="color:var(--muted)">&#128203; Lista:</span> <strong id="img-modal-list">-</strong></div>
+      <div><span style="color:var(--muted)">&#9888; Prioridade:</span> <strong id="img-modal-priority">-</strong></div>
+      <div><span style="color:var(--muted)">&#128712; Status:</span> <strong id="img-modal-alert-status">-</strong></div>
     </div>
     <!-- Linha 2: Dados da câmera (XML) -->
     <div id="img-modal-camdata" style="display:none;margin-top:8px;padding:10px 14px;background:rgba(0,0,0,.13);border-radius:8px;font-size:.82rem;border-left:3px solid #3b82f6">
@@ -1569,43 +1555,6 @@
       <label>Nome da lista *</label>
       <input type="text" id="list-name" placeholder="Ex: Veiculos Roubados" maxlength="80">
     </div>
-    <div class="form-group">
-      <label>Descricao</label>
-      <input type="text" id="list-desc" placeholder="Opcional" maxlength="200">
-    </div>
-    <div class="form-group">
-      <label>Prioridade / Cor de alerta</label>
-      <input type="hidden" id="list-color" value="#ef4444">
-      <div style="display:flex;gap:10px;margin-top:6px">
-        <button type="button" id="list-color-btn-yellow"
-          onclick="selectListColor('#eab308')"
-          style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid #eab308;background:#eab30820;color:#eab308;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s">
-          &#9888; Atenção
-        </button>
-        <button type="button" id="list-color-btn-red"
-          onclick="selectListColor('#ef4444')"
-          style="flex:1;padding:10px 8px;border-radius:8px;border:2px solid #ef4444;background:#ef444440;color:#ef4444;font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s">
-          &#128680; Urgente
-        </button>
-      </div>
-    </div>
-    <div class="form-group" style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:12px 14px;margin-top:4px">
-      <label style="color:var(--text);font-size:.83rem;font-weight:600;margin-bottom:8px;display:block">&#128680; Alarme</label>
-      <label class="toggle-switch" style="margin-bottom:10px">
-        <input type="checkbox" id="list-alarm-enabled" onchange="toggleAlarmSound()">
-        <span>Ativar alarme ao detectar veiculo desta lista</span>
-      </label>
-      <div id="alarm-sound-group" style="display:none">
-        <label style="font-size:.79rem;color:var(--muted);margin-bottom:5px;display:block">Som do alarme</label>
-        <select id="list-alarm-sound" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;font-size:.84rem;width:100%">
-          <option value="beep">&#128276; Bipe simples</option>
-          <option value="siren">&#128680; Sirene</option>
-          <option value="bell">&#128515; Campainha</option>
-          <option value="urgent">&#9888;&#65039; Urgente (rapido)</option>
-        </select>
-        <button class="btn btn-outline btn-xs" style="margin-top:8px" onclick="testAlarmSound()">&#9654; Testar som</button>
-      </div>
-    </div>
     <div class="form-error" id="list-form-error"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('list-modal')">Cancelar</button>
@@ -1618,17 +1567,14 @@
 <div class="modal-overlay" id="vehicle-modal" onclick="if(event.target===this)closeModal('vehicle-modal')">
   <div class="modal modal-sm">
     <div class="modal-header">
-      <h2>Cadastrar Placa</h2>
+      <h2 id="veh-modal-title">Cadastrar Placa</h2>
       <button class="modal-close" onclick="closeModal('vehicle-modal')">&times;</button>
     </div>
     <div class="form-group">
       <label>Placa *</label>
       <input type="text" id="veh-plate" placeholder="Ex: ABC1D23" maxlength="10" oninput="this.value=this.value.toUpperCase()">
     </div>
-    <div class="form-group">
-      <label>Lista *</label>
-      <select id="veh-list-id"><option value="">&#8212; Selecione &#8212;</option></select>
-    </div>
+    <input type="hidden" id="veh-list-id" value="">
     <div class="form-group">
       <label>Observacoes</label>
       <textarea id="veh-notes" rows="3" placeholder="Tipo, cor, modelo, situacao..."></textarea>
@@ -1768,49 +1714,25 @@
       <h2 id="alarme-modal-title">Novo Alarme</h2>
       <button class="modal-close" onclick="closeModal('alarme-modal')">&times;</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">
-      <div class="form-group" style="grid-column:1/3">
-        <label>Nome do Alarme *</label>
-        <input type="text" id="alm-nome" placeholder="Ex: Alerta Veículos Roubados" maxlength="100">
-      </div>
-      <div class="form-group" style="grid-column:1/3">
-        <label>Descrição</label>
-        <input type="text" id="alm-descricao" placeholder="Descrição breve" maxlength="200">
-      </div>
-      <div class="form-group">
-        <label>Tipo *</label>
-        <select id="alm-tipo">
-          <option value="placa_monitorada">&#128663; Placa Monitorada</option>
-          <option value="comboio">&#128666; Comboio</option>
-          <option value="velocidade">&#9889; Velocidade</option>
-          <option value="direcao">&#8644; Direção</option>
-          <option value="personalizado">&#128295; Personalizado</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Prioridade *</label>
-        <select id="alm-prioridade">
-          <option value="baixa">&#9898; Baixa</option>
-          <option value="media" selected>&#128992; Média</option>
-          <option value="alta">&#128993; Alta</option>
-          <option value="critica">&#128308; Crítica</option>
-        </select>
-      </div>
-      <div class="form-group" style="grid-column:1/3">
-        <label>Mensagem do Alerta</label>
-        <input type="text" id="alm-mensagem" placeholder="Mensagem enviada na notificação push" maxlength="300">
-      </div>
-      <div class="form-group" style="grid-column:1/3">
-        <label>Listas Vinculadas</label>
-        <div id="alm-listas-container" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)">
-          <span style="color:var(--muted);font-size:.78rem">Carregando...</span>
-        </div>
-      </div>
-      <div class="form-group" style="grid-column:1/3">
-        <label>Usuários Notificados</label>
-        <div id="alm-usuarios-container" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)">
-          <span style="color:var(--muted);font-size:.78rem">Carregando...</span>
-        </div>
+    <div class="form-group">
+      <label>Lista de Ve&#237;culos *</label>
+      <select id="alm-lista">
+        <option value="">Selecione uma lista...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Prioridade *</label>
+      <select id="alm-prioridade">
+        <option value="baixa">&#9898; Baixa</option>
+        <option value="media" selected>&#128992; M&#233;dia</option>
+        <option value="alta">&#128993; Alta</option>
+        <option value="critica">&#128308; Cr&#237;tica</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Usu&#225;rios que receber&#227;o o alarme *</label>
+      <div id="alm-usuarios-container" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)">
+        <span style="color:var(--muted);font-size:.78rem">Carregando...</span>
       </div>
     </div>
     <div class="form-group">
@@ -1838,6 +1760,7 @@ function toggleMuteAlarm() {
   _alarmSoundMuted = !_alarmSoundMuted;
   var btn   = document.getElementById('btn-mute-alarm');
   var label = document.getElementById('mute-alarm-label');
+  if (!btn || !label) return;
   if (_alarmSoundMuted) {
     btn.classList.remove('btn-outline'); btn.classList.add('btn-warning');
     label.textContent = 'MUDO';
@@ -1896,33 +1819,7 @@ function playAlarmSound(sound) {
   } catch(e) { console.warn('Audio:', e); }
 }
 
-function testAlarmSound() {
-  var sound = document.getElementById('list-alarm-sound').value;
-  playAlarmSound(sound);
-}
-
-function toggleAlarmSound() {
-  var enabled = document.getElementById('list-alarm-enabled').checked;
-  document.getElementById('alarm-sound-group').style.display = enabled ? 'block' : 'none';
-}
-
 // ===== LISTA DE ALERTAS =====
-var _cameraAlarmEnabled = false;
-
-function toggleCameraAlarm() {
-  _cameraAlarmEnabled = !_cameraAlarmEnabled;
-  var btn   = document.getElementById('btn-camera-alarm-toggle');
-  var label = document.getElementById('camera-alarm-label');
-  if (_cameraAlarmEnabled) {
-    btn.classList.remove('btn-outline'); btn.classList.add('btn-danger');
-    label.innerHTML = 'ATIVO <span class="dot" style="display:inline-block;margin-left:4px"></span>';
-    _startBgAlarm();   // inicia poller background
-  } else {
-    btn.classList.remove('btn-danger'); btn.classList.add('btn-outline');
-    label.textContent = 'OFF';
-    _stopBgAlarm();    // para poller background
-  }
-}
 
 var _alertsList    = [];  // {type, icon, plate, detail, ts, tsISO, seen, data}
 var _alertsUnseen  = 0;
@@ -1973,7 +1870,7 @@ function _renderAlertsList() {
         ? new Date(a.tsISO).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})
         : a.ts;
       var listTags = (d.lists || []).map(function(l) {
-        return '<span style="background:' + l.color + '33;color:' + l.color + ';border:1px solid ' + l.color + '44;border-radius:99px;padding:1px 8px;font-weight:700;font-size:.72rem;margin-right:3px">' + (l.list_name || l.name) + '</span>';
+        return '<span style="background:#3b82f633;color:#3b82f6;border:1px solid #3b82f644;border-radius:99px;padding:1px 8px;font-weight:700;font-size:.72rem;margin-right:3px">' + (l.list_name || l.name) + '</span>';
       }).join('');
       reportHtml =
         '<div class="alert-report" style="background:' + accentColor + '12;border-color:' + accentColor + '44">' +
@@ -2350,6 +2247,7 @@ var cameraSet   = new Set();
 var chartHour   = null;
 var chartCam    = null;
 var editListId  = null;
+var _editVehicleId = null;
 var listsCache  = [];
 var _imgMeta    = {}; // cache evId -> {camName, ts} para o modal de imagem
 
@@ -2400,7 +2298,7 @@ function switchTab(name, el) {
     else if (batName === 'alvos') loadAlvos();
     else loadCentral();
   }
-  if (name === 'veiculos') { loadLists(); loadListsIntoSelects(); }
+  if (name === 'veiculos') { loadLists(); }
   if (name === 'cameras')  loadCameras();
   if (name === 'mapa')     loadMapa();
   else                     _stopMapaAutoRefresh();
@@ -2429,14 +2327,6 @@ function switchBatTab(name, el) {
   else if (name === 'alvos') { loadAlvos(); _loadAlvoCameras(); }
 }
 
-function switchSubTab(name, el) {
-  document.querySelectorAll('#tab-veiculos .sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('#tab-veiculos .sub-pane').forEach(function(p){ p.classList.remove('active'); });
-  el.classList.add('active');
-  document.getElementById('sub-' + name).classList.add('active');
-  if (name === 'cadastro') { loadListsIntoSelects(); loadVehicles(); }
-}
-
 function refreshCurrent() {
   if (currentTab === 'painel')  loadPainel();
   else if (currentTab === 'eventos') loadEvents();
@@ -2449,7 +2339,7 @@ function refreshCurrent() {
   }
   else if (currentTab === 'cameras') loadCameras();
   else if (currentTab === 'alarmes') loadAlarmes();
-  else { loadLists(); loadVehicles(); }
+  else { loadLists(); }
 }
 
 // ===== MODAIS =====
@@ -2598,11 +2488,22 @@ function plateHtml(plate) {
   if (!plate || plate === 'unknown' || plate.trim() === '') return '<span style="color:var(--muted)">-</span>';
   var pm = monPlates[plate.toUpperCase()];
   if (pm && pm.length) {
-    var c = pm[0].color || '#ef4444';
+    var c = '#ef4444';
     var title = pm.map(function(l){ return l.list_name; }).join(', ');
     return '<span class="plate-tag plate-alert" title="' + title + '" style="background:' + c + '22;color:' + c + ';border-color:' + c + '55">&#9888; ' + plate + '</span>';
   }
   return '<span class="plate-tag">' + plate + '</span>';
+}
+
+function _activeAlarmListsForPlate(plate) {
+  if (!plate) return [];
+  var pm = monPlates[plate.toUpperCase()];
+  if (!pm || !pm.length) return [];
+  return pm.filter(function(l) { return !!l.alarm_enabled; });
+}
+
+function _hasActiveAlarmForPlate(plate) {
+  return _activeAlarmListsForPlate(plate).length > 0;
 }
 
 function listBadgesHtml(plate) {
@@ -2610,7 +2511,7 @@ function listBadgesHtml(plate) {
   var pm = monPlates[plate.toUpperCase()];
   if (!pm || !pm.length) return '';
   return pm.map(function(l){
-    return '<span class="list-badge" style="background:' + l.color + '22;color:' + l.color + ';border:1px solid ' + l.color + '44">' + l.list_name + '</span>';
+    return '<span class="list-badge" style="background:#3b82f622;color:#3b82f6;border:1px solid #3b82f644">' + l.list_name + '</span>';
   }).join(' ');
 }
 
@@ -2642,7 +2543,7 @@ async function loadEvents(newOffset) {
         var pm = ev.plate && monPlates[ev.plate.toUpperCase()];
         if (pm && !alarmed.has(ev.plate)) {
           alarmed.add(ev.plate);
-          if (_cameraAlarmEnabled) triggerAlarm(ev.plate, pm);
+          triggerAlarm(ev.plate, pm);
         }
       });
     }
@@ -2758,7 +2659,7 @@ function updateEvCards(total, items) {
   } else {
     document.getElementById('ev-avg-conf').textContent = '-';
   }
-  var alerts = items.filter(function(ev){ return monPlates[ev.plate && ev.plate.toUpperCase()]; }).length;
+  var alerts = items.filter(function(ev){ return _hasActiveAlarmForPlate(ev.plate); }).length;
   document.getElementById('ev-alerts').textContent = alerts > 0 ? String(alerts) : '0';
 }
 
@@ -3969,20 +3870,15 @@ function renderLists(lists) {
     return;
   }
   g.innerHTML = lists.map(function(l) {
-    var alarmBadge = l.alarm_enabled
-      ? '<span class="alarm-badge">&#128680; Alarme ativo</span>'
-      : '<span style="font-size:.68rem;color:var(--muted)">Sem alarme</span>';
     return '<div class="list-card" onclick="goToCadastro(' + l.id + ')">' +
       '<div class="list-card-actions">' +
         '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa">&#127919;</button>' +
-        '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar">&#9998;</button>' +
+        '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar nome">&#9998;</button>' +
         '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>' +
       '</div>' +
-      '<div><span class="list-card-dot" style="background:' + l.color + '"></span><span class="list-card-name">' + l.name + '</span></div>' +
-      '<div class="list-card-desc">' + (l.description||'') + '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">' +
+      '<div><span class="list-card-name" style="font-size:.94rem">' + l.name + '</span></div>' +
+      '<div style="margin-top:10px">' +
         '<div class="list-card-count">' + (l.vehicle_count||0) + ' veiculo(s)</div>' +
-        alarmBadge +
       '</div>' +
       '</div>';
   }).join('');
@@ -4005,31 +3901,26 @@ async function importListToAlvos(listId, listName) {
 }
 
 function goToCadastro(listId) {
-  document.querySelectorAll('.sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.sub-pane').forEach(function(p){ p.classList.remove('active'); });
-  var tabs = document.querySelectorAll('.sub-tab');
-  tabs[1].classList.add('active');
-  document.getElementById('sub-cadastro').classList.add('active');
-  loadListsIntoSelects().then(function(){
-    document.getElementById('cad-list-filter').value = listId;
-    loadVehicles();
-  });
+  openListDetail(listId);
 }
 
-function selectListColor(color) {
-  document.getElementById('list-color').value = color;
-  var btnY = document.getElementById('list-color-btn-yellow');
-  var btnR = document.getElementById('list-color-btn-red');
-  if (!btnY || !btnR) return;
-  // reset ambos
-  btnY.style.background = '#eab30820'; btnY.style.borderWidth = '2px'; btnY.style.transform = '';
-  btnR.style.background = '#ef444420'; btnR.style.borderWidth = '2px'; btnR.style.transform = '';
-  // destaca o selecionado
-  if (color === '#eab308') {
-    btnY.style.background = '#eab30840'; btnY.style.borderWidth = '3px'; btnY.style.transform = 'scale(1.04)';
-  } else {
-    btnR.style.background = '#ef444440'; btnR.style.borderWidth = '3px'; btnR.style.transform = 'scale(1.04)';
-  }
+var _currentDetailListId = null;
+
+function openListDetail(listId) {
+  _currentDetailListId = listId;
+  var l = listsCache.find(function(x){ return x.id === listId; });
+  document.getElementById('list-detail-name').textContent = l ? l.name : 'Lista #' + listId;
+  document.getElementById('list-detail-search').value = '';
+  document.getElementById('view-listas').style.display = 'none';
+  document.getElementById('view-list-detail').style.display = 'block';
+  loadListVehicles();
+}
+
+function backToLists() {
+  _currentDetailListId = null;
+  document.getElementById('view-list-detail').style.display = 'none';
+  document.getElementById('view-listas').style.display = 'block';
+  loadLists();
 }
 
 function openListModal(id) {
@@ -4040,32 +3931,16 @@ function openListModal(id) {
     var l = listsCache.find(function(x){ return x.id === id; });
     if (l) {
       document.getElementById('list-name').value = l.name;
-      document.getElementById('list-desc').value = l.description || '';
-      document.getElementById('list-alarm-enabled').checked = !!l.alarm_enabled;
-      document.getElementById('list-alarm-sound').value = l.alarm_sound || 'beep';
-      document.getElementById('alarm-sound-group').style.display = l.alarm_enabled ? 'block' : 'none';
-      // usa a cor salva; se não for amarelo, assume vermelho
-      var savedColor = (l.color === '#eab308') ? '#eab308' : '#ef4444';
-      selectListColor(savedColor);
     }
   } else {
     document.getElementById('list-name').value = '';
-    document.getElementById('list-desc').value = '';
-    document.getElementById('list-alarm-enabled').checked = false;
-    document.getElementById('list-alarm-sound').value = 'beep';
-    document.getElementById('alarm-sound-group').style.display = 'none';
-    selectListColor('#ef4444');
   }
   openModal('list-modal');
   setTimeout(function(){ document.getElementById('list-name').focus(); }, 80);
 }
 
 async function saveList() {
-  var name         = document.getElementById('list-name').value.trim();
-  var desc         = document.getElementById('list-desc').value.trim();
-  var color        = document.getElementById('list-color').value;
-  var alarmEnabled = document.getElementById('list-alarm-enabled').checked;
-  var alarmSound   = document.getElementById('list-alarm-sound').value;
+  var name = document.getElementById('list-name').value.trim();
   var errEl = document.getElementById('list-form-error');
   if (!name) { errEl.textContent = 'O nome e obrigatorio.'; return; }
   errEl.textContent = '';
@@ -4075,12 +3950,11 @@ async function saveList() {
     var r = await fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, description: desc || null, color: color,
-                             alarm_enabled: alarmEnabled, alarm_sound: alarmSound })
+      body: JSON.stringify({ name: name })
     });
     if (!r.ok) { var d = await r.json(); throw new Error(d.detail || r.status); }
     closeModal('list-modal');
-    await Promise.all([loadLists(), loadListsIntoSelects(), loadMonPlates()]);
+    await Promise.all([loadLists(), loadMonPlates()]);
   } catch(e) {
     errEl.textContent = 'Erro: ' + e.message;
   }
@@ -4089,62 +3963,82 @@ async function saveList() {
 async function deleteList(id, name) {
   if (!confirm('Excluir a lista "' + name + '"?\nTodos os veiculos da lista tambem serao removidos.')) return;
   await fetch('/api/vehicles/lists/' + id, { method: 'DELETE' });
-  await Promise.all([loadLists(), loadListsIntoSelects(), loadMonPlates()]);
+  await Promise.all([loadLists(), loadMonPlates()]);
 }
 
-// ===== VEICULOS CADASTRADOS =====
-async function loadListsIntoSelects() {
-  try {
-    var r = await fetch('/api/vehicles/lists');
-    var d = await r.json();
-    var lists = d.items || [];
-    var opts = lists.map(function(l){ return '<option value="' + l.id + '">' + l.name + '</option>'; }).join('');
-    document.getElementById('cad-list-filter').innerHTML = '<option value="">&#8212; Todas as listas &#8212;</option>' + opts;
-    document.getElementById('veh-list-id').innerHTML    = '<option value="">&#8212; Selecione &#8212;</option>' + opts;
-  } catch(e) {}
-}
-
-async function loadVehicles() {
-  var listId = document.getElementById('cad-list-filter').value;
-  var plate  = document.getElementById('cad-plate-search').value.trim();
+// ===== VEICULOS DENTRO DA LISTA =====
+async function loadListVehicles() {
+  if (!_currentDetailListId) return;
+  var plate = document.getElementById('list-detail-search').value.trim();
   var p = new URLSearchParams();
-  if (listId) p.set('list_id', listId);
-  if (plate)  p.set('plate', plate);
+  p.set('list_id', _currentDetailListId);
+  if (plate) p.set('plate', plate);
   try {
     var r = await fetch('/api/vehicles?' + p);
     var d = await r.json();
     var items = d.items || [];
-    renderVehicles(items);
-    document.getElementById('vehicles-status').textContent = items.length + ' veiculo(s) encontrado(s)';
+    renderListVehicles(items);
+    document.getElementById('list-detail-status').textContent = items.length + ' veiculo(s)';
+    document.getElementById('list-detail-count').textContent = items.length + ' veiculo(s) cadastrado(s)';
   } catch(e) {
-    document.getElementById('vehicles-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    document.getElementById('list-detail-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
   }
 }
 
-function renderVehicles(items) {
-  var tb = document.getElementById('vehicles-tbody');
+function renderListVehicles(items) {
+  var tb = document.getElementById('list-detail-tbody');
   if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum veiculo cadastrado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Nenhum veiculo cadastrado nesta lista.<br><small style="opacity:.7;margin-top:6px;display:block">Clique em "+ Adicionar Placa" para comecar.</small></td></tr>';
     return;
   }
   tb.innerHTML = items.map(function(v) {
     return '<tr>' +
       '<td style="color:var(--muted);font-size:.74rem">' + v.id + '</td>' +
-      '<td><span class="list-badge" style="background:' + v.list_color + '22;color:' + v.list_color + ';border:1px solid ' + v.list_color + '44;font-size:.86rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span></td>' +
-      '<td><span class="list-badge" style="background:' + v.list_color + '22;color:' + v.list_color + ';border:1px solid ' + v.list_color + '44">' + v.list_name + '</span></td>' +
+      '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span></td>' +
       '<td style="font-size:.79rem;color:var(--muted)">' + (v.notes||'-') + '</td>' +
       '<td style="font-size:.76rem;color:var(--muted)">' + fmtTs(v.created_at) + '</td>' +
-      '<td><button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')">&#128465;</button></td>' +
+      '<td style="text-align:center;white-space:nowrap">' +
+        '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button> ' +
+        '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>' +
+      '</td>' +
       '</tr>';
   }).join('');
 }
 
 function openAddVehicleModal() {
+  _editVehicleId = null;
   document.getElementById('veh-plate').value = '';
   document.getElementById('veh-notes').value = '';
   document.getElementById('veh-form-error').textContent = '';
-  var cur = document.getElementById('cad-list-filter').value;
-  if (cur) document.getElementById('veh-list-id').value = cur;
+  document.getElementById('veh-list-id').value = _currentDetailListId || '';
+  document.getElementById('veh-modal-title').textContent = 'Cadastrar Placa';
+  openModal('vehicle-modal');
+  setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
+}
+
+async function openEditVehicleModal(vehicleId) {
+  var items = document.querySelectorAll('#list-detail-tbody tr');
+  var vehicleData = null;
+  // Localizar o veículo na tabela para extrair os dados
+  for (var i = 0; i < items.length; i++) {
+    var cells = items[i].querySelectorAll('td');
+    if (cells.length > 0 && parseInt(cells[0].textContent) === vehicleId) {
+      vehicleData = {
+        id: vehicleId,
+        plate: cells[1].textContent.trim(),
+        notes: cells[2].textContent.trim() === '-' ? '' : cells[2].textContent.trim()
+      };
+      break;
+    }
+  }
+  if (!vehicleData) return;
+  
+  _editVehicleId = vehicleId;
+  document.getElementById('veh-plate').value = vehicleData.plate;
+  document.getElementById('veh-notes').value = vehicleData.notes;
+  document.getElementById('veh-form-error').textContent = '';
+  document.getElementById('veh-list-id').value = _currentDetailListId || '';
+  document.getElementById('veh-modal-title').textContent = 'Editar Placa';
   openModal('vehicle-modal');
   setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
 }
@@ -4155,17 +4049,30 @@ async function saveVehicle() {
   var notes  = document.getElementById('veh-notes').value.trim();
   var errEl  = document.getElementById('veh-form-error');
   if (!plate)  { errEl.textContent = 'Placa e obrigatoria.'; return; }
-  if (!listId) { errEl.textContent = 'Selecione uma lista.'; return; }
+  if (!listId) { errEl.textContent = 'Erro: lista nao identificada.'; return; }
   errEl.textContent = '';
   try {
-    var r = await fetch('/api/vehicles', {
-      method: 'POST',
+    var method, url, body;
+    if (_editVehicleId) {
+      // Modo edição (PUT)
+      method = 'PUT';
+      url = '/api/vehicles/' + _editVehicleId;
+      body = JSON.stringify({ plate: plate, notes: notes || null });
+    } else {
+      // Modo criação (POST)
+      method = 'POST';
+      url = '/api/vehicles';
+      body = JSON.stringify({ plate: plate, list_id: parseInt(listId), notes: notes || null });
+    }
+    
+    var r = await fetch(url, {
+      method: method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plate: plate, list_id: parseInt(listId), notes: notes || null })
+      body: body
     });
     if (!r.ok) { var d = await r.json(); throw new Error(d.detail || r.status); }
     closeModal('vehicle-modal');
-    await Promise.all([loadVehicles(), loadMonPlates(), loadLists()]);
+    await Promise.all([loadListVehicles(), loadMonPlates(), loadLists()]);
   } catch(e) {
     errEl.textContent = 'Erro: ' + e.message;
   }
@@ -4174,7 +4081,7 @@ async function saveVehicle() {
 async function deleteVehicle(id, plate) {
   if (!confirm('Remover "' + plate + '" da lista?')) return;
   await fetch('/api/vehicles/' + id, { method: 'DELETE' });
-  await Promise.all([loadVehicles(), loadMonPlates(), loadLists()]);
+  await Promise.all([loadListVehicles(), loadMonPlates(), loadLists()]);
 }
 
 // ===== RELOGIO =====
@@ -4207,7 +4114,6 @@ var _bgAlarmIntervalId = null;
 var _bgAlarmMaxId      = 0;   // maior ID já visto pelo poller
 
 async function _bgAlarmTick() {
-  if (!_cameraAlarmEnabled) return;
   try {
     var r = await fetch('/api/events?limit=30&offset=0');
     if (!r.ok) return;
@@ -4655,7 +4561,7 @@ async function removeAlvo(id, plate) {
 // ===== MONITORAMENTO BATEDOR EM TEMPO REAL =====
 var _batedorSeen = {}; // chave: 'plateA|plateB', valor: timestamp último alerta
 var _batedorAtivos = 0;
-var _realtimeEnabled = false;
+var _realtimeEnabled = true;
 var _realtimeInterval = null;
 var _batNotifEnabled = false;
 
@@ -4676,6 +4582,17 @@ function toggleRealtime() {
   _realtimeEnabled = !_realtimeEnabled;
   var btn   = document.getElementById('btn-monitor-toggle');
   var label = document.getElementById('monitor-toggle-label');
+  if (!btn || !label) {
+    if (_realtimeEnabled && !_realtimeInterval) {
+      checkBatedorRealtime();
+      _realtimeInterval = setInterval(checkBatedorRealtime, 60000);
+    }
+    if (!_realtimeEnabled && _realtimeInterval) {
+      clearInterval(_realtimeInterval);
+      _realtimeInterval = null;
+    }
+    return;
+  }
   if (_realtimeEnabled) {
     btn.classList.remove('btn-outline');
     btn.classList.add('btn-success');
@@ -6416,9 +6333,11 @@ async function loadAlarmes() {
   var tbody = document.getElementById('alarmes-tbody');
   var err = document.getElementById('alarmes-error');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
   if (err) err.textContent = '';
   try {
+    // Pré-carregar listas e usuários primeiro
+    await _preloadAlarmSelects();
     var r = await fetch('/api/alarmes');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var d = await r.json();
@@ -6426,64 +6345,62 @@ async function loadAlarmes() {
     _renderAlarmesTable(_almCache);
     document.getElementById('alc-total').textContent = _almCache.length;
     document.getElementById('alc-ativos').textContent = _almCache.filter(function(a){ return a.ativo; }).length;
-    document.getElementById('alc-criticos').textContent = _almCache.filter(function(a){ return a.prioridade === 'critica'; }).length;
+    document.getElementById('alc-criticos').textContent = _almCache.filter(function(a){ return a.prioridade === 'alta' || a.prioridade === 'critica'; }).length;
     document.getElementById('alc-inativos').textContent = _almCache.filter(function(a){ return !a.ativo; }).length;
-    // Pré-carregar listas e usuários para o modal
-    _preloadAlarmSelects();
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar alarmes: ' + e.message;
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
   }
 }
 
 function _filterAlarmesTable() {
   var q = (document.getElementById('alarmes-search').value || '').toLowerCase();
   var filtered = q ? _almCache.filter(function(a){
-    return (a.nome||'').toLowerCase().includes(q) || (a.tipo||'').toLowerCase().includes(q);
+    var listName = _almGetListName(a.listas);
+    var userStr = _almGetUserNames(a.usuarios);
+    return listName.toLowerCase().includes(q) || userStr.toLowerCase().includes(q) || (a.prioridade||'').toLowerCase().includes(q);
   }) : _almCache;
   _renderAlarmesTable(filtered);
+}
+
+function _almGetListName(listas) {
+  if (!listas || !listas.length) return '\u2014';
+  var lid = listas[0];
+  var found = _almListsCache.find(function(l){ return l.id === lid; });
+  return found ? (found.name||found.nome||'Lista #'+lid) : '#' + lid;
+}
+
+function _almGetUserNames(usuarios) {
+  if (!usuarios || !usuarios.length) return '\u2014';
+  return usuarios.map(function(uid){
+    var found = _almUsersCache.find(function(u){ return u.id === uid; });
+    return found ? found.username : '#' + uid;
+  }).join(', ');
 }
 
 function _renderAlarmesTable(items) {
   var tbody = document.getElementById('alarmes-tbody');
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Nenhum alarme cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum alarme cadastrado.</td></tr>';
     return;
   }
-  var tipoInfo = {
-    placa_monitorada: { lbl:'Placa Monitorada', icon:'\u{1F697}' },
-    comboio:          { lbl:'Comboio',           icon:'\u{1F69A}' },
-    velocidade:       { lbl:'Velocidade',        icon:'\u26A1' },
-    direcao:          { lbl:'Dire\u00e7\u00e3o', icon:'\u21C4' },
-    personalizado:    { lbl:'Personalizado',     icon:'\u{1F527}' }
-  };
   var prioInfo = {
-    baixa:  { lbl:'Baixa',   cls:'',            icon:'\u26AA' },
-    media:  { lbl:'M\u00e9dia',   cls:'badge-green', icon:'\u{1F7E0}' },
-    alta:   { lbl:'Alta',    cls:'badge-yellow', icon:'\u{1F7E1}' },
-    critica:{ lbl:'Cr\u00edtica', cls:'badge-red',   icon:'\u{1F534}' }
+    baixa:  { lbl:'Baixa',         cls:'',            icon:'\u26AA' },
+    media:  { lbl:'M\u00e9dia',    cls:'badge-green',  icon:'\u{1F7E0}' },
+    alta:   { lbl:'Alta',          cls:'badge-yellow', icon:'\u{1F7E1}' },
+    critica:{ lbl:'Cr\u00edtica',  cls:'badge-red',    icon:'\u{1F534}' }
   };
   var isAdmin = (window._authRole === 'admin');
   tbody.innerHTML = items.map(function(a){
-    var ti = tipoInfo[a.tipo] || { lbl: a.tipo, icon:'' };
     var pi = prioInfo[a.prioridade] || { lbl: a.prioridade, cls:'', icon:'' };
     var enc = encodeURIComponent(JSON.stringify(a));
-    var listNames = (a.listas||[]).map(function(lid){
-      var found = _almListsCache.find(function(l){ return l.id === lid; });
-      return found ? found.name : '#' + lid;
-    }).join(', ') || '<span style="color:var(--muted)">\u2014</span>';
-    var userNames = (a.usuarios||[]).map(function(uid){
-      var found = _almUsersCache.find(function(u){ return u.id === uid; });
-      return found ? found.username : '#' + uid;
-    }).join(', ') || '<span style="color:var(--muted)">\u2014</span>';
+    var listName = _almGetListName(a.listas);
+    var userNames = _almGetUserNames(a.usuarios);
     return '<tr>'
       + '<td style="color:var(--muted);font-size:.8rem">' + a.id + '</td>'
-      + '<td><span style="font-weight:700;color:var(--accent)">' + (a.nome||'') + '</span>'
-        + (a.descricao ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px">' + a.descricao + '</div>' : '') + '</td>'
-      + '<td><span class="badge">' + ti.icon + ' ' + ti.lbl + '</span></td>'
+      + '<td><span style="font-weight:700;color:var(--accent)">' + listName + '</span></td>'
       + '<td><span class="badge ' + pi.cls + '">' + pi.icon + ' ' + pi.lbl + '</span></td>'
-      + '<td style="font-size:.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + ((a.listas||[]).join(', ')) + '">' + listNames + '</td>'
-      + '<td style="font-size:.78rem;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + userNames + '</td>'
+      + '<td style="font-size:.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + userNames + '</td>'
       + '<td>' + (a.ativo
         ? '<span class="badge badge-green">\u25CF Ativo</span>'
         : '<span class="badge badge-red">\u25CF Inativo</span>') + '</td>'
@@ -6491,7 +6408,7 @@ function _renderAlarmesTable(items) {
         + '<button class="btn btn-outline btn-xs" onclick="testAlarme(' + a.id + ')" title="Testar push">\u{1F514} Testar</button> '
         + (isAdmin
           ? '<button class="btn btn-outline btn-xs" onclick="openAlarmeModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">\u270E Editar</button> '
-            + '<button class="btn btn-danger btn-xs" onclick="deleteAlarme(' + a.id + ',\'' + (a.nome||'').replace(/'/g, "\\'") + '\')" title="Excluir">\u{1F5D1} Excluir</button>'
+            + '<button class="btn btn-danger btn-xs" onclick="deleteAlarme(' + a.id + ')" title="Excluir">\u{1F5D1} Excluir</button>'
           : '')
       + '</td>'
       + '</tr>';
@@ -6514,25 +6431,17 @@ function openAlarmeModal(encodedOrObj) {
   var a = encodedOrObj ? (typeof encodedOrObj === 'string' ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj) : null;
   _almEditId = a ? a.id : null;
   document.getElementById('alarme-modal-title').textContent = a ? 'Editar Alarme' : 'Novo Alarme';
-  document.getElementById('alm-nome').value = a ? (a.nome||'') : '';
-  document.getElementById('alm-descricao').value = a ? (a.descricao||'') : '';
-  document.getElementById('alm-tipo').value = a ? (a.tipo||'placa_monitorada') : 'placa_monitorada';
-  document.getElementById('alm-prioridade').value = a ? (a.prioridade||'media') : 'media';
-  document.getElementById('alm-mensagem').value = a ? (a.mensagem||'') : '';
-  document.getElementById('alm-ativo').checked = a ? !!a.ativo : true;
   document.getElementById('alarme-form-error').textContent = '';
-  // Render listas checkboxes
-  var lc = document.getElementById('alm-listas-container');
-  var selListas = a ? (a.listas||[]) : [];
-  if (_almListsCache.length) {
-    lc.innerHTML = _almListsCache.map(function(l){
-      var chk = selListas.indexOf(l.id) >= 0 ? ' checked' : '';
-      return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer;padding:3px 8px;background:rgba(255,255,255,.06);border-radius:4px">'
-        + '<input type="checkbox" value="' + l.id + '"' + chk + ' style="width:auto"> ' + (l.name||l.nome||'Lista #'+l.id) + '</label>';
-    }).join('');
-  } else {
-    lc.innerHTML = '<span style="color:var(--muted);font-size:.78rem">Nenhuma lista cadastrada</span>';
-  }
+  // Populate lista select
+  var sel = document.getElementById('alm-lista');
+  var selListaId = (a && a.listas && a.listas.length) ? a.listas[0] : '';
+  sel.innerHTML = '<option value="">Selecione uma lista...</option>';
+  _almListsCache.forEach(function(l){
+    var selected = (l.id === selListaId) ? ' selected' : '';
+    sel.innerHTML += '<option value="' + l.id + '"' + selected + '>' + (l.name||l.nome||'Lista #'+l.id) + '</option>';
+  });
+  document.getElementById('alm-prioridade').value = a ? (a.prioridade||'media') : 'media';
+  document.getElementById('alm-ativo').checked = a ? !!a.ativo : true;
   // Render usuários checkboxes
   var uc = document.getElementById('alm-usuarios-container');
   var selUsers = a ? (a.usuarios||[]) : [];
@@ -6546,29 +6455,23 @@ function openAlarmeModal(encodedOrObj) {
     uc.innerHTML = '<span style="color:var(--muted);font-size:.78rem">Nenhum usu\u00e1rio cadastrado</span>';
   }
   openModal('alarme-modal');
-  setTimeout(function(){ document.getElementById('alm-nome').focus(); }, 80);
+  setTimeout(function(){ document.getElementById('alm-lista').focus(); }, 80);
 }
 
 async function saveAlarme() {
   var errEl = document.getElementById('alarme-form-error');
   var saveBtn = document.getElementById('alm-save-btn');
   errEl.textContent = '';
-  var nome = document.getElementById('alm-nome').value.trim();
-  var descricao = document.getElementById('alm-descricao').value.trim();
-  var tipo = document.getElementById('alm-tipo').value;
+  var listaId = document.getElementById('alm-lista').value;
   var prioridade = document.getElementById('alm-prioridade').value;
-  var mensagem = document.getElementById('alm-mensagem').value.trim();
   var ativo = document.getElementById('alm-ativo').checked;
-  if (!nome) { errEl.textContent = 'Nome \u00e9 obrigat\u00f3rio.'; return; }
-  var listas = [];
-  document.querySelectorAll('#alm-listas-container input[type=checkbox]:checked').forEach(function(cb){
-    listas.push(parseInt(cb.value));
-  });
+  if (!listaId) { errEl.textContent = 'Selecione uma lista de ve\u00edculos.'; return; }
   var usuarios = [];
   document.querySelectorAll('#alm-usuarios-container input[type=checkbox]:checked').forEach(function(cb){
     usuarios.push(parseInt(cb.value));
   });
-  var body = { nome: nome, descricao: descricao, tipo: tipo, prioridade: prioridade, mensagem: mensagem, ativo: ativo, listas: listas, usuarios: usuarios };
+  if (!usuarios.length) { errEl.textContent = 'Selecione pelo menos um usu\u00e1rio.'; return; }
+  var body = { lista_id: parseInt(listaId), prioridade: prioridade, ativo: ativo, usuarios: usuarios };
   saveBtn.disabled = true;
   saveBtn.textContent = 'Salvando...';
   try {
@@ -6586,8 +6489,8 @@ async function saveAlarme() {
   }
 }
 
-async function deleteAlarme(id, nome) {
-  if (!confirm('Excluir o alarme "' + nome + '"?\nEsta a\u00e7\u00e3o n\u00e3o pode ser desfeita.')) return;
+async function deleteAlarme(id) {
+  if (!confirm('Excluir este alarme?\nEsta a\u00e7\u00e3o n\u00e3o pode ser desfeita.')) return;
   var err = document.getElementById('alarmes-error');
   if (err) err.textContent = '';
   try {
@@ -6670,12 +6573,12 @@ function _renderHistTable(items) {
   // Carrega câmeras primeiro para o filtro ficar pronto antes dos eventos
   await loadCameras().catch(function(){});
   await loadEvents(0);
-  await loadListsIntoSelects();
-  // Liga alarmes por padrão após a página estar pronta
-  setTimeout(function() {
-    try { toggleCameraAlarm(); } catch(e) {}
-    try { toggleRealtime();     } catch(e) {}
-  }, 500);
+  // Monitoramento automático sem dependência de controles no topo.
+  _startBgAlarm();
+  if (!_realtimeInterval) {
+    checkBatedorRealtime();
+    _realtimeInterval = setInterval(checkBatedorRealtime, 60000);
+  }
 })();
 </script>
 </body>
