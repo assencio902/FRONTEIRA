@@ -22,6 +22,8 @@ class NotificationService {
   late FlutterLocalNotificationsPlugin _localNotifications;
   AlertModel? _pendingOpenedAlert;
   bool _useCustomAlarmSound = true;
+  bool _initialized = false;
+  bool _initializing = false;
   
   // Callback para processar alerta quando app está aberto
   void Function(AlertModel)? onAlertReceived;
@@ -29,9 +31,24 @@ class NotificationService {
   void Function(AlertModel)? onAlertOpened;
 
   Future<void> initialize() async {
+    if (_initialized) {
+      developer.log('[NotificationService] Inicialização já concluída');
+      return;
+    }
+    if (_initializing) {
+      developer.log('[NotificationService] Inicialização já em andamento');
+      return;
+    }
+
+    _initializing = true;
     try {
       // Inicializar Firebase
-      await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+        developer.log('[NotificationService] Firebase.initializeApp OK');
+      } else {
+        developer.log('[NotificationService] Firebase já inicializado (${Firebase.apps.length} app[s])');
+      }
       _firebaseMessaging = FirebaseMessaging.instance;
       
       // Inicializar notificações locais
@@ -39,7 +56,7 @@ class NotificationService {
 
       // Reagir a refresh de token do Firebase
       _firebaseMessaging.onTokenRefresh.listen((newToken) async {
-        developer.log('[NotificationService] FCM Token atualizado');
+        developer.log('[NotificationService] FCM Token atualizado (${newToken.length} chars)');
         await _registerTokenInBackend(newToken);
       });
       
@@ -49,7 +66,7 @@ class NotificationService {
       
       // Obter token e registrar no backend
       final token = await _firebaseMessaging.getToken();
-      developer.log('[NotificationService] FCM Token: $token');
+      developer.log('[NotificationService] FCM getToken inicial: ${token == null ? "null" : "${token.length} chars"}');
       
       if (token != null) {
         await _registerTokenInBackend(token);
@@ -57,12 +74,27 @@ class NotificationService {
       
       // Listeners para diferentes estados do app
       _setupMessageHandlers();
+      _initialized = true;
       
       developer.log('[NotificationService] Inicializado com sucesso');
     } catch (e) {
       developer.log('[NotificationService] Erro na inicialização: $e', 
         name: 'NotificationService');
+    } finally {
+      _initializing = false;
     }
+  }
+
+  Future<bool> _ensureInitializedForTokenOps() async {
+    if (_initialized) {
+      return true;
+    }
+    await initialize();
+    if (!_initialized) {
+      developer.log('[NotificationService] Não foi possível inicializar Firebase/FCM para operação de token');
+      return false;
+    }
+    return true;
   }
 
   /// Configurar canal de notificação com alta prioridade para Android
@@ -318,13 +350,18 @@ class NotificationService {
   }
 
   /// Registrar token FCM no backend
-  Future<void> _registerTokenInBackend(String token) async {
+  Future<bool> _registerTokenInBackend(String token) async {
     try {
       // Só tenta registrar se tiver sessão válida
       final sessionValid = await Api.isSessionValid();
       if (!sessionValid) {
         developer.log('[NotificationService] Token JWT expirado, adiando registro FCM');
-        return;
+        return false;
+      }
+
+      if (token.isEmpty) {
+        developer.log('[NotificationService] Token FCM vazio, ignorando registro');
+        return false;
       }
 
       // Gerar ID único do dispositivo
@@ -346,26 +383,37 @@ class NotificationService {
       );
       
       if (response.statusCode == 200) {
-        developer.log('[NotificationService] Token FCM registrado no backend');
+        developer.log('[NotificationService] Token FCM registrado no backend (device_id=$deviceId)');
+        await _logTokenStatusFromBackend();
+        return true;
       } else if (response.statusCode == 401) {
         developer.log('[NotificationService] 401 ao registrar token FCM - sessão expirada');
+        return false;
       } else {
         developer.log('[NotificationService] Erro ao registrar token: ${response.statusCode} ${response.body}');
+        return false;
       }
     } catch (e) {
       developer.log('[NotificationService] Erro ao registrar token no backend: $e');
+      return false;
     }
   }
 
   /// Força sincronização do token atual com o backend (usar após login/restauração de sessão).
   Future<void> syncTokenWithBackend() async {
     try {
-      final token = await _firebaseMessaging.getToken();
-      if (token == null || token.isEmpty) {
-        developer.log('[NotificationService] Sem token FCM disponível para sincronizar');
+      final ready = await _ensureInitializedForTokenOps();
+      if (!ready) {
         return;
       }
-      await _registerTokenInBackend(token);
+
+      final token = await _firebaseMessaging.getToken();
+      if (token == null || token.isEmpty) {
+        developer.log('[NotificationService] Sem token FCM disponível para sincronizar (getToken retornou null/vazio)');
+        return;
+      }
+      final ok = await _registerTokenInBackend(token);
+      developer.log('[NotificationService] syncTokenWithBackend finalizado (ok=$ok)');
     } catch (e) {
       developer.log('[NotificationService] Erro ao sincronizar token FCM: $e');
     }
@@ -373,7 +421,27 @@ class NotificationService {
 
   /// Obter token FCM
   Future<String?> getFcmToken() async {
+    final ready = await _ensureInitializedForTokenOps();
+    if (!ready) {
+      return null;
+    }
     return await _firebaseMessaging.getToken();
+  }
+
+  Future<void> _logTokenStatusFromBackend() async {
+    try {
+      final response = await Api.get('/api/fcm/my-token-status');
+      if (response.statusCode != 200) {
+        developer.log('[NotificationService] Falha ao consultar status de token no backend: ${response.statusCode} ${response.body}');
+        return;
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      developer.log(
+        '[NotificationService] Status token backend: active=${data['active_tokens']} inactive=${data['inactive_tokens']} total=${data['total_tokens']} user_id=${data['user_id']}',
+      );
+    } catch (e) {
+      developer.log('[NotificationService] Erro ao consultar status de token no backend: $e');
+    }
   }
 
   /// Disparar alerta manualmente para testes

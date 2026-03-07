@@ -301,6 +301,21 @@ class Api {
     return res;
   }
 
+  /// GET genérico autenticado.
+  static Future<http.Response> get(
+    String path, {
+    bool auth = true,
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final url = Uri.parse('$baseUrl$normalizedPath');
+    final h = await headers(auth: auth);
+    debugPrint('[Api] GET $url auth=$auth hasToken=${h.containsKey("Authorization")}');
+    final res = await http.get(url, headers: h).timeout(timeout);
+    debugPrint('[Api] RES ${res.statusCode} body=${res.body.length > 200 ? res.body.substring(0, 200) : res.body}');
+    return res;
+  }
+
   /// Verifica se a sessão está válida. Retorna true se o token existe e não expirou.
   static Future<bool> isSessionValid() async {
     return !(await AuthStorage.isTokenExpired());

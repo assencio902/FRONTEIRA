@@ -4433,13 +4433,34 @@ async def fcm_register_token(request: Request):
         
         if not fcm_token:
             raise HTTPException(status_code=422, detail="fcm_token obrigatório")
+
+        logger.info(
+            "[FCM] register-token request user_sub=%s user_id=%s device_id=%s token_len=%d",
+            user_sub,
+            user_id,
+            device_id,
+            len(fcm_token),
+        )
         
         with _conn() as conn:
             with conn.cursor() as cur:
                 success = register_fcm_token(user_id, device_id, fcm_token, db_cur=cur)
+                cur.execute(
+                    "SELECT COUNT(*) FROM fcm_device_tokens WHERE user_id=%s AND active=TRUE",
+                    (user_id,),
+                )
+                active_tokens = int(cur.fetchone()[0] or 0)
         
         if not success:
             raise HTTPException(status_code=500, detail="Erro ao registrar token")
+
+        logger.info(
+            "[FCM] register-token success user_sub=%s user_id=%s device_id=%s active_tokens=%d",
+            user_sub,
+            user_id,
+            device_id,
+            active_tokens,
+        )
         
         return {
             "ok": True,
@@ -4447,6 +4468,7 @@ async def fcm_register_token(request: Request):
             "user_id": user_id,
             "user_sub": user_sub,
             "device_id": device_id,
+            "active_tokens": active_tokens,
         }
     
     except HTTPException:
@@ -4454,6 +4476,87 @@ async def fcm_register_token(request: Request):
     except Exception as e:
         logger.error(f"[FCM] Erro ao registrar token: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao registrar token")
+
+
+@app.get("/api/fcm/my-token-status")
+async def fcm_my_token_status(request: Request):
+    """Diagnóstico rápido dos tokens FCM do usuário autenticado."""
+    try:
+        user_sub = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_sub:
+            raise HTTPException(status_code=401, detail="Não autenticado")
+
+        user_id = _resolve_user_numeric_id_from_sub(str(user_sub))
+        if not user_id:
+            raise HTTPException(status_code=422, detail="Usuário do token não mapeado no cadastro")
+
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        COUNT(*) AS total,
+                        COUNT(*) FILTER (WHERE active = TRUE) AS active,
+                        COUNT(*) FILTER (WHERE active = FALSE) AS inactive,
+                        MAX(updated_at) AS last_update,
+                        MAX(last_seen_at) AS last_seen
+                    FROM fcm_device_tokens
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+                row = cur.fetchone()
+
+                cur.execute(
+                    """
+                    SELECT device_id, active, updated_at, last_seen_at
+                    FROM fcm_device_tokens
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    """,
+                    (user_id,),
+                )
+                devices = [
+                    {
+                        "device_id": d[0],
+                        "active": bool(d[1]),
+                        "updated_at": d[2].isoformat() if d[2] else None,
+                        "last_seen_at": d[3].isoformat() if d[3] else None,
+                    }
+                    for d in cur.fetchall()
+                ]
+
+        total = int(row[0] or 0)
+        active = int(row[1] or 0)
+        inactive = int(row[2] or 0)
+        last_update = row[3].isoformat() if row[3] else None
+        last_seen = row[4].isoformat() if row[4] else None
+
+        logger.info(
+            "[FCM] my-token-status user_sub=%s user_id=%s total=%d active=%d inactive=%d",
+            user_sub,
+            user_id,
+            total,
+            active,
+            inactive,
+        )
+
+        return {
+            "ok": True,
+            "user_sub": str(user_sub),
+            "user_id": str(user_id),
+            "total_tokens": total,
+            "active_tokens": active,
+            "inactive_tokens": inactive,
+            "last_update": last_update,
+            "last_seen": last_seen,
+            "devices": devices,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[FCM] Erro em my-token-status: %s", e)
+        raise HTTPException(status_code=500, detail="Erro ao consultar status dos tokens FCM")
 
 
 @app.post("/api/fcm/send-alert")
