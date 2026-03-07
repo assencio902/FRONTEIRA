@@ -22,7 +22,12 @@ class Api {
     final h = <String, String>{'Content-Type': 'application/json'};
     if (auth) {
       final token = await AuthStorage.getToken();
-      if (token != null) h['Authorization'] = 'Bearer $token';
+      if (token != null && token.isNotEmpty) {
+        h['Authorization'] = 'Bearer $token';
+        debugPrint('[Api] Token presente (${token.length} chars)');
+      } else {
+        debugPrint('[Api] ⚠ Sem token JWT disponível');
+      }
     }
     return h;
   }
@@ -278,8 +283,16 @@ class Api {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     final url = Uri.parse('$baseUrl$normalizedPath');
     final h = await headers(auth: auth);
-    return http
+    debugPrint('[Api] POST $url auth=$auth hasToken=${h.containsKey("Authorization")}');
+    final res = await http
         .post(url, headers: h, body: jsonEncode(payload))
         .timeout(timeout);
+    debugPrint('[Api] RES ${res.statusCode} body=${res.body.length > 200 ? res.body.substring(0, 200) : res.body}');
+    return res;
+  }
+
+  /// Verifica se a sessão está válida. Retorna true se o token existe e não expirou.
+  static Future<bool> isSessionValid() async {
+    return !(await AuthStorage.isTokenExpired());
   }
 }

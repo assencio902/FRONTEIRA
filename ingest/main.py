@@ -25,7 +25,7 @@ import json as _json_lib
 import redis as _redis_lib
 from rq import Queue as _RQ_Queue
 
-from jose import JWTError, jwt as _jwt
+from jose import JWTError, ExpiredSignatureError, jwt as _jwt
 from passlib.context import CryptContext
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -52,7 +52,7 @@ MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
 # ===========================
 # AUTH / JWT
 # ===========================
-JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-secret-change-me-2026")
+JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-change-me-in-production")
 JWT_ALG     = "HS256"
 JWT_EXPIRE  = int(os.getenv("JWT_EXPIRE_HOURS", "8"))  # horas
 
@@ -86,13 +86,27 @@ class _AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
+            logger.warning("[AUTH] Sem Bearer token em %s", path)
             return JSONResponse({"detail": "Não autenticado"}, status_code=401)
+        token_str = auth.split(" ", 1)[1]
         try:
-            payload = _decode_token(auth.split(" ", 1)[1])
+            payload = _decode_token(token_str)
             request.state.user = payload
-        except JWTError:
+        except ExpiredSignatureError:
+            logger.warning("[AUTH] Token expirado em %s (sub=%s)", path, _safe_sub(token_str))
+            return JSONResponse({"detail": "Sessão expirada. Faça login novamente."}, status_code=401)
+        except JWTError as e:
+            logger.warning("[AUTH] Token inválido em %s: %s", path, e)
             return JSONResponse({"detail": "Token inválido ou expirado"}, status_code=401)
         return await call_next(request)
+
+def _safe_sub(token_str: str) -> str:
+    """Tenta extrair 'sub' do token sem validar, para logging."""
+    try:
+        payload = _jwt.decode(token_str, JWT_SECRET, algorithms=[JWT_ALG], options={"verify_exp": False})
+        return payload.get("sub", "?")
+    except Exception:
+        return "?"
 
 # ===========================
 # DB

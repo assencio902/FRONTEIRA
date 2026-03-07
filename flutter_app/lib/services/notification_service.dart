@@ -320,6 +320,13 @@ class NotificationService {
   /// Registrar token FCM no backend
   Future<void> _registerTokenInBackend(String token) async {
     try {
+      // Só tenta registrar se tiver sessão válida
+      final sessionValid = await Api.isSessionValid();
+      if (!sessionValid) {
+        developer.log('[NotificationService] Token JWT expirado, adiando registro FCM');
+        return;
+      }
+
       // Gerar ID único do dispositivo
       final prefs = await SharedPreferences.getInstance();
       String? deviceId = prefs.getString('device_id');
@@ -340,6 +347,8 @@ class NotificationService {
       
       if (response.statusCode == 200) {
         developer.log('[NotificationService] Token FCM registrado no backend');
+      } else if (response.statusCode == 401) {
+        developer.log('[NotificationService] 401 ao registrar token FCM - sessão expirada');
       } else {
         developer.log('[NotificationService] Erro ao registrar token: ${response.statusCode} ${response.body}');
       }
@@ -374,6 +383,13 @@ class NotificationService {
 
   /// Dispara alerta de teste pelo backend (fluxo completo push + app).
   Future<Map<String, dynamic>> triggerBackendTestAlert() async {
+    // Verificar se sessão está válida antes de chamar
+    final sessionValid = await Api.isSessionValid();
+    if (!sessionValid) {
+      developer.log('[NotificationService] Token expirado ou ausente ao disparar teste');
+      throw SessionExpiredException('Sessão expirada. Faça login novamente.');
+    }
+
     final payload = {
       'plate': 'ABC1234',
       'target_name': 'Teste Alvo Monitorado',
@@ -387,10 +403,21 @@ class NotificationService {
     };
 
     final response = await Api.post('/api/fcm/send-alert', payload);
+    if (response.statusCode == 401) {
+      throw SessionExpiredException('Sessão expirada. Faça login novamente.');
+    }
     if (response.statusCode >= 400) {
-      throw Exception('Falha no backend de alerta (${response.statusCode}): ${response.body}');
+      throw Exception('Falha no envio de alerta (${response.statusCode}): ${response.body}');
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
+}
+
+/// Exceção específica para sessão expirada, permitindo tratamento diferenciado na UI.
+class SessionExpiredException implements Exception {
+  final String message;
+  SessionExpiredException(this.message);
+  @override
+  String toString() => message;
 }
 

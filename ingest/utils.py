@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt as _jwt
 from passlib.context import CryptContext
 import os
@@ -9,7 +9,7 @@ import psycopg2.pool
 # ===========================
 # CONFIG
 # ===========================
-JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-secret-change-me-2026")
+JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-change-me-in-production")
 JWT_ALG     = "HS256"
 JWT_EXPIRE  = int(os.getenv("JWT_EXPIRE_HOURS", "8"))  # horas
 
@@ -25,8 +25,8 @@ def _verify_pw(plain: str, hashed: str) -> bool:
     return _pwd_ctx.verify(plain, hashed)
 
 def _make_token(sub: str, role: str, full_name: str) -> str:
-    expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRE)
-    to_encode = {"sub": sub, "role": role, "full_name": full_name, "exp": expire}
+    expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE)
+    to_encode = {"sub": sub, "role": role, "name": full_name, "exp": expire}
     return _jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALG)
 
 # ===========================

@@ -1597,11 +1597,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           backgroundColor: sent > 0 ? _kGreen : _kRed,
                         ),
                       );
+                    } on SessionExpiredException {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Sessão expirada. Redirecionando para login...'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      await Future.delayed(const Duration(milliseconds: 800));
+                      if (!mounted) return;
+                      await AuthStorage.clear();
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (_) => false,
+                      );
                     } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Falha no teste push: $e'),
+                          content: Text('Erro no teste: $e'),
                           backgroundColor: _kRed,
                         ),
                       );
