@@ -28,6 +28,29 @@ FCM_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 _token_cache: dict[str, Any] = {"access_token": None, "expires_at": 0.0}
 
 
+def normalize_plate(value: str | None) -> str:
+    """Normaliza placa para comparação consistente (A-Z0-9, sem separadores)."""
+    raw = (value or "").strip().upper()
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def is_likely_fake_token(token: str | None) -> bool:
+    """Detecta tokens de teste/mock para evitar uso em ambiente real."""
+    val = (token or "").strip()
+    if not val:
+        return True
+    lower = val.lower()
+    suspicious_markers = (
+        "dummy",
+        "e2e",
+        "test-token",
+        "fake",
+        "mock",
+        "sample-token",
+    )
+    return any(marker in lower for marker in suspicious_markers)
+
+
 class FCMAlert:
     """Modelo de payload de alerta enviado ao app."""
 
@@ -59,6 +82,7 @@ class FCMAlert:
             "target_name": self.target_name,
             "camera_name": self.camera_name,
             "detected_at": self.detected_at,
+            "occurred_at": self.detected_at,
             "image_url": self.image_url,
             "event_id": self.event_id,
             "city": self.city,
@@ -66,6 +90,8 @@ class FCMAlert:
             "alert_type": self.alert_type,
             # compatibilidade com app legado
             "type": self.alert_type,
+            "screen": "alert_detail",
+            "route": "/alert-detail",
         }
 
 
@@ -120,6 +146,15 @@ def register_fcm_token(user_id: str, device_id: str, fcm_token: str, db_cur=None
         return False
 
     try:
+        if is_likely_fake_token(fcm_token):
+            logger.warning(
+                "[FCM] Token rejeitado por padrão fake user=%s device=%s token_prefix=%s",
+                user_id,
+                device_id,
+                (fcm_token or "")[:16],
+            )
+            return False
+
         db_cur.execute(
             """
             INSERT INTO fcm_device_tokens (user_id, device_id, fcm_token, active, created_at, updated_at, last_seen_at)
@@ -152,21 +187,29 @@ async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> tuple[bool, str 
     title = "ALERTA CRITICO" if alert.alert_type == "critical_alert" else "Deteccao"
     body = f"{alert.target_name} - Placa {alert.plate}"
 
+    notification_payload = {
+        "title": title,
+        "body": body,
+    }
+    if alert.image_url:
+        notification_payload["image"] = alert.image_url
+
+    android_notification_payload = {
+        "channel_id": channel_id,
+        "click_action": "FLUTTER_NOTIFICATION_CLICK",
+        "sound": "default",
+    }
+    if alert.image_url:
+        android_notification_payload["image"] = alert.image_url
+
     payload = {
         "message": {
             "token": fcm_token,
-            "notification": {
-                "title": title,
-                "body": body,
-            },
+            "notification": notification_payload,
             "data": alert.to_payload(),
             "android": {
                 "priority": "HIGH",
-                "notification": {
-                    "channel_id": channel_id,
-                    "click_action": "FLUTTER_NOTIFICATION_CLICK",
-                    "sound": "alarm" if alert.alert_type == "critical_alert" else "default",
-                },
+                "notification": android_notification_payload,
             },
             "apns": {
                 "headers": {"apns-priority": "10"},
@@ -179,6 +222,14 @@ async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> tuple[bool, str 
             },
         }
     }
+
+    logger.info(
+        "[FCM] payload event_id=%s plate=%s image_url=%s route=%s",
+        alert.event_id,
+        alert.plate,
+        "yes" if alert.image_url else "no",
+        "/alert-detail",
+    )
 
     url = FCM_API_URL.format(project_id)
     headers = {
@@ -225,10 +276,27 @@ async def send_alert_to_user_tokens(
         logger.warning("[FCM] Nenhum token ativo para user=%s", user_id)
         return {"sent": 0, "failed": 0, "invalid": 0}
 
+    logger.info("[FCM] user=%s tokens_ativos_encontrados=%d", user_id, len(rows))
+
     sent = 0
     failed = 0
     invalid = 0
     for token_row_id, token in rows:
+        if is_likely_fake_token(token):
+            logger.warning(
+                "[FCM] Token fake ignorado e inativado user=%s token_row_id=%s token_prefix=%s",
+                user_id,
+                token_row_id,
+                (token or "")[:16],
+            )
+            failed += 1
+            invalid += 1
+            db_cur.execute(
+                "UPDATE fcm_device_tokens SET active = FALSE, updated_at = NOW() WHERE id = %s",
+                (token_row_id,),
+            )
+            continue
+
         ok, error_code = await _send_fcm_message(token, alert)
         if ok:
             sent += 1
@@ -355,11 +423,30 @@ async def send_alert_for_detected_plate(
     city: str = "N/A",
 ) -> bool:
     """Dispara push apenas para usuários vinculados a alarmes ativos da(s) lista(s) da placa."""
-    plate_normalized = (plate or "").strip().upper()
+    logger.info(
+        "[FCM] send_alert_for_detected_plate INÍCIO event_id=%s plate_recebida=%s",
+        event_id,
+        plate,
+    )
+    plate_normalized = normalize_plate(plate)
+    logger.info(
+        "[FCM] Placa normalizada event_id=%s plate_normalizada=%s",
+        event_id,
+        plate_normalized,
+    )
     if not plate_normalized:
+        logger.warning(
+            "[FCM] Auto-alerta ignorado event_id=%s: placa vazia/invalidada após normalização",
+            event_id,
+        )
         return False
 
     try:
+        logger.info(
+            "[FCM] Executando query match event_id=%s plate_normalized=%s",
+            event_id,
+            plate_normalized,
+        )
         db_cur.execute(
             """
             SELECT a.id AS alarme_id,
@@ -373,15 +460,34 @@ async def send_alert_for_detected_plate(
             JOIN alarme_listas al ON al.lista_id = vl.id
             JOIN alarmes a ON a.id = al.alarme_id AND a.ativo = TRUE
             JOIN alarme_usuarios au ON au.alarme_id = a.id
-            WHERE UPPER(vli.plate) = %s
+            WHERE REGEXP_REPLACE(UPPER(vli.plate), '[^A-Z0-9]', '', 'g') = %s
             """,
             (plate_normalized,),
         )
         rows = db_cur.fetchall()
+        logger.info(
+            "[FCM] Query retornou %s rows para event_id=%s plate=%s",
+            len(rows),
+            event_id,
+            plate_normalized,
+        )
 
         if not rows:
-            logger.debug("[FCM] Placa %s sem alarme ativo vinculado", plate_normalized)
+            logger.warning(
+                "[FCM] NENHUM MATCH event_id=%s plate=%s - placa não está em lista+alarme ativo ou não há usuários vinculados",
+                event_id,
+                plate_normalized,
+            )
             return False
+
+        alarm_ids = sorted({int(r[0]) for r in rows})
+        user_ids = sorted({str(r[5]) for r in rows})
+        logger.info(
+            "[FCM] Match real placa=%s alarmes_ativos=%s usuarios_vinculados=%s",
+            plate_normalized,
+            alarm_ids,
+            user_ids,
+        )
 
         alarms: dict[int, dict[str, Any]] = {}
         users: dict[str, dict[str, Any]] = {}
@@ -431,11 +537,31 @@ async def send_alert_for_detected_plate(
                 alert_type="critical_alert",
             )
 
+            logger.info(
+                "[FCM] Enviando push event_id=%s user_id=%s plate=%s",
+                event_id,
+                uid,
+                plate_normalized,
+            )
             stats = await send_alert_to_user_tokens(db_cur, uid, alert)
             sent_total += stats["sent"]
             failed_total += stats["failed"]
             invalid_total += stats["invalid"]
+            logger.info(
+                "[FCM] Push resultado event_id=%s user_id=%s sent=%s failed=%s invalid=%s",
+                event_id,
+                uid,
+                stats["sent"],
+                stats["failed"],
+                stats["invalid"],
+            )
 
+            logger.info(
+                "[FCM] Inserindo alertas_criticos event_id=%s user_id=%s plate=%s",
+                event_id,
+                uid,
+                plate_normalized,
+            )
             db_cur.execute(
                 """
                 INSERT INTO alertas_criticos (
@@ -459,9 +585,15 @@ async def send_alert_for_detected_plate(
                     None if stats["sent"] > 0 else "no_active_tokens_or_send_failed",
                 ),
             )
+            logger.info(
+                "[FCM] alertas_criticos INSERIDO com sucesso event_id=%s user_id=%s",
+                event_id,
+                uid,
+            )
 
         logger.info(
-            "[FCM] Auto-alerta plate=%s cam=%s conf=%.2f users=%s sent=%s failed=%s invalid=%s",
+            "[FCM] Auto-alerta COMPLETO event_id=%s plate=%s cam=%s conf=%.2f users=%s sent=%s failed=%s invalid=%s",
+            event_id,
             plate_normalized,
             camera_name,
             confidence,
@@ -470,6 +602,7 @@ async def send_alert_for_detected_plate(
             failed_total,
             invalid_total,
         )
+        return True
         return sent_total > 0
     except Exception as exc:
         logger.exception("[FCM] Erro no auto-alerta da placa %s: %s", plate_normalized, exc)

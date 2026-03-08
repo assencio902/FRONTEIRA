@@ -1,12 +1,23 @@
 import 'dart:developer' as developer;
 import 'dart:convert';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/alert.dart';
 import 'api.dart';
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Background isolate: keep lightweight and avoid UI navigation here.
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp();
+  }
+  developer.log('[NotificationService] onBackgroundMessage recebido: ${message.messageId} data=${message.data}');
+}
 
 /// Serviço de notificações push e alertas críticos
 class NotificationService {
@@ -21,7 +32,6 @@ class NotificationService {
   late FirebaseMessaging _firebaseMessaging;
   late FlutterLocalNotificationsPlugin _localNotifications;
   AlertModel? _pendingOpenedAlert;
-  bool _useCustomAlarmSound = true;
   bool _initialized = false;
   bool _initializing = false;
   
@@ -50,6 +60,9 @@ class NotificationService {
         developer.log('[NotificationService] Firebase já inicializado (${Firebase.apps.length} app[s])');
       }
       _firebaseMessaging = FirebaseMessaging.instance;
+
+      // Handler para mensagens quando app está em background/terminated (data-only).
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       
       // Inicializar notificações locais
       await _initializeLocalNotifications();
@@ -130,7 +143,6 @@ class NotificationService {
       importance: Importance.max,
       enableVibration: true,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('alarm'),
     );
     
     await _localNotifications
@@ -151,19 +163,6 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(normalChannel);
 
-    // Canal de fallback (som padrão), usado se houver falha com recurso customizado.
-    const AndroidNotificationChannel criticalFallbackChannel = AndroidNotificationChannel(
-      'critical_alerts_fallback',
-      'Alertas Críticos (Fallback)',
-      description: 'Canal de fallback para alertas críticos com som padrão do sistema',
-      importance: Importance.max,
-      enableVibration: true,
-      playSound: true,
-    );
-
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(criticalFallbackChannel);
   }
 
   /// Configurar handlers para mensagens em diferentes estados
@@ -171,8 +170,8 @@ class NotificationService {
     // App fechado → abre ao tocar na notificação
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        developer.log('[NotificationService] App aberto via notificação: ${message.data}');
-        _handleRemoteMessage(message, openedFromNotification: true, showLocalNotification: false);
+        developer.log('[NotificationService] getInitialMessage: ${message.data}');
+        handleNotificationNavigation(message, source: 'getInitialMessage');
       }
     });
     
@@ -184,9 +183,54 @@ class NotificationService {
     
     // App em segundo plano → ao tocar na notificação
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      developer.log('[NotificationService] Notificação tocada (app em background): ${message.data}');
-      _handleRemoteMessage(message, openedFromNotification: true, showLocalNotification: false);
+      developer.log('[NotificationService] onMessageOpenedApp: ${message.data}');
+      handleNotificationNavigation(message, source: 'onMessageOpenedApp');
     });
+  }
+
+  AlertModel _alertFromPayload(Map<String, dynamic> data) {
+    final detectedAt =
+        (data['detected_at'] ?? data['occurred_at'] ?? data['timestamp'] ?? '').toString();
+    final normalizedData = <String, dynamic>{
+      ...data,
+      'detected_at': detectedAt,
+    };
+    return AlertModel.fromJson(normalizedData);
+  }
+
+  void _openOrQueueAlert(AlertModel alert, {required String source}) {
+    if (onAlertOpened != null) {
+      developer.log('[NotificationService] Navegando para alerta (source=$source event_id=${alert.eventId})');
+      onAlertOpened!(alert);
+    } else {
+      developer.log('[NotificationService] Callback de navegação ausente; alerta pendente (source=$source event_id=${alert.eventId})');
+      _pendingOpenedAlert = alert;
+    }
+  }
+
+  void handleNotificationNavigation(RemoteMessage message, {required String source}) {
+    try {
+      final alert = _alertFromPayload(message.data);
+      developer.log(
+        '[NotificationService] handleNotificationNavigation source=$source route=alert_detail event_id=${alert.eventId} plate=${alert.plate} image_url=${alert.imageUrl}',
+      );
+      _openOrQueueAlert(alert, source: source);
+    } catch (e) {
+      developer.log('[NotificationService] Falha ao navegar via RemoteMessage (source=$source): $e');
+    }
+  }
+
+  void _handleNotificationNavigationFromPayloadString(String payload, {required String source}) {
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final alert = _alertFromPayload(data);
+      developer.log(
+        '[NotificationService] handleNotificationNavigation payload source=$source route=alert_detail event_id=${alert.eventId} plate=${alert.plate} image_url=${alert.imageUrl}',
+      );
+      _openOrQueueAlert(alert, source: source);
+    } catch (e) {
+      developer.log('[NotificationService] Falha ao navegar via payload local (source=$source): $e');
+    }
   }
 
   /// Processar mensagem remota
@@ -198,40 +242,14 @@ class NotificationService {
     try {
       final data = message.data;
       developer.log('[NotificationService] Processando alerta: $data');
-      
-      // Extrair dados
-      final plate = data['plate'] ?? '';
-      final targetName = data['target_name'] ?? '';
-      final cameraName = data['camera_name'] ?? '';
-      final detectedAt = data['detected_at'] ?? '';
-      final imageUrl = data['image_url'] ?? '';
-      final eventId = data['event_id'] ?? '';
-      final city = data['city'] ?? '';
-      final riskLevel = data['risk_level'] ?? 'normal';
-      final type = data['alert_type'] ?? data['type'] ?? 'normal_alert';
-      
-      final alert = AlertModel(
-        plate: plate,
-        targetName: targetName,
-        cameraName: cameraName,
-        detectedAt: detectedAt,
-        imageUrl: imageUrl,
-        eventId: eventId,
-        city: city,
-        riskLevel: riskLevel,
-        isCritical: type == 'critical_alert',
-      );
+      final alert = _alertFromPayload(data);
       
       if (showLocalNotification) {
         await _showNotification(alert);
       }
 
       if (openedFromNotification) {
-        if (onAlertOpened != null) {
-          onAlertOpened!(alert);
-        } else {
-          _pendingOpenedAlert = alert;
-        }
+        _openOrQueueAlert(alert, source: 'remote_message_opened');
       } else if (onAlertReceived != null) {
         onAlertReceived!(alert);
       }
@@ -250,14 +268,20 @@ class NotificationService {
   /// Exibir notificação local
   Future<void> _showNotification(AlertModel alert) async {
     try {
-      var channelId = alert.isCritical ? 'critical_alerts' : 'normal_alerts';
+      final channelId = alert.isCritical ? 'critical_alerts' : 'normal_alerts';
       final importance = alert.isCritical ? Importance.max : Importance.defaultImportance;
-      RawResourceAndroidNotificationSound? androidSound;
-      if (alert.isCritical && _useCustomAlarmSound) {
-        androidSound = const RawResourceAndroidNotificationSound('alarm');
-      }
-      if (alert.isCritical && !_useCustomAlarmSound) {
-        channelId = 'critical_alerts_fallback';
+
+      BigPictureStyleInformation? bigPictureStyle;
+      if (alert.imageUrl.isNotEmpty) {
+        final imagePath = await _downloadImageToTempFile(alert.imageUrl);
+        if (imagePath != null) {
+          developer.log('[NotificationService] BigPicture pronto para event_id=${alert.eventId} image_path=$imagePath');
+          bigPictureStyle = BigPictureStyleInformation(
+            FilePathAndroidBitmap(imagePath),
+            contentTitle: alert.isCritical ? 'ALERTA CRITICO' : 'Deteccao',
+            summaryText: '${alert.targetName} - Placa ${alert.plate}',
+          );
+        }
       }
 
       AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
@@ -267,7 +291,7 @@ class NotificationService {
         priority: alert.isCritical ? Priority.max : Priority.defaultPriority,
         enableVibration: true,
         playSound: true,
-        sound: androidSound,
+        styleInformation: bigPictureStyle,
       );
       
       const iosDetails = DarwinNotificationDetails(
@@ -294,34 +318,32 @@ class NotificationService {
       
       developer.log('[NotificationService] Notificação exibida: ${alert.plate}');
     } catch (e) {
-      // fallback para o som padrão caso o recurso customizado falhe.
-      if (alert.isCritical && _useCustomAlarmSound) {
-        _useCustomAlarmSound = false;
-        developer.log('[NotificationService] Falha com som customizado, usando fallback padrão');
-        final androidDetails = AndroidNotificationDetails(
-          'critical_alerts_fallback',
-          'Alertas Críticos (Fallback)',
-          importance: Importance.max,
-          priority: Priority.max,
-          enableVibration: true,
-          playSound: true,
-        );
-        const iosDetails = DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          sound: 'default',
-        );
-        await _localNotifications.show(
-          alert.eventId.hashCode,
-          'ALERTA CRITICO',
-          '${alert.targetName} - Placa ${alert.plate}',
-          NotificationDetails(android: androidDetails, iOS: iosDetails),
-          payload: jsonEncode(alert.toJson()),
-        );
-        return;
-      }
       developer.log('[NotificationService] Erro ao exibir notificação: $e', name: 'NotificationService');
+    }
+  }
+
+  Future<String?> _downloadImageToTempFile(String imageUrl) async {
+    try {
+      developer.log('[NotificationService] Tentando baixar imagem da notificação: $imageUrl');
+      final uri = Uri.tryParse(imageUrl);
+      if (uri == null) {
+        developer.log('[NotificationService] URL de imagem inválida: $imageUrl');
+        return null;
+      }
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+        developer.log('[NotificationService] Falha ao baixar imagem status=${response.statusCode} url=$imageUrl');
+        return null;
+      }
+
+      final dir = Directory.systemTemp;
+      final filePath = '${dir.path}\\notif_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File(filePath);
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+      return file.path;
+    } catch (e) {
+      developer.log('[NotificationService] Falha ao baixar imagem da notificação: $e');
+      return null;
     }
   }
 
@@ -330,17 +352,7 @@ class NotificationService {
     developer.log('[NotificationService] Notificação tocada: ${response.payload}');
     final payload = response.payload;
     if (payload == null || payload.isEmpty) return;
-    try {
-      final data = jsonDecode(payload) as Map<String, dynamic>;
-      final alert = AlertModel.fromJson(data);
-      if (onAlertOpened != null) {
-        onAlertOpened!(alert);
-      } else {
-        _pendingOpenedAlert = alert;
-      }
-    } catch (e) {
-      developer.log('[NotificationService] Payload inválido na notificação: $e');
-    }
+    _handleNotificationNavigationFromPayloadString(payload, source: 'local_notification_tap');
   }
 
   /// Callback quando usuário toca na notificação (background)

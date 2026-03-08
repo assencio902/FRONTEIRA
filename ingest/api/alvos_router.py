@@ -7,6 +7,10 @@ router = APIRouter(prefix="/api/v1/alvos", tags=["alvos"])
 
 ALVOS_LIST_NAME = "Alvos Rastreados"
 
+def _normalize_plate(value: str | None) -> str:
+    raw = (value or "").strip().upper()
+    return "".join(ch for ch in raw if ch.isalnum())
+
 def _get_or_create_alvos_list_id(cur) -> int:
     cur.execute("SELECT id FROM vehicle_lists WHERE name = %s", (ALVOS_LIST_NAME,))
     row = cur.fetchone()
@@ -24,6 +28,8 @@ def _get_or_create_alvos_list_id(cur) -> int:
     return cur.fetchone()[0]
 
 def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
+    plate = _normalize_plate(plate)
+    old_plate = _normalize_plate(old_plate) if old_plate else None
     list_id = _get_or_create_alvos_list_id(cur)
     notes = descricao or "Alvo rastreado"
     if old_plate and old_plate != plate:
@@ -41,6 +47,7 @@ def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
     )
 
 def _remove_alvo_from_lista(cur, plate: str):
+    plate = _normalize_plate(plate)
     cur.execute("SELECT id FROM vehicle_lists WHERE name = %s", (ALVOS_LIST_NAME,))
     row = cur.fetchone()
     if row:
@@ -68,7 +75,7 @@ def alvos_list():
 @router.post("")
 async def alvos_create(request: Request):
     data = await request.json()
-    plate = (data.get("plate") or "").strip().upper()
+    plate = _normalize_plate(data.get("plate") or "")
     descricao = (data.get("descricao") or "").strip()
     if not plate:
         raise HTTPException(status_code=400, detail="Placa obrigatória")
@@ -102,7 +109,7 @@ def alvos_delete(aid: int):
 @router.put("/{aid}")
 async def alvos_update(aid: int, request: Request):
     body = await request.json()
-    plate    = (body.get("plate") or "").strip().upper()
+    plate    = _normalize_plate(body.get("plate") or "")
     descricao = (body.get("descricao") or "").strip()
     if not plate:
         return JSONResponse(status_code=400, content={"error": "Placa obrigatoria"})

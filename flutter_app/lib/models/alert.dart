@@ -24,15 +24,16 @@ class AlertModel {
 
   factory AlertModel.fromJson(Map<String, dynamic> json) {
     final alertType = (json['alert_type'] ?? json['type'] ?? '').toString();
+    final detectedAt = (json['detected_at'] ?? json['occurred_at'] ?? json['timestamp'] ?? '').toString();
     return AlertModel(
-      plate: json['plate'] ?? '',
-      targetName: json['target_name'] ?? '',
-      cameraName: json['camera_name'] ?? '',
-      detectedAt: json['detected_at'] ?? '',
-      imageUrl: json['image_url'] ?? '',
-      eventId: json['event_id'] ?? '',
-      city: json['city'] ?? 'N/A',
-      riskLevel: json['risk_level'] ?? 'normal',
+      plate: (json['plate'] ?? '').toString(),
+      targetName: (json['target_name'] ?? '').toString(),
+      cameraName: (json['camera_name'] ?? '').toString(),
+      detectedAt: detectedAt,
+      imageUrl: (json['image_url'] ?? '').toString(),
+      eventId: (json['event_id'] ?? '').toString(),
+      city: (json['city'] ?? 'N/A').toString(),
+      riskLevel: (json['risk_level'] ?? 'normal').toString(),
       isCritical: alertType == 'critical_alert',
     );
   }
@@ -49,6 +50,9 @@ class AlertModel {
       'risk_level': riskLevel,
       'alert_type': isCritical ? 'critical_alert' : 'normal_alert',
       'type': isCritical ? 'critical_alert' : 'normal_alert',
+      'screen': 'alert_detail',
+      'route': '/alert-detail',
+      'occurred_at': detectedAt,
     };
   }
 }

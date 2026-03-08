@@ -34,6 +34,8 @@ from services.fcm_service import (
     send_alert_for_detected_plate,
     send_alert_to_alarm_users,
     FCMAlert,
+    normalize_plate,
+    is_likely_fake_token,
 )
 
 from cleanup_background import start_cleanup_background, stop_cleanup_background
@@ -566,6 +568,11 @@ def _parse_dt(s: str | None) -> datetime | None:
         return dt
     except Exception:
         return None
+
+
+def _normalize_plate(value: str | None) -> str:
+    """Normalização única de placa para cadastro e comparação."""
+    return normalize_plate(value)
 
 
 # ===========================
@@ -1509,7 +1516,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             print(f"[WEBHOOK] body não-XML ignorado de {client_ip} ({len(body)} bytes, ct={content_type})")
             return JSONResponse({"ok": True, "bytes": len(body)})
 
-    plate = "unknown"
+    plate = ""
     camera_id = None
     xml_ip = None          # IP real da câmera (do XML <ipAddress>)
     channel_name_xml = None
@@ -1528,7 +1535,9 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                     el = root.find(".//" + tag)  # fallback sem namespace
                 return el.text.strip() if el is not None and el.text else None
 
-            plate            = x("licensePlate") or "unknown"
+            plate_raw        = x("licensePlate") or ""
+            plate            = _normalize_plate(plate_raw)
+            logger.info("[WEBHOOK] Placa XML bruta=%s normalizada=%s", plate_raw, plate)
             xml_ip           = x("ipAddress")           # IP real: "172.21.151.16"
             channel_name_xml = x("channelName")         # nome do canal: "11_PRAINHA_1_CHACARAS"
             channel_id_xml   = x("channelID")           # fallback: "1"
@@ -1614,7 +1623,13 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 confidence = 0.0
 
         except Exception as e:
-            print(f"[XML] erro parse: {e}")
+            logger.exception("[WEBHOOK] erro parse XML: %s", e)
+
+    # Mantém placa vazia se não houver no XML — será preenchida pelo YOLO ou permanecerá null
+    # NÃO usa "UNKNOWN" para evitar poluir alertas_criticos com placas falsas
+
+    logger.info("[WEBHOOK] Evento recebido ip=%s content_type=%s images=%d", client_ip, content_type, len(images))
+    logger.info("[WEBHOOK] Placa extraida=%s", plate or "(vazia)")
 
     # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
     if not camera_id:
@@ -1622,9 +1637,9 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         if header_ip:
             camera_id = header_ip
             xml_ip    = xml_ip or header_ip
-            print(f"[INGEST] camera_id resolvido via X-Camera-IP: {camera_id}")
+            logger.info("[WEBHOOK] camera_id resolvido via X-Camera-IP: %s", camera_id)
         else:
-            print(f"[INGEST] evento sem camera_id ignorado (ip cliente={client_ip})")
+            logger.warning("[WEBHOOK] evento sem camera_id ignorado (ip cliente=%s)", client_ip)
             return JSONResponse({"ok": False, "detail": "camera não identificada no XML"}, status_code=400)
 
     channel_name = None
@@ -1639,7 +1654,12 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
         # Rejeita evento se câmera não estiver cadastrada no banco
         if not cam.get("id"):
-            print(f"[INGEST] câmera não cadastrada ignorada: camera_id={camera_id} ip={xml_ip} channel={channel_name_xml}")
+            logger.warning(
+                "[WEBHOOK] câmera não cadastrada ignorada camera_id=%s ip=%s channel=%s",
+                camera_id,
+                xml_ip,
+                channel_name_xml,
+            )
             return JSONResponse({"ok": False, "detail": f"câmera '{camera_id}' não cadastrada"}, status_code=403)
 
         # Usa sempre o camera_id canônico do banco (não o IP bruto do XML)
@@ -1757,19 +1777,57 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             ))
             event_id = cur.fetchone()[0]
 
-            # Disparo automático de push quando a placa detectada está monitorada.
-            try:
-                await send_alert_for_detected_plate(
-                    db_cur=cur,
-                    plate=plate or "",
-                    camera_name=(cam.get("nome") if isinstance(cam, dict) else None) or (camera_id or channel_name or "Camera"),
-                    image_url=image_path or "",
-                    confidence=float(confidence or 0),
-                    event_id=str(event_id),
-                    city="N/A",
+            logger.info(
+                "[WEBHOOK] evento persistido id=%s plate=%s camera_id=%s channel=%s",
+                event_id,
+                plate or "(vazia)",
+                camera_id,
+                channel_name,
+            )
+
+            # Disparo automático de push APENAS se placa foi lida com sucesso
+            # Evita disparar alertas com placa vazia/"UNKNOWN" que poluem alertas_criticos
+            plate_test = plate and plate.strip()
+            plate_upper = plate.strip().upper() if plate_test else ""
+            is_invalid_plate = plate_upper in ("UNKNOWN", "NONE", "NULL")
+            logger.info(
+                "[WEBHOOK] Validação alerta event_id=%s plate_test=%s plate_upper=%s is_invalid=%s",
+                event_id,
+                bool(plate_test),
+                plate_upper,
+                is_invalid_plate,
+            )
+            
+            if plate_test and not is_invalid_plate:
+                logger.info(
+                    "[WEBHOOK] Chamando send_alert_for_detected_plate event_id=%s plate=%s",
+                    event_id,
+                    plate,
                 )
-            except Exception as _fcm_err:
-                logger.exception("[FCM] Falha no auto-disparo do alerta: %s", _fcm_err)
+                try:
+                    alerta_enviado = await send_alert_for_detected_plate(
+                        db_cur=cur,
+                        plate=plate,
+                        camera_name=(cam.get("nome") if isinstance(cam, dict) else None) or (camera_id or channel_name or "Camera"),
+                        image_url=image_path or "",
+                        confidence=float(confidence or 0),
+                        event_id=str(event_id),
+                        city="N/A",
+                    )
+                    logger.info(
+                        "[WEBHOOK] send_alert_for_detected_plate retornou %s para event_id=%s",
+                        alerta_enviado,
+                        event_id,
+                    )
+                except Exception as _fcm_err:
+                    logger.exception("[FCM] EXCEÇÃO no auto-disparo do alerta event_id=%s: %s", event_id, _fcm_err)
+            else:
+                logger.warning(
+                    "[WEBHOOK] Alerta NÃO disparado: placa vazia/inválida (event_id=%s plate=%s). "
+                    "Aguardando YOLO ou disparo manual.",
+                    event_id,
+                    plate or "(vazia)",
+                )
 
     # Se não chegou imagem pelo POST, tenta buscar snapshot da câmera via ISAPI
     if not image_path and cam.get("ip") and cam.get("usuario") and cam.get("senha"):
@@ -2020,7 +2078,7 @@ async def vehicles_create(request: Request):
         plate_raw = data.get("plate")
         if plate_raw is None or plate_raw == "":
             raise HTTPException(status_code=400, detail="plate é obrigatório")
-        plate = str(plate_raw).strip().upper()
+        plate = _normalize_plate(str(plate_raw))
         if not plate:
             raise HTTPException(status_code=400, detail="plate não pode ser vazio")
         
@@ -2085,7 +2143,7 @@ async def vehicles_update(vid: int, request: Request):
         
         plate = None
         if plate_raw is not None:
-            plate = str(plate_raw).strip().upper()
+            plate = _normalize_plate(str(plate_raw))
             if not plate:
                 raise HTTPException(status_code=400, detail="plate não pode ser vazio")
         
@@ -2197,6 +2255,8 @@ def _get_or_create_alvos_list_id(cur) -> int:
 
 def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
     """Adiciona ou atualiza a placa na lista de monitoramento 'Alvos Rastreados'."""
+    plate = _normalize_plate(plate)
+    old_plate = _normalize_plate(old_plate) if old_plate else None
     list_id = _get_or_create_alvos_list_id(cur)
     notes = descricao or "Alvo rastreado"
     if old_plate and old_plate != plate:
@@ -2216,6 +2276,7 @@ def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
 
 def _remove_alvo_from_lista(cur, plate: str):
     """Remove a placa da lista de monitoramento 'Alvos Rastreados'."""
+    plate = _normalize_plate(plate)
     cur.execute("SELECT id FROM vehicle_lists WHERE name = %s", (ALVOS_LIST_NAME,))
     row = cur.fetchone()
     if row:
@@ -2228,7 +2289,7 @@ def _remove_alvo_from_lista(cur, plate: str):
 @app.post("/api/alvos")
 async def alvos_create(request: Request):
     data = await request.json()
-    plate = (data.get("plate") or "").strip().upper()
+    plate = _normalize_plate(data.get("plate") or "")
     descricao = (data.get("descricao") or "").strip()
     if not plate:
         raise HTTPException(status_code=400, detail="Placa obrigatória")
@@ -2264,7 +2325,7 @@ def alvos_delete(aid: int):
 @app.put("/api/alvos/{aid}")
 async def alvos_update(aid: int, request: Request):
     body = await request.json()
-    plate    = (body.get("plate") or "").strip().upper()
+    plate    = _normalize_plate(body.get("plate") or "")
     descricao = (body.get("descricao") or "").strip()
     if not plate:
         from fastapi.responses import JSONResponse
@@ -2315,7 +2376,7 @@ def alvos_import_list(list_id: int):
                     VALUES (%s, %s)
                     ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
                     """,
-                    (plate.upper(), desc),
+                    (_normalize_plate(plate), desc),
                 )
                 if cur.rowcount:
                     inserted += 1
@@ -4387,6 +4448,12 @@ async def _catchall_handler(request: Request) -> PlainTextResponse:
         f"  body_2kb     : {body_preview[:500]}"
     )
 
+    if method == "POST":
+        logger.warning(
+            "[CATCHALL] POST em %s não processa alerta real; use /api/simple-webhook para fluxo de alarme.",
+            path,
+        )
+
     return PlainTextResponse("OK", status_code=200)
 
 
@@ -4434,6 +4501,16 @@ async def fcm_register_token(request: Request):
         if not fcm_token:
             raise HTTPException(status_code=422, detail="fcm_token obrigatório")
 
+        if is_likely_fake_token(fcm_token):
+            logger.warning(
+                "[FCM] register-token rejeitado (fake) user_sub=%s user_id=%s device_id=%s token_prefix=%s",
+                user_sub,
+                user_id,
+                device_id,
+                fcm_token[:16],
+            )
+            raise HTTPException(status_code=422, detail="fcm_token inválido para ambiente real")
+
         logger.info(
             "[FCM] register-token request user_sub=%s user_id=%s device_id=%s token_len=%d",
             user_sub,
@@ -4455,11 +4532,12 @@ async def fcm_register_token(request: Request):
             raise HTTPException(status_code=500, detail="Erro ao registrar token")
 
         logger.info(
-            "[FCM] register-token success user_sub=%s user_id=%s device_id=%s active_tokens=%d",
+            "[FCM] register-token success user_sub=%s user_id=%s device_id=%s active_tokens=%d token_prefix=%s",
             user_sub,
             user_id,
             device_id,
             active_tokens,
+            fcm_token[:16],
         )
         
         return {
