@@ -1,10 +1,9 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BPFRON - Polícia de Fronteiras e Divisas</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script>
     // Diagnóstico: captura qualquer erro JS e exibe na tela
     window.onerror = function(msg, src, line, col, err) {
@@ -1748,8 +1747,27 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+// Callback global para Google Maps API
+var _googleMapsReady = false;
+function initGoogleMaps() {
+  _googleMapsReady = true;
+  console.log('[Google Maps] API carregada com sucesso');
+}
+// Tratamento de erro global do Google Maps
+function gm_authFailure() {
+  console.error('[Google Maps] Erro de autenticação - verifique a chave da API');
+  var noGps = document.getElementById('map-no-gps');
+  if (noGps) {
+    noGps.innerHTML = '<div style="background:rgba(239,68,68,0.1);border:1px solid var(--danger);border-radius:8px;padding:12px;color:var(--danger)">'
+      + '<strong>❌ Erro de Autenticação Google Maps</strong><br>'
+      + '<small>A chave da API pode estar inválida, expirada ou sem as permissões necessárias.<br>'
+      + 'Verifique: Maps JavaScript API, Visualization API habilitadas.</small>'
+      + '</div>';
+  }
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC9lYlU_GIJWsZIfKJDI-wHOTDbMLafsNU&libraries=visualization&callback=initGoogleMaps"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 // ===== ALARME — WEB AUDIO API =====
@@ -5093,10 +5111,10 @@ async function deleteCamera(id, nome) {
   }
 }
 
-// ===== MAPA DE CÂMERAS (Leaflet) =====
-var _mapaLeaflet      = null;
+// ===== MAPA DE CÂMERAS (Google Maps) =====
+var _googleMap        = null;
 var _mapaMarkers      = [];
-var _mapaLayer        = null;
+var _mapaInfoWindows  = [];
 var _mapaTrajetoria   = null;  // {plates:[], points:[{camera_id,ts,plate,cam_nome}]}
 var _trajetoriaLayers = [];
 var _mapaTrajMode     = false; // true = chamado direto do mapa (exige input de placa)
@@ -5107,7 +5125,8 @@ var _mapaCacheItems   = [];   // cache da última lista de câmeras com GPS
 
 // --- Filtrar eventos por câmera a partir do mapa ---
 function _filtrarEventosPorCamera(cameraId) {
-  if (_mapaLeaflet) _mapaLeaflet.closePopup();
+  // Fecha todos os InfoWindows abertos
+  _mapaInfoWindows.forEach(function(iw) { iw.close(); });
   curCamera = cameraId;
   var sel = document.getElementById('ev-camera');
   if (sel) sel.value = cameraId;
@@ -5120,24 +5139,57 @@ function _filtrarEventosPorCamera(cameraId) {
 function _toggleHeatMap() {
   _mapaHeatActive = !_mapaHeatActive;
   var btn = document.getElementById('btn-mapa-heat');
-  if (!_mapaLeaflet) return;
+  if (!_googleMap || !_checkGoogleMapsLoaded()) {
+    alert('Aguarde o Google Maps carregar completamente.');
+    _mapaHeatActive = false;
+    return;
+  }
   if (_mapaHeatActive) {
+    // Verifica se a biblioteca de visualização está disponível
+    if (!google.maps.visualization || !google.maps.visualization.HeatmapLayer) {
+      alert('Biblioteca de visualização do Google Maps não disponível.');
+      _mapaHeatActive = false;
+      return;
+    }
     // Constrói pontos com intensidade = total_events (normalizado)
     var maxEvt = Math.max(1, _mapaCacheItems.reduce(function(m, c) { return Math.max(m, c.total_events || 0); }, 0));
-    var pts = _mapaCacheItems
-      .filter(function(c) { return c.latitude != null && c.longitude != null && (c.total_events || 0) > 0; })
-      .map(function(c) { return [c.latitude, c.longitude, (c.total_events || 1) / maxEvt]; });
-    if (!pts.length) {
+    var heatmapData = [];
+    _mapaCacheItems.forEach(function(c) {
+      if (c.latitude != null && c.longitude != null && (c.total_events || 0) > 0) {
+        var weight = (c.total_events || 1) / maxEvt;
+        heatmapData.push({
+          location: new google.maps.LatLng(c.latitude, c.longitude),
+          weight: weight
+        });
+      }
+    });
+    if (!heatmapData.length) {
       alert('Nenhuma câmera com GPS e eventos detectados para gerar o heat map.');
       _mapaHeatActive = false;
       return;
     }
-    _mapaHeatLayer = L.heatLayer(pts, { radius: 35, blur: 25, maxZoom: 17,
-      gradient: { 0.2: '#22c55e', 0.5: '#f59e0b', 0.8: '#ef4444', 1.0: '#fff' }
-    }).addTo(_mapaLeaflet);
-    if (btn) { btn.textContent = '\u274c Fechar Heat Map'; btn.classList.add('cam-sort-active'); }
+    try {
+      _mapaHeatLayer = new google.maps.visualization.HeatmapLayer({
+        data: heatmapData,
+        map: _googleMap,
+        radius: 35,
+        opacity: 0.7,
+        gradient: [
+          'rgba(0, 255, 0, 0)',
+          'rgba(34, 197, 94, 1)',    // verde
+          'rgba(245, 158, 11, 1)',   // amarelo
+          'rgba(239, 68, 68, 1)',    // vermelho
+          'rgba(255, 255, 255, 1)'   // branco
+        ]
+      });
+      if (btn) { btn.textContent = '\u274c Fechar Heat Map'; btn.classList.add('cam-sort-active'); }
+    } catch(e) {
+      console.error('[Heat Map]', e);
+      alert('Erro ao criar heat map: ' + e.message);
+      _mapaHeatActive = false;
+    }
   } else {
-    if (_mapaHeatLayer) { _mapaHeatLayer.remove(); _mapaHeatLayer = null; }
+    if (_mapaHeatLayer) { _mapaHeatLayer.setMap(null); _mapaHeatLayer = null; }
     if (btn) { btn.textContent = '\uD83D\uDD25 Heat Map'; btn.classList.remove('cam-sort-active'); }
   }
 }
@@ -5150,8 +5202,8 @@ function _stopMapaAutoRefresh() {
 }
 
 async function _mapaRefreshStatus() {
-  // Atualiza apenas as cores dos marcadores existentes sem rebuilddar o mapa
-  if (!_mapaLeaflet || !_mapaCacheItems.length) return;
+  // Atualiza apenas as cores dos marcadores existentes sem rebuild do mapa
+  if (!_googleMap || !_mapaCacheItems.length) return;
   try {
     var r = await fetch('/api/cameras/status');
     if (!r.ok) return;
@@ -5162,7 +5214,15 @@ async function _mapaRefreshStatus() {
       if (!c) return;
       var lastSeen = statusMap[c.camera_id] || null;
       var color    = _mapaStatusColor(lastSeen, c.ativa);
-      m.setIcon(_mapaIcon(color));
+      // Atualiza cor do marker no Google Maps
+      m.setIcon({
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: 'rgba(255,255,255,0.85)',
+        strokeWeight: 2
+      });
     });
   } catch(e) { /* silencioso */ }
 }
@@ -5340,7 +5400,11 @@ function splitPointsIntoSegments(pts, maxGapMinutes, maxGapMeters) {
 var _SEGMENT_COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#06b6d4','#4ade80','#facc15','#ec4899','#14b8a6','#8b5cf6'];
 
 function _plotarTrajetoria() {
-  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  // Limpa camadas anteriores
+  _trajetoriaLayers.forEach(function(l) {
+    if (l.setMap) l.setMap(null);
+    if (l.remove) l.remove();
+  });
   _trajetoriaLayers = [];
   if (!_mapaTrajetoria || !_mapaTrajetoria.points.length) return;
 
@@ -5361,31 +5425,9 @@ function _plotarTrajetoria() {
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
 
-  function arrowIcon(color, angle) {
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
-      + '<circle cx="11" cy="11" r="10" fill="' + color + '" fill-opacity=".85" stroke="#fff" stroke-width="1.5"/>'
-      + '<polygon points="11,3 15.5,16 11,13 6.5,16" fill="#fff" transform="rotate(' + angle + ',11,11)"/>'
-      + '</svg>';
-    return L.divIcon({ html: svg, className: '', iconSize: [22,22], iconAnchor: [11,11] });
-  }
-
-  function endpointIcon(label, bg) {
-    var html = '<div style="background:' + bg + ';color:#fff;font-weight:900;font-size:.62rem;'
-      + 'border-radius:6px;padding:3px 6px;border:2px solid #fff;white-space:nowrap;'
-      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">' + label + '</div>';
-    return L.divIcon({ html: html, className: '', iconAnchor: [20,12] });
-  }
-
-  function segmentBadgeIcon(label, bg) {
-    var html = '<div style="background:' + bg + ';color:#fff;font-weight:800;font-size:.58rem;'
-      + 'border-radius:4px;padding:2px 5px;border:1.5px solid #fff;white-space:nowrap;'
-      + 'box-shadow:0 1px 4px rgba(0,0,0,.4);opacity:.9">' + label + '</div>';
-    return L.divIcon({ html: html, className: '', iconAnchor: [16,10] });
-  }
-
   // ── Agrupa por placa e numera ─────────────────────────────────────────
   var byPlate = {};
-  var allLL   = [];
+  var bounds   = new google.maps.LatLngBounds();
   var seq     = 0;
   
   points.forEach(function(pt) {
@@ -5395,7 +5437,7 @@ function _plotarTrajetoria() {
     pt.seq = seq;
     if (!byPlate[pt.plate]) byPlate[pt.plate] = [];
     byPlate[pt.plate].push(pt);
-    allLL.push([pt.lat, pt.lng]);
+    bounds.extend(new google.maps.LatLng(pt.lat, pt.lng));
   });
 
   var totalSegments = 0;
@@ -5418,15 +5460,27 @@ function _plotarTrajetoria() {
       // ── Polyline por trecho (segmento-a-segmento) ───────────────
       if (seg.length >= 2) {
         // Sombra
-        var shadow = L.polyline(seg.map(function(p) { return [p.lat, p.lng]; }), {
-          color: '#000', weight: 7, opacity: .25
-        }).addTo(_mapaLeaflet);
+        var shadowPath = seg.map(function(p) { return {lat: p.lat, lng: p.lng}; });
+        var shadow = new google.maps.Polyline({
+          path: shadowPath,
+          strokeColor: '#000',
+          strokeOpacity: 0.25,
+          strokeWeight: 7,
+          map: _googleMap,
+          zIndex: 1
+        });
         _trajetoriaLayers.push(shadow);
 
         // Linha principal do trecho
-        var line = L.polyline(seg.map(function(p) { return [p.lat, p.lng]; }), {
-          color: segColor, weight: 5, opacity: .92, dashArray: segments.length > 1 ? null : null
-        }).addTo(_mapaLeaflet);
+        var mainPath = seg.map(function(p) { return {lat: p.lat, lng: p.lng}; });
+        var line = new google.maps.Polyline({
+          path: mainPath,
+          strokeColor: segColor,
+          strokeOpacity: 0.92,
+          strokeWeight: 5,
+          map: _googleMap,
+          zIndex: 2
+        });
         _trajetoriaLayers.push(line);
 
         // Setas direcionais em cada sub-segmento
@@ -5437,7 +5491,23 @@ function _plotarTrajetoria() {
           var midLat = (p1.lat + p2.lat) / 2;
           var midLng = (p1.lng + p2.lng) / 2;
           var ang = bearing(p1, p2);
-          var arrow = L.marker([midLat, midLng], { icon: arrowIcon(segColor, ang), zIndexOffset: 10 }).addTo(_mapaLeaflet);
+          
+          // Cria marcador de seta usando SVG
+          var arrowSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
+            + '<circle cx="11" cy="11" r="10" fill="' + segColor + '" fill-opacity=".85" stroke="#fff" stroke-width="1.5"/>'
+            + '<polygon points="11,3 15.5,16 11,13 6.5,16" fill="#fff" transform="rotate(' + ang + ',11,11)"/>'
+            + '</svg>';
+          
+          var arrow = new google.maps.Marker({
+            position: {lat: midLat, lng: midLng},
+            map: _googleMap,
+            icon: {
+              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(arrowSvg),
+              scaledSize: new google.maps.Size(22, 22),
+              anchor: new google.maps.Point(11, 11)
+            },
+            zIndex: 10
+          });
           _trajetoriaLayers.push(arrow);
         }
       }
@@ -5448,9 +5518,29 @@ function _plotarTrajetoria() {
         var tLast  = new Date(seg[seg.length-1].ts);
         var fmtT = function(d) { return isNaN(d) ? '' : d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); };
         var badgeLabel = 'Trecho ' + (segIdx+1) + '/' + segments.length + ' (' + fmtT(tFirst) + ' → ' + fmtT(tLast) + ')';
-        var badgeMk = L.marker([seg[0].lat, seg[0].lng], {
-          icon: segmentBadgeIcon(badgeLabel, segColor), zIndexOffset: 45
-        }).addTo(_mapaLeaflet);
+        
+        var badgeHtml = '<div style="background:' + segColor + ';color:#fff;font-weight:800;font-size:.58rem;'
+          + 'border-radius:4px;padding:2px 5px;border:1.5px solid #fff;white-space:nowrap;'
+          + 'box-shadow:0 1px 4px rgba(0,0,0,.4);opacity:.9">' + badgeLabel + '</div>';
+        
+        var badgeMk = new google.maps.Marker({
+          position: {lat: seg[0].lat, lng: seg[0].lng},
+          map: _googleMap,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+            ),
+            scaledSize: new google.maps.Size(1, 1),
+            anchor: new google.maps.Point(0, 0)
+          },
+          label: {
+            text: 'Trecho ' + (segIdx+1) + '/' + segments.length,
+            color: '#fff',
+            fontSize: '11px',
+            fontWeight: 'bold'
+          },
+          zIndex: 45
+        });
         _trajetoriaLayers.push(badgeMk);
       }
 
@@ -5463,49 +5553,118 @@ function _plotarTrajetoria() {
         var circleHtml = '<div style="background:' + segColor + ';color:#000;font-weight:900;font-size:.75rem;'
           + 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
           + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p.seq + '</div>';
-        var mk = L.marker([p.lat, p.lng], {
-          icon: L.divIcon({ html: circleHtml, className: '', iconSize: [26,26], iconAnchor: [13,13] }),
-          zIndexOffset: 20
-        }).bindPopup(
-          '<div style="font-family:system-ui;min-width:220px">'
+        
+        var popupContent = '<div style="font-family:system-ui;min-width:220px">'
           + '<div style="font-weight:900;font-size:1rem;color:' + segColor + ';margin-bottom:6px;letter-spacing:.06em">' + plate + '</div>'
           + '<div style="font-size:.82rem;line-height:1.9">'
           + '<b style="color:#64748b">Passagem</b> <b>#' + p.seq + ' de ' + pts.length + '</b>'
           + (segments.length > 1 ? ' <span style="font-size:.72rem;color:' + segColor + '">(trecho ' + (segIdx+1) + ')</span>' : '') + '<br>'
           + '<b style="color:#64748b">Câmera:</b> ' + p.cam_nome + '<br>'
           + '<b style="color:#64748b">Horário:</b> ' + fmt
-          + '</div></div>'
-        ).addTo(_mapaLeaflet);
+          + '</div></div>';
+
+        var infoWindow = new google.maps.InfoWindow({
+          content: popupContent
+        });
+
+        var mk = new google.maps.Marker({
+          position: {lat: p.lat, lng: p.lng},
+          map: _googleMap,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(circleHtml),
+            scaledSize: new google.maps.Size(26, 26),
+            anchor: new google.maps.Point(13, 13)
+          },
+          zIndex: 20
+        });
+        
+        mk.addListener('click', function() {
+          _mapaInfoWindows.forEach(function(iw) { iw.close(); });
+          infoWindow.open(_googleMap, mk);
+        });
+        
         _trajetoriaLayers.push(mk);
+        _mapaInfoWindows.push(infoWindow);
       });
 
       // ── Marca INÍCIO / FIM de cada trecho ──────────────────────
       if (seg.length >= 1) {
         var startLabel = segments.length > 1 ? '▶ INÍCIO T' + (segIdx+1) : '▶ INÍCIO';
-        var mStart = L.marker([seg[0].lat, seg[0].lng], { icon: endpointIcon(startLabel, '#16a34a'), zIndexOffset: 50 })
-          .addTo(_mapaLeaflet);
+        var startHtml = '<div style="background:#16a34a;color:#fff;font-weight:900;font-size:.62rem;'
+          + 'border-radius:6px;padding:3px 6px;border:2px solid #fff;white-space:nowrap;'
+          + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">' + startLabel + '</div>';
+        
+        var mStart = new google.maps.Marker({
+          position: {lat: seg[0].lat, lng: seg[0].lng},
+          map: _googleMap,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+            ),
+            scaledSize: new google.maps.Size(1, 1),
+            anchor: new google.maps.Point(20, 12)
+          },
+          label: {
+            text: startLabel,
+            color: '#fff',
+            fontSize: '10px',
+            fontWeight: 'bold'
+          },
+          zIndex: 50
+        });
         _trajetoriaLayers.push(mStart);
       }
       if (seg.length >= 2) {
         var endLabel = segments.length > 1 ? '■ FIM T' + (segIdx+1) : '■ FIM';
-        var mEnd = L.marker([seg[seg.length-1].lat, seg[seg.length-1].lng], { icon: endpointIcon(endLabel, '#dc2626'), zIndexOffset: 50 })
-          .addTo(_mapaLeaflet);
+        var mEnd = new google.maps.Marker({
+          position: {lat: seg[seg.length-1].lat, lng: seg[seg.length-1].lng},
+          map: _googleMap,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+            ),
+            scaledSize: new google.maps.Size(1, 1),
+            anchor: new google.maps.Point(20, 12)
+          },
+          label: {
+            text: endLabel,
+            color: '#fff',
+            fontSize: '10px',
+            fontWeight: 'bold'
+          },
+          zIndex: 50
+        });
         _trajetoriaLayers.push(mEnd);
       }
 
       // ── Linha tracejada entre fim de um trecho e início do próximo ──
       if (segIdx < segments.length - 1) {
         var nextSeg = segments[segIdx + 1];
-        var gapLine = L.polyline(
-          [[seg[seg.length-1].lat, seg[seg.length-1].lng], [nextSeg[0].lat, nextSeg[0].lng]],
-          { color: '#94a3b8', weight: 2, opacity: .5, dashArray: '8,8' }
-        ).addTo(_mapaLeaflet);
+        var gapLine = new google.maps.Polyline({
+          path: [
+            {lat: seg[seg.length-1].lat, lng: seg[seg.length-1].lng},
+            {lat: nextSeg[0].lat, lng: nextSeg[0].lng}
+          ],
+          strokeColor: '#94a3b8',
+          strokeOpacity: 0.5,
+          strokeWeight: 2,
+          map: _googleMap,
+          zIndex: 1,
+          icons: [{
+            icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 2 },
+            offset: '0',
+            repeat: '10px'
+          }]
+        });
         _trajetoriaLayers.push(gapLine);
       }
     });
   });
 
-  if (allLL.length) _mapaLeaflet.fitBounds(allLL, { padding: [70, 70], maxZoom: 14 });
+  if (!bounds.isEmpty()) {
+    _googleMap.fitBounds(bounds, {top: 70, right: 70, bottom: 70, left: 70});
+    if (_googleMap.getZoom() > 14) _googleMap.setZoom(14);
+  }
 
   // ──  Info bar ───────────────────────────────────────────────────────────
   var noGps = document.getElementById('map-no-gps');
@@ -5534,7 +5693,10 @@ function _plotarTrajetoria() {
 
 function _limparTrajetoria() {
   _mapaTrajetoria = null;
-  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers.forEach(function(l) {
+    if (l.setMap) l.setMap(null);
+    if (l.remove) l.remove();
+  });
   _trajetoriaLayers = [];
   var noGps = document.getElementById('map-no-gps');
   if (noGps) noGps.innerHTML = '';
@@ -5559,35 +5721,61 @@ function _mapaStatusLabel(lastSeenIso) {
   return 'Offline (h\u00e1 ' + (h < 24 ? Math.round(h) + 'h' : Math.round(h/24) + 'd') + ')';
 }
 
-function _mapaIcon(color) {
-  return L.divIcon({
-    className: '',
-    html: '<div style="width:14px;height:14px;border-radius:50%;background:' + color + ';border:2px solid rgba(255,255,255,.85);box-shadow:0 0 7px ' + color + 'aa"></div>',
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -9],
-  });
+// Verifica se Google Maps está carregado
+function _checkGoogleMapsLoaded() {
+  return _googleMapsReady && typeof google !== 'undefined' && typeof google.maps !== 'undefined';
+}
+
+// Aguarda carregamento do Google Maps
+async function _waitForGoogleMaps(timeout) {
+  timeout = timeout || 15000;
+  var start = Date.now();
+  while (!_checkGoogleMapsLoaded()) {
+    if (Date.now() - start > timeout) {
+      throw new Error('Timeout aguardando Google Maps API. Verifique se a chave está válida.');
+    }
+    await new Promise(function(resolve) { setTimeout(resolve, 100); });
+  }
 }
 
 async function loadMapa() {
   var container = document.getElementById('map-container');
   if (!container) return;
 
-  // Inicializa Leaflet na primeira chamada
-  if (!_mapaLeaflet) {
-    _mapaLeaflet = L.map('map-container', { zoomControl: true }).setView([-15.0, -52.0], 5);
-    var baseDefault = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
-      maxZoom: 19
-    });
-    
-    // Usa OpenStreetMap como padrão
-    baseDefault.addTo(_mapaLeaflet);
+  try {
+    // Aguarda Google Maps carregar
+    if (!_checkGoogleMapsLoaded()) {
+      var noGps = document.getElementById('map-no-gps');
+      if (noGps) noGps.innerHTML = '<div style="color:var(--warning);font-size:.82rem">⏳ Aguardando Google Maps API...</div>';
+      await _waitForGoogleMaps(10000);
+    }
+
+    // Inicializa Google Maps na primeira chamada
+    if (!_googleMap) {
+      _googleMap = new google.maps.Map(container, {
+        center: {lat: -15.0, lng: -52.0},
+        zoom: 5,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        zoomControl: true,
+        mapTypeControl: true,
+        scaleControl: true,
+        streetViewControl: false,
+        rotateControl: false,
+        fullscreenControl: true
+      });
+    }
+  } catch(e) {
+    console.error('[Mapa] Erro ao inicializar Google Maps:', e);
+    var noGps = document.getElementById('map-no-gps');
+    if (noGps) noGps.innerHTML = '<div style="color:var(--danger);font-size:.82rem">❌ Erro ao carregar Google Maps: ' + e.message + '<br><small>Verifique se a chave da API está válida e tem as permissões necessárias.</small></div>';
+    return;
   }
 
   // Remove marcadores anteriores
-  _mapaMarkers.forEach(function(m) { m.remove(); });
+  _mapaMarkers.forEach(function(m) { m.setMap(null); });
   _mapaMarkers = [];
+  _mapaInfoWindows.forEach(function(iw) { iw.close(); });
+  _mapaInfoWindows = [];
 
   try {
     var rCams   = await fetch('/api/cameras?include_inactive=true');
@@ -5604,7 +5792,7 @@ async function loadMapa() {
       else withoutGps.push(c);
     });
 
-    var bounds = [];
+    var bounds = new google.maps.LatLngBounds();
     withGps.forEach(function(c) {
       var lastSeen = statusMap[c.camera_id] || c.last_seen || null;
       var color    = _mapaStatusColor(lastSeen, c.ativa);
@@ -5616,7 +5804,7 @@ async function loadMapa() {
         ? '<br><b>Dire\u00e7\u00e3o:</b> <span style="color:#facc15">' + c.direcao + '</span>'
         : '';
       var camIdEsc = (c.camera_id || '').replace(/'/g, "\\'");
-      var popup = '<div style="font-family:system-ui;min-width:210px">'
+      var popupContent = '<div style="font-family:system-ui;min-width:210px">'
         + '<div style="font-weight:700;font-size:.95rem;margin-bottom:6px">&#128247; ' + c.nome + '</div>'
         + '<div style="font-size:.8rem;line-height:1.8">'
         + '<b>ID:</b> ' + (c.camera_id || '\u2014') + '<br>'
@@ -5635,20 +5823,47 @@ async function loadMapa() {
         + '</div>'
         + '</div>';
 
-      var marker = L.marker([c.latitude, c.longitude], { icon: _mapaIcon(color) })
-        .bindPopup(popup, { maxWidth: 260 })
-        .addTo(_mapaLeaflet);
+      var infoWindow = new google.maps.InfoWindow({
+        content: popupContent,
+        maxWidth: 260
+      });
+
+      var marker = new google.maps.Marker({
+        position: {lat: c.latitude, lng: c.longitude},
+        map: _googleMap,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: 'rgba(255,255,255,0.85)',
+          strokeWeight: 2
+        }
+      });
+      
+      marker.addListener('click', function() {
+        _mapaInfoWindows.forEach(function(iw) { iw.close(); });
+        infoWindow.open(_googleMap, marker);
+      });
+
       _mapaMarkers.push(marker);
-      bounds.push([c.latitude, c.longitude]);
+      _mapaInfoWindows.push(infoWindow);
+      bounds.extend(marker.getPosition());
     });
 
-    if (bounds.length > 0 && !_mapaTrajetoria) {
-      _mapaLeaflet.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    if (withGps.length > 0 && !_mapaTrajetoria) {
+      _googleMap.fitBounds(bounds);
+      // Limita zoom máximo
+      var listener = google.maps.event.addListenerOnce(_googleMap, 'bounds_changed', function() {
+        if (_googleMap.getZoom() > 15) {
+          _googleMap.setZoom(15);
+        }
+      });
     }
 
     // Necessário quando a aba estava oculta
     setTimeout(function() {
-      _mapaLeaflet.invalidateSize();
+      google.maps.event.trigger(_googleMap, 'resize');
       if (_mapaTrajetoria) _plotarTrajetoria();
     }, 80);
 
@@ -5740,10 +5955,13 @@ function renderVehicleTrajectory(data) {
   var points = data.points;
   
   // Guarda dados para limpeza posterior
-  if (!_mapaLeaflet) return;
+  if (!_googleMap) return;
 
   // Remove camadas anteriores de trajetória
-  _trajetoriaLayers.forEach(function(l) { l.remove(); });
+  _trajetoriaLayers.forEach(function(l) {
+    if (l.setMap) l.setMap(null);
+    if (l.remove) l.remove();
+  });
   _trajetoriaLayers = [];
 
   // Cores
@@ -5751,7 +5969,7 @@ function renderVehicleTrajectory(data) {
   var mainColor = COLORS[0];
 
   // Coleta bounds para zoom
-  var bounds = [];
+  var bounds = new google.maps.LatLngBounds();
   var ptsToProcess = points.filter(function(p) {
     return p.lat != null && p.lng != null;
   });
@@ -5763,25 +5981,33 @@ function renderVehicleTrajectory(data) {
 
   ptsToProcess.forEach(function(p, idx) {
     p._index = idx + 1; // numeração começa de 1
-    bounds.push([p.lat, p.lng]);
+    bounds.extend(new google.maps.LatLng(p.lat, p.lng));
   });
 
   // Desenha polyline ligando os pontos
   if (ptsToProcess.length >= 2) {
     // Sombra
-    var shadow = L.polyline(ptsToProcess.map(function(p) { return [p.lat, p.lng]; }), {
-      color: '#000',
-      weight: 7,
-      opacity: 0.25
-    }).addTo(_mapaLeaflet);
+    var shadowPath = ptsToProcess.map(function(p) { return {lat: p.lat, lng: p.lng}; });
+    var shadow = new google.maps.Polyline({
+      path: shadowPath,
+      strokeColor: '#000',
+      strokeOpacity: 0.25,
+      strokeWeight: 7,
+      map: _googleMap,
+      zIndex: 1
+    });
     _trajetoriaLayers.push(shadow);
 
     // Linha principal
-    var line = L.polyline(ptsToProcess.map(function(p) { return [p.lat, p.lng]; }), {
-      color: mainColor,
-      weight: 4,
-      opacity: 0.9
-    }).addTo(_mapaLeaflet);
+    var mainPath = ptsToProcess.map(function(p) { return {lat: p.lat, lng: p.lng}; });
+    var line = new google.maps.Polyline({
+      path: mainPath,
+      strokeColor: mainColor,
+      strokeOpacity: 0.9,
+      strokeWeight: 4,
+      map: _googleMap,
+      zIndex: 2
+    });
     _trajetoriaLayers.push(line);
 
     // Setas direcionais
@@ -5794,14 +6020,6 @@ function renderVehicleTrajectory(data) {
       return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
 
-    function arrowIcon(color, angle) {
-      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
-        + '<circle cx="10" cy="10" r="9" fill="' + color + '" fill-opacity=".85" stroke="#fff" stroke-width="1.2"/>'
-        + '<polygon points="10,3 13.5,14 10,11 6.5,14" fill="#fff" transform="rotate(' + angle + ',10,10)"/>'
-        + '</svg>';
-      return L.divIcon({html: svg, className: '', iconSize: [20, 20], iconAnchor: [10, 10]});
-    }
-
     for (var i = 0; i < ptsToProcess.length - 1; i++) {
       var p1 = ptsToProcess[i];
       var p2 = ptsToProcess[i + 1];
@@ -5809,8 +6027,22 @@ function renderVehicleTrajectory(data) {
       var midLat = (p1.lat + p2.lat) / 2;
       var midLng = (p1.lng + p2.lng) / 2;
       var ang = bearing(p1, p2);
-      var arrow = L.marker([midLat, midLng], {icon: arrowIcon(mainColor, ang), zIndexOffset: 10})
-        .addTo(_mapaLeaflet);
+      
+      var arrowSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
+        + '<circle cx="10" cy="10" r="9" fill="' + mainColor + '" fill-opacity=".85" stroke="#fff" stroke-width="1.2"/>'
+        + '<polygon points="10,3 13.5,14 10,11 6.5,14" fill="#fff" transform="rotate(' + ang + ',10,10)"/>'
+        + '</svg>';
+      
+      var arrow = new google.maps.Marker({
+        position: {lat: midLat, lng: midLng},
+        map: _googleMap,
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(arrowSvg),
+          scaledSize: new google.maps.Size(20, 20),
+          anchor: new google.maps.Point(10, 10)
+        },
+        zIndex: 10
+      });
       _trajetoriaLayers.push(arrow);
     }
   }
@@ -5838,40 +6070,79 @@ function renderVehicleTrajectory(data) {
       + '</div>'
       + '</div>';
 
-    var mk = L.marker([p.lat, p.lng], {
-      icon: L.divIcon({html: circleHtml, className: '', iconSize: [28, 28], iconAnchor: [14, 14]}),
-      zIndexOffset: 20
-    }).bindPopup(markerContent)
-     .addTo(_mapaLeaflet);
+    var infoWindow = new google.maps.InfoWindow({
+      content: markerContent
+    });
+
+    var mk = new google.maps.Marker({
+      position: {lat: p.lat, lng: p.lng},
+      map: _googleMap,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(circleHtml),
+        scaledSize: new google.maps.Size(28, 28),
+        anchor: new google.maps.Point(14, 14)
+      },
+      zIndex: 20
+    });
+    
+    mk.addListener('click', function() {
+      _mapaInfoWindows.forEach(function(iw) { iw.close(); });
+      infoWindow.open(_googleMap, mk);
+    });
+    
     _trajetoriaLayers.push(mk);
+    _mapaInfoWindows.push(infoWindow);
   });
 
   // Marcadores de início e fim
   if (ptsToProcess.length >= 1) {
-    var startHtml = '<div style="background:#16a34a;color:#fff;font-weight:900;font-size:.68rem;'
-      + 'border-radius:6px;padding:4px 8px;border:2px solid #fff;white-space:nowrap;'
-      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">▶ INÍCIO</div>';
-    var mStart = L.marker([ptsToProcess[0].lat, ptsToProcess[0].lng], {
-      icon: L.divIcon({html: startHtml, className: '', iconAnchor: [24, 8]}),
-      zIndexOffset: 50
-    }).addTo(_mapaLeaflet);
+    var mStart = new google.maps.Marker({
+      position: {lat: ptsToProcess[0].lat, lng: ptsToProcess[0].lng},
+      map: _googleMap,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+        ),
+        scaledSize: new google.maps.Size(1, 1),
+        anchor: new google.maps.Point(24, 8)
+      },
+      label: {
+        text: '▶ INÍCIO',
+        color: '#fff',
+        fontSize: '11px',
+        fontWeight: 'bold'
+      },
+      zIndex: 50
+    });
     _trajetoriaLayers.push(mStart);
   }
 
   if (ptsToProcess.length >= 2) {
-    var endHtml = '<div style="background:#dc2626;color:#fff;font-weight:900;font-size:.68rem;'
-      + 'border-radius:6px;padding:4px 8px;border:2px solid #fff;white-space:nowrap;'
-      + 'box-shadow:0 2px 6px rgba(0,0,0,.45)">■ FIM</div>';
-    var mEnd = L.marker([ptsToProcess[ptsToProcess.length - 1].lat, ptsToProcess[ptsToProcess.length - 1].lng], {
-      icon: L.divIcon({html: endHtml, className: '', iconAnchor: [24, 8]}),
-      zIndexOffset: 50
-    }).addTo(_mapaLeaflet);
+    var mEnd = new google.maps.Marker({
+      position: {lat: ptsToProcess[ptsToProcess.length - 1].lat, lng: ptsToProcess[ptsToProcess.length - 1].lng},
+      map: _googleMap,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+        ),
+        scaledSize: new google.maps.Size(1, 1),
+        anchor: new google.maps.Point(24, 8)
+      },
+      label: {
+        text: '■ FIM',
+        color: '#fff',
+        fontSize: '11px',
+        fontWeight: 'bold'
+      },
+      zIndex: 50
+    });
     _trajetoriaLayers.push(mEnd);
   }
 
   // Ajusta zoom para caber toda a rota
-  if (bounds.length > 0) {
-    _mapaLeaflet.fitBounds(bounds, {padding: [70, 70], maxZoom: 14});
+  if (!bounds.isEmpty()) {
+    _googleMap.fitBounds(bounds, {top: 70, right: 70, bottom: 70, left: 70});
+    if (_googleMap.getZoom() > 14) _googleMap.setZoom(14);
   }
 
   // Mostra câmeras sem GPS se houver
@@ -5896,7 +6167,10 @@ function renderVehicleTrajectory(data) {
 
 function clearVehicleTrajectory() {
   // Remove camadas de trajetória do mapa
-  _trajetoriaLayers.forEach(function(l) { if (l && l.remove) l.remove(); });
+  _trajetoriaLayers.forEach(function(l) {
+    if (l && l.setMap) l.setMap(null);
+    if (l && l.remove) l.remove();
+  });
   _trajetoriaLayers = [];
   
   // Limpa dados
