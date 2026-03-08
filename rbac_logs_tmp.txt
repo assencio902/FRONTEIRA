@@ -1,0 +1,200 @@
+ingest-1  | INFO:     Cleanup worker encerrado.
+ingest-1  | 2026-03-08 14:09:58,093 INFO     uvicorn.error: Started server process [1]
+ingest-1  | INFO:     Started server process [1]
+ingest-1  | 2026-03-08 14:09:58,093 INFO     uvicorn.error: Waiting for application startup.
+ingest-1  | INFO:     Waiting for application startup.
+ingest-1  | 2026-03-08 14:09:58,116 INFO     uvicorn.error: Cleanup worker iniciado ÔÇö interval=600s images=7d events=30d max_gb=50 dry_run=False
+ingest-1  | INFO:     Cleanup worker iniciado ÔÇö interval=600s images=7d events=30d max_gb=50 dry_run=False
+ingest-1  | 2026-03-08 14:09:58,116 INFO     uvicorn.error: Application startup complete.
+ingest-1  | INFO:     Application startup complete.
+ingest-1  | 2026-03-08 14:09:58,117 INFO     uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ingest-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45204 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:45194 - "GET /api/users HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:35380 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57660 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:57660 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /login HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "POST /api/auth/login HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38268 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38270 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38270 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38270 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57296 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57304 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57320 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:57310 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | 2026-03-08 14:11:15,669 INFO     uvicorn.error: Cleanup ciclo ÔÇö disco livre: 16.7 GB | uploads: 0.00 GB
+ingest-1  | INFO:     Cleanup ciclo ÔÇö disco livre: 16.7 GB | uploads: 0.00 GB
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /dashboard HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/vehicles/allplates HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/cameras?include_inactive=true HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/events?limit=10&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51034 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51042 - "GET /api/users HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:48890 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:46462 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51318 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:51318 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:51318 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:51318 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42946 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:42946 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42954 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42954 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42954 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:35688 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | 2026-03-08 14:12:49,374 INFO     uvicorn.error: Cleanup ciclo concluido.
+ingest-1  | INFO:     Cleanup ciclo concluido.
+ingest-1  | INFO:     172.18.0.1:50644 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:50644 - "GET /api/vehicles/lists HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:50644 - "GET /api/batedor/central?window=2h&limit=300 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:50644 - "GET /api/batedor/grupos_comboio?window=2h&co_window=300&group_sizes=2&min_cameras=2&order_mode=any&leader_ratio=0.70&payload_max_front=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:46880 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51502 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51514 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51514 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:51514 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42932 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42026 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:48196 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:48196 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:48196 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38582 - "GET /api/events?limit=30&offset=0 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38588 - "POST /api/auth/login HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:38588 - "POST /api/users HTTP/1.1" 400 Bad Request
+ingest-1  | INFO:     172.18.0.1:36372 - "GET /api/batedor/central?window=2h&limit=100 HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:36372 - "GET /api/alvos/recentes?window=30m HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:36372 - "GET /api/alvos HTTP/1.1" 200 OK
+ingest-1  | 2026-03-08 14:15:41,558 INFO     uvicorn.error: Shutting down
+ingest-1  | INFO:     Shutting down
+ingest-1  | 2026-03-08 14:15:41,658 INFO     uvicorn.error: Waiting for application shutdown.
+ingest-1  | INFO:     Waiting for application shutdown.
+ingest-1  | 2026-03-08 14:15:41,659 INFO     uvicorn.error: Cleanup worker: sinal de parada enviado.
+ingest-1  | INFO:     Cleanup worker: sinal de parada enviado.
+ingest-1  | 2026-03-08 14:15:41,659 INFO     uvicorn.error: Cleanup worker encerrado.
+ingest-1  | INFO:     Cleanup worker encerrado.
+ingest-1  | 2026-03-08 14:15:41,659 INFO     uvicorn.error: Application shutdown complete.
+ingest-1  | INFO:     Application shutdown complete.
+ingest-1  | 2026-03-08 14:15:41,659 INFO     uvicorn.error: Finished server process [1]
+ingest-1  | INFO:     Finished server process [1]
+ingest-1  | 2026-03-08 14:15:42,705 INFO     uvicorn.error: Started server process [1]
+ingest-1  | INFO:     Started server process [1]
+ingest-1  | 2026-03-08 14:15:42,706 INFO     uvicorn.error: Waiting for application startup.
+ingest-1  | INFO:     Waiting for application startup.
+ingest-1  | 2026-03-08 14:15:42,726 INFO     uvicorn.error: Cleanup worker iniciado ÔÇö interval=600s images=7d events=30d max_gb=50 dry_run=False
+ingest-1  | INFO:     Cleanup worker iniciado ÔÇö interval=600s images=7d events=30d max_gb=50 dry_run=False
+ingest-1  | 2026-03-08 14:15:42,726 INFO     uvicorn.error: Application startup complete.
+ingest-1  | INFO:     Application startup complete.
+ingest-1  | 2026-03-08 14:15:42,727 INFO     uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ingest-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ingest-1  | INFO:     172.18.0.1:42326 - "POST /api/auth/login HTTP/1.1" 200 OK
+ingest-1  | INFO:     172.18.0.1:42326 - "POST /api/users HTTP/1.1" 400 Bad Request

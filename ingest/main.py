@@ -40,6 +40,17 @@ from services.fcm_service import (
 
 from cleanup_background import start_cleanup_background, stop_cleanup_background
 
+# ============================================================
+# RBAC - Role-Based Access Control
+# ============================================================
+from rbac import (
+    VALID_ROLES,
+    normalize_role,
+    normalize_role_input,
+    assert_admin,
+    assert_admin_or_operator,
+)
+
 logger = logging.getLogger(__name__)
 
 # ===========================
@@ -68,7 +79,8 @@ def _verify_pw(plain: str, hashed: str) -> bool:
 
 def _make_token(sub: str, role: str, full_name: str) -> str:
     exp = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE)
-    return _jwt.encode({"sub": sub, "role": role, "name": full_name, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
+    safe_role = normalize_role(role)
+    return _jwt.encode({"sub": sub, "role": safe_role, "name": full_name, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
 
 def _decode_token(token: str) -> dict:
     return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
@@ -93,6 +105,7 @@ class _AuthMiddleware(BaseHTTPMiddleware):
         token_str = auth.split(" ", 1)[1]
         try:
             payload = _decode_token(token_str)
+            payload["role"] = normalize_role(payload.get("role"))
             request.state.user = payload
         except ExpiredSignatureError:
             logger.warning("[AUTH] Token expirado em %s (sub=%s)", path, _safe_sub(token_str))
@@ -270,12 +283,25 @@ def _init_db():
                     username TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     full_name TEXT DEFAULT '',
-                    role TEXT DEFAULT 'operator',
+                    role TEXT DEFAULT 'visualizador',
                     ativa BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMPTZ DEFAULT NOW(),
                     updated_at TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
+            # Migração RBAC: converte valores legados para os papéis oficiais.
+            cur.execute("UPDATE users SET role='operador' WHERE role='operator';")
+            cur.execute("UPDATE users SET role='visualizador' WHERE role IN ('viewer', 'visualizacao');")
+            cur.execute("UPDATE users SET role='visualizador' WHERE role IS NULL OR TRIM(role)='';")
+            cur.execute("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'visualizador';")
+            cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;")
+            cur.execute(
+                """
+                ALTER TABLE users
+                ADD CONSTRAINT users_role_check
+                CHECK (role IN ('admin', 'operador', 'visualizador'))
+                """
+            )
             # Inserir admin padrão se não existir
             # Credenciais lidas do ambiente (defina ADMIN_USER e ADMIN_PASSWORD no .env)
             _seed_user = os.getenv("ADMIN_USER", "admin")
@@ -691,19 +717,30 @@ async def auth_login(request: Request):
     if not row:
         raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
     uid, uname, pw_hash, full_name, role, ativa = row
+    role = normalize_role(role)
     if not ativa:
         raise HTTPException(status_code=403, detail="Usuário inativo")
     if not _verify_pw(password, pw_hash):
         raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
     token = _make_token(uname, role, full_name or uname)
-    return {"access_token": token, "token_type": "bearer", "role": role, "full_name": full_name or uname, "username": uname}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": role,
+        "full_name": full_name or uname,
+        "username": uname,
+    }
 
 @app.get("/api/auth/me")
 async def auth_me(request: Request):
     user = getattr(request.state, "user", None)
     if not user:
         raise HTTPException(status_code=401, detail="Não autenticado")
-    return {"username": user.get("sub"), "role": user.get("role"), "full_name": user.get("name")}
+    return {
+        "username": user.get("sub"),
+        "role": normalize_role(user.get("role")),
+        "full_name": user.get("name"),
+    }
 
 @app.put("/api/auth/password")
 async def change_my_password(request: Request):
@@ -735,9 +772,7 @@ async def change_my_password(request: Request):
 
 @app.get("/api/users")
 async def list_users(request: Request):
-    user = getattr(request.state, "user", {})
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    assert_admin(request, "Acesso restrito a administradores")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, username, full_name, role, ativa, created_at FROM users ORDER BY id")
@@ -746,18 +781,21 @@ async def list_users(request: Request):
 
 @app.post("/api/users", status_code=201)
 async def create_user(request: Request):
-    user = getattr(request.state, "user", {})
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    assert_admin(request, "Acesso restrito a administradores")
     data = await request.json()
     username  = str(data.get("username") or "").strip().lower()
     password  = str(data.get("password") or "").strip()
     full_name = str(data.get("full_name") or "").strip()
-    role      = str(data.get("role") or "operator").strip()
+    role_raw  = data.get("role")
+    role      = normalize_role_input(role_raw)
     ativa     = bool(data.get("ativa", True))
     if not username: raise HTTPException(status_code=400, detail="username obrigatório")
     if not password: raise HTTPException(status_code=400, detail="password obrigatório")
-    if role not in ("admin", "operator", "viewer"): raise HTTPException(status_code=400, detail="role inválido")
+    if role not in VALID_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"role inválido: '{role_raw}'. Use apenas: admin, operador, visualizador",
+        )
     try:
         with _conn() as conn:
             with conn.cursor() as cur:
@@ -774,15 +812,19 @@ async def create_user(request: Request):
 
 @app.put("/api/users/{uid}")
 async def update_user(uid: int, request: Request):
-    requester = getattr(request.state, "user", {})
-    if requester.get("role") != "admin" and requester.get("sub") != uid:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+    # Apenas admin pode alterar dados de usuários
+    assert_admin(request, "Apenas administradores podem alterar usuários")
     data = await request.json()
     sets, vals = [], []
     if "full_name" in data: sets.append("full_name=%s"); vals.append(str(data["full_name"]).strip())
     if "role" in data:
-        role = str(data["role"]).strip()
-        if role not in ("admin", "operator", "viewer"): raise HTTPException(status_code=400, detail="role inválido")
+        role_raw = data["role"]
+        role = normalize_role_input(role_raw)
+        if role not in VALID_ROLES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"role inválido: '{role_raw}'. Use apenas: admin, operador, visualizacao",
+            )
         sets.append("role=%s"); vals.append(role)
     if "ativa" in data: sets.append("ativa=%s"); vals.append(bool(data["ativa"]))
     if "password" in data and data["password"]:
@@ -798,9 +840,7 @@ async def update_user(uid: int, request: Request):
 
 @app.delete("/api/users/{uid}", status_code=204)
 async def delete_user(uid: int, request: Request):
-    requester = getattr(request.state, "user", {})
-    if requester.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    assert_admin(request, "Acesso restrito a administradores")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
@@ -891,6 +931,8 @@ def cameras_status():
 
 @app.post("/api/cameras")
 async def create_camera(request: Request):
+    # Admin e operador podem criar câmeras
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem criar câmeras")
     data = await request.json()
     camera_id = (data.get("camera_id") or "").strip()
     nome = (data.get("nome") or "").strip()
@@ -952,6 +994,8 @@ async def create_camera(request: Request):
 
 @app.put("/api/cameras/{cam_id}")
 async def update_camera(cam_id: int, request: Request):
+    # Admin e operador podem editar câmeras
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar câmeras")
     data = await request.json()
     nome        = data.get("nome")
     criticidade = data.get("criticidade")
@@ -1050,7 +1094,9 @@ async def update_camera(cam_id: int, request: Request):
 
 
 @app.delete("/api/cameras/{cam_id}")
-def delete_camera(cam_id: int):
+def delete_camera(cam_id: int, request: Request):
+    # Admin e operador podem deletar câmeras
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem deletar câmeras")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM cameras WHERE id=%s", (cam_id,))
@@ -1937,6 +1983,8 @@ def vehicles_lists():
 @app.post("/api/vehicles/lists")
 async def vehicles_lists_create(request: Request):
     """Cria uma nova lista de monitoramento."""
+    # Admin e operador podem criar listas
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem criar listas")
     try:
         data = await request.json()
         name = (data.get("name") or "").strip()
@@ -1969,6 +2017,8 @@ async def vehicles_lists_create(request: Request):
 @app.put("/api/vehicles/lists/{list_id}")
 async def vehicles_lists_update(list_id: int, request: Request):
     """Edita uma lista de monitoramento."""
+    # Admin e operador podem editar listas
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar listas")
     try:
         data = await request.json()
         name = (data.get("name") or "").strip()
@@ -2006,8 +2056,10 @@ async def vehicles_lists_update(list_id: int, request: Request):
 
 
 @app.delete("/api/vehicles/lists/{list_id}")
-def vehicles_lists_delete(list_id: int):
+def vehicles_lists_delete(list_id: int, request: Request):
     """Deleta uma lista e todos seus veículos."""
+    # Admin e operador podem deletar listas
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem deletar listas")
     try:
         with _conn() as conn:
             with conn.cursor() as cur:
@@ -2071,6 +2123,8 @@ def vehicles_query(list_id: int | None = None, plate: str | None = None):
 @app.post("/api/vehicles")
 async def vehicles_create(request: Request):
     """Adiciona um veículo a uma lista."""
+    # Admin e operador podem criar/adicionar veículos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem adicionar veículos")
     try:
         data = await request.json()
         
@@ -2136,6 +2190,8 @@ async def vehicles_create(request: Request):
 @app.put("/api/vehicles/{vid}")
 async def vehicles_update(vid: int, request: Request):
     """Atualiza um veículo (placa e/ou notas)."""
+    # Admin e operador podem atualizar veículos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem atualizar veículos")
     try:
         data = await request.json()
         plate_raw = data.get("plate")
@@ -2194,8 +2250,10 @@ async def vehicles_update(vid: int, request: Request):
 
 
 @app.delete("/api/vehicles/{vid}")
-def vehicles_delete(vid: int):
+def vehicles_delete(vid: int, request: Request):
     """Remove um veículo de uma lista."""
+    # Admin e operador podem deletar veículos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem deletar veículos")
     try:
         with _conn() as conn:
             with conn.cursor() as cur:
@@ -2288,6 +2346,8 @@ def _remove_alvo_from_lista(cur, plate: str):
 
 @app.post("/api/alvos")
 async def alvos_create(request: Request):
+    # Admin e operador podem criar alvos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem criar alvos")
     data = await request.json()
     plate = _normalize_plate(data.get("plate") or "")
     descricao = (data.get("descricao") or "").strip()
@@ -2311,7 +2371,9 @@ async def alvos_create(request: Request):
 
 
 @app.delete("/api/alvos/{aid}")
-def alvos_delete(aid: int):
+def alvos_delete(aid: int, request: Request):
+    # Apenas admin pode deletar alvos
+    assert_admin(request, "Apenas administradores podem deletar alvos")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT plate FROM alvos WHERE id = %s", (aid,))
@@ -2324,6 +2386,8 @@ def alvos_delete(aid: int):
 
 @app.put("/api/alvos/{aid}")
 async def alvos_update(aid: int, request: Request):
+    # Admin e operador podem editar alvos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar alvos")
     body = await request.json()
     plate    = _normalize_plate(body.get("plate") or "")
     descricao = (body.get("descricao") or "").strip()
@@ -2348,8 +2412,10 @@ async def alvos_update(aid: int, request: Request):
 
 
 @app.post("/api/alvos/import-list/{list_id}")
-def alvos_import_list(list_id: int):
+def alvos_import_list(list_id: int, request: Request):
     """Importa todas as placas de uma lista de monitoramento como Alvos Rastreados."""
+    # Admin e operador podem importar alvos
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem importar alvos")
     with _conn() as conn:
         with conn.cursor() as cur:
             # Verifica se a lista existe
@@ -3513,6 +3579,10 @@ async def vehicle_report_decision(request: Request):
       note         (str, opcional — observação livre)
       window       (str, opcional)
     """
+    assert_admin_or_operator(
+        request,
+        "Apenas administradores e operadores podem registrar decisões operacionais",
+    )
     data = await request.json()
     plate    = (data.get("plate") or "").strip().upper()
     decision = (data.get("decision") or "").strip().lower()
@@ -4115,6 +4185,10 @@ def comboio_report(
 @app.post("/api/comboio/confirm", status_code=201)
 async def comboio_confirm(request: Request):
     """Confirma suspeito de comboio — salva decisão + registra como alvo."""
+    assert_admin_or_operator(
+        request,
+        "Apenas administradores e operadores podem confirmar comboio",
+    )
     data = await request.json()
     plate = (data.get("target_plate") or "").strip().upper()
     if not plate:
@@ -4153,6 +4227,10 @@ async def comboio_confirm(request: Request):
 @app.post("/api/comboio/false_positive", status_code=201)
 async def comboio_false_positive(request: Request):
     """Marca grupo de comboio como falso positivo."""
+    assert_admin_or_operator(
+        request,
+        "Apenas administradores e operadores podem marcar falso positivo",
+    )
     data = await request.json()
     plate = (data.get("target_plate") or "").strip().upper()
     if not plate:
@@ -4640,6 +4718,7 @@ async def fcm_my_token_status(request: Request):
 @app.post("/api/fcm/send-alert")
 async def fcm_send_alert(request: Request):
     """Endpoint manual para teste de push para usuários vinculados a um alarme."""
+    assert_admin(request, "Apenas administradores podem enviar alerta manual")
     try:
         data = await request.json()
         alarme_id_raw = data.get("alarme_id")
@@ -4711,6 +4790,7 @@ async def fcm_send_alert(request: Request):
 @app.get("/api/fcm/status")
 async def fcm_status(request: Request):
     """Verificar status de alertas FCM"""
+    assert_admin(request, "Apenas administradores podem acessar status FCM")
     try:
         user_sub = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
         if not user_sub:
@@ -4751,6 +4831,8 @@ async def fcm_status(request: Request):
 @app.get("/api/alarmes")
 async def list_alarmes(request: Request):
     """Listar todos os alarmes com listas e usuários vinculados."""
+    # Admin, operador e visualizador podem listar alarmes
+    require_role(request, "admin", "operador", "visualizador")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -4777,9 +4859,8 @@ async def list_alarmes(request: Request):
 
 @app.post("/api/alarmes", status_code=201)
 async def create_alarme(request: Request):
-    user = getattr(request.state, "user", {})
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    # Admin e operador podem criar alarmes
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem criar alarmes")
     data = await request.json()
     lista_id = data.get("lista_id")
     if not lista_id:
@@ -4812,9 +4893,8 @@ async def create_alarme(request: Request):
 
 @app.put("/api/alarmes/{aid}")
 async def update_alarme(aid: int, request: Request):
-    user = getattr(request.state, "user", {})
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    # Admin e operador podem atualizar alarmes
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem atualizar alarmes")
     data = await request.json()
     sets, vals = [], []
     lista_id = data.get("lista_id")
@@ -4855,9 +4935,8 @@ async def update_alarme(aid: int, request: Request):
 
 @app.delete("/api/alarmes/{aid}", status_code=204)
 async def delete_alarme(aid: int, request: Request):
-    user = getattr(request.state, "user", {})
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+    # Admin e operador podem deletar alarmes
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem deletar alarmes")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM alarmes WHERE id=%s", (aid,))
@@ -4868,6 +4947,8 @@ async def delete_alarme(aid: int, request: Request):
 @app.post("/api/alarmes/{aid}/test")
 async def test_alarme(aid: int, request: Request):
     """Dispara um alerta de teste para os usuários vinculados ao alarme."""
+    # Admin e operador podem testar alarmes
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem testar alarmes")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT nome, tipo, prioridade, mensagem FROM alarmes WHERE id=%s", (aid,))
@@ -4905,6 +4986,8 @@ async def test_alarme(aid: int, request: Request):
 @app.get("/api/alarmes/historico")
 async def alarmes_historico(request: Request):
     """Retorna últimos 200 registros de alertas enviados (tabela alertas_criticos)."""
+    # Apenas admin pode acessar histórico de alarmes
+    assert_admin(request, "Apenas administradores podem acessar histórico de alarmes")
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -4929,23 +5012,12 @@ async def alarmes_historico(request: Request):
 @app.post("/api/alarmes/historico/{alert_id}/read")
 async def alarmes_historico_mark_read(alert_id: int, request: Request):
     """Marca um alerta do histórico como lido (admin marca qualquer; usuário marca o próprio)."""
-    user = getattr(request.state, "user", {}) or {}
-    user_sub = str(user.get("sub") or "")
-    role = str(user.get("role") or "")
-    if not user_sub:
-        raise HTTPException(status_code=401, detail="Não autenticado")
-
-    user_id = _resolve_user_numeric_id_from_sub(user_sub)
+    # Admin, operador e visualizador podem marcar alertas como lidos
+    require_role(request, "admin", "operador", "visualizador")
 
     with _conn() as conn:
         with conn.cursor() as cur:
-            if role == "admin":
-                cur.execute("UPDATE alertas_criticos SET lido=TRUE WHERE id=%s", (alert_id,))
-            else:
-                cur.execute(
-                    "UPDATE alertas_criticos SET lido=TRUE WHERE id=%s AND usuario_id IN (%s, %s)",
-                    (alert_id, user_sub, user_id or user_sub),
-                )
+            cur.execute("UPDATE alertas_criticos SET lido=TRUE WHERE id=%s", (alert_id,))
             if cur.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Alerta não encontrado")
     return {"ok": True, "id": alert_id, "lido": True}

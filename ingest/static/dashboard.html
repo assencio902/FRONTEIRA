@@ -1679,9 +1679,9 @@
       <div class="form-group">
         <label>Perfil</label>
         <select id="um-role">
-          <option value="operator">&#128100; Operador</option>
+          <option value="operador">&#128100; Operador</option>
           <option value="admin">&#128081; Administrador</option>
-          <option value="viewer">&#128065;&#65039; Visualizador</option>
+          <option value="visualizador">&#128065;&#65039; Visualizador</option>
         </select>
       </div>
       <div class="form-group">
@@ -6410,6 +6410,8 @@ function _resetGruposFilters() {
   // Expor token globalmente
   window._authToken = token;
   window._authRole  = localStorage.getItem('bpfron_role') || '';
+  if (window._authRole === 'operator') window._authRole = 'operador';
+  if (window._authRole === 'viewer' || window._authRole === 'visualizacao') window._authRole = 'visualizador';
   window._authUser  = localStorage.getItem('bpfron_user') || '';
   window._authName  = localStorage.getItem('bpfron_fullname') || '';
   // Mostrar info do usuário
@@ -6417,7 +6419,7 @@ function _resetGruposFilters() {
   var sbRole = document.getElementById('sb-role');
   var tbUser = document.getElementById('topbar-user');
   if (sbUser) sbUser.textContent = window._authName || window._authUser;
-  if (sbRole) sbRole.textContent = window._authRole === 'admin' ? '&#128081; Administrador' : window._authRole === 'operator' ? '&#128100; Operador' : '&#128065; Visualizador';
+  if (sbRole) sbRole.textContent = window._authRole === 'admin' ? '&#128081; Administrador' : window._authRole === 'operador' ? '&#128100; Operador' : '&#128065;&#65039; Visualizador';
   if (tbUser) tbUser.textContent = window._authUser;
   // Mostrar itens de admin
   if (window._authRole === 'admin') {
@@ -6425,6 +6427,96 @@ function _resetGruposFilters() {
       el.style.display = el.classList.contains('nav-item') ? 'flex' : 'block';
     });
   }
+})();
+
+function _applyRoleBasedUI(root) {
+  var scope = root || document;
+  var role = window._authRole || 'visualizador';
+  var isAdmin = role === 'admin';
+  var isOperador = role === 'operador';
+  var isVisualizador = role === 'visualizador';
+
+  // Ocultar menus que o usuário não tem acesso
+  if (!isAdmin) {
+    scope.querySelectorAll('.nav-admin-only').forEach(function(el){
+      el.style.display = 'none';
+    });
+  }
+
+  // Operador: pode criar, editar e deletar veículos, listas e câmeras, mas sem acesso a usuários e alarmes
+  if (isOperador) {
+    // Ocultar gerenciamento de usuários
+    scope.querySelectorAll('[data-menu="users"]').forEach(function(el){
+      el.style.display = 'none';
+    });
+    // Ocultar criação/edição de alarmes (apenas admin)
+    scope.querySelectorAll('button, a.btn').forEach(function(el){
+      var onclick = (el.getAttribute('onclick') || '').toLowerCase();
+      if (onclick.includes('openalarmemodal') || onclick.includes('savealarme') || onclick.includes('deletealarme') || onclick.includes('testalarme')) {
+        el.style.display = 'none';
+      }
+    });
+  }
+
+  // Visualizador: somente leitura em eventos, batedor, painel e mapa de câmeras
+  if (isVisualizador) {
+    // Ocultar abas que visualizador não pode acessar
+    var allowedTabs = ['painel', 'eventos', 'batedor', 'mapa', 'config'];
+    scope.querySelectorAll('.nav-item').forEach(function(el){
+      var onclick = (el.getAttribute('onclick') || '').toLowerCase();
+      var tabMatch = onclick.match(/switchtab\('([^']+)'/i);
+      if (tabMatch) {
+        var tabName = tabMatch[1].toLowerCase();
+        if (!allowedTabs.includes(tabName)) {
+          el.style.display = 'none';
+        }
+      }
+    });
+
+    // Ocultar abas de conteúdo que não são permitidas
+    scope.querySelectorAll('[id^="tab-"]').forEach(function(el){
+      var tabId = el.id.replace('tab-', '').toLowerCase();
+      if (!allowedTabs.includes(tabId)) {
+        el.style.display = 'none';
+      }
+    });
+
+    // Ocultar gerenciamento de usuários
+    scope.querySelectorAll('[data-menu="users"]').forEach(function(el){
+      el.style.display = 'none';
+    });
+
+    // Bloqueiar TODOS os botões de ação de escrita
+    scope.querySelectorAll('button, a.btn, [onclick]').forEach(function(el){
+      var txt = (el.textContent || '').toLowerCase();
+      var onclick = (el.getAttribute('onclick') || '').toLowerCase();
+      var classes = (el.getAttribute('class') || '').toLowerCase();
+      
+      // Bloquear tudo que seja ação de escrita/modificação
+      var isWriteAction =
+        txt.includes('novo') || txt.includes('salvar') || txt.includes('cadastrar') ||
+        txt.includes('editar') || txt.includes('excluir') || txt.includes('deletar') ||
+        txt.includes('importar') || txt.includes('adicionar') || txt.includes('remover') ||
+        txt.includes('confirmar') || txt.includes('falso positivo') ||
+        onclick.includes('save') || onclick.includes('create') || onclick.includes('update') ||
+        onclick.includes('delete') || onclick.includes('import') || onclick.includes('openusermodal') ||
+        onclick.includes('openalarmemodal') || onclick.includes('testalarme') ||
+        onclick.includes('comboio_confirm') || onclick.includes('false_positive') ||
+        onclick.includes('openvehiculomodal') || onclick.includes('opencameramodal') ||
+        onclick.includes('openbatedormodal') || onclick.includes('savevehicle') ||
+        onclick.includes('savecamera') || onclick.includes('savebatedor');
+      
+      if (isWriteAction) {
+        el.style.display = 'none';
+      }
+    });
+  }
+}
+
+(function initRoleGuards(){
+  _applyRoleBasedUI(document);
+  var obs = new MutationObserver(function(){ _applyRoleBasedUI(document); });
+  obs.observe(document.body, { childList: true, subtree: true });
 })();
 
 // Interceptar fetch para adicionar Authorization
@@ -6555,7 +6647,7 @@ async function loadUsers() {
     // Atualizar cards
     document.getElementById('uc-total').textContent     = _usersCache.length;
     document.getElementById('uc-admins').textContent    = _usersCache.filter(function(u){ return u.role==='admin'; }).length;
-    document.getElementById('uc-operators').textContent = _usersCache.filter(function(u){ return u.role==='operator'; }).length;
+    document.getElementById('uc-operators').textContent = _usersCache.filter(function(u){ return u.role==='operador' || u.role==='operator'; }).length;
     document.getElementById('uc-inactive').textContent  = _usersCache.filter(function(u){ return !u.ativa; }).length;
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar usu\u00e1rios: ' + e.message;
@@ -6579,8 +6671,11 @@ function _renderUsersTable(items) {
   }
   var roleInfo = {
     admin:    { lbl:'Administrador', cls:'badge-red',   icon:'&#128081;' },
+    operador: { lbl:'Operador',      cls:'badge-green', icon:'&#128100;' },
     operator: { lbl:'Operador',      cls:'badge-green', icon:'&#128100;' },
-    viewer:   { lbl:'Visualizador',  cls:'',            icon:'&#128065;&#65039;' }
+    visualizador: { lbl:'Visualizador', cls:'', icon:'&#128065;&#65039;' },
+    visualizacao: { lbl:'Visualizador',  cls:'',    icon:'&#128065;&#65039;' },
+    viewer:   { lbl:'Visualizador',  cls:'',    icon:'&#128065;&#65039;' }
   };
   tbody.innerHTML = items.map(function(u){
     var ri  = roleInfo[u.role] || { lbl: u.role, cls:'', icon:'' };
@@ -6615,7 +6710,7 @@ function openUserModal(encodedOrObj) {
   document.getElementById('user-modal-title').textContent = u ? 'Editar Usu\u00e1rio' : 'Novo Usu\u00e1rio';
   document.getElementById('um-username').value  = u ? (u.username||'') : '';
   document.getElementById('um-fullname').value  = u ? (u.full_name||'') : '';
-  document.getElementById('um-role').value      = u ? (u.role||'operator') : 'operator';
+  document.getElementById('um-role').value      = u ? (u.role||'operador') : 'operador';
   document.getElementById('um-ativa').checked   = u ? !!u.ativa : true;
   document.getElementById('um-password').value  = '';
   document.getElementById('um-password2').value = '';
@@ -6635,13 +6730,29 @@ async function saveUser() {
   errEl.textContent = '';
   var username  = document.getElementById('um-username').value.trim().toLowerCase();
   var full_name = document.getElementById('um-fullname').value.trim();
-  var role      = document.getElementById('um-role').value;
+  var roleRaw   = document.getElementById('um-role').value;
+  var roleMap = {
+    'admin': 'admin',
+    'administrador': 'admin',
+    'operador': 'operador',
+    'operator': 'operador',
+    'visualizacao': 'visualizacao',
+    'visualização': 'visualizacao',
+    'visualizador': 'visualizacao',
+    'viewer': 'visualizacao'
+  };
+  var roleKey = (roleRaw || '').toString().trim().toLowerCase();
+  var role    = roleMap[roleKey] || roleKey;
   var ativa     = document.getElementById('um-ativa').checked;
   var pw        = document.getElementById('um-password').value;
   var pw2       = document.getElementById('um-password2').value;
   // Valida\u00e7\u00f5es
   if (!_userEditId && !username) { errEl.textContent = 'Usu\u00e1rio (login) \u00e9 obrigat\u00f3rio.'; return; }
   if (!_userEditId && !pw)       { errEl.textContent = 'Senha \u00e9 obrigat\u00f3ria para novo usu\u00e1rio.'; return; }
+  if (['admin','operador','visualizacao'].indexOf(role) < 0) {
+    errEl.textContent = 'Perfil inválido. Use apenas: admin, operador ou visualizacao.';
+    return;
+  }
   if (pw && pw.length < 6)       { errEl.textContent = 'Senha deve ter pelo menos 6 caracteres.'; return; }
   if (pw && pw !== pw2)          { errEl.textContent = 'As senhas n\u00e3o coincidem.'; return; }
   var body = { username: username, full_name: full_name, role: role, ativa: ativa };

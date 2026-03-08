@@ -1,6 +1,7 @@
 ﻿from typing import Optional
 from fastapi import HTTPException
 from utils import _conn, _hash_pw, _verify_pw, _make_token
+from rbac import normalize_role, normalize_role_input, VALID_ROLES
 
 class UserService:
     @staticmethod
@@ -12,6 +13,7 @@ class UserService:
         if not row:
             raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
         uid, uname, pw_hash, full_name, role, ativa = row
+        role = normalize_role(role)
         if not ativa:
             raise HTTPException(status_code=403, detail="Usuário inativo")
         if not _verify_pw(password, pw_hash):
@@ -34,6 +36,10 @@ class UserService:
 
     @staticmethod
     def create_user(username: str, password: str, full_name: str, role: str, ativa: bool):
+        role_raw = role
+        role = normalize_role_input(role)
+        if role not in VALID_ROLES:
+            raise HTTPException(status_code=400, detail=f"role inválido: '{role_raw}'. Use apenas: admin, operador, visualizacao")
         try:
             with _conn() as conn:
                 with conn.cursor() as cur:
@@ -54,6 +60,10 @@ class UserService:
         if full_name is not None:
             sets.append("full_name=%s"); vals.append(full_name.strip())
         if role is not None:
+            role_raw = role
+            role = normalize_role_input(role)
+            if role not in VALID_ROLES:
+                raise HTTPException(status_code=400, detail=f"role inválido: '{role_raw}'. Use apenas: admin, operador, visualizacao")
             sets.append("role=%s"); vals.append(role)
         if ativa is not None:
             sets.append("ativa=%s"); vals.append(ativa)
