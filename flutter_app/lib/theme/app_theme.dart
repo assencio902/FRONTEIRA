@@ -35,7 +35,7 @@ abstract final class AppTheme {
           elevation: 0,
           titleTextStyle: TextStyle(
             color: AppColors.text,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -50,23 +50,23 @@ abstract final class AppTheme {
         iconTheme: const IconThemeData(color: AppColors.text),
         textTheme: const TextTheme(
           // Títulos
-          titleLarge:   TextStyle(color: AppColors.text, fontSize: 20, fontWeight: FontWeight.w700),
-          titleMedium:  TextStyle(color: AppColors.text, fontSize: 17, fontWeight: FontWeight.w600),
-          titleSmall:   TextStyle(color: AppColors.text, fontSize: 15, fontWeight: FontWeight.w600),
+          titleLarge:   TextStyle(color: AppColors.text, fontSize: 24, fontWeight: FontWeight.w700),
+          titleMedium:  TextStyle(color: AppColors.text, fontSize: 21, fontWeight: FontWeight.w600),
+          titleSmall:   TextStyle(color: AppColors.text, fontSize: 19, fontWeight: FontWeight.w600),
           // Corpo
-          bodyLarge:    TextStyle(color: AppColors.text, fontSize: 16),
-          bodyMedium:   TextStyle(color: AppColors.text, fontSize: 14),
-          bodySmall:    TextStyle(color: AppColors.muted, fontSize: 13),
+          bodyLarge:    TextStyle(color: AppColors.text, fontSize: 18),
+          bodyMedium:   TextStyle(color: AppColors.text, fontSize: 16),
+          bodySmall:    TextStyle(color: AppColors.muted, fontSize: 15),
           // Labels
-          labelLarge:   TextStyle(color: AppColors.text, fontSize: 14, fontWeight: FontWeight.w600),
-          labelMedium:  TextStyle(color: AppColors.muted, fontSize: 13),
-          labelSmall:   TextStyle(color: AppColors.muted, fontSize: 12),
+          labelLarge:   TextStyle(color: AppColors.text, fontSize: 16, fontWeight: FontWeight.w600),
+          labelMedium:  TextStyle(color: AppColors.muted, fontSize: 15),
+          labelSmall:   TextStyle(color: AppColors.muted, fontSize: 14),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppColors.background,
           hintStyle: TextStyle(color: AppColors.text.withValues(alpha: 0.40)),
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
           enabledBorder: OutlineInputBorder(
             borderSide: const BorderSide(color: AppColors.border),
             borderRadius: BorderRadius.circular(12),
@@ -83,7 +83,7 @@ abstract final class AppTheme {
             borderSide: const BorderSide(color: AppColors.danger, width: 1.6),
             borderRadius: BorderRadius.circular(12),
           ),
-          labelStyle: const TextStyle(color: AppColors.muted, fontSize: 14),
+          labelStyle: const TextStyle(color: AppColors.muted, fontSize: 16),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -93,10 +93,10 @@ abstract final class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            minimumSize: const Size(64, 50),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            minimumSize: const Size(64, 54),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             textStyle: const TextStyle(
-              fontSize: 15,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
             ),
@@ -109,10 +109,10 @@ abstract final class AppTheme {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            minimumSize: const Size(64, 50),
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            minimumSize: const Size(64, 54),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             textStyle: const TextStyle(
-              fontSize: 15,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.4,
             ),
@@ -130,10 +130,21 @@ abstract final class AppTheme {
           style: TextButton.styleFrom(
             foregroundColor: AppColors.warning,
             textStyle: const TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          selectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          selectedIconTheme: IconThemeData(size: 26),
+          unselectedIconTheme: IconThemeData(size: 24),
+        ),
+        listTileTheme: const ListTileThemeData(
+          titleTextStyle: TextStyle(color: AppColors.text, fontSize: 16, fontWeight: FontWeight.w600),
+          subtitleTextStyle: TextStyle(color: AppColors.muted, fontSize: 13),
+          iconColor: AppColors.text,
         ),
       );
 }

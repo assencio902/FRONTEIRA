@@ -204,7 +204,7 @@ class _SearchScreenState extends State<SearchScreen> {
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
-                fontSize: 14,
+                fontSize: 16,
                 letterSpacing: 2,
               ),
             ),
@@ -288,7 +288,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 'FILTROS DE PESQUISA',
                 style: TextStyle(
                   color: _kYellow,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 2,
                 ),
@@ -308,7 +308,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: const Text('Limpar',
                       style: TextStyle(
                         color: _kMuted,
-                        fontSize: 13,
+                        fontSize: 15,
                         decoration: TextDecoration.underline,
                         decorationColor: _kMuted,
                       )),
@@ -367,7 +367,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Text('PERÍODO',
                   style: TextStyle(
                       color: _kMuted,
-                      fontSize: 9,
+                    fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5)),
             ],
@@ -403,7 +403,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         '${_fmtDt(_filterDateFrom!)}  —  ${_fmtDt(_filterDateTo ?? _filterDateFrom!)}',
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 13,
+                          fontSize: 15,
                             fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -413,7 +413,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: const Text('Editar',
                           style: TextStyle(
                               color: _kYellow,
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700)),
                     ),
                   ],
@@ -474,7 +474,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(label,
                 style: TextStyle(
                   color: active ? _kYellow : _kMuted,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                 )),
           ],
@@ -515,7 +515,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active ? Colors.white : _kMuted,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: active ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
@@ -554,7 +554,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   const Text('Câmeras',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
+                        fontSize: 15,
                           fontWeight: FontWeight.w800)),
                   const Spacer(),
                   GestureDetector(
@@ -573,7 +573,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ? const Padding(
                       padding: EdgeInsets.all(24),
                       child: Text('Nenhuma câmera encontrada.',
-                          style: TextStyle(color: _kMuted, fontSize: 13)),
+                          style: TextStyle(color: _kMuted, fontSize: 15)),
                     )
                   : ListView(
                       shrinkWrap: true,
@@ -585,7 +585,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               color: _kMuted, size: 18),
                           title: const Text('Todas as câmeras',
                               style:
-                                  TextStyle(color: _kMuted, fontSize: 13)),
+                                TextStyle(color: _kMuted, fontSize: 15)),
                           onTap: () => Navigator.pop(context, null),
                         ),
                         const Divider(color: _kBorder, height: 1),
@@ -607,7 +607,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 style: TextStyle(
                                     color:
                                         ativa ? Colors.white : _kMuted,
-                                    fontSize: 12,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w600)),
                             trailing: crit == 'CRITICA'
                                 ? Container(
@@ -621,7 +621,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     child: const Text('CRÍTICA',
                                         style: TextStyle(
                                             color: _kRed,
-                                            fontSize: 8,
+                                          fontSize: 10,
                                             fontWeight:
                                                 FontWeight.w800)))
                                 : null,
@@ -650,13 +650,13 @@ class _SearchScreenState extends State<SearchScreen> {
         title: const Text('Direção',
             style: TextStyle(
                 color: Colors.white,
-                fontSize: 14,
+            fontSize: 16,
                 fontWeight: FontWeight.w700)),
         children: [
           SimpleDialogOption(
             onPressed: () => Navigator.pop(context, null),
             child: const Text('Todas as direções',
-                style: TextStyle(color: _kMuted, fontSize: 13)),
+              style: TextStyle(color: _kMuted, fontSize: 15)),
           ),
           ...opcoes.map((o) => SimpleDialogOption(
             onPressed: () => Navigator.pop(context, o),
@@ -672,7 +672,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 const SizedBox(width: 8),
                 Text(o,
                     style: const TextStyle(
-                        color: Colors.white, fontSize: 13)),
+                    color: Colors.white, fontSize: 15)),
               ],
             ),
           )),
@@ -717,7 +717,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   const Text('Cor do Veículo',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
+                        fontSize: 15,
                           fontWeight: FontWeight.w800)),
                   const Spacer(),
                   GestureDetector(
@@ -725,7 +725,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: const Text('Todas',
                         style: TextStyle(
                             color: _kMuted,
-                            fontSize: 13,
+                        fontSize: 15,
                             decoration: TextDecoration.underline,
                             decorationColor: _kMuted)),
                   ),
@@ -771,7 +771,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           Text(label,
                               style: TextStyle(
                                   color: sel ? Colors.white : _kMuted,
-                                  fontSize: 13,
+                                fontSize: 15,
                                   fontWeight: sel
                                       ? FontWeight.w700
                                       : FontWeight.normal)),
@@ -806,7 +806,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Text('Buscar por Nome',
                 style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700)),
           ],
         ),
@@ -938,9 +938,9 @@ class _SearchScreenState extends State<SearchScreen> {
           'PLACA DO VEÍCULO',
           style: TextStyle(
             color: _kMuted,
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
-            letterSpacing: 2.5,
+            letterSpacing: 2.0,
           ),
         ),
         const SizedBox(height: 8),
@@ -997,7 +997,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   'FOTO CAPTURADA',
                   style: TextStyle(
                     color: _kMuted,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 2,
                   ),

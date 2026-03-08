@@ -156,7 +156,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -218,7 +218,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
             child: Text(
               widget.alert.plate,
               style: const TextStyle(
-                fontSize: 48,
+                fontSize: 50,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
                 fontFamily: 'Courier',
@@ -233,7 +233,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
           Text(
             widget.alert.targetName,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 22,
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
@@ -252,7 +252,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
                 child: Text(
                   'Nível de risco: ${widget.alert.riskLevel.toUpperCase()}',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
@@ -294,7 +294,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               color: Colors.white70,
               fontWeight: FontWeight.w500,
             ),
@@ -304,7 +304,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
           child: Text(
             value,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
@@ -323,7 +323,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
         children: [
           Expanded(
             child: SizedBox(
-              height: 50,
+              height: 54,
               child: ElevatedButton.icon(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
@@ -337,7 +337,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
                     side: const BorderSide(color: Color(0xFF1A3828)),
                   ),
                   textStyle: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -347,7 +347,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: 50,
+              height: 54,
               child: ElevatedButton.icon(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -364,7 +364,7 @@ class _AlertDetailScreenState extends State<AlertDetailScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   textStyle: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

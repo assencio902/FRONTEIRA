@@ -91,7 +91,7 @@ class _MetricBadge extends StatelessWidget {
         Text(value,
             style: TextStyle(
               color: color,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w900,
             )),
         const SizedBox(height: 2),
@@ -99,7 +99,7 @@ class _MetricBadge extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: _kMuted,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               height: 1.2,
             )),
@@ -401,7 +401,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'BPFRON Monitoramento',
                   style: TextStyle(
                     color: _kBg,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -409,7 +409,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'LPR - Monitoramento de Veículos',
                   style: TextStyle(
                     color: _kBg,
-                    fontSize: 11,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -452,7 +452,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: const Text('⚠️ Watchlist', style: TextStyle(color: _kRed)),
             subtitle: const Text(
               'Monitorar Veículos',
-              style: TextStyle(color: _kMuted, fontSize: 11),
+              style: TextStyle(color: _kMuted, fontSize: 13),
             ),
             onTap: () {
               Navigator.pop(context); // Fechar drawer
@@ -471,7 +471,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: const Text('📊 Histórico de Alarmes', style: TextStyle(color: Colors.cyan)),
             subtitle: const Text(
               'Filtrar por período',
-              style: TextStyle(color: _kMuted, fontSize: 11),
+              style: TextStyle(color: _kMuted, fontSize: 13),
             ),
             onTap: () {
               Navigator.pop(context); // Fechar drawer
@@ -490,7 +490,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: const Text('🗺️ Trajetória', style: TextStyle(color: Colors.green)),
             subtitle: const Text(
               'Buscar rota de veículo',
-              style: TextStyle(color: _kMuted, fontSize: 11),
+              style: TextStyle(color: _kMuted, fontSize: 13),
             ),
             onTap: () {
               Navigator.pop(context); // Fechar drawer
@@ -556,8 +556,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         selectedItemColor: _kYellow,
         unselectedItemColor: _kMuted,
         selectedLabelStyle: const TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
+          fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        unselectedLabelStyle: const TextStyle(fontSize: 14),
         items: const [
           BottomNavigationBarItem(
               icon: Icon(Icons.home_rounded), label: 'Início'),
@@ -603,7 +603,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const Text('ALERTAS',
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                    fontSize: 15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.5)),
                 const SizedBox(width: 8),
@@ -618,7 +618,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Text('${suspeitos.length}',
                         style: const TextStyle(
                             color: _kRed,
-                            fontSize: 12,
+                          fontSize: 14,
                             fontWeight: FontWeight.w900)),
                   ),
               ],
@@ -638,7 +638,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'FILTROS DE ALERTA: 12h | 24h | 7d | 15d | 30d',
                   style: TextStyle(
                     color: _kYellow,
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
                   ),
@@ -670,12 +670,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const Text('Nenhum alerta no momento',
                                 style: TextStyle(
                                     color: _kMuted,
-                                    fontSize: 14,
+                                  fontSize: 16,
                                     fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
                             Text('Sem alertas no período ${_alertsPeriod.label}',
                                 style:
-                                    TextStyle(color: _kMuted, fontSize: 11)),
+                                TextStyle(color: _kMuted, fontSize: 13)),
                           ],
                         ))
                     : ListView.builder(
@@ -708,7 +708,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           period.label,
           style: TextStyle(
             color: isSelected ? Colors.black : _kMuted,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -775,7 +775,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Text('CENTRAL DE AMEAÇAS',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
+                        fontSize: 15,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5)),
                 ),
@@ -804,7 +804,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'FILTROS DE AMEAÇAS',
                         style: TextStyle(
                           color: _kYellow,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 2,
                         ),
@@ -827,7 +827,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Limpar',
                             style: TextStyle(
                               color: _kMuted,
-                              fontSize: 11,
+                              fontSize: 13,
                               decoration: TextDecoration.underline,
                               decorationColor: _kMuted,
                             ),
@@ -844,7 +844,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Filtrar por placa',
                       style: TextStyle(
                         color: _kMuted,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -957,7 +957,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 '${(_gruposLeaderRatio * 100).toStringAsFixed(0)}%',
                                 style: const TextStyle(
                                     color: _kYellow,
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w700),
                               ),
                             ],
@@ -986,7 +986,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             textStyle: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700,
                               letterSpacing: .4,
                             ),
@@ -1925,7 +1925,7 @@ class _PassagemRow extends StatelessWidget {
           child: Text(plate,
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 11,
+                fontSize: 13,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2)),
         ),
@@ -1935,19 +1935,19 @@ class _PassagemRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(camNome,
-                  style: const TextStyle(color: _kMuted, fontSize: 12),
+                  style: const TextStyle(color: _kMuted, fontSize: 14),
                   overflow: TextOverflow.ellipsis),
               const SizedBox(height: 2),
               Row(children: [
                 Text(ts,
-                    style: const TextStyle(color: _kMuted, fontSize: 12)),
+                    style: const TextStyle(color: _kMuted, fontSize: 14)),
                 if (dir != null && dir.isNotEmpty) ...
                   [
                     const SizedBox(width: 8),
                     Text(dir,
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600)),
                   ],
               ]),
@@ -1977,7 +1977,7 @@ class _Badge extends StatelessWidget {
       child: Text(label,
           style: TextStyle(
               color: color,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8)),
     );

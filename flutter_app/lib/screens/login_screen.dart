@@ -151,10 +151,10 @@ class _LoginScreenState extends State<LoginScreen> {
             'ACESSO RESTRITO',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
               color: _kYellow,
-              letterSpacing: 2.5,
+              letterSpacing: 2.0,
             ),
           ),
           const SizedBox(height: 22),
@@ -208,14 +208,14 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(width: 8),
               const Text('Lembrar-me',
-                  style: TextStyle(fontSize: 13, color: _kMuted)),
+                  style: TextStyle(fontSize: 15, color: _kMuted)),
               const Spacer(),
               GestureDetector(
                 onTap: () {},
                 child: const Text(
                   'Esqueci minha senha',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     color: _kYellow,
                     decoration: TextDecoration.underline,
                     decorationColor: _kYellow,
@@ -241,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(_error!,
-                        style: const TextStyle(color: _kRed, fontSize: 13)),
+                        style: const TextStyle(color: _kRed, fontSize: 15)),
                   ),
                 ],
               ),
@@ -252,7 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // Botão ENTRAR
           SizedBox(
-            height: 50,
+            height: 54,
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
               style: ElevatedButton.styleFrom(
@@ -279,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           'ENTRAR',
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
-                            fontSize: 15,
+                            fontSize: 17,
                             letterSpacing: 2.5,
                           ),
                         ),
@@ -313,10 +313,10 @@ class _LoginScreenState extends State<LoginScreen> {
       textInputAction: action,
       onSubmitted: onSubmitted,
       autocorrect: false,
-      style: const TextStyle(color: Colors.white, fontSize: 15),
+      style: const TextStyle(color: Colors.white, fontSize: 17),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: _kMuted, fontSize: 14),
+        labelStyle: const TextStyle(color: _kMuted, fontSize: 16),
         prefixIcon: Icon(icon, color: _kMuted, size: 20),
         suffixIcon: suffix,
         filled: true,
@@ -330,7 +330,7 @@ class _LoginScreenState extends State<LoginScreen> {
           borderSide: const BorderSide(color: _kYellow, width: 1.5),
         ),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       ),
     );
   }
@@ -351,13 +351,13 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(width: 6),
             const Text('Operador autorizado',
-                style: TextStyle(fontSize: 11, color: _kMuted)),
+                style: TextStyle(fontSize: 13, color: _kMuted)),
           ],
         ),
         const SizedBox(height: 6),
         const Text(
           'Versão 1.0  •  BPFRON © 2026',
-          style: TextStyle(fontSize: 10, color: AppColors.muted),
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
       ],
     );

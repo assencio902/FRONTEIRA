@@ -45,7 +45,7 @@ class PlateSearchField extends StatelessWidget {
       style: const TextStyle(
         color: AppColors.text,
         fontWeight: FontWeight.w800,
-        fontSize: 17,
+        fontSize: 19,
         letterSpacing: 2.5,
       ),
       decoration: InputDecoration(
@@ -53,7 +53,7 @@ class PlateSearchField extends StatelessWidget {
         counterText: '',
         hintStyle: TextStyle(
           color: AppColors.muted.withValues(alpha: 0.45),
-          fontSize: 17,
+          fontSize: 19,
           letterSpacing: 2.5,
           fontWeight: FontWeight.w500,
         ),
@@ -65,7 +65,7 @@ class PlateSearchField extends StatelessWidget {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppColors.background,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: AppColors.border),
           borderRadius: BorderRadius.circular(12),
