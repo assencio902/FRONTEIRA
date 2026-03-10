@@ -15,6 +15,9 @@ import '../models/alert.dart';
 import 'api.dart';
 
 const String _criticalChannelId = 'critical_alerts';
+// Novo canal para alarmes com som/vibração máxima. Usamos um channelId novo
+// para evitar problemas de cache caso o canal antigo exista sem som.
+const String _alarmChannelId = 'alarm_high_importance_v2';
 const String _normalChannelId = 'normal_alerts';
 const String _androidNotificationIcon = '@mipmap/ic_launcher';
 
@@ -23,6 +26,17 @@ const AndroidNotificationChannel _criticalNotificationChannel =
       _criticalChannelId,
       'Alertas Críticos',
       description: 'Notificações de detecção de veículos monitorados',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
+
+// Canal novo e garantido para alarmes (som e vibração máximos)
+const AndroidNotificationChannel _alarmNotificationChannel =
+    AndroidNotificationChannel(
+      _alarmChannelId,
+      'Alarmes Críticos',
+      description: 'Notificações de alarmes críticos com som e vibração',
       importance: Importance.max,
       playSound: true,
       enableVibration: true,
@@ -424,13 +438,28 @@ class NotificationService {
         'body=${message.notification?.body ?? ""} '
         'data=${message.data}',
       );
+      final data = message.data;
+      final fallbackTitle = (data['title'] ?? '').toString().trim();
+      final fallbackBody = (data['body'] ?? '').toString().trim();
+      final titleOverride =
+          message.notification?.title?.trim().isNotEmpty == true
+          ? message.notification!.title!.trim()
+          : (fallbackTitle.isNotEmpty ? fallbackTitle : 'Novo alarme');
+      final bodyOverride =
+          message.notification?.body?.trim().isNotEmpty == true
+          ? message.notification!.body!.trim()
+          : (fallbackBody.isNotEmpty ? fallbackBody : 'Alerta recebido');
+
+      developer.log(
+        '[NotificationService] ${phase}_display title=$titleOverride body=$bodyOverride event_id=${data['event_id'] ?? message.messageId}',
+      );
       final alert = buildAlertFromMessage(message);
       
       if (showLocalNotification) {
         await _showNotification(
           alert,
-          titleOverride: message.notification?.title,
-          bodyOverride: message.notification?.body,
+          titleOverride: titleOverride,
+          bodyOverride: bodyOverride,
         );
       }
 
@@ -839,6 +868,41 @@ class NotificationService {
       throw Exception('Falha no envio de alerta (${response.statusCode}): ${response.body}');
     }
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  /// Dispara teste de push para o próprio usuário/dispositivo autenticado.
+  Future<Map<String, dynamic>> triggerSelfTestPush({
+    String? deviceId,
+    String title = 'Teste Push BPFRON',
+    String body = 'Mensagem de teste enviada pelo backend',
+  }) async {
+    final sessionValid = await Api.isSessionValid();
+    if (!sessionValid) {
+      developer.log('[NotificationService] Sessão inválida para test-self');
+      throw SessionExpiredException('Sessão expirada. Faça login novamente.');
+    }
+
+    final payload = <String, dynamic>{
+      'title': title,
+      'body': body,
+      'event_id': 'self-${DateTime.now().millisecondsSinceEpoch}',
+    };
+    if (deviceId != null && deviceId.trim().isNotEmpty) {
+      payload['device_id'] = deviceId.trim();
+    }
+
+    developer.log('[NotificationService] test-self payload=$payload');
+    final response = await Api.post('/api/fcm/test-self', payload);
+    if (response.statusCode == 401) {
+      throw SessionExpiredException('Sessão expirada. Faça login novamente.');
+    }
+    if (response.statusCode >= 400) {
+      throw Exception('Falha no test-self (${response.statusCode}): ${response.body}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    developer.log('[NotificationService] test-self resultado=$data');
+    return data;
   }
 }
 

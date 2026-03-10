@@ -33,9 +33,12 @@ class ApiClient {
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
-  Uri _uri(String path, [Map<String, String>? query]) =>
-      Uri.parse('${AppConfig.baseUrl}$path')
-          .replace(queryParameters: query ?? const {});
+  Uri _uri(String path, [Map<String, String>? query]) {
+    final base = Uri.parse('${AppConfig.baseUrl}$path');
+    return (query != null && query.isNotEmpty)
+        ? base.replace(queryParameters: query)
+        : base;
+  }
 
   void _checkResponse(http.Response res) {
     if (res.statusCode == 401) {

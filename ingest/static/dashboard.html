@@ -7256,6 +7256,41 @@ async function testAlarme(id) {
   }
 }
 
+async function testAlarme(id) {
+  if (!confirm('Enviar notificação push de TESTE para este alarme?')) return;
+  try {
+    console.log('[Alarmes] Testando alarme id=' + id);
+    var r = await fetch('/api/alarmes/' + id + '/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}'
+    });
+
+    if (!r.ok) {
+      var ed = await r.json().catch(function() { return {}; });
+      console.error('[Alarmes] Erro no teste:', ed);
+      // Mostrar mensagem amigável de erro ao usuário
+      alert(ed.error || ed.detail || 'Falha ao testar alarme.');
+      return;
+    }
+
+    var data = await r.json();
+    console.log('[Alarmes] Resultado do teste:', data);
+    console.log('Resposta teste alarme:', data);
+
+    if (data && data.ok === true) {
+      var name = data.alarm_name || data.alarm_id || id;
+      var tokens = data.tokens_encontrados || 0;
+      alert(`Teste enviado com sucesso.\nAlarme: ${name}\nDispositivos encontrados: ${tokens}`);
+    } else {
+      alert(data.error || data.detail || 'Falha ao testar alarme.');
+    }
+  } catch (e) {
+    console.error('[Alarmes] Erro ao testar alarme:', e);
+    alert('Erro de comunicação ao testar alarme.');
+  }
+}
+
 // --- Histórico ---
 var _histCache = [];
 async function _loadHistorico() {

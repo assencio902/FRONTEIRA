@@ -1,11 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
-import '../services/api_client.dart';
-import '../services/auth_service.dart';
+import '../config.dart';
+import '../services/auth_storage.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
@@ -62,27 +64,73 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() { _loading = true; _error = null; });
 
+    final loginUrl = Uri.parse('${AppConfig.baseUrl}/api/auth/login');
+
+    debugPrint('[LOGIN] ▶ clicou em Entrar  user=$user');
+    debugPrint('[LOGIN] URL: $loginUrl');
+    debugPrint('[LOGIN] body: {"username":"$user","password":"***"}');
+
     try {
-      await AuthService.instance.login(user, pass);
-      await NotificationService().syncTokenWithBackend();
+      final res = await http.post(
+        loginUrl,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'username': user, 'password': pass}),
+      ).timeout(const Duration(seconds: 15));
+
+      debugPrint('[LOGIN] status: ${res.statusCode}');
+      debugPrint('[LOGIN] body: ${res.body.length > 300 ? res.body.substring(0, 300) : res.body}');
+
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        if (!mounted) return;
+        setState(() => _error = 'Usuário ou senha inválidos.');
+        return;
+      }
+
+      if (res.statusCode != 200) {
+        String detail;
+        try {
+          final body = jsonDecode(res.body) as Map<String, dynamic>;
+          detail = (body['detail'] ?? body['message'] ?? '').toString();
+        } catch (_) {
+          detail = res.body.isNotEmpty ? res.body : res.statusCode.toString();
+        }
+        debugPrint('[LOGIN] ERRO: status=${res.statusCode} detail=$detail');
+        if (!mounted) return;
+        setState(() => _error = 'Falha no login (${res.statusCode}): $detail');
+        return;
+      }
+
+      // 200 OK — salvar token e navegar
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final token = (data['access_token'] ?? '').toString();
+      if (token.isEmpty) {
+        debugPrint('[LOGIN] ERRO: 200 OK mas access_token vazio → body=${res.body}');
+        if (!mounted) return;
+        setState(() => _error = 'Resposta inválida do servidor (token ausente).');
+        return;
+      }
+
+      await AuthStorage.saveToken(token);
+      debugPrint('[LOGIN] token salvo, sincronizando FCM...');
+      await NotificationService().syncTokenWithBackend(reason: 'login');
+
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.statusCode == 401 || e.statusCode == 403) {
-        setState(() => _error = 'Usuário ou senha inválidos.');
-      } else {
-        setState(() => _error = 'Falha no login (${e.statusCode}). Tente novamente.');
-      }
     } on TimeoutException {
+      debugPrint('[LOGIN] ERRO: TimeoutException — URL $loginUrl não respondeu em 15 s');
       if (!mounted) return;
       setState(() => _error = 'A API demorou para responder. Verifique sua conexão.');
-    } on SocketException {
+    } on SocketException catch (e) {
+      debugPrint('[LOGIN] ERRO: SocketException → $e');
       if (!mounted) return;
       setState(() => _error = 'Não foi possível conectar à API. Verifique internet/servidor.');
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[LOGIN] ERRO inesperado → $e\n$st');
       if (!mounted) return;
       setState(() => _error = 'Não foi possível realizar o login agora.');
     } finally {

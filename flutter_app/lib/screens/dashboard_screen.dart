@@ -159,6 +159,51 @@ class _PushDiagnosticsDialogState extends State<_PushDiagnosticsDialog> {
     }
   }
 
+  Future<void> _runSelfPushTest() async {
+    setState(() => _busy = true);
+    try {
+      final result = await NotificationService().triggerSelfTestPush();
+      final sent = int.tryParse('${result['sent'] ?? 0}') ?? 0;
+      final failed = int.tryParse('${result['failed'] ?? 0}') ?? 0;
+      final invalid = int.tryParse('${result['invalid_tokens'] ?? 0}') ?? 0;
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Self push: $sent sucesso, $failed falhas, $invalid inválidos'),
+          backgroundColor: sent > 0 ? _kGreen : _kRed,
+        ),
+      );
+
+      setState(() {
+        _diagnosticsFuture = NotificationService().collectDiagnostics(
+          reason: 'diagnostic_dialog_self_test',
+          logResult: true,
+        );
+      });
+    } on SessionExpiredException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sessão expirada. Faça login novamente.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Falha no self push: $e'),
+          backgroundColor: _kRed,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -293,6 +338,10 @@ class _PushDiagnosticsDialogState extends State<_PushDiagnosticsDialog> {
         OutlinedButton(
           onPressed: _busy ? null : () => _refresh(),
           child: const Text('Atualizar'),
+        ),
+        OutlinedButton(
+          onPressed: _busy ? null : _runSelfPushTest,
+          child: const Text('Teste push'),
         ),
         ElevatedButton(
           onPressed: _busy ? null : () => _refresh(syncBackend: true),
@@ -1939,14 +1988,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 GestureDetector(
                   onTap: () async {
                     try {
-                      final alarmesData = await Api.getAlarmes();
-                      final items = List<Map<String, dynamic>>.from((alarmesData['items'] ?? []) as List);
-                      final active = items.where((a) => a['ativo'] == true).toList();
-                      if (active.isEmpty) {
-                        throw Exception('Nenhum alarme ativo para teste de push.');
-                      }
-                      final alarmeId = (active.first['id'] as num).toInt();
-                      final result = await NotificationService().triggerBackendTestAlert(alarmeId: alarmeId);
+                      final result = await NotificationService().triggerSelfTestPush();
                       if (!mounted) return;
                       final sent = result['sent'] ?? 0;
                       final failed = result['failed'] ?? 0;

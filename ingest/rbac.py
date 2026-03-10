@@ -209,6 +209,7 @@ ROUTE_ACCESS_MAP = {
     # FCM - Próprio token + admin pode gerenciar
     "POST /api/fcm/register-token": ["admin", "operador", "visualizacao"],
     "GET /api/fcm/my-token-status": ["admin", "operador", "visualizacao"],
+    "POST /api/fcm/test-self": ["admin", "operador", "visualizacao"],
     "GET /api/fcm/status": ["admin"],
     "POST /api/fcm/send-alert": ["admin"],
 }
