@@ -1,27 +1,88 @@
-import 'dart:developer' as developer;
+import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+
 import '../models/alert.dart';
 import 'api.dart';
 
+const String _criticalChannelId = 'critical_alerts';
+const String _normalChannelId = 'normal_alerts';
+const String _androidNotificationIcon = '@mipmap/ic_launcher';
+
+const AndroidNotificationChannel _criticalNotificationChannel =
+    AndroidNotificationChannel(
+      _criticalChannelId,
+      'Alertas Críticos',
+      description: 'Notificações de detecção de veículos monitorados',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
+
+const AndroidNotificationChannel _normalNotificationChannel =
+    AndroidNotificationChannel(
+      _normalChannelId,
+      'Alertas Comuns',
+      description: 'Notificações gerais do aplicativo',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Background isolate: keep lightweight and avoid UI navigation here.
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp();
   }
-  developer.log('[NotificationService] onBackgroundMessage recebido: ${message.messageId} data=${message.data}');
+  developer.log(
+    '[NotificationService] background_message id=${message.messageId} '
+    'kind=${NotificationService.describeMessageKind(message)} '
+    'title=${message.notification?.title ?? ""} '
+    'body=${message.notification?.body ?? ""} '
+    'data=${message.data}',
+  );
+
+  if (message.notification == null && message.data.isNotEmpty) {
+    await NotificationService.showBackgroundDataNotification(message);
+  }
+}
+
+class PushDiagnostics {
+  final String packageName;
+  final String? fcmToken;
+  final String notificationPermissionStatus;
+  final bool firebaseInitialized;
+  final bool autoInitEnabled;
+  final String deviceId;
+  final bool? lastBackendSyncOk;
+
+  const PushDiagnostics({
+    required this.packageName,
+    required this.fcmToken,
+    required this.notificationPermissionStatus,
+    required this.firebaseInitialized,
+    required this.autoInitEnabled,
+    required this.deviceId,
+    required this.lastBackendSyncOk,
+  });
 }
 
 /// Serviço de notificações push e alertas críticos
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+  static final FlutterLocalNotificationsPlugin _backgroundLocalNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  static bool _backgroundNotificationsReady = false;
 
   factory NotificationService() {
     return _instance;
@@ -34,75 +95,86 @@ class NotificationService {
   AlertModel? _pendingOpenedAlert;
   bool _initialized = false;
   bool _initializing = false;
+  bool _messageHandlersConfigured = false;
+  bool _localNotificationsInitialized = false;
+  bool _firebaseReady = false;
+  bool? _lastBackendSyncOk;
+  NotificationSettings? _lastNotificationSettings;
+  StreamSubscription<String>? _tokenRefreshSubscription;
   
   // Callback para processar alerta quando app está aberto
   void Function(AlertModel)? onAlertReceived;
   // Callback para abrir tela detalhada ao tocar na notificação
   void Function(AlertModel)? onAlertOpened;
 
-  Future<void> initialize() async {
+  Future<void> initialize({String reason = 'initialize'}) async {
     if (_initialized) {
-      developer.log('[NotificationService] Inicialização já concluída');
+      developer.log('[NotificationService] Inicialização já concluída (reason=$reason)');
       return;
     }
     if (_initializing) {
-      developer.log('[NotificationService] Inicialização já em andamento');
+      developer.log('[NotificationService] Inicialização já em andamento (reason=$reason)');
       return;
     }
 
     _initializing = true;
     try {
-      // Inicializar Firebase
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-        developer.log('[NotificationService] Firebase.initializeApp OK');
-      } else {
-        developer.log('[NotificationService] Firebase já inicializado (${Firebase.apps.length} app[s])');
-      }
+      await _ensureFirebaseReady(reason: reason);
       _firebaseMessaging = FirebaseMessaging.instance;
+      await _firebaseMessaging.setAutoInitEnabled(true);
+      developer.log('[NotificationService] FirebaseMessaging auto-init habilitado');
 
-      // Handler para mensagens quando app está em background/terminated (data-only).
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-      
-      // Inicializar notificações locais
-      await _initializeLocalNotifications();
 
-      // Reagir a refresh de token do Firebase
-      _firebaseMessaging.onTokenRefresh.listen((newToken) async {
-        developer.log('[NotificationService] FCM Token atualizado (${newToken.length} chars)');
-        await _registerTokenInBackend(newToken);
-      });
-      
-      // Registrar FCM
-      final settings = await _firebaseMessaging.requestPermission();
-      developer.log('[NotificationService] Permissões: ${settings.authorizationStatus}');
-      
-      // Obter token e registrar no backend
-      final token = await _firebaseMessaging.getToken();
-      developer.log('[NotificationService] FCM getToken inicial: ${token == null ? "null" : "${token.length} chars"}');
-      
-      if (token != null) {
-        await _registerTokenInBackend(token);
-      }
-      
-      // Listeners para diferentes estados do app
+      await _initializeLocalNotifications();
+      await requestNotificationPermission(reason: 'initialize:$reason');
+      await _logCurrentToken(reason: 'initialize:$reason');
+
+      _tokenRefreshSubscription ??=
+          _firebaseMessaging.onTokenRefresh.listen((newToken) async {
+            developer.log('[NotificationService] fcm_token_refresh token=$newToken');
+            await _registerTokenInBackend(newToken, reason: 'onTokenRefresh');
+          });
+
       _setupMessageHandlers();
       _initialized = true;
-      
-      developer.log('[NotificationService] Inicializado com sucesso');
+
+      await syncTokenWithBackend(reason: 'initialize:$reason');
+      developer.log('[NotificationService] Inicializado com sucesso (reason=$reason)');
     } catch (e) {
-      developer.log('[NotificationService] Erro na inicialização: $e', 
-        name: 'NotificationService');
+      developer.log(
+        '[NotificationService] Erro na inicialização (reason=$reason): $e',
+        name: 'NotificationService',
+      );
     } finally {
       _initializing = false;
     }
+  }
+
+  Future<void> handleAppOpened({String reason = 'app_open'}) async {
+    developer.log('[NotificationService] handleAppOpened reason=$reason');
+    await initialize(reason: reason);
+    await syncTokenWithBackend(reason: reason);
+    await collectDiagnostics(reason: reason, logResult: true);
+  }
+
+  Future<void> _ensureFirebaseReady({required String reason}) async {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+      developer.log('[NotificationService] Firebase.initializeApp OK (reason=$reason)');
+    } else {
+      developer.log(
+        '[NotificationService] Firebase já inicializado (${Firebase.apps.length} app[s]) (reason=$reason)',
+      );
+    }
+    _firebaseReady = Firebase.apps.isNotEmpty;
   }
 
   Future<bool> _ensureInitializedForTokenOps() async {
     if (_initialized) {
       return true;
     }
-    await initialize();
+    await initialize(reason: 'token_op');
     if (!_initialized) {
       developer.log('[NotificationService] Não foi possível inicializar Firebase/FCM para operação de token');
       return false;
@@ -112,12 +184,14 @@ class NotificationService {
 
   /// Configurar canal de notificação com alta prioridade para Android
   Future<void> _initializeLocalNotifications() async {
+    if (_localNotificationsInitialized) {
+      return;
+    }
+
     _localNotifications = FlutterLocalNotificationsPlugin();
     
-    // Configuração Android
-    const androidInitializationSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    // Configuração iOS
+    const androidInitializationSettings = AndroidInitializationSettings(_androidNotificationIcon);
+
     const DarwinInitializationSettings iosInitializationSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -134,58 +208,99 @@ class NotificationService {
       onDidReceiveNotificationResponse: _handleNotificationTap,
       onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
     );
-    
-    // Criar canal de notificação para alertas críticos
-    const AndroidNotificationChannel criticalChannel = AndroidNotificationChannel(
-      'critical_alerts',
-      'Alertas Críticos',
-      description: 'Notificações de detecção de veículos monitorados',
-      importance: Importance.max,
-      enableVibration: true,
-      playSound: true,
-    );
-    
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(criticalChannel);
-    
-    // Canal para alertas comuns
-    const AndroidNotificationChannel normalChannel = AndroidNotificationChannel(
-      'normal_alerts',
-      'Alertas Comuns',
-      description: 'Notificações gerais',
-      importance: Importance.defaultImportance,
-      enableVibration: true,
-      playSound: true,
-    );
-    
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(normalChannel);
-
+    await _createAndroidChannels(_localNotifications);
+    _localNotificationsInitialized = true;
+    developer.log('[NotificationService] Canais Android inicializados');
   }
 
   /// Configurar handlers para mensagens em diferentes estados
   void _setupMessageHandlers() {
-    // App fechado → abre ao tocar na notificação
+    if (_messageHandlersConfigured) {
+      return;
+    }
+
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        developer.log('[NotificationService] getInitialMessage: ${message.data}');
+        developer.log(
+          '[NotificationService] notification_open source=getInitialMessage '
+          'id=${message.messageId} kind=${describeMessageKind(message)} data=${message.data}',
+        );
         handleNotificationNavigation(message, source: 'getInitialMessage');
       }
     });
-    
-    // App em segundo plano → notificação recebida
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      developer.log('[NotificationService] Mensagem recebida (app aberto): ${message.data}');
-      _handleRemoteMessage(message, openedFromNotification: false, showLocalNotification: true);
+      _handleRemoteMessage(
+        message,
+        phase: 'foreground',
+        openedFromNotification: false,
+        showLocalNotification: true,
+      );
     });
-    
-    // App em segundo plano → ao tocar na notificação
+
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      developer.log('[NotificationService] onMessageOpenedApp: ${message.data}');
+      developer.log(
+        '[NotificationService] notification_open source=onMessageOpenedApp '
+        'id=${message.messageId} kind=${describeMessageKind(message)} data=${message.data}',
+      );
       handleNotificationNavigation(message, source: 'onMessageOpenedApp');
     });
+
+    _messageHandlersConfigured = true;
+  }
+
+  static String describeMessageKind(RemoteMessage message) {
+    final hasNotification = message.notification != null;
+    final hasData = message.data.isNotEmpty;
+    if (hasNotification && hasData) {
+      return 'notification+data';
+    }
+    if (hasNotification) {
+      return 'notification_only';
+    }
+    if (hasData) {
+      return 'data_only';
+    }
+    return 'empty';
+  }
+
+  static Future<void> _createAndroidChannels(
+    FlutterLocalNotificationsPlugin plugin,
+  ) async {
+    final androidPlugin =
+        plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(_criticalNotificationChannel);
+    await androidPlugin?.createNotificationChannel(_normalNotificationChannel);
+  }
+
+  static Future<void> _ensureBackgroundNotificationsReady() async {
+    if (_backgroundNotificationsReady) {
+      return;
+    }
+
+    const initializationSettings = InitializationSettings(
+      android: AndroidInitializationSettings(_androidNotificationIcon),
+      iOS: DarwinInitializationSettings(),
+    );
+
+    await _backgroundLocalNotifications.initialize(
+      initializationSettings,
+      onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
+    );
+    await _createAndroidChannels(_backgroundLocalNotifications);
+    _backgroundNotificationsReady = true;
+  }
+
+  static Future<void> showBackgroundDataNotification(RemoteMessage message) async {
+    await _ensureBackgroundNotificationsReady();
+    final alert = buildAlertFromMessage(message);
+    await _showNotificationWithPlugin(
+      _backgroundLocalNotifications,
+      alert,
+      logPrefix: '[NotificationService] background_local_notification',
+      titleOverride: message.notification?.title,
+      bodyOverride: message.notification?.body,
+    );
   }
 
   AlertModel _alertFromPayload(Map<String, dynamic> data) {
@@ -196,6 +311,65 @@ class NotificationService {
       'detected_at': detectedAt,
     };
     return AlertModel.fromJson(normalizedData);
+  }
+
+  static AlertModel buildAlertFromMessage(RemoteMessage message) {
+    final data = Map<String, dynamic>.from(message.data);
+    final title = message.notification?.title?.trim() ?? '';
+    final body = message.notification?.body?.trim() ?? '';
+    final inferredTargetName = _extractTargetName(body, fallbackTitle: title);
+    final inferredPlate = _extractPlate(body);
+    final explicitType = (data['alert_type'] ?? data['type'] ?? '').toString();
+    final isCritical = explicitType.isNotEmpty
+        ? explicitType == 'critical_alert'
+        : title.toUpperCase().contains('ALERTA');
+
+    final normalizedData = <String, dynamic>{
+      ...data,
+      'plate': (data['plate'] ?? inferredPlate).toString(),
+      'target_name': (data['target_name'] ?? inferredTargetName).toString(),
+      'camera_name': (data['camera_name'] ?? data['camera'] ?? '').toString(),
+      'detected_at': (
+        data['detected_at'] ?? data['occurred_at'] ?? data['timestamp'] ?? DateTime.now().toIso8601String()
+      ).toString(),
+      'image_url': (data['image_url'] ?? data['image'] ?? '').toString(),
+      'event_id': (data['event_id'] ?? message.messageId ?? 'fcm-${DateTime.now().millisecondsSinceEpoch}').toString(),
+      'city': (data['city'] ?? 'N/A').toString(),
+      'risk_level': (data['risk_level'] ?? (isCritical ? 'high' : 'normal')).toString(),
+      'alert_type': explicitType.isNotEmpty
+          ? explicitType
+          : (isCritical ? 'critical_alert' : 'normal_alert'),
+      'type': explicitType.isNotEmpty
+          ? explicitType
+          : (isCritical ? 'critical_alert' : 'normal_alert'),
+      'screen': (data['screen'] ?? 'alert_detail').toString(),
+      'route': (data['route'] ?? '/alert-detail').toString(),
+      'occurred_at': (
+        data['occurred_at'] ?? data['detected_at'] ?? data['timestamp'] ?? DateTime.now().toIso8601String()
+      ).toString(),
+    };
+
+    return AlertModel.fromJson(normalizedData);
+  }
+
+  static String _extractTargetName(String body, {required String fallbackTitle}) {
+    if (body.isEmpty) {
+      return fallbackTitle;
+    }
+    const marker = ' - Placa ';
+    final idx = body.indexOf(marker);
+    if (idx > 0) {
+      return body.substring(0, idx).trim();
+    }
+    return body;
+  }
+
+  static String _extractPlate(String body) {
+    if (body.isEmpty) {
+      return '';
+    }
+    final match = RegExp(r'placa\s+([a-z0-9-]{4,})', caseSensitive: false).firstMatch(body);
+    return match?.group(1)?.toUpperCase() ?? '';
   }
 
   void _openOrQueueAlert(AlertModel alert, {required String source}) {
@@ -210,7 +384,9 @@ class NotificationService {
 
   void handleNotificationNavigation(RemoteMessage message, {required String source}) {
     try {
-      final alert = _alertFromPayload(message.data);
+      final alert = message.data.isNotEmpty
+          ? _alertFromPayload(message.data)
+          : buildAlertFromMessage(message);
       developer.log(
         '[NotificationService] handleNotificationNavigation source=$source route=alert_detail event_id=${alert.eventId} plate=${alert.plate} image_url=${alert.imageUrl}',
       );
@@ -236,16 +412,26 @@ class NotificationService {
   /// Processar mensagem remota
   Future<void> _handleRemoteMessage(
     RemoteMessage message, {
+    required String phase,
     required bool openedFromNotification,
     required bool showLocalNotification,
   }) async {
     try {
-      final data = message.data;
-      developer.log('[NotificationService] Processando alerta: $data');
-      final alert = _alertFromPayload(data);
+      developer.log(
+        '[NotificationService] ${phase}_message id=${message.messageId} '
+        'kind=${describeMessageKind(message)} '
+        'title=${message.notification?.title ?? ""} '
+        'body=${message.notification?.body ?? ""} '
+        'data=${message.data}',
+      );
+      final alert = buildAlertFromMessage(message);
       
       if (showLocalNotification) {
-        await _showNotification(alert);
+        await _showNotification(
+          alert,
+          titleOverride: message.notification?.title,
+          bodyOverride: message.notification?.body,
+        );
       }
 
       if (openedFromNotification) {
@@ -266,20 +452,46 @@ class NotificationService {
   }
 
   /// Exibir notificação local
-  Future<void> _showNotification(AlertModel alert) async {
+  Future<void> _showNotification(
+    AlertModel alert, {
+    String? titleOverride,
+    String? bodyOverride,
+  }) async {
+    await _showNotificationWithPlugin(
+      _localNotifications,
+      alert,
+      titleOverride: titleOverride,
+      bodyOverride: bodyOverride,
+      logPrefix: '[NotificationService] local_notification',
+    );
+  }
+
+  static Future<void> _showNotificationWithPlugin(
+    FlutterLocalNotificationsPlugin plugin,
+    AlertModel alert, {
+    String? titleOverride,
+    String? bodyOverride,
+    required String logPrefix,
+  }) async {
     try {
-      final channelId = alert.isCritical ? 'critical_alerts' : 'normal_alerts';
-      final importance = alert.isCritical ? Importance.max : Importance.defaultImportance;
+      final channelId = alert.isCritical ? _criticalChannelId : _normalChannelId;
+      final importance = alert.isCritical ? Importance.max : Importance.high;
+      final title = titleOverride?.trim().isNotEmpty == true
+          ? titleOverride!.trim()
+          : (alert.isCritical ? 'ALERTA CRITICO' : 'Deteccao');
+      final body = bodyOverride?.trim().isNotEmpty == true
+          ? bodyOverride!.trim()
+          : '${alert.targetName} - Placa ${alert.plate}';
 
       BigPictureStyleInformation? bigPictureStyle;
       if (alert.imageUrl.isNotEmpty) {
-        final imagePath = await _downloadImageToTempFile(alert.imageUrl);
+        final imagePath = await _downloadImageToTempFileStatic(alert.imageUrl);
         if (imagePath != null) {
-          developer.log('[NotificationService] BigPicture pronto para event_id=${alert.eventId} image_path=$imagePath');
+          developer.log('$logPrefix big_picture_ready event_id=${alert.eventId} image_path=$imagePath');
           bigPictureStyle = BigPictureStyleInformation(
             FilePathAndroidBitmap(imagePath),
-            contentTitle: alert.isCritical ? 'ALERTA CRITICO' : 'Deteccao',
-            summaryText: '${alert.targetName} - Placa ${alert.plate}',
+            contentTitle: title,
+            summaryText: body,
           );
         }
       }
@@ -288,10 +500,15 @@ class NotificationService {
         channelId,
         alert.isCritical ? 'Alertas Críticos' : 'Alertas Comuns',
         importance: importance,
-        priority: alert.isCritical ? Priority.max : Priority.defaultPriority,
+        priority: alert.isCritical ? Priority.max : Priority.high,
         enableVibration: true,
         playSound: true,
         styleInformation: bigPictureStyle,
+        icon: _androidNotificationIcon,
+        category: alert.isCritical
+            ? AndroidNotificationCategory.alarm
+            : AndroidNotificationCategory.message,
+        visibility: NotificationVisibility.public,
       );
       
       const iosDetails = DarwinNotificationDetails(
@@ -308,21 +525,21 @@ class NotificationService {
 
       final payload = jsonEncode(alert.toJson());
       
-      await _localNotifications.show(
+      await plugin.show(
         alert.eventId.hashCode,
-        alert.isCritical ? 'ALERTA CRITICO' : 'Deteccao',
-        '${alert.targetName} - Placa ${alert.plate}',
+        title,
+        body,
         notificationDetails,
         payload: payload,
       );
       
-      developer.log('[NotificationService] Notificação exibida: ${alert.plate}');
+      developer.log('$logPrefix shown event_id=${alert.eventId} plate=${alert.plate} channel=$channelId');
     } catch (e) {
-      developer.log('[NotificationService] Erro ao exibir notificação: $e', name: 'NotificationService');
+      developer.log('$logPrefix error=$e', name: 'NotificationService');
     }
   }
 
-  Future<String?> _downloadImageToTempFile(String imageUrl) async {
+  static Future<String?> _downloadImageToTempFileStatic(String imageUrl) async {
     try {
       developer.log('[NotificationService] Tentando baixar imagem da notificação: $imageUrl');
       final uri = Uri.tryParse(imageUrl);
@@ -349,7 +566,7 @@ class NotificationService {
 
   /// Callback quando usuário toca na notificação (foreground)
   void _handleNotificationTap(NotificationResponse response) {
-    developer.log('[NotificationService] Notificação tocada: ${response.payload}');
+    developer.log('[NotificationService] notification_open source=local_notification_tap payload=${response.payload}');
     final payload = response.payload;
     if (payload == null || payload.isEmpty) return;
     _handleNotificationNavigationFromPayloadString(payload, source: 'local_notification_tap');
@@ -358,34 +575,83 @@ class NotificationService {
   /// Callback quando usuário toca na notificação (background)
   @pragma('vm:entry-point')
   static void _handleBackgroundNotificationTap(NotificationResponse response) {
-    developer.log('[NotificationService] Background notification tapped: ${response.payload}');
+    developer.log('[NotificationService] notification_open source=background_local_notification_tap payload=${response.payload}');
+  }
+
+  Future<NotificationSettings> requestNotificationPermission({String reason = 'manual'}) async {
+    final ready = await _ensureInitializedForPermissionOps();
+    if (!ready) {
+      return _lastNotificationSettings ??
+          const NotificationSettings(
+            authorizationStatus: AuthorizationStatus.notDetermined,
+            alert: AppleNotificationSetting.notSupported,
+            announcement: AppleNotificationSetting.notSupported,
+            badge: AppleNotificationSetting.notSupported,
+            carPlay: AppleNotificationSetting.notSupported,
+            lockScreen: AppleNotificationSetting.notSupported,
+            notificationCenter: AppleNotificationSetting.notSupported,
+            showPreviews: AppleShowPreviewSetting.never,
+            sound: AppleNotificationSetting.notSupported,
+            timeSensitive: AppleNotificationSetting.notSupported,
+            criticalAlert: AppleNotificationSetting.notSupported,
+          );
+    }
+
+    final settings = await _firebaseMessaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+    _lastNotificationSettings = settings;
+    developer.log(
+      '[NotificationService] notification_permission reason=$reason '
+      'status=${_authorizationStatusLabel(settings.authorizationStatus)}',
+    );
+    return settings;
+  }
+
+  Future<bool> _ensureInitializedForPermissionOps() async {
+    if (_initialized) {
+      return true;
+    }
+    await initialize(reason: 'permission_op');
+    return _initialized;
+  }
+
+  String _authorizationStatusLabel(AuthorizationStatus status) {
+    switch (status) {
+      case AuthorizationStatus.authorized:
+        return 'authorized';
+      case AuthorizationStatus.denied:
+        return 'denied';
+      case AuthorizationStatus.notDetermined:
+        return 'notDetermined';
+      case AuthorizationStatus.provisional:
+        return 'provisional';
+    }
   }
 
   /// Registrar token FCM no backend
-  Future<bool> _registerTokenInBackend(String token) async {
+  Future<bool> _registerTokenInBackend(String token, {required String reason}) async {
     try {
-      // Só tenta registrar se tiver sessão válida
       final sessionValid = await Api.isSessionValid();
       if (!sessionValid) {
-        developer.log('[NotificationService] Token JWT expirado, adiando registro FCM');
+        _lastBackendSyncOk = false;
+        developer.log('[NotificationService] JWT ausente/expirado; adiando registro FCM (reason=$reason)');
         return false;
       }
 
       if (token.isEmpty) {
+        _lastBackendSyncOk = false;
         developer.log('[NotificationService] Token FCM vazio, ignorando registro');
         return false;
       }
 
-      // Gerar ID único do dispositivo
-      final prefs = await SharedPreferences.getInstance();
-      String? deviceId = prefs.getString('device_id');
-      
-      if (deviceId == null) {
-        deviceId = const Uuid().v4();
-        await prefs.setString('device_id', deviceId);
-      }
-      
-      // Registrar token
+      final deviceId = await _getOrCreateDeviceId();
       final response = await Api.post(
         '/api/fcm/register-token',
         {
@@ -395,39 +661,49 @@ class NotificationService {
       );
       
       if (response.statusCode == 200) {
-        developer.log('[NotificationService] Token FCM registrado no backend (device_id=$deviceId)');
+        _lastBackendSyncOk = true;
+        developer.log(
+          '[NotificationService] backend_token_sync ok=true reason=$reason device_id=$deviceId token=$token',
+        );
         await _logTokenStatusFromBackend();
         return true;
       } else if (response.statusCode == 401) {
+        _lastBackendSyncOk = false;
         developer.log('[NotificationService] 401 ao registrar token FCM - sessão expirada');
         return false;
       } else {
+        _lastBackendSyncOk = false;
         developer.log('[NotificationService] Erro ao registrar token: ${response.statusCode} ${response.body}');
         return false;
       }
     } catch (e) {
+      _lastBackendSyncOk = false;
       developer.log('[NotificationService] Erro ao registrar token no backend: $e');
       return false;
     }
   }
 
   /// Força sincronização do token atual com o backend (usar após login/restauração de sessão).
-  Future<void> syncTokenWithBackend() async {
+  Future<bool> syncTokenWithBackend({String reason = 'manual'}) async {
     try {
       final ready = await _ensureInitializedForTokenOps();
       if (!ready) {
-        return;
+        return false;
       }
 
-      final token = await _firebaseMessaging.getToken();
+      final token = await _logCurrentToken(reason: 'sync:$reason');
       if (token == null || token.isEmpty) {
         developer.log('[NotificationService] Sem token FCM disponível para sincronizar (getToken retornou null/vazio)');
-        return;
+        _lastBackendSyncOk = false;
+        return false;
       }
-      final ok = await _registerTokenInBackend(token);
-      developer.log('[NotificationService] syncTokenWithBackend finalizado (ok=$ok)');
+      final ok = await _registerTokenInBackend(token, reason: reason);
+      developer.log('[NotificationService] syncTokenWithBackend finalizado (ok=$ok reason=$reason)');
+      return ok;
     } catch (e) {
       developer.log('[NotificationService] Erro ao sincronizar token FCM: $e');
+      _lastBackendSyncOk = false;
+      return false;
     }
   }
 
@@ -437,7 +713,65 @@ class NotificationService {
     if (!ready) {
       return null;
     }
-    return await _firebaseMessaging.getToken();
+    return _logCurrentToken(reason: 'get_fcm_token');
+  }
+
+  Future<String?> _logCurrentToken({required String reason}) async {
+    final token = await _firebaseMessaging.getToken();
+    developer.log('[NotificationService] current_fcm_token reason=$reason token=${token ?? "null"}');
+    return token;
+  }
+
+  Future<String> _getOrCreateDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var deviceId = prefs.getString('device_id');
+    if (deviceId == null || deviceId.isEmpty) {
+      deviceId = const Uuid().v4();
+      await prefs.setString('device_id', deviceId);
+    }
+    return deviceId;
+  }
+
+  Future<PushDiagnostics> collectDiagnostics({
+    String reason = 'manual',
+    bool logResult = false,
+  }) async {
+    await initialize(reason: 'diagnostics:$reason');
+    final packageInfo = await PackageInfo.fromPlatform();
+    final notificationSettings = await _firebaseMessaging.getNotificationSettings();
+    final autoInitEnabled = _firebaseMessaging.isAutoInitEnabled;
+    final token = await _firebaseMessaging.getToken();
+    final deviceId = await _getOrCreateDeviceId();
+
+    _lastNotificationSettings = notificationSettings;
+    _firebaseReady = Firebase.apps.isNotEmpty;
+
+    final diagnostics = PushDiagnostics(
+      packageName: packageInfo.packageName,
+      fcmToken: token,
+      notificationPermissionStatus: _authorizationStatusLabel(
+        notificationSettings.authorizationStatus,
+      ),
+      firebaseInitialized: _firebaseReady,
+      autoInitEnabled: autoInitEnabled,
+      deviceId: deviceId,
+      lastBackendSyncOk: _lastBackendSyncOk,
+    );
+
+    if (logResult) {
+      developer.log(
+        '[NotificationService] diagnostics reason=$reason '
+        'package=${diagnostics.packageName} '
+        'firebase_initialized=${diagnostics.firebaseInitialized} '
+        'permission=${diagnostics.notificationPermissionStatus} '
+        'auto_init=${diagnostics.autoInitEnabled} '
+        'device_id=${diagnostics.deviceId} '
+        'token=${diagnostics.fcmToken ?? "null"} '
+        'backend_sync_ok=${diagnostics.lastBackendSyncOk}',
+      );
+    }
+
+    return diagnostics;
   }
 
   Future<void> _logTokenStatusFromBackend() async {

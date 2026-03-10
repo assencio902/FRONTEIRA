@@ -110,6 +110,233 @@ class _MetricBadge extends StatelessWidget {
   }
 }
 
+class _PushDiagnosticsDialog extends StatefulWidget {
+  const _PushDiagnosticsDialog();
+
+  @override
+  State<_PushDiagnosticsDialog> createState() => _PushDiagnosticsDialogState();
+}
+
+class _PushDiagnosticsDialogState extends State<_PushDiagnosticsDialog> {
+  late Future<PushDiagnostics> _diagnosticsFuture;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _diagnosticsFuture = NotificationService().collectDiagnostics(
+      reason: 'diagnostic_dialog_open',
+      logResult: true,
+    );
+  }
+
+  Future<void> _refresh({
+    bool syncBackend = false,
+    bool requestPermission = false,
+  }) async {
+    setState(() => _busy = true);
+    try {
+      if (requestPermission) {
+        await NotificationService().requestNotificationPermission(
+          reason: 'diagnostic_dialog_permission',
+        );
+      }
+      if (syncBackend) {
+        await NotificationService().syncTokenWithBackend(
+          reason: 'diagnostic_dialog_sync',
+        );
+      }
+      setState(() {
+        _diagnosticsFuture = NotificationService().collectDiagnostics(
+          reason: 'diagnostic_dialog_refresh',
+          logResult: true,
+        );
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: _kCard,
+      title: const Row(
+        children: [
+          Icon(Icons.bug_report_rounded, color: _kYellow),
+          SizedBox(width: 8),
+          Text('Diagnóstico Push', style: TextStyle(color: Colors.white)),
+        ],
+      ),
+      content: SizedBox(
+        width: 520,
+        child: FutureBuilder<PushDiagnostics>(
+          future: _diagnosticsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: CircularProgressIndicator(color: _kYellow),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Text(
+                'Falha ao carregar diagnóstico: ${snapshot.error}',
+                style: const TextStyle(color: _kRed),
+              );
+            }
+
+            final diagnostics = snapshot.data!;
+            final token = diagnostics.fcmToken ?? 'null';
+
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDiagnosticRow('Package name', diagnostics.packageName),
+                  _buildDiagnosticRow(
+                    'Firebase inicializado',
+                    diagnostics.firebaseInitialized ? 'sim' : 'nao',
+                    valueColor: diagnostics.firebaseInitialized ? _kGreen : _kRed,
+                  ),
+                  _buildDiagnosticRow(
+                    'Permissão notificação',
+                    diagnostics.notificationPermissionStatus,
+                    valueColor: diagnostics.notificationPermissionStatus == 'authorized'
+                        ? _kGreen
+                        : _kYellow,
+                  ),
+                  _buildDiagnosticRow(
+                    'FCM auto-init',
+                    diagnostics.autoInitEnabled ? 'sim' : 'nao',
+                    valueColor: diagnostics.autoInitEnabled ? _kGreen : _kRed,
+                  ),
+                  _buildDiagnosticRow('Device ID', diagnostics.deviceId),
+                  _buildDiagnosticRow(
+                    'Backend sync',
+                    diagnostics.lastBackendSyncOk == null
+                        ? 'nao executado'
+                        : (diagnostics.lastBackendSyncOk! ? 'ok' : 'falhou'),
+                    valueColor: diagnostics.lastBackendSyncOk == null
+                        ? _kMuted
+                        : (diagnostics.lastBackendSyncOk! ? _kGreen : _kRed),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Token FCM atual',
+                    style: TextStyle(
+                      color: _kYellow,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _kBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SelectableText(
+                          token,
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: token == 'null'
+                                ? null
+                                : () async {
+                                    await Clipboard.setData(ClipboardData(text: token));
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Token FCM copiado.'),
+                                        backgroundColor: _kGreen,
+                                      ),
+                                    );
+                                  },
+                            icon: const Icon(Icons.copy_rounded, size: 16),
+                            label: const Text('Copiar token'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: const Text('Fechar'),
+        ),
+        OutlinedButton(
+          onPressed: _busy ? null : () => _refresh(requestPermission: true),
+          child: const Text('Permissão'),
+        ),
+        OutlinedButton(
+          onPressed: _busy ? null : () => _refresh(),
+          child: const Text('Atualizar'),
+        ),
+        ElevatedButton(
+          onPressed: _busy ? null : () => _refresh(syncBackend: true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kYellow,
+            foregroundColor: Colors.black,
+          ),
+          child: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                )
+              : const Text('Sincronizar token'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiagnosticRow(String label, String value, {Color valueColor = Colors.white}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              label,
+              style: const TextStyle(color: _kMuted, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: valueColor, fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -403,6 +630,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<void> _openPushDiagnostics() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => const _PushDiagnosticsDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -559,8 +793,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
+          ListTile(
+            leading: const Icon(Icons.bug_report_rounded, color: Colors.cyan),
+            title: const Text('Diagnóstico Push', style: TextStyle(color: Colors.cyan)),
+            subtitle: const Text(
+              'Ver token, pacote e permissão',
+              style: TextStyle(color: _kMuted, fontSize: 13),
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              _openPushDiagnostics();
+            },
+          ),
+
           // Sair
-          const Spacer(),
+          const SizedBox(height: 24),
           const Divider(color: _kBorder),
           ListTile(
             leading: const Icon(Icons.logout, color: _kRed),
@@ -1667,6 +1914,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                GestureDetector(
+                  onTap: _openPushDiagnostics,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.cyan.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: Colors.cyan.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: const Text('FCM',
+                        style: TextStyle(
+                            color: Colors.cyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1)),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 // Botão de teste de alerta
                 GestureDetector(
                   onTap: () async {
@@ -1699,6 +1967,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       await Future.delayed(const Duration(milliseconds: 800));
                       if (!mounted) return;
                       await AuthStorage.clear();
+                      if (!mounted) return;
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                         (_) => false,
