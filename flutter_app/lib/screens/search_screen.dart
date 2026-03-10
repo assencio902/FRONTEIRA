@@ -222,36 +222,148 @@ class _SearchScreenState extends State<SearchScreen> {
           child: Container(height: 1, color: _kBorder),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 8),
+      body: Column(
+        children: [
+          // tab-results
+          Expanded(
+            child: _buildResultsArea(),
+          ),
 
-            // ── Filtros ───────────────────────────────────────────────────
-            _buildFilters(),
-            const SizedBox(height: 16),
-
-            // ── Campo de texto ─────────────────────────────────────────────
-            _buildTextField(),
-            const SizedBox(height: 20),
-
-            // ── Botão pesquisar ────────────────────────────────────────────
-            LoadingButton(
-              label: 'Pesquisar',
-              loading: _loading,
-              onPressed: _search,
-              icon: Icons.manage_search_rounded,
+          // tab-filters-bottom
+          SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: _kCard,
+                border: Border(top: BorderSide(color: _kBorder)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.52,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFilters(),
+                      const SizedBox(height: 12),
+                      _buildTextField(),
+                      const SizedBox(height: 12),
+                      LoadingButton(
+                        label: 'Pesquisar',
+                        loading: _loading,
+                        onPressed: _search,
+                        icon: Icons.manage_search_rounded,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // ── Preview imagem capturada ───────────────────────────────────
-            if (_capturedImage != null) ...[
-              const SizedBox(height: 20),
-              _buildImagePreview(),
-            ],
+  Widget _buildResultsArea() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_scanning || _loading)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _kYellow),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _scanning ? 'Capturando e reconhecendo placa...' : 'Pesquisando passagens...',
+                    style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            )
+          else if (_scanResult == 'notfound')
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kRed.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: _kRed, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Nenhuma placa reconhecida. Ajuste o enquadramento e tente novamente.',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_scanResult == 'found')
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kYellow.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kYellow.withValues(alpha: 0.35)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, color: _kYellow, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Placa detectada. Abrindo os resultados da consulta...',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: _kMuted, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Use os filtros no rodapé, informe uma placa e toque em Pesquisar.',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_capturedImage != null) ...[
+            const SizedBox(height: 12),
+            _buildImagePreview(),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -270,7 +382,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _filterPeriodLabel != null;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: _kCard,
         borderRadius: BorderRadius.circular(12),
@@ -283,7 +395,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(
             children: [
               const Icon(Icons.filter_list_rounded, color: _kYellow, size: 16),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               const Text(
                 'FILTROS DE PESQUISA',
                 style: TextStyle(
@@ -308,14 +420,15 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: const Text('Limpar',
                       style: TextStyle(
                         color: _kMuted,
-                        fontSize: 15,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
                         decorationColor: _kMuted,
                       )),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // ── Linha 1: Câmera | Direção ──────────────────────────────────────────
           Row(
@@ -328,7 +441,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 active: _filterCamera != null,
                 onTap: _pickCamera,
               )),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(child: _filterChip(
                 icon: Icons.swap_vert_rounded,
                 label: _filterDirecao ?? 'Direção',
@@ -337,7 +450,7 @@ class _SearchScreenState extends State<SearchScreen> {
               )),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
           // ── Linha 2: Cor | Nome ─────────────────────────────────────────────────
           Row(
@@ -348,7 +461,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 active: _filterCor != null,
                 onTap: _pickCor,
               )),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(child: _filterChip(
                 icon: Icons.person_outline_rounded,
                 label: _filterNome ?? 'Nome',
@@ -357,22 +470,22 @@ class _SearchScreenState extends State<SearchScreen> {
               )),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           // ── Linha 3: Período ───────────────────────────────────────────────────
           const Row(
             children: [
-              Icon(Icons.schedule_rounded, color: _kMuted, size: 13),
-              SizedBox(width: 5),
+              Icon(Icons.schedule_rounded, color: _kMuted, size: 14),
+              SizedBox(width: 6),
               Text('PERÍODO',
                   style: TextStyle(
                       color: _kMuted,
-                    fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: 1.5)),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -386,24 +499,24 @@ class _SearchScreenState extends State<SearchScreen> {
           // Range customizado
           if (_filterPeriodLabel == 'custom' && _filterDateFrom != null) ...
             [
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _kYellow.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(7),
+                  color: _kYellow.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: _kYellow.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.date_range_rounded, color: _kYellow, size: 13),
-                    const SizedBox(width: 6),
+                    const Icon(Icons.date_range_rounded, color: _kYellow, size: 14),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${_fmtDt(_filterDateFrom!)}  —  ${_fmtDt(_filterDateTo ?? _filterDateFrom!)}',
                         style: const TextStyle(
                             color: Colors.white,
-                          fontSize: 15,
+                          fontSize: 13,
                             fontWeight: FontWeight.w600),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -456,11 +569,11 @@ class _SearchScreenState extends State<SearchScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           color: active ? _kYellow.withValues(alpha: 0.14) : _kBg,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: active ? _kYellow.withValues(alpha: 0.7) : _kBorder,
             width: active ? 1.3 : 1,
@@ -469,13 +582,13 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isCustom) const Icon(Icons.tune_rounded, size: 12, color: _kYellow),
-            if (isCustom) const SizedBox(width: 4),
+            if (isCustom) const Icon(Icons.tune_rounded, size: 13, color: _kYellow),
+            if (isCustom) const SizedBox(width: 5),
             Text(label,
                 style: TextStyle(
                   color: active ? _kYellow : _kMuted,
-                  fontSize: 15,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                  fontSize: 13,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
                 )),
           ],
         ),
@@ -493,36 +606,37 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
         decoration: BoxDecoration(
           color: active
-              ? _kYellow.withValues(alpha: 0.08)
-              : _kBg.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(8),
+              ? _kYellow.withValues(alpha: 0.1)
+              : _kBg.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(
             color: active ? _kYellow.withValues(alpha: 0.6) : _kBorder,
+            width: active ? 1.2 : 1,
           ),
         ),
         child: Row(
           children: [
             Icon(icon,
                 color: active ? _kYellow : _kMuted,
-                size: 14),
-            const SizedBox(width: 6),
+                size: 15),
+            const SizedBox(width: 7),
             Expanded(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active ? Colors.white : _kMuted,
-                  fontSize: 15,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+                  fontSize: 13,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
             ),
             Icon(Icons.expand_more_rounded,
                 color: active ? _kYellow : _kMuted,
-                size: 14),
+                size: 15),
           ],
         ),
       ),
@@ -938,36 +1052,45 @@ class _SearchScreenState extends State<SearchScreen> {
           'PLACA DO VEÍCULO',
           style: TextStyle(
             color: _kMuted,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
             letterSpacing: 2.0,
           ),
         ),
-        const SizedBox(height: 8),
-        PlateSearchField(
-          controller: _plateCtrl,
-          hintText: 'ABC1234',
-          onSubmitted: _search,
-          onChanged: (_) {
-            if (_scanResult != null) setState(() => _scanResult = null);
-          },
-          suffixIcon: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.camera_alt_rounded, color: _kYellow),
-                tooltip: 'Fotografar placa',
-                onPressed: _scanning || _loading ? null : _scanPlate,
-              ),
-              IconButton(
-                icon: const Icon(Icons.clear_rounded, color: _kMuted),
-                tooltip: 'Limpar',
-                onPressed: () {
-                  _plateCtrl.clear();
-                  setState(() { _scanResult = null; _capturedImage = null; });
-                },
-              ),
-            ],
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _kYellow.withValues(alpha: 0.4)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: PlateSearchField(
+            controller: _plateCtrl,
+            hintText: 'ABC1234',
+            onSubmitted: _search,
+            onChanged: (_) {
+              if (_scanResult != null) setState(() => _scanResult = null);
+            },
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.camera_alt_rounded, color: _kYellow, size: 20),
+                  tooltip: 'Fotografar placa',
+                  onPressed: _scanning || _loading ? null : _scanPlate,
+                  padding: const EdgeInsets.all(8),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear_rounded, color: _kMuted, size: 18),
+                  tooltip: 'Limpar',
+                  onPressed: () {
+                    _plateCtrl.clear();
+                    setState(() { _scanResult = null; _capturedImage = null; });
+                  },
+                  padding: const EdgeInsets.all(8),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -979,7 +1102,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildImagePreview() {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kBorder),
       ),
       clipBehavior: Clip.antiAlias,
@@ -987,18 +1110,18 @@ class _SearchScreenState extends State<SearchScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             color: _kCard,
             child: const Row(
               children: [
-                Icon(Icons.image_rounded, color: _kMuted, size: 14),
-                SizedBox(width: 6),
+                Icon(Icons.image_rounded, color: _kMuted, size: 15),
+                SizedBox(width: 8),
                 Text(
                   'FOTO CAPTURADA',
                   style: TextStyle(
                     color: _kMuted,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 2,
                   ),
                 ),
@@ -1007,7 +1130,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           Image.file(
             _capturedImage!,
-            height: 160,
+            height: 180,
             fit: BoxFit.cover,
           ),
         ],

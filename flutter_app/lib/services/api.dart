@@ -2,7 +2,16 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/plate_result.dart';
+import '../config.dart';
 import 'auth_storage.dart';
+
+/// Exceção para sessão inválida/expirada.
+class ApiUnauthorizedException implements Exception {
+  final String message;
+  ApiUnauthorizedException([this.message = 'Sessão expirada. Faça login novamente.']);
+  @override
+  String toString() => message;
+}
 
 /// API simples centralizada.
 /// Usa [AuthStorage] para persistir e ler o token JWT automaticamente.
@@ -11,10 +20,7 @@ import 'auth_storage.dart';
 ///   - Local (emulador): http://10.0.2.2:8000
 ///   - Local (dispositivo): http://192.168.x.x:8000 (IP da máquina host)
 class Api {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://104.236.104.79:8000',
-  );
+  static const String baseUrl = AppConfig.baseUrl;
 
   // ─── Headers ─────────────────────────────────────────────────────────────
 
@@ -77,7 +83,7 @@ class Api {
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
     debugPrint('RES platesSearch: ${res.statusCode} body=${res.body}');
     if (res.statusCode == 401) {
-      throw Exception('Não autenticado (401): ${res.body}');
+      throw ApiUnauthorizedException();
     }
     if (res.statusCode >= 400) {
       throw Exception('Erro ${res.statusCode}: ${res.body}');
@@ -91,7 +97,7 @@ class Api {
     final url = Uri.parse('$baseUrl/api/cameras');
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     return List<Map<String, dynamic>>.from(data['items'] as List);
@@ -102,7 +108,7 @@ class Api {
     final url = Uri.parse('$baseUrl/api/stats/overview');
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -112,7 +118,7 @@ class Api {
     final url = Uri.parse('$baseUrl/api/alarmes');
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}: ${res.body}');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -146,7 +152,7 @@ class Api {
     debugPrint('REQ: GET $url');
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 15));
     debugPrint('RES getBatedorTrajeto: ${res.statusCode}');
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}: ${res.body}');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -164,7 +170,7 @@ class Api {
     });
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -177,11 +183,22 @@ class Api {
     );
     final h = await headers();
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     return List<Map<String, dynamic>>.from(
         (data['items'] ?? data['events'] ?? []) as List);
+  }
+
+  /// GET /api/events/{event_id} — detalhes completos de um evento.
+  static Future<Map<String, dynamic>> getEventDetail(int eventId) async {
+    final url = Uri.parse('$baseUrl/api/events/$eventId');
+    final h = await headers();
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
+    if (res.statusCode == 404) throw Exception('Evento não encontrado');
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   /// GET /api/batedor/grupos_comboio — detecta grupos de veículos em comboio.
@@ -220,7 +237,7 @@ class Api {
     debugPrint('REQ: GET $url');
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 15));
     debugPrint('RES getGruposComboio: ${res.statusCode}');
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) {
       throw Exception('Erro ${res.statusCode}: ${res.body}');
     }
@@ -250,7 +267,7 @@ class Api {
     debugPrint('REQ: GET $url');
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 15));
     debugPrint('RES getBatedorCentral: ${res.statusCode}');
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) {
       throw Exception('Erro ${res.statusCode}: ${res.body}');
     }
@@ -276,11 +293,35 @@ class Api {
     debugPrint('REQ: GET $url');
     final res = await http.get(url, headers: h).timeout(const Duration(seconds: 15));
     debugPrint('RES getVehicleTrajectory: ${res.statusCode}');
-    if (res.statusCode == 401) throw Exception('Não autenticado (401)');
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
     if (res.statusCode >= 400) {
       throw Exception('Erro ${res.statusCode}: ${res.body}');
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// GET /api/vehicles/lists — listas de monitoramento disponíveis.
+  static Future<List<Map<String, dynamic>>> getVehicleLists() async {
+    final url = Uri.parse('$baseUrl/api/vehicles/lists');
+    final h = await headers();
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from(data['items'] as List? ?? []);
+  }
+
+  /// GET /api/vehicles?list_id=X — veículos de uma lista de monitoramento.
+  static Future<List<Map<String, dynamic>>> getVehicles(int listId) async {
+    final url = Uri.parse('$baseUrl/api/vehicles').replace(
+      queryParameters: {'list_id': '$listId'},
+    );
+    final h = await headers();
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from(data['items'] as List? ?? []);
   }
 
   /// POST genérico autenticado.

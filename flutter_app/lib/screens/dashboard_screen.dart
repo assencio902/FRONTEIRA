@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../models/alert.dart';
 import '../screens/alert_detail_screen.dart';
 import '../screens/alert_modal.dart';
+import '../screens/event_detail_screen.dart';
 import '../services/alarm_service.dart';
 import '../services/alarm_history_service.dart';
 import '../services/api.dart';
@@ -126,6 +128,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _stats;
   List<Map<String, dynamic>> _events = [];
   bool _loadingDash = false;
+  String? _dashboardError;
   _AlertsPeriod _alertsPeriod = _AlertsPeriod.h24;
   
   // ── Dados da Central de Ameaças ───────────────────────────────────────────
@@ -263,7 +266,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadDashboard() async {
     if (_loadingDash) return;
-    setState(() => _loadingDash = true);
+
+    final tokenExpired = await AuthStorage.isTokenExpired();
+    if (tokenExpired) {
+      await _handleSessionExpired();
+      return;
+    }
+
+    setState(() {
+      _loadingDash = true;
+      _dashboardError = null;
+    });
+
     try {
       final results = await Future.wait([
         Api.getStats(),
@@ -274,11 +288,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _stats  = results[0] as Map<String, dynamic>;
         _events = (results[1] as List).cast<Map<String, dynamic>>();
       });
+    } on ApiUnauthorizedException {
+      await _handleSessionExpired();
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() => _dashboardError =
+          'A API demorou para responder. Verifique a conexão e tente novamente.');
+    } on SocketException {
+      if (!mounted) return;
+      setState(() => _dashboardError =
+          'Sem conexão com a API. Verifique internet/servidor.');
     } catch (e) {
       debugPrint('Dashboard load error: $e');
+      if (!mounted) return;
+      setState(() => _dashboardError =
+          'Falha ao carregar dashboard/eventos. Tente novamente.');
     } finally {
       if (mounted) setState(() => _loadingDash = false);
     }
+  }
+
+  Future<void> _handleSessionExpired() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sessão expirada. Faça login novamente.'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    await AuthStorage.clear();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
   }
 
   Future<void> _loadGruposComboio() async {
@@ -659,6 +702,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(
                         color: _kYellow, strokeWidth: 2))
+                : _dashboardError != null && suspeitos.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: _kRed, size: 42),
+                            const SizedBox(height: 10),
+                            Text(
+                              _dashboardError!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: _kMuted,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      )
                 : suspeitos.isEmpty
                   ? Center(
                     child: Column(
@@ -1487,6 +1549,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildTopbar(),
+            if (_dashboardError != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _kRed.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _kRed.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.wifi_off_rounded, color: _kRed, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _dashboardError!,
+                        style: const TextStyle(color: _kRed, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -1741,6 +1825,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: CircularProgressIndicator(
                       color: _kYellow, strokeWidth: 2)),
             )
+          : _dashboardError != null && _events.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded, color: _kRed, size: 30),
+                        const SizedBox(height: 8),
+                        Text(
+                          _dashboardError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: _kMuted, fontSize: 12),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: _loadDashboard,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kYellow,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Tentar novamente'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
           : _events.isEmpty
               ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
@@ -1905,16 +2016,27 @@ class _PassagemRow extends StatelessWidget {
             : conf >= 65
                 ? _kYellow
                 : _kRed;
+    final eventId = event['id'] as int?;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        border: const Border(bottom: BorderSide(color: _kBorder, width: 0.4)),
-        color: highlightLow && (conf ?? 100) < 70
-            ? _kRed.withValues(alpha: 0.04)
-            : null,
-      ),
-      child: Row(children: [
+    return InkWell(
+      onTap: eventId != null
+          ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EventDetailScreen(eventId: eventId),
+                ),
+              );
+            }
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          border: const Border(bottom: BorderSide(color: _kBorder, width: 0.4)),
+          color: highlightLow && (conf ?? 100) < 70
+              ? _kRed.withValues(alpha: 0.04)
+              : null,
+        ),
+        child: Row(children: [
         // Placa chip
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -1956,6 +2078,7 @@ class _PassagemRow extends StatelessWidget {
         ),
         _Badge(label: confStr, color: confColor),
       ]),
+      ),
     );
   }
 }

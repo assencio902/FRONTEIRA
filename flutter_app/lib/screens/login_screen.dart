@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../services/api.dart';
+import '../services/api_client.dart';
+import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
@@ -47,24 +51,40 @@ class _LoginScreenState extends State<LoginScreen> {
     final user = _userCtrl.text.trim();
     final pass = _passCtrl.text;
 
-    if (user.isEmpty || pass.isEmpty) {
-      setState(() => _error = 'Informe usuário e senha.');
+    if (user.isEmpty) {
+      setState(() => _error = 'Informe o usuário.');
+      return;
+    }
+    if (pass.isEmpty) {
+      setState(() => _error = 'Informe a senha.');
       return;
     }
 
     setState(() { _loading = true; _error = null; });
-    await Future.delayed(const Duration(milliseconds: 800));
 
     try {
-      await Api.login(user, pass);
+      await AuthService.instance.login(user, pass);
       await NotificationService().syncTokenWithBackend();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        setState(() => _error = 'Usuário ou senha inválidos.');
+      } else {
+        setState(() => _error = 'Falha no login (${e.statusCode}). Tente novamente.');
+      }
+    } on TimeoutException {
+      if (!mounted) return;
+      setState(() => _error = 'A API demorou para responder. Verifique sua conexão.');
+    } on SocketException {
+      if (!mounted) return;
+      setState(() => _error = 'Não foi possível conectar à API. Verifique internet/servidor.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Usuário ou senha inválidos.');
+      setState(() => _error = 'Não foi possível realizar o login agora.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

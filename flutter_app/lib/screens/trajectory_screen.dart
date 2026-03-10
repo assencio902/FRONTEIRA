@@ -220,216 +220,254 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
       appBar: AppBar(
         backgroundColor: _kCard,
         elevation: 0,
-        title: const Text(
-          '🗺️ Trajetória de Veículo',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        title: const Row(
+          children: [
+            Icon(Icons.map_rounded, color: _kYellow, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Trajetória de Veículo',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: _kBorder),
         ),
       ),
       body: Column(
         children: [
-          // Painel de busca
-          Container(
-            color: _kCard,
-            padding: const EdgeInsets.all(16),
+          // tab-results
+          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Campo de placa
-                PlateSearchField(
-                  controller: _plateController,
-                  hintText: 'ABC1234',
-                  onSubmitted: _loading ? null : _loadTrajectory,
+                Expanded(
+                  child: _buildMap(),
                 ),
-                const SizedBox(height: 12),
-
-                // Período
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DateButton(
-                        label: 'Início',
-                        date: _startDate,
-                        onTap: _selectStartDate,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _DateButton(
-                        label: 'Fim',
-                        date: _endDate,
-                        onTap: _selectEndDate,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Botões
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _loading ? null : _loadTrajectory,
-                        icon: _loading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.black,
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                        label: const Text('Buscar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kYellow,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: .4,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: _clearTrajectory,
-                      icon: const Icon(Icons.clear),
-                      label: const Text('Limpar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _kCard,
-                        foregroundColor: _kMuted,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: _kBorder),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: .4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Switch para mostrar câmeras no mapa
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0a3820),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _kBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.videocam, color: _kMuted, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Exibir câmeras no mapa ${_loadingCameras ? "..." : "(${_cameras.length} câmeras)"}',
-                          style: const TextStyle(color: _kMuted, fontSize: 12),
-                        ),
-                      ),
-                      Switch(
-                        value: _showCamerasOnMap,
-                        onChanged: (value) {
-                          setState(() => _showCamerasOnMap = value);
-                        },
-                        activeColor: _kYellow,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Mensagem de erro
-                if (_errorMsg != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '⚠️ $_errorMsg',
-                      style: const TextStyle(color: _kRed, fontSize: 12),
-                    ),
-                  ),
-
-                // Info da trajetória
-                if (_trajectoryData != null) ...[
-                  const SizedBox(height: 8),
+                if (_trajectoryData != null &&
+                    (_trajectoryData!['cameras_without_gps'] as List?)?.isNotEmpty ==
+                        true)
                   Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0a3820),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _kYellow.withOpacity(0.3)),
-                    ),
+                    color: Colors.orange.withOpacity(0.12),
+                    padding: const EdgeInsets.all(14),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _InfoChip(
-                          icon: Icons.location_on,
-                          label: 'Pontos GPS',
-                          value: '${_trajectoryData!['total_points']}',
-                        ),
-                        _InfoChip(
-                          icon: Icons.event,
-                          label: 'Eventos',
-                          value: '${_trajectoryData!['total_events']}',
-                        ),
-                        if ((_trajectoryData!['cameras_without_gps'] as List?)
-                                ?.isNotEmpty ==
-                            true)
-                          _InfoChip(
-                            icon: Icons.warning_amber,
-                            label: 'Sem GPS',
-                            value:
-                                '${(_trajectoryData!['cameras_without_gps'] as List).length}',
-                            color: Colors.orange,
+                        const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Câmeras sem GPS: ${(_trajectoryData!['cameras_without_gps'] as List).join(", ")}',
+                            style: const TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.w600),
                           ),
+                        ),
                       ],
                     ),
                   ),
-                ],
               ],
             ),
           ),
 
-          // Mapa (sempre visível)
-          Expanded(
-            child: _buildMap(),
-          ),
-
-          // Câmeras sem GPS
-          if (_trajectoryData != null &&
-              (_trajectoryData!['cameras_without_gps'] as List?)?.isNotEmpty ==
-                  true)
-            Container(
-              color: Colors.orange.withOpacity(0.1),
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Câmeras sem GPS: ${(_trajectoryData!['cameras_without_gps'] as List).join(', ')}',
-                      style: const TextStyle(color: Colors.orange, fontSize: 11),
-                    ),
+          // tab-filters-bottom
+          SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: _kCard,
+                border: Border(top: BorderSide(color: _kBorder)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.56,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PlateSearchField(
+                        controller: _plateController,
+                        hintText: 'ABC1234',
+                        onSubmitted: _loading ? null : _loadTrajectory,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DateButton(
+                              label: 'Início',
+                              date: _startDate,
+                              onTap: _selectStartDate,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _DateButton(
+                              label: 'Fim',
+                              date: _endDate,
+                              onTap: _selectEndDate,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _loading ? null : _loadTrajectory,
+                              icon: _loading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.black,
+                                      ),
+                                    )
+                                  : const Icon(Icons.search),
+                              label: const Text('Buscar'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _kYellow,
+                                foregroundColor: Colors.black,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: .4,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: _clearTrajectory,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Limpar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _kCard,
+                              foregroundColor: _kMuted,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(color: _kBorder),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: .4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _kBg.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.videocam_rounded, color: _kMuted, size: 16),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Exibir câmeras no mapa ${_loadingCameras ? "..." : "(${_cameras.length})"}',
+                                style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            Switch(
+                              value: _showCamerasOnMap,
+                              onChanged: (value) {
+                                setState(() => _showCamerasOnMap = value);
+                              },
+                              activeColor: _kYellow,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_errorMsg != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _kRed.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _kRed.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: _kRed, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMsg!,
+                                    style: const TextStyle(color: _kRed, fontSize: 13, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_trajectoryData != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _kYellow.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: _kYellow.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _InfoChip(
+                                icon: Icons.location_on_rounded,
+                                label: 'Pontos GPS',
+                                value: '${_trajectoryData!['total_points']}',
+                              ),
+                              _InfoChip(
+                                icon: Icons.event_rounded,
+                                label: 'Eventos',
+                                value: '${_trajectoryData!['total_events']}',
+                              ),
+                              if ((_trajectoryData!['cameras_without_gps'] as List?)
+                                      ?.isNotEmpty ==
+                                  true)
+                                _InfoChip(
+                                  icon: Icons.warning_amber_rounded,
+                                  label: 'Sem GPS',
+                                  value:
+                                      '${(_trajectoryData!['cameras_without_gps'] as List).length}',
+                                  color: Colors.orange,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
+          ),
         ],
       ),
     );

@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config.dart';
 import '../models/auth_token.dart';
 import '../models/plate_result.dart';
-import 'auth_service.dart';
+import 'auth_storage.dart';
 
 /// Exceção lançada quando a API retorna um erro HTTP.
 class ApiException implements Exception {
@@ -56,31 +55,29 @@ class ApiClient {
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
-  /// POST /auth/login  →  salva e retorna [AuthToken].
+  /// POST /api/auth/login  →  salva e retorna [AuthToken].
   Future<AuthToken> login(String email, String password) async {
     final res = await http.post(
-      _uri('/auth/login'),
+      _uri('/api/auth/login'),
       headers: _baseHeaders(),
       body: jsonEncode({'username': email, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 12));
     _checkResponse(res);
     final token = AuthToken.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('jwt_token', token.accessToken);
+    await AuthStorage.saveToken(token.accessToken);
     return token;
   }
 
   /// Remove o token localmente (logout).
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('jwt_token');
+    await AuthStorage.clear();
   }
 
   // ─── Placas ─────────────────────────────────────────────────────────────────
 
   /// GET /api/events?plate=...&limit=10&page=1
   Future<PlateSearchResult> searchPlate(String plate) async {
-    final token = await AuthService.instance.getToken();
+    final token = await AuthStorage.getToken();
     final url = _uri('/api/events', {'plate': plate, 'limit': '10', 'page': '1'});
     debugPrint('REQ: GET $url token=${token != null}');
     final res = await http.get(

@@ -55,11 +55,15 @@ class _SplashState extends State<_Splash> {
 
   Future<void> _check() async {
     final token = await AuthStorage.getToken();
+    final expired = await AuthStorage.isTokenExpired();
+    if (expired) {
+      await AuthStorage.clear();
+    }
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) =>
-            (token != null && token.isNotEmpty) ? const DashboardScreen() : const LoginScreen(),
+            (token != null && token.isNotEmpty && !expired) ? const DashboardScreen() : const LoginScreen(),
       ),
     );
   }

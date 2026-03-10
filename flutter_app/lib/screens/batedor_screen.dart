@@ -1,9 +1,22 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../repositories/plate_recognition_repository.dart';
 import '../services/api.dart';
 import '../theme/app_theme.dart';
+import '../widgets/loading_button.dart';
 import '../widgets/plate_search_field.dart';
+
+// ─── Paleta mapeada para AppColors ───────────────────────────────────────────
+const _kBg     = AppColors.background;
+const _kCard   = AppColors.surface;
+const _kBorder = AppColors.border;
+const _kYellow = AppColors.warning;
+const _kRed    = AppColors.danger;
+const _kMuted  = AppColors.muted;
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 
@@ -108,22 +121,24 @@ class _BatedorScreenState extends State<BatedorScreen> {
   final _plateCtrl = TextEditingController();
   final _focusNode = FocusNode();
 
+  // ── Estado de busca ───────────────────────────────────────────────────────
+  bool   _loading   = false;
+  bool   _scanning   = false;
+  File? _capturedImage;
+  String? _scanResult;
+  String? _error;
+  Map<String, dynamic>? _result;
+
   // ── Filtros de comportamento ─────────────────────────────────────────────
   String _window     = '24h';
   int    _coWindow   = 600;
   int    _minCameras = 2;
-  bool   _filtersOpen = false;
 
   // ── Filtros do suspeito ───────────────────────────────────────────────────
   String? _direcao;
   String? _vehicleType;
   String? _vehicleColor;
   final _prefixCtrl = TextEditingController();
-
-  // ── Estado ────────────────────────────────────────────────────────────────
-  bool   _loading   = false;
-  String? _error;
-  Map<String, dynamic>? _result;
 
   // ── Expansão de evidências ─────────────────────────────────────────────────
   final Set<int> _expanded = {};
@@ -134,6 +149,45 @@ class _BatedorScreenState extends State<BatedorScreen> {
     _prefixCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  // ── Reconhecimento via API ───────────────────────────────────────────────
+
+  Future<void> _scanPlate() async {
+    setState(() { _scanning = true; _scanResult = null; _capturedImage = null; });
+
+    try {
+      final picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+
+      if (photo == null) {
+        setState(() => _scanning = false);
+        return;
+      }
+
+      final imageFile = File(photo.path);
+      setState(() => _capturedImage = imageFile);
+
+      final result = await PlateRecognitionRepository.recognize(imageFile);
+      final plate = result.plate?.trim().toUpperCase() ?? '';
+
+      if (plate.isNotEmpty) {
+        _plateCtrl.text = plate;
+        setState(() => _scanResult = 'found');
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) _search();
+      } else {
+        setState(() => _scanResult = 'notfound');
+      }
+    } catch (e) {
+      setState(() => _scanResult = 'notfound');
+    } finally {
+      if (mounted) setState(() => _scanning = false);
+    }
   }
 
   // ── Busca ─────────────────────────────────────────────────────────────────
@@ -161,454 +215,702 @@ class _BatedorScreenState extends State<BatedorScreen> {
     }
   }
 
+  void _clearFilters() {
+    setState(() {
+      _window = '24h';
+      _coWindow = 600;
+      _minCameras = 2;
+      _direcao = null;
+      _vehicleType = null;
+      _vehicleColor = null;
+      _prefixCtrl.clear();
+      _plateCtrl.clear();
+      _capturedImage = null;
+      _scanResult = null;
+    });
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _kBg,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
+        backgroundColor: _kCard,
         elevation: 0,
         title: const Row(
           children: [
-            Icon(Icons.route_rounded, color: AppColors.warning, size: 22),
-            SizedBox(width: 10),
+            Icon(Icons.route_rounded, color: _kYellow, size: 20),
+            SizedBox(width: 8),
             Text(
               'Batedor — Trajeto Conjunto',
               style: TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
                 fontSize: 16,
+                letterSpacing: 1,
               ),
             ),
           ],
         ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: _kBorder),
+        ),
       ),
       body: Column(
         children: [
-          // ── Painel de pesquisa ───────────────────────────────────────────
-          _SearchPanel(
-            plateCtrl:    _plateCtrl,
-            prefixCtrl:   _prefixCtrl,
-            focusNode:    _focusNode,
-            loading:      _loading,
-            filtersOpen:  _filtersOpen,
-            window:       _window,
-            coWindow:     _coWindow,
-            minCameras:   _minCameras,
-            direcao:      _direcao,
-            vehicleType:  _vehicleType,
-            vehicleColor: _vehicleColor,
-            onSearch:     _search,
-            onToggleFilters:     () => setState(() => _filtersOpen = !_filtersOpen),
-            onWindowChanged:     (v) => setState(() => _window = v),
-            onCoWindowChanged:   (v) => setState(() => _coWindow = v),
-            onMinCamerasChanged: (v) => setState(() => _minCameras = v),
-            onDirecaoChanged:    (v) => setState(() => _direcao = v == _direcao ? null : v),
-            onVehicleTypeChanged:(v) => setState(() => _vehicleType = v == _vehicleType ? null : v),
-            onVehicleColorChanged:(v)=> setState(() => _vehicleColor = v == _vehicleColor ? null : v),
+          // Área de resultados
+          Expanded(
+            child: _buildResultsArea(),
           ),
 
-          // ── Corpo ─────────────────────────────────────────────────────────
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.warning))
-                : _error != null
-                    ? _ErrorView(message: _error!)
-                    : _result == null
-                        ? const _EmptyHint()
-                        : _ResultList(
-                            result:   _result!,
-                            expanded: _expanded,
-                            onToggle: (i) => setState(() {
-                              if (_expanded.contains(i)) {
-                                _expanded.remove(i);
-                              } else {
-                                _expanded.add(i);
-                              }
-                            }),
-                          ),
+          // Painel de filtros inferior
+          SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: _kCard,
+                border: Border(top: BorderSide(color: _kBorder)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.55,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFilters(),
+                      const SizedBox(height: 12),
+                      _buildPlateField(),
+                      const SizedBox(height: 12),
+                      LoadingButton(
+                        label: 'Buscar',
+                        loading: _loading,
+                        onPressed: _search,
+                        icon: Icons.search_rounded,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Painel de pesquisa + filtros
-// ─────────────────────────────────────────────────────────────────────────────
+  // ─── Área de resultados ───────────────────────────────────────────────────
 
-class _SearchPanel extends StatelessWidget {
-  final TextEditingController plateCtrl;
-  final TextEditingController prefixCtrl;
-  final FocusNode focusNode;
-  final bool loading;
-  final bool filtersOpen;
-  final String window;
-  final int coWindow;
-  final int minCameras;
-  final String? direcao;
-  final String? vehicleType;
-  final String? vehicleColor;
-  final VoidCallback onSearch;
-  final VoidCallback onToggleFilters;
-  final ValueChanged<String> onWindowChanged;
-  final ValueChanged<int> onCoWindowChanged;
-  final ValueChanged<int> onMinCamerasChanged;
-  final ValueChanged<String> onDirecaoChanged;
-  final ValueChanged<String> onVehicleTypeChanged;
-  final ValueChanged<String> onVehicleColorChanged;
-
-  const _SearchPanel({
-    required this.plateCtrl,
-    required this.prefixCtrl,
-    required this.focusNode,
-    required this.loading,
-    required this.filtersOpen,
-    required this.window,
-    required this.coWindow,
-    required this.minCameras,
-    this.direcao,
-    this.vehicleType,
-    this.vehicleColor,
-    required this.onSearch,
-    required this.onToggleFilters,
-    required this.onWindowChanged,
-    required this.onCoWindowChanged,
-    required this.onMinCamerasChanged,
-    required this.onDirecaoChanged,
-    required this.onVehicleTypeChanged,
-    required this.onVehicleColorChanged,
-  });
-
-  String _buildFilterSummary() {
-    final parts = <String>[
-      'janela $window',
-      '${_fmtDur(coWindow)}/cam',
-      'min. $minCameras',
-    ];
-    if (direcao != null) parts.add(direcao!);
-    if (vehicleType != null) parts.add(_kTypeLabel[vehicleType] ?? vehicleType!);
-    if (vehicleColor != null) parts.add(vehicleColor!);
-    if (prefixCtrl.text.isNotEmpty) parts.add('placa: ${prefixCtrl.text.toUpperCase()}');
-    return parts.join('  |  ');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+  Widget _buildResultsArea() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Campo de placa + botão pesquisa ───────────────────────────
+          if (_scanning || _loading)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: _kYellow),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _scanning ? 'Capturando e reconhecendo placa...' : 'Pesquisando ameaças...',
+                    style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            )
+          else if (_scanResult == 'notfound')
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kRed.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: _kRed, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Nenhuma placa reconhecida. Ajuste o enquadramento e tente novamente.',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_scanResult == 'found')
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kYellow.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kYellow.withValues(alpha: 0.35)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, color: _kYellow, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Placa detectada. Iniciando busca de ameaças...',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_error != null)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kRed.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: _kRed, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (_result == null)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _kCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kBorder),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: _kMuted, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Configure os filtros, informe uma placa e toque em Buscar.',
+                      style: TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            _ResultList(
+              result: _result!,
+              expanded: _expanded,
+              onToggle: (i) => setState(() {
+                if (_expanded.contains(i)) {
+                  _expanded.remove(i);
+                } else {
+                  _expanded.add(i);
+                }
+              }),
+            ),
+          if (_capturedImage != null) ...[
+            const SizedBox(height: 12),
+            _buildImagePreview(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─── Preview imagem ────────────────────────────────────────────────────────
+
+  Widget _buildImagePreview() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            color: _kCard,
+            child: const Row(
+              children: [
+                Icon(Icons.image_rounded, color: _kMuted, size: 15),
+                SizedBox(width: 8),
+                Text(
+                  'Imagem capturada',
+                  style: TextStyle(
+                      color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          Image.file(
+            _capturedImage!,
+            fit: BoxFit.cover,
+            height: 200,
+          ),
+        ],
+      ),
+    );
+  }
+    final hasAnyFilter = _direcao != null ||
+      _vehicleType != null ||
+      _vehicleColor != null ||
+      _prefixCtrl.text.isNotEmpty ||
+      _window != '24h' ||
+      _coWindow != 600 ||
+      _minCameras != 2;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Cabeçalho
           Row(
             children: [
-              Expanded(
-                child: PlateSearchField(
-                  controller: plateCtrl,
-                  focusNode: focusNode,
-                  hintText: 'PLACA ALVO',
-                  maxLength: 8,
-                  onSubmitted: onSearch,
+              const Icon(Icons.filter_list_rounded, color: _kYellow, size: 16),
+              const SizedBox(width: 8),
+              const Text(
+                'FILTROS DE AMEAÇAS',
+                style: TextStyle(
+                  color: _kYellow,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2,
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.warning,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
+              const Spacer(),
+              if (hasAnyFilter)
+                GestureDetector(
+                  onTap: _clearFilters,
+                  child: const Text('Limpar',
+                      style: TextStyle(
+                        color: _kMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: _kMuted,
+                      )),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Janela de tempo
+          const Row(
+            children: [
+              Icon(Icons.schedule_rounded, color: _kMuted, size: 14),
+              SizedBox(width: 6),
+              Text('JANELA DE TEMPO',
+                  style: TextStyle(
+                      color: _kMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _kWindows.map((e) {
+                final selected = e.$1 == _window;
+                return GestureDetector(
+                  onTap: () => setState(() => _window = e.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: selected ? _kYellow.withValues(alpha: 0.14) : _kBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: selected ? _kYellow.withValues(alpha: 0.7) : _kBorder,
+                        width: selected ? 1.3 : 1,
+                      ),
+                    ),
+                    child: Text(e.$2,
+                        style: TextStyle(
+                          color: selected ? _kYellow : _kMuted,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                        )),
                   ),
-                  onPressed: loading ? null : onSearch,
-                  child: loading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                      : const Icon(Icons.search_rounded, size: 22),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Co-window
+          const Row(
+            children: [
+              Icon(Icons.timer_rounded, color: _kMuted, size: 14),
+              SizedBox(width: 6),
+              Text('TEMPO MÁX. POR CÂMERA',
+                  style: TextStyle(
+                      color: _kMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _kCoWindows.map((e) {
+                final selected = e.$1 == _coWindow;
+                return GestureDetector(
+                  onTap: () => setState(() => _coWindow = e.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.primary.withValues(alpha: 0.14) : _kBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: selected ? AppColors.primary.withValues(alpha: 0.7) : _kBorder,
+                        width: selected ? 1.3 : 1,
+                      ),
+                    ),
+                    child: Text(e.$2,
+                        style: TextStyle(
+                          color: selected ? AppColors.primary : _kMuted,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                        )),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Mínimo de câmeras
+          const Row(
+            children: [
+              Icon(Icons.videocam_rounded, color: _kMuted, size: 14),
+              SizedBox(width: 6),
+              Text('MÍNIMO DE CÂMERAS',
+                  style: TextStyle(
+                      color: _kMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: _kMinCameras.map((n) {
+              final selected = n == _minCameras;
+              return GestureDetector(
+                onTap: () => setState(() => _minCameras = n),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: selected ? _kRed.withValues(alpha: 0.14) : _kBg,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: selected ? _kRed.withValues(alpha: 0.7) : _kBorder,
+                      width: selected ? 1.3 : 1,
+                    ),
+                  ),
+                  child: Text('$n+',
+                      style: TextStyle(
+                        color: selected ? _kRed : _kMuted,
+                        fontSize: 13,
+                        fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      )),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          const Divider(color: _kBorder, height: 1),
+          const SizedBox(height: 16),
+
+          // Filtros do suspeito
+          const Row(
+            children: [
+              Icon(Icons.person_search_rounded, color: _kRed, size: 16),
+              SizedBox(width: 8),
+              Text(
+                'FILTROS DO SUSPEITO',
+                style: TextStyle(
+                  color: _kRed,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 12),
 
-          // ── Toggle filtros ────────────────────────────────────────────
-          TextButton.icon(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.muted,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-            ),
-            onPressed: onToggleFilters,
-            icon: Icon(filtersOpen ? Icons.expand_less : Icons.tune_rounded, size: 16),
-            label: Text(
-              filtersOpen
-                  ? 'Ocultar filtros'
-                  : _buildFilterSummary(),
-              style: const TextStyle(fontSize: 13),
+          // Prefixo de placa
+          const Text('Prefixo da placa (ex: ABC, PR)',
+              style: TextStyle(
+                  color: _kMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _prefixCtrl,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+              LengthLimitingTextInputFormatter(7),
+            ],
+            style: const TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 2,
+                fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'ABC ou PR',
+              hintStyle: const TextStyle(
+                  color: AppColors.muted, letterSpacing: 1, fontSize: 12),
+              filled: true,
+              fillColor: _kBg.withValues(alpha: 0.7),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: _kBorder),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: _kRed, width: 1.4),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
+          const SizedBox(height: 12),
 
-          // ── Painel de filtros expansível ──────────────────────────────
-          if (filtersOpen) ...[
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 12),
-
-            // Janela de tempo
-            _FilterSection(
-              label: 'Janela de tempo',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kWindows.map((e) {
-                    final selected = e.$1 == window;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(e.$2),
-                        selected: selected,
-                        selectedColor: AppColors.warning,
-                        labelStyle: TextStyle(
-                          color: selected ? Colors.black : AppColors.text,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                        backgroundColor: AppColors.background,
-                        side: BorderSide(
-                          color: selected ? AppColors.warning : AppColors.border,
-                        ),
-                        onSelected: (_) => onWindowChanged(e.$1),
+          // Direção
+          const Text('Direção do trajeto',
+              style: TextStyle(
+                  color: _kMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _kDirecoes.map((e) {
+                final selected = e.$1 == _direcao;
+                return GestureDetector(
+                  onTap: () => setState(() => _direcao = selected ? null : e.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: selected ? _kRed.withValues(alpha: 0.14) : _kBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: selected ? _kRed.withValues(alpha: 0.7) : _kBorder,
+                        width: selected ? 1.3 : 1,
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Tempo conjunto por câmera
-            _FilterSection(
-              label: 'Tempo máximo de diferença por câmera',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kCoWindows.map((e) {
-                    final selected = e.$1 == coWindow;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(e.$2),
-                        selected: selected,
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: selected ? Colors.white : AppColors.text,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                        backgroundColor: AppColors.background,
-                        side: BorderSide(
-                          color: selected ? AppColors.primary : AppColors.border,
-                        ),
-                        onSelected: (_) => onCoWindowChanged(e.$1),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Mínimo de câmeras juntas
-            _FilterSection(
-              label: 'Mínimo de câmeras juntas',
-              child: Row(
-                children: _kMinCameras.map((n) {
-                  final selected = n == minCameras;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text('$n+'),
-                      selected: selected,
-                      selectedColor: AppColors.danger,
-                      labelStyle: TextStyle(
-                        color: selected ? Colors.white : AppColors.text,
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                      backgroundColor: AppColors.background,
-                      side: BorderSide(
-                        color: selected ? AppColors.danger : AppColors.border,
-                      ),
-                      onSelected: (_) => onMinCamerasChanged(n),
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-            const SizedBox(height: 14),
-            const Divider(color: AppColors.border, height: 1),
-            const SizedBox(height: 10),
-            Text('FILTROS DO SUSPEITO',
-                style: TextStyle(
-                    color: AppColors.danger,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2)),
-            const SizedBox(height: 10),
-
-            // Prefixo de placa do suspeito
-            _FilterSection(
-              label: 'Prefixo da placa do suspeito (ex: ABC, PR)',
-              child: TextField(
-                controller: prefixCtrl,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
-                  LengthLimitingTextInputFormatter(7),
-                ],
-                style: const TextStyle(
-                    color: AppColors.text,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2,
-                    fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'ex: ABC ou PR',
-                  hintStyle: const TextStyle(color: AppColors.muted, letterSpacing: 1, fontSize: 12),
-                  prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted, size: 18),
-                  suffixIcon: prefixCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: AppColors.muted, size: 16),
-                          onPressed: () => prefixCtrl.clear(),
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.background,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(10),
+                    child: Text(e.$2,
+                        style: TextStyle(
+                          color: selected ? _kRed : _kMuted,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                        )),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: AppColors.danger, width: 1.4),
-                    borderRadius: BorderRadius.circular(10),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Tipo de veículo
+          const Text('Tipo de veículo',
+              style: TextStyle(
+                  color: _kMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _kVehicleTypes.map((e) {
+                final selected = e.$1 == _vehicleType;
+                return GestureDetector(
+                  onTap: () => setState(() => _vehicleType = selected ? null : e.$1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.primary.withValues(alpha: 0.14) : _kBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: selected ? AppColors.primary.withValues(alpha: 0.7) : _kBorder,
+                        width: selected ? 1.3 : 1,
+                      ),
+                    ),
+                    child: Text(e.$2,
+                        style: TextStyle(
+                          color: selected ? AppColors.primary : _kMuted,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                        )),
                   ),
-                ),
-              ),
+                );
+              }).toList(),
             ),
+          ),
+          const SizedBox(height: 12),
 
-            const SizedBox(height: 10),
-
-            // Direção do trajeto
-            _FilterSection(
-              label: 'Direção do trajeto',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kDirecoes.map((e) {
-                    final selected = e.$1 == direcao;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(e.$2),
-                        selected: selected,
-                        selectedColor: AppColors.danger,
-                        labelStyle: TextStyle(
-                          color: selected ? Colors.white : AppColors.text,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                        backgroundColor: AppColors.background,
-                        side: BorderSide(
-                            color: selected ? AppColors.danger : AppColors.border),
-                        onSelected: (_) => onDirecaoChanged(e.$1),
+          // Cor do veículo
+          const Text('Cor do veículo',
+              style: TextStyle(
+                  color: _kMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _kVehicleColors.map((cor) {
+                final selected = cor == _vehicleColor;
+                return GestureDetector(
+                  onTap: () => setState(() => _vehicleColor = selected ? null : cor),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: selected ? _colorFromName(cor).withValues(alpha: 0.2) : _kBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: selected ? _colorFromName(cor) : _kBorder,
+                        width: selected ? 1.3 : 1,
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Tipo de veículo
-            _FilterSection(
-              label: 'Tipo de veículo do suspeito',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kVehicleTypes.map((e) {
-                    final selected = e.$1 == vehicleType;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(e.$2),
-                        selected: selected,
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: selected ? Colors.white : AppColors.text,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                          fontSize: 12,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _colorFromName(cor),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24, width: 0.5),
+                          ),
                         ),
-                        backgroundColor: AppColors.background,
-                        side: BorderSide(
-                            color: selected ? AppColors.primary : AppColors.border),
-                        onSelected: (_) => onVehicleTypeChanged(e.$1),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                        const SizedBox(width: 5),
+                        Text(cor,
+                            style: TextStyle(
+                              color: selected ? Colors.white : _kMuted,
+                              fontSize: 13,
+                              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                            )),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-
-            const SizedBox(height: 10),
-
-            // Cor do veículo
-            _FilterSection(
-              label: 'Cor do veículo do suspeito',
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kVehicleColors.map((cor) {
-                    final selected = cor == vehicleColor;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(cor),
-                        selected: selected,
-                        selectedColor: _colorFromName(cor),
-                        labelStyle: TextStyle(
-                          color: selected ? _colorTextFromName(cor) : AppColors.text,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
-                          fontSize: 12,
-                        ),
-                        backgroundColor: AppColors.background,
-                        side: BorderSide(
-                            color: selected
-                                ? _colorFromName(cor)
-                                : AppColors.border),
-                        onSelected: (_) => onVehicleColorChanged(cor),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-          ],
-
-          const Divider(color: AppColors.border, height: 1),
+          ),
         ],
       ),
     );
   }
+
+  // ─── Campo de placa ───────────────────────────────────────────────────────
+
+  Widget _buildPlateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PLACA ALVO',
+          style: TextStyle(
+            color: _kMuted,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2.0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _kYellow.withValues(alpha: 0.4)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: PlateSearchField(
+            controller: _plateCtrl,
+            focusNode: _focusNode,
+            hintText: 'ABC1234',
+            onSubmitted: _search,
+            onChanged: (_) {
+              if (_scanResult != null) setState(() => _scanResult = null);
+            },
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.camera_alt_rounded, color: _kYellow, size: 20),
+                  tooltip: 'Fotografar placa',
+                  onPressed: _scanning || _loading ? null : _scanPlate,
+                  padding: const EdgeInsets.all(8),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear_rounded, color: _kMuted, size: 18),
+                  tooltip: 'Limpar',
+                  onPressed: () {
+                    _plateCtrl.clear();
+                    setState(() { _scanResult = null; _capturedImage = null; });
+                  },
+                  padding: const EdgeInsets.all(8),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
 }
 
 // ─── Mapeamento de cor nome → Color Flutter ───────────────────────────────────
@@ -635,24 +937,6 @@ Color _colorTextFromName(String cor) {
     case 'prata':
     case 'amarelo': return Colors.black;
     default:        return Colors.white;
-  }
-}
-
-class _FilterSection extends StatelessWidget {
-  final String label;
-  final Widget child;
-  const _FilterSection({required this.label, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        child,
-      ],
-    );
   }
 }
 
@@ -721,7 +1005,7 @@ class _ResultList extends StatelessWidget {
         // ── Cards de companheiros ──────────────────────────────────────
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
             itemCount: companions.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
