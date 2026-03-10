@@ -33,6 +33,7 @@ from services.fcm_service import (
     register_fcm_token,
     send_alert_for_detected_plate,
     send_alert_to_alarm_users,
+    get_fcm_credential_identity,
     FCMAlert,
     normalize_plate,
     is_likely_fake_token,
@@ -4774,10 +4775,16 @@ async def fcm_send_alert(request: Request):
 
         return {
             "ok": True,
+            "linked_users": stats.get("linked_users", stats.get("users", 0)),
+            "valid_tokens": stats.get("valid_tokens", 0),
             "sent": stats["sent"],
+            "sent_success": stats["sent"],
             "failed": stats["failed"],
+            "failures": stats["failed"],
             "invalid_tokens": stats["invalid"],
             "users": stats.get("users", 0),
+            "users_with_tokens": stats.get("users_with_tokens", 0),
+            "tokens_attempted": stats.get("tokens_attempted", stats.get("valid_tokens", 0)),
             "alarme_id": alarme_id,
             "event_id": event_id,
         }
@@ -4786,6 +4793,116 @@ async def fcm_send_alert(request: Request):
     except Exception as e:
         logger.exception("[FCM] Erro ao enviar alerta manual: %s", e)
         raise HTTPException(status_code=500, detail="Erro interno ao enviar alerta push")
+
+
+@app.post("/api/fcm/test-self")
+async def fcm_test_self(request: Request):
+    """Teste direto de push para o usuário autenticado (opcionalmente para um device_id)."""
+    try:
+        user_sub = request.state.user.get("sub") if isinstance(request.state.user, dict) else None
+        if not user_sub:
+            raise HTTPException(status_code=401, detail="Não autenticado")
+
+        user_id = _resolve_user_numeric_id_from_sub(str(user_sub))
+        if not user_id:
+            raise HTTPException(status_code=422, detail="Usuário do token não mapeado no cadastro")
+
+        data = await request.json()
+        device_id = (data.get("device_id") or "").strip() or None
+        title = str(data.get("title") or "Teste Push BPFRON").strip()
+        body = str(data.get("body") or "Mensagem de teste enviada pelo backend").strip()
+        event_id = str(data.get("event_id") or f"self-test-{uuid.uuid4().hex[:12]}").strip()
+
+        logger.info(
+            "[FCM] test-self request user_sub=%s resolved_user_id=%s device_id=%s title=%s event_id=%s",
+            user_sub,
+            user_id,
+            device_id or "*",
+            title,
+            event_id,
+        )
+
+        alert = FCMAlert(
+            plate="TESTE-SELF",
+            target_name=title,
+            camera_name="Teste Direto",
+            detected_at=datetime.now(timezone.utc).isoformat(),
+            image_url="",
+            event_id=event_id,
+            city="N/A",
+            risk_level="high",
+            alert_type="critical_alert",
+        )
+
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, user_id, device_id, LEFT(fcm_token, 16) AS token_prefix, active, updated_at
+                    FROM fcm_device_tokens
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 30
+                    """,
+                    (str(user_id),),
+                )
+                token_rows = cur.fetchall() or []
+
+                active_rows = [r for r in token_rows if bool(r[4])]
+                logger.info(
+                    "[FCM] test-self token_snapshot user_sub=%s user_id=%s total_rows=%d active_rows=%d",
+                    user_sub,
+                    user_id,
+                    len(token_rows),
+                    len(active_rows),
+                )
+                for row in token_rows:
+                    logger.info(
+                        "[FCM] test-self token_row token_row_id=%s user_id=%s device_id=%s token_prefix=%s active=%s updated_at=%s",
+                        row[0],
+                        row[1],
+                        row[2],
+                        row[3],
+                        row[4],
+                        row[5],
+                    )
+
+                stats = await send_alert_to_user_tokens(cur, str(user_id), alert, device_id=device_id)
+
+        logger.info(
+            "[FCM] test-self user_sub=%s user_id=%s device_id=%s sent=%s failed=%s invalid=%s valid_tokens=%s",
+            user_sub,
+            user_id,
+            device_id or "*",
+            stats.get("sent", 0),
+            stats.get("failed", 0),
+            stats.get("invalid", 0),
+            stats.get("valid_tokens", 0),
+        )
+
+        return {
+            "ok": True,
+            "user_sub": str(user_sub),
+            "user_id": str(user_id),
+            "device_id": device_id,
+            "event_id": event_id,
+            "valid_tokens": int(stats.get("valid_tokens", 0)),
+            "sent": int(stats.get("sent", 0)),
+            "failed": int(stats.get("failed", 0)),
+            "invalid_tokens": int(stats.get("invalid", 0)),
+            "payload": {
+                "title": title,
+                "body": body,
+                "type": "critical_alert",
+                "event_id": event_id,
+                "click_action": "FLUTTER_NOTIFICATION_CLICK",
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[FCM] Erro no test-self: %s", e)
+        raise HTTPException(status_code=500, detail="Erro interno no teste de push")
 
 
 @app.get("/api/fcm/status")
@@ -5063,19 +5180,34 @@ async def test_alarme(aid: int, request: Request):
                 risk_level=prioridade,
                 alert_type=tipo,
             )
-            stats = await send_alert_to_alarm_users(cur, aid, alert)
-    
-    # Retornar informações detalhadas do resultado
+            stats = await send_alert_to_alarm_users(
+                cur,
+                aid,
+                alert,
+                deactivate_invalid_tokens=False,
+                collect_results=True,
+            )
+
+    cred = get_fcm_credential_identity()
+    resultados = list(stats.get("resultados", []))
+    token_ids = list(stats.get("token_ids", []))
+    ok = any(bool(item.get("sucesso")) for item in resultados)
+
     return {
-        "ok": True,
+        "ok": ok,
         "alarm_id": aid,
         "alarm_name": nome,
-        "sent": stats["sent"],
-        "failed": stats["failed"],
-        "invalid": stats["invalid"],
-        "users_found": stats.get("users_found", 0),
-        "users_with_tokens": stats.get("users_with_tokens", 0),
-        "tokens_attempted": stats.get("tokens_attempted", 0),
+        "tokens_encontrados": int(stats.get("tokens_encontrados", len(token_ids))),
+        "tokens_testados": token_ids,
+        "project_id": cred.get("project_id", ""),
+        "client_email": cred.get("client_email", ""),
+        "credentials_path": cred.get("credentials_path", ""),
+        "resultados": resultados,
+        "linked_users": int(stats.get("linked_users", 0)),
+        "users_with_tokens": int(stats.get("users_with_tokens", 0)),
+        "sent": int(stats.get("sent", 0)),
+        "failed": int(stats.get("failed", 0)),
+        "invalid_tokens": int(stats.get("invalid", 0)),
     }
 
 

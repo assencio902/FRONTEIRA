@@ -26,6 +26,13 @@ FCM_PROJECT_ID = os.getenv("FCM_PROJECT_ID", "")
 FCM_SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
 _token_cache: dict[str, Any] = {"access_token": None, "expires_at": 0.0}
+_credential_info_cache: dict[str, Any] = {}
+
+SELECT_ACTIVE_USER_TOKENS_SQL = """
+    SELECT id, user_id, device_id, fcm_token
+    FROM fcm_device_tokens
+    WHERE user_id = %s AND active = TRUE
+"""
 
 
 def normalize_plate(value: str | None) -> str:
@@ -49,6 +56,15 @@ def is_likely_fake_token(token: str | None) -> bool:
         "sample-token",
     )
     return any(marker in lower for marker in suspicious_markers)
+
+
+def _token_prefix(token: str | None) -> str:
+    val = (token or "").strip()
+    return val[:16] if val else ""
+
+
+def _compact_sql(sql: str) -> str:
+    return " ".join((sql or "").split())
 
 
 class FCMAlert:
@@ -90,6 +106,7 @@ class FCMAlert:
             "alert_type": self.alert_type,
             # compatibilidade com app legado
             "type": self.alert_type,
+            "click_action": "FLUTTER_NOTIFICATION_CLICK",
             "screen": "alert_detail",
             "route": "/alert-detail",
         }
@@ -111,6 +128,22 @@ def _load_service_account_credentials():
 
     with open(FCM_CREDENTIALS_PATH, "r", encoding="utf-8") as fh:
         info = json.load(fh)
+
+    project_id = _resolve_project_id(info)
+    client_email = str(info.get("client_email") or "")
+    _credential_info_cache.update(
+        {
+            "credentials_path": FCM_CREDENTIALS_PATH,
+            "project_id": project_id,
+            "client_email": client_email,
+        }
+    )
+    logger.info(
+        "[FCM] credencial carregada path=%s project_id=%s client_email=%s",
+        FCM_CREDENTIALS_PATH,
+        project_id,
+        client_email,
+    )
 
     creds = service_account.Credentials.from_service_account_file(
         FCM_CREDENTIALS_PATH,
@@ -137,6 +170,41 @@ def _get_access_token() -> tuple[str, str]:
     project_id = _resolve_project_id(info)
     _token_cache.update({"access_token": access_token, "expires_at": expiry, "project_id": project_id})
     return access_token, project_id
+
+
+def get_fcm_credential_identity() -> dict[str, str]:
+    """Retorna metadados da credencial FCM atualmente configurada."""
+    if _credential_info_cache:
+        return {
+            "credentials_path": str(_credential_info_cache.get("credentials_path") or FCM_CREDENTIALS_PATH),
+            "project_id": str(_credential_info_cache.get("project_id") or ""),
+            "client_email": str(_credential_info_cache.get("client_email") or ""),
+        }
+
+    if not os.path.exists(FCM_CREDENTIALS_PATH):
+        return {
+            "credentials_path": FCM_CREDENTIALS_PATH,
+            "project_id": "",
+            "client_email": "",
+        }
+
+    with open(FCM_CREDENTIALS_PATH, "r", encoding="utf-8") as fh:
+        info = json.load(fh)
+
+    project_id = _resolve_project_id(info)
+    client_email = str(info.get("client_email") or "")
+    _credential_info_cache.update(
+        {
+            "credentials_path": FCM_CREDENTIALS_PATH,
+            "project_id": project_id,
+            "client_email": client_email,
+        }
+    )
+    return {
+        "credentials_path": FCM_CREDENTIALS_PATH,
+        "project_id": project_id,
+        "client_email": client_email,
+    }
 
 
 def register_fcm_token(user_id: str, device_id: str, fcm_token: str, db_cur=None) -> bool:
@@ -175,13 +243,121 @@ def register_fcm_token(user_id: str, device_id: str, fcm_token: str, db_cur=None
         return False
 
 
-async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> tuple[bool, str | None]:
-    """Envia uma mensagem para um token FCM. Retorna (ok, erro)."""
+def _classify_fcm_failure(response: httpx.Response) -> tuple[str, str, bool]:
+    response_text = response.text[:800]
+    detail = response_text
+    markers: list[str] = []
+
+    try:
+        payload = response.json()
+    except Exception:
+        payload = None
+
+    if isinstance(payload, dict):
+        error_obj = payload.get("error") if isinstance(payload.get("error"), dict) else payload
+        for key in ("status", "message"):
+            value = error_obj.get(key) if isinstance(error_obj, dict) else None
+            if value:
+                markers.append(str(value))
+
+        details = error_obj.get("details") if isinstance(error_obj, dict) else None
+        if isinstance(details, list):
+            for item in details:
+                if not isinstance(item, dict):
+                    continue
+                error_code = item.get("errorCode")
+                if error_code:
+                    markers.append(str(error_code))
+                field_violations = item.get("fieldViolations")
+                if isinstance(field_violations, list):
+                    for violation in field_violations:
+                        if not isinstance(violation, dict):
+                            continue
+                        description = violation.get("description")
+                        if description:
+                            markers.append(str(description))
+
+        if markers:
+            detail = " | ".join(markers)
+
+    haystack = f"{response_text} {' '.join(markers)}".lower()
+    invalid_markers = (
+        "unregistered",
+        "registration-token-not-registered",
+        "not registered",
+        "requested entity was not found",
+        "requested entity was not found.",
+    )
+    is_invalid = any(marker in haystack for marker in invalid_markers)
+    project_markers = (
+        "project was not found",
+        "project not found",
+        "sender id",
+        "mismatched-credential",
+    )
+    is_project_mismatch = any(marker in haystack for marker in project_markers)
+
+    if is_invalid:
+        error_code = "invalid_token"
+    elif is_project_mismatch:
+        error_code = "project_mismatch"
+    else:
+        error_code = f"http_{response.status_code}"
+    return error_code, detail, is_invalid
+
+
+def _extract_firebase_error_fields(response: httpx.Response) -> dict[str, str]:
+    firebase_status = ""
+    firebase_error = ""
+    firebase_message = ""
+    try:
+        payload = response.json()
+    except Exception:
+        payload = None
+
+    if isinstance(payload, dict):
+        error_obj = payload.get("error") if isinstance(payload.get("error"), dict) else payload
+        if isinstance(error_obj, dict):
+            firebase_status = str(error_obj.get("status") or "")
+            firebase_message = str(error_obj.get("message") or "")
+            details = error_obj.get("details")
+            if isinstance(details, list):
+                for item in details:
+                    if not isinstance(item, dict):
+                        continue
+                    code = item.get("errorCode")
+                    if code:
+                        firebase_error = str(code)
+                        break
+
+    return {
+        "firebase_status": firebase_status,
+        "firebase_error": firebase_error,
+        "firebase_message": firebase_message,
+    }
+
+
+def _deactivate_token(db_cur, token_row_id: int, reason: str) -> None:
+    db_cur.execute(
+        "UPDATE fcm_device_tokens SET active = FALSE, updated_at = NOW() WHERE id = %s",
+        (token_row_id,),
+    )
+    logger.warning("[FCM] token desativado token_row_id=%s reason=%s", token_row_id, reason)
+
+
+async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> dict[str, Any]:
+    """Envia uma mensagem para um token FCM. Retorna detalhes do resultado."""
     try:
         access_token, project_id = _get_access_token()
     except Exception as exc:
         logger.error("[FCM] Credencial/Token indisponível: %s", exc)
-        return False, f"credentials_error:{exc}"
+        return {
+            "ok": False,
+            "error_code": "credentials_error",
+            "error_detail": str(exc),
+            "invalid_token": False,
+            "http_status": None,
+        }
 
     channel_id = "critical_alerts" if alert.alert_type == "critical_alert" else "normal_alerts"
     title = "ALERTA CRITICO" if alert.alert_type == "critical_alert" else "Deteccao"
@@ -223,12 +399,23 @@ async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> tuple[bool, str 
         }
     }
 
+    payload_log = {
+        "message": {
+            **payload["message"],
+            "token": f"{_token_prefix(fcm_token)}...",
+        }
+    }
+
     logger.info(
-        "[FCM] payload event_id=%s plate=%s image_url=%s route=%s",
+        "[FCM] payload event_id=%s plate=%s image_url=%s route=%s has_notification=%s has_data=%s project_id=%s body=%s",
         alert.event_id,
         alert.plate,
         "yes" if alert.image_url else "no",
         "/alert-detail",
+        bool(payload.get("message", {}).get("notification")),
+        bool(payload.get("message", {}).get("data")),
+        project_id,
+        json.dumps(payload_log, ensure_ascii=False),
     )
 
     url = FCM_API_URL.format(project_id)
@@ -237,20 +424,69 @@ async def _send_fcm_message(fcm_token: str, alert: FCMAlert) -> tuple[bool, str 
         "Content-Type": "application/json; charset=UTF-8",
     }
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.post(url, headers=headers, json=payload)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, headers=headers, json=payload)
+    except Exception as exc:
+        logger.exception("[FCM] Exceção ao chamar Firebase token=%s", _token_prefix(fcm_token))
+        return {
+            "ok": False,
+            "error_code": "firebase_request_exception",
+            "error_detail": str(exc),
+            "invalid_token": False,
+            "http_status": None,
+            "firebase_status": "",
+            "firebase_error": "",
+            "firebase_message": str(exc),
+            "firebase_message_id": None,
+        }
 
     if response.status_code == 200:
-        logger.info("[FCM] Push enviado token=%s plate=%s", fcm_token[:18], alert.plate)
-        return True, None
+        firebase_message_id = None
+        try:
+            resp_payload = response.json()
+            firebase_message_id = resp_payload.get("name") if isinstance(resp_payload, dict) else None
+        except Exception:
+            firebase_message_id = None
 
-    response_text = response.text[:800]
-    logger.error("[FCM] Falha HTTP %s: %s", response.status_code, response_text)
+        logger.info(
+            "[FCM] Push enviado token=%s plate=%s firebase_response=%s",
+            fcm_token[:18],
+            alert.plate,
+            response.text,
+        )
+        return {
+            "ok": True,
+            "error_code": None,
+            "error_detail": None,
+            "invalid_token": False,
+            "http_status": response.status_code,
+            "firebase_status": "OK",
+            "firebase_error": "",
+            "firebase_message": "",
+            "firebase_message_id": firebase_message_id,
+        }
 
-    is_unregistered = "UNREGISTERED" in response_text or "registration-token-not-registered" in response_text
-    if is_unregistered:
-        return False, "invalid_token"
-    return False, f"http_{response.status_code}"
+    error_code, error_detail, invalid_token = _classify_fcm_failure(response)
+    firebase_fields = _extract_firebase_error_fields(response)
+    logger.error(
+        "[FCM] Falha HTTP %s token=%s detail=%s firebase_response=%s",
+        response.status_code,
+        _token_prefix(fcm_token),
+        error_detail,
+        response.text,
+    )
+    return {
+        "ok": False,
+        "error_code": error_code,
+        "error_detail": error_detail,
+        "invalid_token": invalid_token,
+        "http_status": response.status_code,
+        "firebase_status": firebase_fields["firebase_status"],
+        "firebase_error": firebase_fields["firebase_error"],
+        "firebase_message": firebase_fields["firebase_message"],
+        "firebase_message_id": None,
+    }
 
 
 async def send_alert_to_user_tokens(
@@ -258,63 +494,144 @@ async def send_alert_to_user_tokens(
     user_id: str,
     alert: FCMAlert,
     device_id: Optional[str] = None,
-) -> dict[str, int]:
+    *,
+    deactivate_invalid_tokens: bool = True,
+    collect_results: bool = False,
+) -> dict[str, Any]:
     """Envia alerta para tokens ativos do usuário e inativa tokens inválidos."""
     params = [user_id]
-    sql = """
-        SELECT id, fcm_token
-        FROM fcm_device_tokens
-        WHERE user_id = %s AND active = TRUE
-    """
+    sql = SELECT_ACTIVE_USER_TOKENS_SQL
     if device_id:
         sql += " AND device_id = %s"
         params.append(device_id)
+    sql += " ORDER BY id"
+
+    logger.info("[FCM] SQL busca tokens: %s | params=%s", _compact_sql(sql), tuple(params))
 
     db_cur.execute(sql, tuple(params))
     rows = db_cur.fetchall()
     if not rows:
-        logger.warning("[FCM] Nenhum token ativo para user=%s", user_id)
-        return {"sent": 0, "failed": 0, "invalid": 0}
+        logger.warning("[FCM] Nenhum token ativo para user_id=%s device_id=%s", user_id, device_id or "*")
+        return {
+            "sent": 0,
+            "failed": 0,
+            "invalid": 0,
+            "valid_tokens": 0,
+            "tokens_encontrados": 0,
+            "token_ids": [],
+            "resultados": [],
+        }
 
-    logger.info("[FCM] user=%s tokens_ativos_encontrados=%d", user_id, len(rows))
+    logger.info("[FCM] user_id=%s tokens_ativos_encontrados=%d device_id=%s", user_id, len(rows), device_id or "*")
 
     sent = 0
     failed = 0
     invalid = 0
-    for token_row_id, token in rows:
+    valid_tokens = 0
+    token_ids = [int(r[0]) for r in rows]
+    resultados: list[dict[str, Any]] = []
+    for token_row_id, token_user_id, token_device_id, token in rows:
+        token_prefix = _token_prefix(token)
         if is_likely_fake_token(token):
             logger.warning(
-                "[FCM] Token fake ignorado e inativado user=%s token_row_id=%s token_prefix=%s",
-                user_id,
+                "[FCM] envio_push user_id=%s device_id=%s token_row_id=%s token_prefix=%s resultado=fake_token",
+                token_user_id,
+                token_device_id,
                 token_row_id,
-                (token or "")[:16],
+                token_prefix,
             )
             failed += 1
             invalid += 1
-            db_cur.execute(
-                "UPDATE fcm_device_tokens SET active = FALSE, updated_at = NOW() WHERE id = %s",
-                (token_row_id,),
-            )
+            if deactivate_invalid_tokens:
+                _deactivate_token(db_cur, token_row_id, "fake_token")
+            if collect_results:
+                resultados.append(
+                    {
+                        "token_id": int(token_row_id),
+                        "user_id": str(token_user_id),
+                        "device_id": str(token_device_id),
+                        "token_prefix": token_prefix,
+                        "sucesso": False,
+                        "erro": "FAKE_TOKEN",
+                        "detalhe": "Token marcado como teste/mock",
+                    }
+                )
             continue
 
-        ok, error_code = await _send_fcm_message(token, alert)
-        if ok:
+        valid_tokens += 1
+        logger.info(
+            "[FCM] envio_push user_id=%s device_id=%s token_row_id=%s token_prefix=%s resultado=attempt",
+            token_user_id,
+            token_device_id,
+            token_row_id,
+            token_prefix,
+        )
+
+        result = await _send_fcm_message(token, alert)
+        if result["ok"]:
             sent += 1
             db_cur.execute(
                 "UPDATE fcm_device_tokens SET last_seen_at = NOW(), updated_at = NOW() WHERE id = %s",
                 (token_row_id,),
             )
+            logger.info(
+                "[FCM] envio_push user_id=%s device_id=%s token_row_id=%s token_prefix=%s resultado=success http_status=%s",
+                token_user_id,
+                token_device_id,
+                token_row_id,
+                token_prefix,
+                result["http_status"],
+            )
+            if collect_results:
+                resultados.append(
+                    {
+                        "token_id": int(token_row_id),
+                        "user_id": str(token_user_id),
+                        "device_id": str(token_device_id),
+                        "token_prefix": token_prefix,
+                        "sucesso": True,
+                        "firebase_message_id": result.get("firebase_message_id"),
+                    }
+                )
             continue
 
         failed += 1
-        if error_code == "invalid_token":
+        if result["invalid_token"]:
             invalid += 1
-            db_cur.execute(
-                "UPDATE fcm_device_tokens SET active = FALSE, updated_at = NOW() WHERE id = %s",
-                (token_row_id,),
+            if deactivate_invalid_tokens:
+                _deactivate_token(db_cur, token_row_id, result["error_code"] or "invalid_token")
+
+        logger.warning(
+            "[FCM] envio_push user_id=%s device_id=%s token_row_id=%s token_prefix=%s resultado=failed error_code=%s detail=%s",
+            token_user_id,
+            token_device_id,
+            token_row_id,
+            token_prefix,
+            result["error_code"],
+            result["error_detail"],
+        )
+        if collect_results:
+            resultados.append(
+                {
+                    "token_id": int(token_row_id),
+                    "user_id": str(token_user_id),
+                    "device_id": str(token_device_id),
+                    "token_prefix": token_prefix,
+                    "sucesso": False,
+                    "erro": result.get("firebase_error") or result.get("firebase_status") or result.get("error_code"),
+                    "detalhe": result.get("firebase_message") or result.get("error_detail"),
+                }
             )
 
-    return {"sent": sent, "failed": failed, "invalid": invalid}
+    return {
+        "sent": sent,
+        "failed": failed,
+        "invalid": invalid,
+        "valid_tokens": valid_tokens,
+        "tokens_encontrados": len(rows),
+        "token_ids": token_ids,
+        "resultados": resultados,
+    }
 
 
 async def send_alert_to_all_active_tokens(db_cur, alert: FCMAlert) -> dict[str, int]:
@@ -322,12 +639,13 @@ async def send_alert_to_all_active_tokens(db_cur, alert: FCMAlert) -> dict[str, 
     db_cur.execute("SELECT DISTINCT user_id FROM fcm_device_tokens WHERE active = TRUE")
     users = [row[0] for row in db_cur.fetchall()]
 
-    totals = {"sent": 0, "failed": 0, "invalid": 0, "users": len(users)}
+    totals = {"sent": 0, "failed": 0, "invalid": 0, "users": len(users), "valid_tokens": 0}
     for user_id in users:
         stats = await send_alert_to_user_tokens(db_cur, str(user_id), alert)
         totals["sent"] += stats["sent"]
         totals["failed"] += stats["failed"]
         totals["invalid"] += stats["invalid"]
+        totals["valid_tokens"] += stats.get("valid_tokens", 0)
     return totals
 
 
@@ -341,7 +659,14 @@ def _priority_to_risk(priority: str | None) -> str:
     return val if val in {"baixa", "media", "alta", "critica"} else "media"
 
 
-async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> dict[str, int]:
+async def send_alert_to_alarm_users(
+    db_cur,
+    alarme_id: int,
+    alert: FCMAlert,
+    *,
+    deactivate_invalid_tokens: bool = True,
+    collect_results: bool = False,
+) -> dict[str, Any]:
     """Envia alerta apenas para usuários vinculados a um alarme."""
     # Buscar usuários vinculados ao alarme
     db_cur.execute(
@@ -356,7 +681,7 @@ async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> 
     )
     users = [str(row[0]) for row in db_cur.fetchall()]
     
-    logger.info("[FCM] send_alert_to_alarm_users: alarme_id=%s encontrados %d usuários vinculados", alarme_id, len(users))
+    logger.info("[FCM] send_alert_to_alarm_users: alarme_id=%s linked_users=%d", alarme_id, len(users))
     
     if not users:
         logger.warning("[FCM] Alarme %s tem 0 usuários vinculados", alarme_id)
@@ -365,8 +690,10 @@ async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> 
             "failed": 0,
             "invalid": 0,
             "users": 0,
+            "linked_users": 0,
             "users_found": 0,
             "users_with_tokens": 0,
+            "valid_tokens": 0,
             "tokens_attempted": 0,
         }
 
@@ -375,41 +702,56 @@ async def send_alert_to_alarm_users(db_cur, alarme_id: int, alert: FCMAlert) -> 
         "failed": 0,
         "invalid": 0,
         "users": len(users),
+        "linked_users": len(users),
         "users_found": len(users),
         "users_with_tokens": 0,
+        "valid_tokens": 0,
         "tokens_attempted": 0,
     }
     
+    aggregated_resultados: list[dict[str, Any]] = []
+    aggregated_token_ids: list[int] = []
+
     for user_id in users:
-        # Contar tokens ativos para este usuário ANTES de enviar
-        db_cur.execute(
-            "SELECT COUNT(*) FROM fcm_device_tokens WHERE user_id = %s AND active = TRUE",
-            (user_id,),
+        stats = await send_alert_to_user_tokens(
+            db_cur,
+            user_id,
+            alert,
+            deactivate_invalid_tokens=deactivate_invalid_tokens,
+            collect_results=collect_results,
         )
-        tokens_count = int(db_cur.fetchone()[0] or 0)
-        
-        if tokens_count > 0:
+        valid_tokens = int(stats.get("valid_tokens") or 0)
+
+        if valid_tokens > 0:
             totals["users_with_tokens"] += 1
-            totals["tokens_attempted"] += tokens_count
-            logger.debug("[FCM] user_id=%s tem %d token(s) ativo(s)", user_id, tokens_count)
+            logger.info("[FCM] alarme_id=%s user_id=%s valid_tokens=%d", alarme_id, user_id, valid_tokens)
         else:
-            logger.warning("[FCM] user_id=%s tem 0 tokens ativos", user_id)
-        
-        stats = await send_alert_to_user_tokens(db_cur, user_id, alert)
+            logger.warning("[FCM] alarme_id=%s user_id=%s valid_tokens=0", alarme_id, user_id)
+
+        totals["valid_tokens"] += valid_tokens
+        totals["tokens_attempted"] += valid_tokens
         totals["sent"] += stats["sent"]
         totals["failed"] += stats["failed"]
         totals["invalid"] += stats["invalid"]
+        if collect_results:
+            aggregated_resultados.extend(stats.get("resultados", []))
+            aggregated_token_ids.extend([int(tid) for tid in stats.get("token_ids", [])])
     
     logger.info(
-        "[FCM] send_alert_to_alarm_users resultado: users=%d found=%d with_tokens=%d tokens_attempted=%d sent=%d failed=%d",
-        totals["users"],
-        totals["users_found"],
+        "[FCM] send_alert_to_alarm_users resultado: alarme_id=%s linked_users=%d users_with_tokens=%d valid_tokens=%d sent=%d failed=%d invalid=%d",
+        alarme_id,
+        totals["linked_users"],
         totals["users_with_tokens"],
-        totals["tokens_attempted"],
+        totals["valid_tokens"],
         totals["sent"],
         totals["failed"],
+        totals["invalid"],
     )
     
+    if collect_results:
+        totals["token_ids"] = sorted(set(aggregated_token_ids))
+        totals["resultados"] = aggregated_resultados
+        totals["tokens_encontrados"] = len(totals["token_ids"])
     return totals
 
 
@@ -548,9 +890,10 @@ async def send_alert_for_detected_plate(
             failed_total += stats["failed"]
             invalid_total += stats["invalid"]
             logger.info(
-                "[FCM] Push resultado event_id=%s user_id=%s sent=%s failed=%s invalid=%s",
+                "[FCM] Push resultado event_id=%s user_id=%s valid_tokens=%s sent=%s failed=%s invalid=%s",
                 event_id,
                 uid,
+                stats.get("valid_tokens", 0),
                 stats["sent"],
                 stats["failed"],
                 stats["invalid"],
@@ -602,7 +945,6 @@ async def send_alert_for_detected_plate(
             failed_total,
             invalid_total,
         )
-        return True
         return sent_total > 0
     except Exception as exc:
         logger.exception("[FCM] Erro no auto-alerta da placa %s: %s", plate_normalized, exc)
