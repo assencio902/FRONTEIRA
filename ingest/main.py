@@ -33,10 +33,13 @@ from services.fcm_service import (
     register_fcm_token,
     send_alert_for_detected_plate,
     send_alert_to_alarm_users,
+    send_alert_to_user_tokens,
     get_fcm_credential_identity,
     FCMAlert,
     normalize_plate,
     is_likely_fake_token,
+    MIN_PLATE_CONF,
+    _is_valid_plate_format,
 )
 
 from cleanup_background import start_cleanup_background, stop_cleanup_background
@@ -88,7 +91,7 @@ def _decode_token(token: str) -> dict:
     return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
 # Paths públicos (não exigem JWT)
-_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/api/ingest", "/api/catchall", "/catchall")
+_PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/webhook", "/api/ingest", "/api/catchall", "/catchall")
 _PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login",
                     "/docs", "/redoc", "/openapi.json"}
 
@@ -1527,6 +1530,7 @@ def _fetch_snapshot_and_enqueue(
 
     print(f"[SNAPSHOT] evento {event_id} | cam {cam_ip} | {image_path}", flush=True)
 
+@app.post("/webhook")
 @app.post("/api/simple-webhook")
 async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     client_ip = _get_client_ip(request)
@@ -1534,6 +1538,14 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
     xml_bytes: bytes | None = None
     images: list[tuple[str, bytes]] = []
+    plate = ""
+    camera_id = None
+    xml_ip = None          # IP real da câmera (do XML <ipAddress>)
+    channel_name_xml = None
+    channel_name = None
+    confidence = 0.0
+    occurred_at = None
+    xml_direction = None   # direção do veículo reportada pela câmera (forward/reverse)
 
     if "multipart/form-data" in content_type:
         # ── Formato padrão Hikvision ISAPI / camera-poller ──────────────
@@ -1551,26 +1563,50 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                     images.append((v.filename or "image.jpg", data))
 
     else:
-        # ── Formato alternativo: câmeras Hikvision HTTP Upload (application/xml, text/xml) ─
         body = await request.body()
-        ct_lower = content_type.lower()
-        is_xml_ct = any(x in ct_lower for x in ("xml", "text/plain"))
-        starts_with_xml = body.lstrip()[:1] == b"<"
-        if (is_xml_ct or starts_with_xml) and body:
+
+        if "application/json" in content_type:
+            try:
+                _json_input = await request.json()
+            except Exception as e:
+                logger.warning("[WEBHOOK-JSON] JSON inválido de %s: %s", client_ip, e)
+                return JSONResponse({"ok": False, "detail": "JSON inválido"}, status_code=400)
+
+            plate = normalize_plate((_json_input.get("plate") or "").strip())
+
+            try:
+                confidence = float(_json_input.get("confidence") or 0)
+            except Exception:
+                confidence = 0.0
+
+            if _json_input.get("camera_id"):
+                camera_id = _json_input.get("camera_id")
+
+            if _json_input.get("channel_name"):
+                channel_name_xml = _json_input.get("channel_name")
+                channel_name = _json_input.get("channel_name")
+
+            if not occurred_at:
+                occurred_at = datetime.now(timezone.utc)
+
+            xml_bytes = None
+            images = []
+
+            logger.info(
+                "[WEBHOOK-JSON] plate=%s confidence=%.3f camera_id=%s channel_name=%s",
+                plate,
+                confidence,
+                camera_id,
+                channel_name,
+            )
+
+        elif body.lstrip().startswith(b"<"):
             xml_bytes = body
             print(f"[WEBHOOK] evento XML direto de {client_ip} ({len(body)} bytes, ct={content_type or 'none'})")
+
         else:
-            # Conteúdo não-XML sem multipart — apenas registra (heartbeat, etc.)
             print(f"[WEBHOOK] body não-XML ignorado de {client_ip} ({len(body)} bytes, ct={content_type})")
             return JSONResponse({"ok": True, "bytes": len(body)})
-
-    plate = ""
-    camera_id = None
-    xml_ip = None          # IP real da câmera (do XML <ipAddress>)
-    channel_name_xml = None
-    confidence = 0.0
-    occurred_at = None
-    xml_direction = None   # direção do veículo reportada pela câmera (forward/reverse)
 
     if xml_bytes:
         try:
@@ -1690,7 +1726,6 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             logger.warning("[WEBHOOK] evento sem camera_id ignorado (ip cliente=%s)", client_ip)
             return JSONResponse({"ok": False, "detail": "camera não identificada no XML"}, status_code=400)
 
-    channel_name = None
     if camera_id:
         # nome padrão = channelName do XML; fallback = próprio camera_id
         default_nome = channel_name_xml or camera_id
@@ -1833,8 +1868,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 channel_name,
             )
 
-            # Disparo automático de push APENAS se placa foi lida com sucesso
-            # Evita disparar alertas com placa vazia/"UNKNOWN" que poluem alertas_criticos
+            # Disparo automático de push: aplicar validações rígidas para evitar falsos positivos
             plate_test = plate and plate.strip()
             plate_upper = plate.strip().upper() if plate_test else ""
             is_invalid_plate = plate_upper in ("UNKNOWN", "NONE", "NULL")
@@ -1845,37 +1879,66 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 plate_upper,
                 is_invalid_plate,
             )
-            
-            if plate_test and not is_invalid_plate:
-                logger.info(
-                    "[WEBHOOK] Chamando send_alert_for_detected_plate event_id=%s plate=%s",
-                    event_id,
-                    plate,
-                )
-                try:
-                    alerta_enviado = await send_alert_for_detected_plate(
-                        db_cur=cur,
-                        plate=plate,
-                        camera_name=(cam.get("nome") if isinstance(cam, dict) else None) or (camera_id or channel_name or "Camera"),
-                        image_url=image_path or "",
-                        confidence=float(confidence or 0),
-                        event_id=str(event_id),
-                        city="N/A",
-                    )
-                    logger.info(
-                        "[WEBHOOK] send_alert_for_detected_plate retornou %s para event_id=%s",
-                        alerta_enviado,
-                        event_id,
-                    )
-                except Exception as _fcm_err:
-                    logger.exception("[FCM] EXCEÇÃO no auto-disparo do alerta event_id=%s: %s", event_id, _fcm_err)
-            else:
+
+            if not plate_test or is_invalid_plate:
                 logger.warning(
-                    "[WEBHOOK] Alerta NÃO disparado: placa vazia/inválida (event_id=%s plate=%s). "
-                    "Aguardando YOLO ou disparo manual.",
+                    "[WEBHOOK] Alerta NÃO disparado: placa vazia/inválida (event_id=%s plate=%s). Aguardando YOLO ou disparo manual.",
                     event_id,
                     plate or "(vazia)",
                 )
+            else:
+                plate_normalized = normalize_plate(plate)
+
+                # Formato válido (AAA1234 ou AAA1A23)
+                if not _is_valid_plate_format(plate_normalized):
+                    logger.warning(
+                        "[WEBHOOK] Alerta descartado por formato inválido event_id=%s plate=%s",
+                        event_id,
+                        plate_normalized,
+                    )
+                else:
+                    try:
+                        conf_val = float(confidence or 0)
+                    except Exception:
+                        conf_val = 0.0
+
+                    if conf_val < MIN_PLATE_CONF:
+                        logger.warning(
+                            "[WEBHOOK] Alerta descartado por baixa confiança event_id=%s plate=%s conf=%.3f min_required=%.3f",
+                            event_id,
+                            plate_normalized,
+                            conf_val,
+                            MIN_PLATE_CONF,
+                        )
+                    elif len(plate_normalized) < 7 or not plate_normalized.isalnum():
+                        logger.warning(
+                            "[WEBHOOK] Alerta descartado por leitura parcial event_id=%s plate=%s",
+                            event_id,
+                            plate_normalized,
+                        )
+                    else:
+                        logger.info(
+                            "[WEBHOOK] Chamando send_alert_for_detected_plate event_id=%s plate=%s",
+                            event_id,
+                            plate_normalized,
+                        )
+                        try:
+                            alerta_enviado = await send_alert_for_detected_plate(
+                                db_cur=cur,
+                                plate=plate_normalized,
+                                camera_name=(cam.get("nome") if isinstance(cam, dict) else None) or (camera_id or channel_name or "Camera"),
+                                image_url=image_path or "",
+                                confidence=float(confidence or 0),
+                                event_id=str(event_id),
+                                city="N/A",
+                            )
+                            logger.info(
+                                "[WEBHOOK] send_alert_for_detected_plate retornou %s para event_id=%s",
+                                alerta_enviado,
+                                event_id,
+                            )
+                        except Exception as _fcm_err:
+                            logger.exception("[FCM] EXCEÇÃO no auto-disparo do alerta event_id=%s: %s", event_id, _fcm_err)
 
     # Se não chegou imagem pelo POST, tenta buscar snapshot da câmera via ISAPI
     if not image_path and cam.get("ip") and cam.get("usuario") and cam.get("senha"):
@@ -4869,15 +4932,31 @@ async def fcm_test_self(request: Request):
 
                 stats = await send_alert_to_user_tokens(cur, str(user_id), alert, device_id=device_id)
 
+        if not isinstance(stats, dict):
+            stats = {}
+
+        def _safe_int(v):
+            if v is None:
+                return 0
+            try:
+                return int(v)
+            except Exception:
+                return 0
+
+        sent = _safe_int(stats.get("sent", 0))
+        failed = _safe_int(stats.get("failed", 0))
+        invalid = _safe_int(stats.get("invalid", 0))
+        valid_tokens = _safe_int(stats.get("valid_tokens", 0))
+
         logger.info(
             "[FCM] test-self user_sub=%s user_id=%s device_id=%s sent=%s failed=%s invalid=%s valid_tokens=%s",
             user_sub,
             user_id,
             device_id or "*",
-            stats.get("sent", 0),
-            stats.get("failed", 0),
-            stats.get("invalid", 0),
-            stats.get("valid_tokens", 0),
+            sent,
+            failed,
+            invalid,
+            valid_tokens,
         )
 
         return {
@@ -4886,10 +4965,10 @@ async def fcm_test_self(request: Request):
             "user_id": str(user_id),
             "device_id": device_id,
             "event_id": event_id,
-            "valid_tokens": int(stats.get("valid_tokens", 0)),
-            "sent": int(stats.get("sent", 0)),
-            "failed": int(stats.get("failed", 0)),
-            "invalid_tokens": int(stats.get("invalid", 0)),
+            "valid_tokens": valid_tokens,
+            "sent": sent,
+            "failed": failed,
+            "invalid_tokens": invalid,
             "payload": {
                 "title": title,
                 "body": body,

@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 import httpx
+import re
+import os
 
 try:
     from google.auth.transport.requests import Request as GoogleAuthRequest
@@ -39,6 +41,21 @@ def normalize_plate(value: str | None) -> str:
     """Normaliza placa para comparação consistente (A-Z0-9, sem separadores)."""
     raw = (value or "").strip().upper()
     return "".join(ch for ch in raw if ch.isalnum())
+
+
+# Configuráveis: confiança mínima para OCR e confirmação dupla
+MIN_PLATE_CONF = float(os.getenv("MIN_PLATE_CONF", "0.85"))
+REQUIRE_DOUBLE_CONFIRM = os.getenv("REQUIRE_DOUBLE_CONFIRM", "false").lower() in ("1", "true", "yes")
+DOUBLE_CONFIRM_SECONDS = int(os.getenv("DOUBLE_CONFIRM_SECONDS", "10"))
+
+
+def _is_valid_plate_format(plate_normalized: str) -> bool:
+    """Valida formato de placa brasileiro: antigo AAA1234 ou Mercosul AAA1A23."""
+    if not plate_normalized or len(plate_normalized) != 7:
+        return False
+    old_re = re.compile(r'^[A-Z]{3}[0-9]{4}$')
+    mer_re = re.compile(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
+    return bool(old_re.match(plate_normalized) or mer_re.match(plate_normalized))
 
 
 def is_likely_fake_token(token: str | None) -> bool:
@@ -776,12 +793,65 @@ async def send_alert_for_detected_plate(
         event_id,
         plate_normalized,
     )
-    if not plate_normalized:
+
+    # Validação de formato da placa
+    if not _is_valid_plate_format(plate_normalized):
         logger.warning(
-            "[FCM] Auto-alerta ignorado event_id=%s: placa vazia/invalidada após normalização",
+            "[FCM] Auto-alerta descartado event_id=%s plate=%s motivo=format_invalid",
             event_id,
+            plate_normalized,
         )
         return False
+
+    # Confiança mínima do OCR
+    try:
+        conf_val = float(confidence or 0.0)
+    except Exception:
+        conf_val = 0.0
+    if conf_val < MIN_PLATE_CONF:
+        logger.warning(
+            "[FCM] Auto-alerta descartado event_id=%s plate=%s motivo=low_confidence conf=%.3f min_required=%.3f",
+            event_id,
+            plate_normalized,
+            conf_val,
+            MIN_PLATE_CONF,
+        )
+        return False
+
+    # Proteção para leituras parciais / curingas
+    if len(plate_normalized) < 7 or not plate_normalized.isalnum():
+        logger.warning(
+            "[FCM] Auto-alerta descartado event_id=%s plate=%s motivo=partial_or_invalid_chars",
+            event_id,
+            plate_normalized,
+        )
+        return False
+
+    # Regra opcional: exigir confirmação em 2 leituras próximas
+    if REQUIRE_DOUBLE_CONFIRM:
+        try:
+            # Procurar evento recente com mesma placa na mesma camera (camera_id OR channel_name)
+            db_cur.execute(
+                """
+                SELECT 1 FROM lpr_events
+                WHERE REGEXP_REPLACE(UPPER(plate), '[^A-Z0-9]', '', 'g') = %s
+                  AND (camera_id = %s OR channel_name = %s)
+                  AND ts >= NOW() - INTERVAL '%s seconds'
+                LIMIT 1
+                """,
+                (plate_normalized, camera_name, camera_name, DOUBLE_CONFIRM_SECONDS),
+            )
+            found = db_cur.fetchone()
+            if not found:
+                logger.info(
+                    "[FCM] Auto-alerta aguardando confirmação event_id=%s plate=%s motivo=need_second_reading window_s=%s",
+                    event_id,
+                    plate_normalized,
+                    DOUBLE_CONFIRM_SECONDS,
+                )
+                return False
+        except Exception as _e:
+            logger.exception("[FCM] Erro ao checar confirmação dupla para plate=%s: %s", plate_normalized, _e)
 
     try:
         logger.info(
