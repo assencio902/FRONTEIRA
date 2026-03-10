@@ -47,6 +47,7 @@ from rbac import (
     VALID_ROLES,
     normalize_role,
     normalize_role_input,
+    require_role,
     assert_admin,
     assert_admin_or_operator,
 )
@@ -4833,28 +4834,123 @@ async def list_alarmes(request: Request):
     """Listar todos os alarmes com listas e usuários vinculados."""
     # Admin, operador e visualizador podem listar alarmes
     require_role(request, "admin", "operador", "visualizador")
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT a.id, a.nome, a.descricao, a.tipo, a.prioridade, a.ativo,
-                       a.mensagem, a.criado_em, a.atualizado_em
-                FROM alarmes a ORDER BY a.id DESC
-            """)
-            alarmes = []
-            for r in cur.fetchall():
-                aid = r[0]
-                cur.execute("SELECT lista_id FROM alarme_listas WHERE alarme_id=%s", (aid,))
-                listas = [row[0] for row in cur.fetchall()]
-                cur.execute("SELECT usuario_id FROM alarme_usuarios WHERE alarme_id=%s", (aid,))
-                usuarios = [row[0] for row in cur.fetchall()]
-                alarmes.append({
-                    "id": aid, "nome": r[1], "descricao": r[2], "tipo": r[3],
-                    "prioridade": r[4], "ativo": r[5], "mensagem": r[6],
-                    "criado_em": r[7].isoformat() if r[7] else None,
-                    "atualizado_em": r[8].isoformat() if r[8] else None,
-                    "listas": listas, "usuarios": usuarios,
-                })
-    return {"items": alarmes}
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT to_regclass('public.alarmes')")
+                has_alarmes_table = bool(cur.fetchone()[0])
+                if not has_alarmes_table:
+                    logger.warning("[ALARMES] Tabela public.alarmes não encontrada; retornando lista vazia")
+                    return {"items": []}
+
+                cur.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema='public' AND table_name='alarmes'
+                    """
+                )
+                alarmes_cols = {row[0] for row in cur.fetchall()}
+
+                if "id" not in alarmes_cols:
+                    logger.error("[ALARMES] Coluna obrigatória 'id' ausente em public.alarmes")
+                    return {"items": [], "detail": "Estrutura de alarmes inconsistente"}
+
+                if "nome" not in alarmes_cols:
+                    logger.error("[ALARMES] Coluna obrigatória 'nome' ausente em public.alarmes")
+                    return {"items": [], "detail": "Estrutura de alarmes inconsistente"}
+
+                select_parts = [
+                    "a.id AS id",
+                    "a.nome AS nome",
+                    ("a.descricao" if "descricao" in alarmes_cols else "''::text") + " AS descricao",
+                    ("a.tipo" if "tipo" in alarmes_cols else "'placa_monitorada'::text") + " AS tipo",
+                    ("a.prioridade" if "prioridade" in alarmes_cols else "'media'::text") + " AS prioridade",
+                    ("a.ativo" if "ativo" in alarmes_cols else "TRUE") + " AS ativo",
+                    ("a.mensagem" if "mensagem" in alarmes_cols else "''::text") + " AS mensagem",
+                    ("a.criado_em" if "criado_em" in alarmes_cols else "NULL::timestamptz") + " AS criado_em",
+                    ("a.atualizado_em" if "atualizado_em" in alarmes_cols else "NULL::timestamptz") + " AS atualizado_em",
+                ]
+                cur.execute(f"SELECT {', '.join(select_parts)} FROM alarmes a ORDER BY a.id DESC")
+
+                rows = cur.fetchall() or []
+                if not rows:
+                    return {"items": []}
+
+                cur.execute("SELECT to_regclass('public.alarme_listas')")
+                has_alarme_listas = bool(cur.fetchone()[0])
+                cur.execute("SELECT to_regclass('public.alarme_usuarios')")
+                has_alarme_usuarios = bool(cur.fetchone()[0])
+
+                alarme_listas_ok = False
+                alarme_usuarios_ok = False
+
+                if has_alarme_listas:
+                    cur.execute(
+                        """
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema='public' AND table_name='alarme_listas'
+                        """
+                    )
+                    cols = {row[0] for row in cur.fetchall()}
+                    alarme_listas_ok = {"alarme_id", "lista_id"}.issubset(cols)
+                    if not alarme_listas_ok:
+                        logger.warning("[ALARMES] Tabela alarme_listas sem colunas esperadas: %s", cols)
+
+                if has_alarme_usuarios:
+                    cur.execute(
+                        """
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_schema='public' AND table_name='alarme_usuarios'
+                        """
+                    )
+                    cols = {row[0] for row in cur.fetchall()}
+                    alarme_usuarios_ok = {"alarme_id", "usuario_id"}.issubset(cols)
+                    if not alarme_usuarios_ok:
+                        logger.warning("[ALARMES] Tabela alarme_usuarios sem colunas esperadas: %s", cols)
+
+                alarmes = []
+                for row in rows:
+                    aid, nome, descricao, tipo, prioridade, ativo, mensagem, criado_em, atualizado_em = row
+
+                    if aid is None:
+                        logger.warning("[ALARMES] Registro ignorado por id nulo: %s", row)
+                        continue
+
+                    listas = []
+                    usuarios = []
+
+                    if alarme_listas_ok:
+                        cur.execute("SELECT lista_id FROM alarme_listas WHERE alarme_id=%s", (aid,))
+                        listas = [r[0] for r in (cur.fetchall() or []) if r and r[0] is not None]
+
+                    if alarme_usuarios_ok:
+                        cur.execute("SELECT usuario_id FROM alarme_usuarios WHERE alarme_id=%s", (aid,))
+                        usuarios = [r[0] for r in (cur.fetchall() or []) if r and r[0] is not None]
+
+                    alarmes.append({
+                        "id": int(aid),
+                        "nome": str(nome or ""),
+                        "descricao": str(descricao or ""),
+                        "tipo": str(tipo or "placa_monitorada"),
+                        "prioridade": str(prioridade or "media"),
+                        "ativo": bool(ativo),
+                        "mensagem": str(mensagem or ""),
+                        "criado_em": criado_em.isoformat() if isinstance(criado_em, datetime) else (str(criado_em) if criado_em else None),
+                        "atualizado_em": atualizado_em.isoformat() if isinstance(atualizado_em, datetime) else (str(atualizado_em) if atualizado_em else None),
+                        "listas": listas,
+                        "usuarios": usuarios,
+                    })
+
+        return {"items": alarmes}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[ALARMES] Erro em GET /api/alarmes: %s", e)
+        return {"items": [], "detail": "Erro ao listar alarmes"}
 
 
 @app.post("/api/alarmes", status_code=201)
@@ -4988,25 +5084,74 @@ async def alarmes_historico(request: Request):
     """Retorna últimos 200 registros de alertas enviados (tabela alertas_criticos)."""
     # Apenas admin pode acessar histórico de alarmes
     assert_admin(request, "Apenas administradores podem acessar histórico de alarmes")
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, usuario_id, evento_id, placa, camera_name, target_name,
-                       detected_at, risk_level, alert_type, criado_em, lido, error_message
-                FROM alertas_criticos
-                ORDER BY criado_em DESC LIMIT 200
-            """)
-            items = []
-            for r in cur.fetchall():
-                items.append({
-                    "id": r[0], "usuario_id": r[1], "event_id": r[2], "placa": r[3],
-                    "camera_name": r[4], "target_name": r[5],
-                    "detected_at": r[6].isoformat() if r[6] else None,
-                    "risk_level": r[7], "alert_type": r[8],
-                    "criado_em": r[9].isoformat() if r[9] else None,
-                    "lido": r[10], "error_message": r[11],
-                })
-    return {"items": items}
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT to_regclass('public.alertas_criticos')")
+                has_table = bool(cur.fetchone()[0])
+                if not has_table:
+                    logger.warning("[ALARMES] Tabela public.alertas_criticos não encontrada; retornando histórico vazio")
+                    return {"items": []}
+
+                cur.execute(
+                    """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema='public' AND table_name='alertas_criticos'
+                    """
+                )
+                cols = {row[0] for row in cur.fetchall()}
+
+                if "id" not in cols:
+                    logger.error("[ALARMES] Coluna obrigatória 'id' ausente em public.alertas_criticos")
+                    return {"items": [], "detail": "Estrutura de histórico inconsistente"}
+
+                select_parts = [
+                    "id",
+                    ("usuario_id" if "usuario_id" in cols else "NULL::integer") + " AS usuario_id",
+                    ("evento_id" if "evento_id" in cols else "NULL::text") + " AS evento_id",
+                    ("placa" if "placa" in cols else "''::text") + " AS placa",
+                    ("camera_name" if "camera_name" in cols else "''::text") + " AS camera_name",
+                    ("target_name" if "target_name" in cols else "''::text") + " AS target_name",
+                    ("detected_at" if "detected_at" in cols else "NULL::timestamptz") + " AS detected_at",
+                    ("risk_level" if "risk_level" in cols else "''::text") + " AS risk_level",
+                    ("alert_type" if "alert_type" in cols else "''::text") + " AS alert_type",
+                    ("criado_em" if "criado_em" in cols else "NULL::timestamptz") + " AS criado_em",
+                    ("lido" if "lido" in cols else "FALSE") + " AS lido",
+                    ("error_message" if "error_message" in cols else "''::text") + " AS error_message",
+                ]
+
+                order_col = "criado_em" if "criado_em" in cols else "id"
+                cur.execute(f"SELECT {', '.join(select_parts)} FROM alertas_criticos ORDER BY {order_col} DESC LIMIT 200")
+
+                rows = cur.fetchall() or []
+                if not rows:
+                    return {"items": []}
+
+                items = []
+                for r in rows:
+                    items.append({
+                        "id": int(r[0]) if r[0] is not None else None,
+                        "usuario_id": r[1],
+                        "event_id": r[2],
+                        "placa": str(r[3] or ""),
+                        "camera_name": str(r[4] or ""),
+                        "target_name": str(r[5] or ""),
+                        "detected_at": r[6].isoformat() if isinstance(r[6], datetime) else (str(r[6]) if r[6] else None),
+                        "risk_level": str(r[7] or ""),
+                        "alert_type": str(r[8] or ""),
+                        "criado_em": r[9].isoformat() if isinstance(r[9], datetime) else (str(r[9]) if r[9] else None),
+                        "lido": bool(r[10]),
+                        "error_message": str(r[11] or ""),
+                    })
+
+        return {"items": items}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[ALARMES] Erro em GET /api/alarmes/historico: %s", e)
+        return {"items": [], "detail": "Erro ao carregar histórico de alarmes"}
 
 
 @app.post("/api/alarmes/historico/{alert_id}/read")
