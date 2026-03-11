@@ -6221,11 +6221,10 @@ async function loadVehicleTrajectory() {
   status.innerHTML = '<span class="spinner" style="margin-right:6px;vertical-align:middle"></span>Buscando...';
 
   try {
-    // Converte datetime-local para ISO 8601 com timezone UTC
-    var dtStart = new Date(start);
-    var dtEnd = new Date(end);
-    var startIso = dtStart.toISOString();
-    var endIso = dtEnd.toISOString();
+    // Envia o valor local diretamente (YYYY-MM-DDTHH:mm).
+    // O backend assume fuso -03:00 quando não há tzinfo — não converter para UTC aqui.
+    var startIso = start;
+    var endIso   = end;
 
     var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
             + '?start=' + encodeURIComponent(startIso)
@@ -6265,8 +6264,9 @@ function renderVehicleTrajectory(data) {
   _vehicleTrajData = data;
 
   var plate = data.plate;
-  var points = data.points;
-  
+  // Normaliza lon → lng (backend usa 'lon', Google Maps espera 'lng')
+  var points = data.points.map(function(p) { return Object.assign({}, p, { lng: p.lon }); });
+
   // Guarda dados para limpeza posterior
   if (!_googleMap) return;
 
