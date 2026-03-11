@@ -1,11 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../models/camera.dart';
+import '../models/period_filter.dart';
+import '../repositories/plate_recognition_repository.dart';
 import '../services/api.dart';
 import '../services/camera_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/period_filter_sheet.dart';
 import '../widgets/plate_search_field.dart';
 
 const _kBg = AppColors.background;
@@ -27,17 +33,17 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
   final _plateController = TextEditingController();
   GoogleMapController? _googleMapController;
   
-  DateTime? _startDate;
-  DateTime? _endDate;
-  
   bool _loading = false;
   String? _errorMsg;
   Map<String, dynamic>? _trajectoryData;
+  
+  PeriodFilter? _period;
   
   // Câmeras carregadas da API
   List<Camera> _cameras = [];
   bool _loadingCameras = false;
   bool _showCamerasOnMap = true;
+  bool _scanningPlate = false;
 
   @override
   void initState() {
@@ -69,90 +75,51 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     }
   }
 
-  Future<void> _selectStartDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _startDate ?? DateTime.now().subtract(const Duration(days: 1)),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: _kYellow,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
+  Widget _buildPeriodChip() {
+    final active = _period != null;
+    return GestureDetector(
+      onTap: () async {
+        final res = await PeriodFilterSheet.show(
+          context,
+          current: _period,
         );
+        if (res.confirmed && mounted) {
+          setState(() => _period = res.filter);
+        }
       },
-    );
-    if (date == null) return;
-
-    if (!mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_startDate ?? DateTime.now()),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: _kYellow,
-              onSurface: Colors.white,
-            ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? _kYellow.withValues(alpha: 0.1) : _kBg.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: active ? _kYellow.withValues(alpha: 0.6) : _kBorder,
+            width: active ? 1.2 : 1,
           ),
-          child: child!,
-        );
-      },
-    );
-    if (time == null) return;
-
-    setState(() {
-      _startDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
-  }
-
-  Future<void> _selectEndDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: _kYellow,
-              onSurface: Colors.white,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.schedule_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                active ? _period!.displayLabel : 'Período',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active ? Colors.white : _kMuted,
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
             ),
-          ),
-          child: child!,
-        );
-      },
+            Icon(Icons.expand_more_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
+          ],
+        ),
+      ),
     );
-    if (date == null) return;
-
-    if (!mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_endDate ?? DateTime.now()),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: _kYellow,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (time == null) return;
-
-    setState(() {
-      _endDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
   }
 
   Future<void> _loadTrajectory() async {
@@ -161,8 +128,8 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
       setState(() => _errorMsg = 'Informe a placa');
       return;
     }
-    if (_startDate == null || _endDate == null) {
-      setState(() => _errorMsg = 'Informe período de busca');
+    if (_period == null) {
+      setState(() => _errorMsg = 'Informe o período de busca');
       return;
     }
 
@@ -173,8 +140,8 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     });
 
     try {
-      final start = _startDate!.toIso8601String();
-      final end = _endDate!.toIso8601String();
+      final start = _period!.from.toIso8601String();
+      final end = _period!.to.toIso8601String();
       
       final data = await Api.getVehicleTrajectory(plate, start, end);
       
@@ -198,8 +165,7 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
   void _clearTrajectory() {
     setState(() {
       _plateController.clear();
-      _startDate = null;
-      _endDate = null;
+      _period = null;
       _trajectoryData = null;
       _errorMsg = null;
     });
@@ -211,6 +177,34 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
         5.0,
       ),
     );
+  }
+
+  Future<void> _scanTrajectoryPlate() async {
+    setState(() => _scanningPlate = true);
+    try {
+      final picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+      if (photo == null) {
+        if (mounted) setState(() => _scanningPlate = false);
+        return;
+      }
+      final result =
+          await PlateRecognitionRepository.recognize(File(photo.path));
+      final plate = result.plate?.trim().toUpperCase() ?? '';
+      if (plate.isNotEmpty && mounted) {
+        _plateController.text = plate;
+        setState(() => _scanningPlate = false);
+        _loadTrajectory();
+      } else {
+        if (mounted) setState(() => _scanningPlate = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _scanningPlate = false);
+    }
   }
 
   @override
@@ -282,124 +276,123 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
               ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.56,
+                  maxHeight: MediaQuery.of(context).size.height * 0.38,
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      PlateSearchField(
-                        controller: _plateController,
-                        hintText: 'ABC1234',
-                        onSubmitted: _loading ? null : _loadTrajectory,
+                      // Campo da placa
+                      const Text(
+                        'PLACA DO VEÍCULO',
+                        style: TextStyle(
+                          color: _kMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _DateButton(
-                              label: 'Início',
-                              date: _startDate,
-                              onTap: _selectStartDate,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _DateButton(
-                              label: 'Fim',
-                              date: _endDate,
-                              onTap: _selectEndDate,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _loading ? null : _loadTrajectory,
-                              icon: _loading
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.black,
-                                      ),
-                                    )
-                                  : const Icon(Icons.search),
-                              label: const Text('Buscar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _kYellow,
-                                foregroundColor: Colors.black,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                textStyle: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: .4,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            onPressed: _clearTrajectory,
-                            icon: const Icon(Icons.clear),
-                            label: const Text('Limpar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kCard,
-                              foregroundColor: _kMuted,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: _kBorder),
-                              ),
-                              textStyle: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: .4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 3),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _kYellow.withValues(alpha: 0.4)),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: PlateSearchField(
+                          controller: _plateController,
+                          hintText: 'ABC1234',
+                          onSubmitted: _loading ? null : _loadTrajectory,
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.camera_alt_rounded,
+                                    color: _kYellow, size: 20),
+                                tooltip: 'Fotografar placa',
+                                onPressed: _scanningPlate || _loading
+                                    ? null
+                                    : _scanTrajectoryPlate,
+                                padding: const EdgeInsets.all(6),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.clear_rounded,
+                                    color: _kMuted, size: 18),
+                                tooltip: 'Limpar',
+                                onPressed: _clearTrajectory,
+                                padding: const EdgeInsets.all(6),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Período
+                      _buildPeriodChip(),
+                      const SizedBox(height: 5),
+                      // Toggle câmeras
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
                           color: _kBg.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(7),
                           border: Border.all(color: _kBorder),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.videocam_rounded, color: _kMuted, size: 16),
-                            const SizedBox(width: 10),
+                            const Icon(Icons.videocam_rounded, color: _kMuted, size: 13),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                'Exibir câmeras no mapa ${_loadingCameras ? "..." : "(${_cameras.length})"}',
-                                style: const TextStyle(color: _kMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                                'Câmeras no mapa ${_loadingCameras ? "..." : "(${_cameras.length})"}',
+                                style: const TextStyle(color: _kMuted, fontSize: 11, fontWeight: FontWeight.w600),
                               ),
                             ),
-                            Switch(
-                              value: _showCamerasOnMap,
-                              onChanged: (value) {
-                                setState(() => _showCamerasOnMap = value);
-                              },
-                              activeColor: _kYellow,
+                            Transform.scale(
+                              scale: 0.75,
+                              child: Switch(
+                                value: _showCamerasOnMap,
+                                onChanged: (value) {
+                                  setState(() => _showCamerasOnMap = value);
+                                },
+                                activeColor: _kYellow,
+                              ),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Botão Buscar
+                      SizedBox(
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          onPressed: _loading ? null : _loadTrajectory,
+                          icon: _loading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : const Icon(Icons.route_rounded, size: 16),
+                          label: const Text('Buscar Rota'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kYellow,
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: .4,
+                            ),
+                          ),
                         ),
                       ),
                       if (_errorMsg != null)
@@ -481,10 +474,23 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
 
     // Processa pontos de trajetória (se houver)
     final points = (_trajectoryData?['points'] as List?) ?? [];
+
+    // Log diagnóstico: eventos sem coordenadas GPS
+    if (_trajectoryData != null && points.isNotEmpty) {
+      final semCoord = points.cast<Map<String, dynamic>>()
+          .where((p) => _readLat(p) == null || _readLon(p) == null)
+          .toList();
+      if (semCoord.isNotEmpty) {
+        for (final p in semCoord) {
+          debugPrint('[Trajectory] Evento sem GPS: camera=${p["camera_id"]} ts=${p["ts"]}');
+        }
+        debugPrint('[Trajectory] ${semCoord.length} de ${points.length} evento(s) sem coordenadas GPS.');
+      }
+    }
+
     final validEntries = points.asMap().entries.where((entry) {
-      final lat = _toDouble(entry.value['lat']);
-      final lng = _toDouble(entry.value['lng']);
-      return lat != null && lng != null;
+      final p = entry.value as Map<String, dynamic>;
+      return _readLat(p) != null && _readLon(p) != null;
     }).toList();
 
     // Define posição inicial do mapa
@@ -492,10 +498,10 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     final double initialZoom;
     
     if (validEntries.isNotEmpty) {
-      final firstPoint = validEntries.first.value;
+      final firstPoint = validEntries.first.value as Map<String, dynamic>;
       initialPosition = LatLng(
-        _toDouble(firstPoint['lat'])!,
-        _toDouble(firstPoint['lng'])!,
+        _readLat(firstPoint)!,
+        _readLon(firstPoint)!,
       );
       initialZoom = 10.0;
     } else {
@@ -510,8 +516,8 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
           Marker(
             markerId: MarkerId('pt_${validEntries[i].key}'),
             position: LatLng(
-              _toDouble(validEntries[i].value['lat'])!,
-              _toDouble(validEntries[i].value['lng'])!,
+              _readLat(validEntries[i].value as Map<String, dynamic>)!,
+              _readLon(validEntries[i].value as Map<String, dynamic>)!,
             ),
             icon: i == 0
                 ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen)
@@ -546,13 +552,13 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     // Combina todos os marcadores
     final allMarkers = {...trajectoryMarkers, ...cameraMarkers};
 
-    // Cria polyline se houver pontos
+    // Cria polyline somente com 2 ou mais pontos válidos
     final Set<Polyline> polylines;
-    if (validEntries.isNotEmpty) {
+    if (validEntries.length >= 2) {
       final polylinePoints = validEntries
           .map((entry) => LatLng(
-                _toDouble(entry.value['lat'])!,
-                _toDouble(entry.value['lng'])!,
+                _readLat(entry.value as Map<String, dynamic>)!,
+                _readLon(entry.value as Map<String, dynamic>)!,
               ))
           .toList();
       
@@ -574,6 +580,8 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
       infoMessage = '📍 Informe a placa e período para buscar a trajetória';
     } else if (validEntries.isEmpty) {
       infoMessage = '⚠️ Nenhum ponto com GPS encontrado para essa busca';
+    } else if (validEntries.length == 1) {
+      infoMessage = '📍 Rota indisponível: apenas uma leitura encontrada';
     }
 
     return Stack(
@@ -637,21 +645,20 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     final controller = _googleMapController;
     if (controller == null || points.isEmpty) return;
 
-    final valid = points.where((p) {
-      final lat = _toDouble(p['lat']);
-      final lng = _toDouble(p['lng']);
-      return lat != null && lng != null;
-    }).toList();
+    final valid = points
+        .cast<Map<String, dynamic>>()
+        .where((p) => _readLat(p) != null && _readLon(p) != null)
+        .toList();
     if (valid.isEmpty) return;
 
-    var minLat = _toDouble(valid.first['lat'])!;
+    var minLat = _readLat(valid.first)!;
     var maxLat = minLat;
-    var minLng = _toDouble(valid.first['lng'])!;
+    var minLng = _readLon(valid.first)!;
     var maxLng = minLng;
 
     for (final p in valid.skip(1)) {
-      final lat = _toDouble(p['lat'])!;
-      final lng = _toDouble(p['lng'])!;
+      final lat = _readLat(p)!;
+      final lng = _readLon(p)!;
       if (lat < minLat) minLat = lat;
       if (lat > maxLat) maxLat = lat;
       if (lng < minLng) minLng = lng;
@@ -680,6 +687,13 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
     if (value is String) return double.tryParse(value);
     return null;
   }
+
+  /// Lê latitude de um ponto da API.
+  double? _readLat(Map<String, dynamic> p) => _toDouble(p['lat']);
+
+  /// Lê longitude aceitando ambas as chaves 'lon' e 'lng' (robustez entre versões da API).
+  double? _readLon(Map<String, dynamic> p) =>
+      _toDouble(p['lng']) ?? _toDouble(p['lon']);
 
   void _showPointDetails(Map<String, dynamic> point, int index) {
     final totalPoints = (_trajectoryData!['points'] as List).length;
@@ -842,54 +856,6 @@ class _TrajectoryScreenState extends State<TrajectoryScreen> {
 }
 
 // ─── Widgets auxiliares ───────────────────────────────────────────────────────
-
-class _DateButton extends StatelessWidget {
-  final String label;
-  final DateTime? date;
-  final VoidCallback onTap;
-
-  const _DateButton({
-    required this.label,
-    required this.date,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0a3820),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(color: _kMuted, fontSize: 11),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              date == null
-                  ? 'Selecionar'
-                  : DateFormat('dd/MM/yyyy HH:mm').format(date!),
-              style: TextStyle(
-                color: date == null ? _kMuted : Colors.white,
-                fontSize: 13,
-                fontWeight: date == null ? FontWeight.normal : FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _InfoChip extends StatelessWidget {
   final IconData icon;

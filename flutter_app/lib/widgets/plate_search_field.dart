@@ -45,7 +45,7 @@ class PlateSearchField extends StatelessWidget {
       style: const TextStyle(
         color: AppColors.text,
         fontWeight: FontWeight.w800,
-        fontSize: 19,
+        fontSize: 14,
         letterSpacing: 2.5,
       ),
       decoration: InputDecoration(
@@ -53,30 +53,30 @@ class PlateSearchField extends StatelessWidget {
         counterText: '',
         hintStyle: TextStyle(
           color: AppColors.muted.withValues(alpha: 0.45),
-          fontSize: 19,
+          fontSize: 14,
           letterSpacing: 2.5,
           fontWeight: FontWeight.w500,
         ),
         prefixIcon: const Icon(
           Icons.directions_car_rounded,
           color: AppColors.warning,
-          size: 22,
+          size: 16,
         ),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppColors.background,
-        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(vertical: 7, horizontal: 12),
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: AppColors.border),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: AppColors.warning, width: 1.6),
-          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.warning, width: 1.5),
+          borderRadius: BorderRadius.circular(8),
         ),
         disabledBorder: OutlineInputBorder(
           borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
       ),
       onSubmitted: onSubmitted != null ? (_) => onSubmitted!() : null,

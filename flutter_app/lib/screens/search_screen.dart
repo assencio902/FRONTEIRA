@@ -7,7 +7,9 @@ import '../repositories/plate_recognition_repository.dart';
 import '../services/api.dart';
 import '../services/auth_storage.dart';
 import '../theme/app_theme.dart';
+import '../models/period_filter.dart';
 import '../widgets/loading_button.dart';
+import '../widgets/period_filter_sheet.dart';
 import '../widgets/plate_search_field.dart';
 import 'login_screen.dart';
 import 'result_screen.dart';
@@ -46,10 +48,8 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _filterCor;
   // Nome (busca livre)
   String? _filterNome;
-  // Período: preset label ou 'custom'
-  String? _filterPeriodLabel;      // 'Hoje','Ontem','7d','15d','30d','custom'
-  DateTime? _filterDateFrom;
-  DateTime? _filterDateTo;
+  // Período
+  PeriodFilter? _filterPeriod;
 
   @override
   void initState() {
@@ -139,7 +139,11 @@ class _SearchScreenState extends State<SearchScreen> {
     final plate = _plateCtrl.text.trim().toUpperCase().replaceAll(RegExp(r'[- ]'), '');
     setState(() => _loading = true);
     try {
-      final result = await Api.platesSearch(plate);
+      final result = await Api.platesSearch(
+        plate,
+        dtFrom: _filterPeriod?.from,
+        dtTo: _filterPeriod?.to,
+      );
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -239,17 +243,17 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.52,
+                  maxHeight: MediaQuery.of(context).size.height * 0.38,
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildFilters(),
-                      const SizedBox(height: 12),
                       _buildTextField(),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 5),
+                      _buildFilters(),
+                      const SizedBox(height: 5),
                       LoadingButton(
                         label: 'Pesquisar',
                         loading: _loading,
@@ -374,18 +378,17 @@ class _SearchScreenState extends State<SearchScreen> {
     final camLabel = _filterCamera == null
         ? 'Câmera'
         : (_filterCamera!['nome'] as String);
-    final periodLabel = _periodDisplay(_filterPeriodLabel, _filterDateFrom, _filterDateTo);
     final hasAny = _filterCamera != null ||
         _filterDirecao != null ||
         _filterCor != null ||
         _filterNome != null ||
-        _filterPeriodLabel != null;
+        _filterPeriod != null;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: _kCard,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: _kBorder),
       ),
       child: Column(
@@ -394,15 +397,15 @@ class _SearchScreenState extends State<SearchScreen> {
           // Cabeçalho
           Row(
             children: [
-              const Icon(Icons.filter_list_rounded, color: _kYellow, size: 16),
-              const SizedBox(width: 8),
+              const Icon(Icons.filter_list_rounded, color: _kYellow, size: 13),
+              const SizedBox(width: 5),
               const Text(
                 'FILTROS DE PESQUISA',
                 style: TextStyle(
                   color: _kYellow,
-                  fontSize: 14,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
+                  letterSpacing: 1.5,
                 ),
               ),
               const Spacer(),
@@ -413,9 +416,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     _filterDirecao = null;
                     _filterCor = null;
                     _filterNome = null;
-                    _filterPeriodLabel = null;
-                    _filterDateFrom = null;
-                    _filterDateTo = null;
+                    _filterPeriod = null;
                   }),
                   child: const Text('Limpar',
                       style: TextStyle(
@@ -428,7 +429,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 6),
 
           // ── Linha 1: Câmera | Direção ──────────────────────────────────────────
           Row(
@@ -441,7 +442,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 active: _filterCamera != null,
                 onTap: _pickCamera,
               )),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Expanded(child: _filterChip(
                 icon: Icons.swap_vert_rounded,
                 label: _filterDirecao ?? 'Direção',
@@ -450,7 +451,7 @@ class _SearchScreenState extends State<SearchScreen> {
               )),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
 
           // ── Linha 2: Cor | Nome ─────────────────────────────────────────────────
           Row(
@@ -461,7 +462,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 active: _filterCor != null,
                 onTap: _pickCor,
               )),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Expanded(child: _filterChip(
                 icon: Icons.person_outline_rounded,
                 label: _filterNome ?? 'Nome',
@@ -470,126 +471,56 @@ class _SearchScreenState extends State<SearchScreen> {
               )),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
           // ── Linha 3: Período ───────────────────────────────────────────────────
-          const Row(
-            children: [
-              Icon(Icons.schedule_rounded, color: _kMuted, size: 14),
-              SizedBox(width: 6),
-              Text('PERÍODO',
-                  style: TextStyle(
-                      color: _kMuted,
-                    fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final p in ['Hoje', 'Ontem', '7d', '15d', '30d'])
-                  _periodChip(p, periodLabel),
-                _periodChip('Período personalizado', periodLabel, isCustom: true),
-              ],
-            ),
-          ),
-          // Range customizado
-          if (_filterPeriodLabel == 'custom' && _filterDateFrom != null) ...
-            [
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _kYellow.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _kYellow.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.date_range_rounded, color: _kYellow, size: 14),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${_fmtDt(_filterDateFrom!)}  —  ${_fmtDt(_filterDateTo ?? _filterDateFrom!)}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                          fontSize: 13,
-                            fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _pickCustomPeriod,
-                      child: const Text('Editar',
-                          style: TextStyle(
-                              color: _kYellow,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _buildPeriodChip(),
         ],
       ),
     );
   }
 
-  String _periodDisplay(String? label, DateTime? from, DateTime? to) {
-    if (label == null) return 'Período';
-    if (label == 'custom') {
-      if (from == null) return 'A Definir';
-      return '${_fmtDt(from)} — ${_fmtDt(to ?? from)}';
-    }
-    return label;
-  }
-
-  String _fmtDt(DateTime d) =>
-      '${d.day.toString().padLeft(2,'0')}/${d.month.toString().padLeft(2,'0')} '
-      '${d.hour.toString().padLeft(2,'0')}:${d.minute.toString().padLeft(2,'0')}';
-
-  Widget _periodChip(String label, String currentDisplay, {bool isCustom = false}) {
-    final active = isCustom
-        ? _filterPeriodLabel == 'custom'
-        : _filterPeriodLabel == label;
+  Widget _buildPeriodChip() {
+    final active = _filterPeriod != null;
     return GestureDetector(
       onTap: () async {
-        if (isCustom) {
-          await _pickCustomPeriod();
-        } else {
-          setState(() {
-            _filterPeriodLabel = label;
-            _filterDateFrom = null;
-            _filterDateTo = null;
-          });
+        final res = await PeriodFilterSheet.show(
+          context,
+          current: _filterPeriod,
+        );
+        if (res.confirmed && mounted) {
+          setState(() => _filterPeriod = res.filter);
         }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: active ? _kYellow.withValues(alpha: 0.14) : _kBg,
-          borderRadius: BorderRadius.circular(22),
+          color: active ? _kYellow.withValues(alpha: 0.1) : _kBg.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(7),
           border: Border.all(
-            color: active ? _kYellow.withValues(alpha: 0.7) : _kBorder,
-            width: active ? 1.3 : 1,
+            color: active ? _kYellow.withValues(alpha: 0.6) : _kBorder,
+            width: active ? 1.2 : 1,
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            if (isCustom) const Icon(Icons.tune_rounded, size: 13, color: _kYellow),
-            if (isCustom) const SizedBox(width: 5),
-            Text(label,
+            Icon(Icons.schedule_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                active ? _filterPeriod!.displayLabel : 'Período',
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: active ? _kYellow : _kMuted,
-                  fontSize: 13,
-                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                )),
+                  color: active ? Colors.white : _kMuted,
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(Icons.expand_more_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
           ],
         ),
       ),
@@ -606,12 +537,12 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: active
               ? _kYellow.withValues(alpha: 0.1)
               : _kBg.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: active ? _kYellow.withValues(alpha: 0.6) : _kBorder,
             width: active ? 1.2 : 1,
@@ -621,22 +552,22 @@ class _SearchScreenState extends State<SearchScreen> {
           children: [
             Icon(icon,
                 color: active ? _kYellow : _kMuted,
-                size: 15),
-            const SizedBox(width: 7),
+                size: 13),
+            const SizedBox(width: 5),
             Expanded(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active ? Colors.white : _kMuted,
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
             ),
             Icon(Icons.expand_more_rounded,
                 color: active ? _kYellow : _kMuted,
-                size: 15),
+                size: 13),
           ],
         ),
       ),
@@ -975,73 +906,6 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  Future<void> _pickCustomPeriod() async {
-    // Passo 1: data inicial
-    final dateFrom = await showDatePicker(
-      context: context,
-      initialDate: _filterDateFrom ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      helpText: 'DATA INÍCIO',
-      builder: (ctx, child) => _dateTheme(ctx, child!),
-    );
-    if (dateFrom == null || !mounted) return;
-
-    // Passo 2: hora inicial
-    final timeFrom = await showTimePicker(
-      context: context,
-      initialTime: _filterDateFrom != null
-          ? TimeOfDay.fromDateTime(_filterDateFrom!)
-          : const TimeOfDay(hour: 0, minute: 0),
-      helpText: 'HORÁRIO INÍCIO',
-      builder: (ctx, child) => _dateTheme(ctx, child!),
-    );
-    if (timeFrom == null || !mounted) return;
-
-    // Passo 3: data final
-    final dateTo = await showDatePicker(
-      context: context,
-      initialDate: _filterDateTo ?? DateTime.now(),
-      firstDate: dateFrom,
-      lastDate: DateTime.now(),
-      helpText: 'DATA FIM',
-      builder: (ctx, child) => _dateTheme(ctx, child!),
-    );
-    if (dateTo == null || !mounted) return;
-
-    // Passo 4: hora final
-    final timeTo = await showTimePicker(
-      context: context,
-      initialTime: _filterDateTo != null
-          ? TimeOfDay.fromDateTime(_filterDateTo!)
-          : TimeOfDay.now(),
-      helpText: 'HORÁRIO FIM',
-      builder: (ctx, child) => _dateTheme(ctx, child!),
-    );
-    if (timeTo == null || !mounted) return;
-
-    setState(() {
-      _filterPeriodLabel = 'custom';
-      _filterDateFrom = DateTime(
-          dateFrom.year, dateFrom.month, dateFrom.day,
-          timeFrom.hour, timeFrom.minute);
-      _filterDateTo = DateTime(
-          dateTo.year, dateTo.month, dateTo.day,
-          timeTo.hour, timeTo.minute);
-    });
-  }
-
-  Widget _dateTheme(BuildContext ctx, Widget child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: _kYellow,
-            onPrimary: Colors.black,
-            surface: _kCard,
-          ),
-        ),
-        child: child,
-      );
-
   // ─── Campo texto ──────────────────────────────────────────────────────────
 
   Widget _buildTextField() {
@@ -1052,15 +916,15 @@ class _SearchScreenState extends State<SearchScreen> {
           'PLACA DO VEÍCULO',
           style: TextStyle(
             color: _kMuted,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w800,
             letterSpacing: 2.0,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 4),
         Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: _kYellow.withValues(alpha: 0.4)),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1078,7 +942,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   icon: const Icon(Icons.camera_alt_rounded, color: _kYellow, size: 20),
                   tooltip: 'Fotografar placa',
                   onPressed: _scanning || _loading ? null : _scanPlate,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                 ),
                 IconButton(
                   icon: const Icon(Icons.clear_rounded, color: _kMuted, size: 18),
@@ -1087,7 +951,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     _plateCtrl.clear();
                     setState(() { _scanResult = null; _capturedImage = null; });
                   },
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                 ),
               ],
             ),

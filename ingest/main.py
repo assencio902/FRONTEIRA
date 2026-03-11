@@ -5380,6 +5380,96 @@ async def alarmes_historico_mark_read(alert_id: int, request: Request):
 
 
 # ===========================
+# ROTAS / TRAJETÓRIA DE PLACA
+# ===========================
+
+@app.get("/api/rotas/{plate}")
+def rotas_plate(plate: str, limit: int = 1000,
+                dt_from: Optional[str] = None, dt_to: Optional[str] = None):
+    """
+    Retorna a trajetória completa de uma placa, com todos os eventos em ordem
+    cronológica, incluindo coordenadas geográficas das câmeras.
+    Parâmetros opcionais: dt_from e dt_to (ISO 8601) para filtrar por período.
+    Resposta: { rotas: [ { seq, plate, camera_name, event_time, lat, lon,
+                            camera_id, local, image_path } ] }
+    """
+    plate = (plate or "").strip().upper()
+    if not plate:
+        raise HTTPException(status_code=400, detail="Placa inválida")
+    limit = max(1, min(5000, int(limit)))
+
+    # Filtros de data opcionais
+    _dt_from = None
+    _dt_to   = None
+    if dt_from:
+        try:
+            _dt_from = datetime.fromisoformat(dt_from.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+    if dt_to:
+        try:
+            _dt_to = datetime.fromisoformat(dt_to.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+
+    date_clause = ""
+    date_params: list = []
+    if _dt_from:
+        date_clause += " AND COALESCE(e.occurred_at, e.ts) >= %s"
+        date_params.append(_dt_from)
+    if _dt_to:
+        date_clause += " AND COALESCE(e.occurred_at, e.ts) <= %s"
+        date_params.append(_dt_to)
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    e.id,
+                    e.plate,
+                    COALESCE(c.nome, e.channel_name, e.camera_id) AS camera_name,
+                    COALESCE(e.occurred_at, e.ts)                  AS event_time,
+                    c.latitude,
+                    c.longitude,
+                    e.camera_id,
+                    COALESCE(c.nome, e.camera_id)                  AS local,
+                    e.image_path
+                FROM lpr_events e
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip = e.camera_id
+                       OR ip = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
+                WHERE e.plate = %s{date_clause}
+                ORDER BY COALESCE(e.occurred_at, e.ts) ASC
+                LIMIT %s
+                """,
+                (plate, *date_params, limit),
+            )
+            rows = cur.fetchall()
+
+    rotas = []
+    for seq, r in enumerate(rows, start=1):
+        rotas.append({
+            "seq":         seq,
+            "plate":       r[1],
+            "camera_name": r[2] or "Câmera desconhecida",
+            "event_time":  r[3].isoformat() if r[3] else None,
+            "lat":         float(r[4]) if r[4] is not None else None,
+            "lon":         float(r[5]) if r[5] is not None else None,
+            "camera_id":   r[6],
+            "local":       r[7] or "Local desconhecido",
+            "image_path":  r[8],
+        })
+
+    return {"plate": plate, "total": len(rotas), "rotas": rotas}
+
+
+# ===========================
 # ROTA CATCHALL
 # ===========================
 

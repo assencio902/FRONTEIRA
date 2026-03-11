@@ -3,8 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 
 import '../models/alert.dart';
+import '../models/period_filter.dart';
+import '../repositories/plate_recognition_repository.dart';
 import '../screens/alert_detail_screen.dart';
 import '../screens/alert_modal.dart';
 import '../screens/event_detail_screen.dart';
@@ -17,6 +21,7 @@ import '../services/watchlist_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/alarm_overlay.dart';
+import '../widgets/period_filter_sheet.dart';
 import '../widgets/plate_search_field.dart';
 import 'alarm_history_screen.dart';
 import 'login_screen.dart';
@@ -420,6 +425,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _gruposPayloadMaxFront = 0;        // 0-5
   String _gruposPlate = '';              // filtro por placa
   final TextEditingController _gruposPlateController = TextEditingController();
+  bool _ameacasScanning = false;
+  PeriodFilter? _gruposPeriod;
 
   // ── WebSocket e Alarmes ───────────────────────────────────────────────────
   final _watchlistService = WatchlistService();
@@ -611,6 +618,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (_gruposPlate.isNotEmpty) {
         final result = await Api.getBatedorCentral(
           plate: _gruposPlate,
+          dtFrom: _gruposPeriod?.from,
+          dtTo: _gruposPeriod?.to,
           limit: 100,
         );
         if (!mounted) return;
@@ -650,6 +659,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } finally {
       if (mounted) setState(() => _loadingGroups = false);
     }
+  }
+
+  Future<void> _scanAmeacasPlate() async {
+    setState(() => _ameacasScanning = true);
+    try {
+      final picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+      if (photo == null) {
+        if (mounted) setState(() => _ameacasScanning = false);
+        return;
+      }
+      final result = await PlateRecognitionRepository.recognize(File(photo.path));
+      final plate = result.plate?.trim().toUpperCase() ?? '';
+      if (plate.isNotEmpty && mounted) {
+        _gruposPlateController.text = plate;
+        setState(() { _gruposPlate = plate; _ameacasScanning = false; });
+        _loadGruposComboio();
+      } else {
+        if (mounted) setState(() => _ameacasScanning = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _ameacasScanning = false);
+    }
+  }
+
+  Future<void> _selectAmeacasDateFrom() async {
+    // Delegado ao PeriodFilterSheet
+  }
+
+  Future<void> _selectAmeacasDateTo() async {
+    // Delegado ao PeriodFilterSheet
   }
 
   @override
@@ -765,7 +809,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // Mapas
           ListTile(
             leading: const Icon(Icons.map, color: _kYellow),
-            title: const Text('Mapas & Rotas', style: TextStyle(color: Colors.white)),
+            title: const Text('Rotas', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.pop(context);
               setState(() => _tab = 4);
@@ -907,7 +951,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavigationBarItem(
               icon: Icon(Icons.crisis_alert_rounded), label: 'Ameaças'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.map_rounded), label: 'Mapas'),
+              icon: Icon(Icons.map_rounded), label: 'Rotas'),
         ],
       ),
     );
@@ -1104,16 +1148,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ── Central de Ameaças ───────────────────────────────────────────────────────
 
   Widget _buildCentralAmeacasTab() {
-    final hasAnyFilters =
-        _gruposWindow != '2h' ||
-        _gruposGroupSizes != '2,3' ||
-        _gruposMinCameras != 2 ||
-        _gruposOrderMode != 'any' ||
-        _gruposCoWindow != 300 ||
-        _gruposLeaderRatio != 0.70 ||
-        _gruposPayloadMaxFront != 0 ||
-        _gruposPlate.isNotEmpty;
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1125,273 +1159,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: _kCard,
               border: Border(bottom: BorderSide(color: _kBorder)),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                const Icon(Icons.crisis_alert_rounded, color: _kYellow, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
+                Icon(Icons.crisis_alert_rounded, color: _kYellow, size: 18),
+                SizedBox(width: 8),
+                Expanded(
                   child: Text('CENTRAL DE AMEAÇAS',
                       style: TextStyle(
                           color: Colors.white,
-                        fontSize: 15,
+                          fontSize: 15,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5)),
                 ),
               ],
             ),
           ),
-          // Filtros (estilo igual ao card de Pesquisa)
-          Container(
-            color: _kBg,
-            padding: const EdgeInsets.all(12),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: _kCard,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _kBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.filter_list_rounded, color: _kYellow, size: 16),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'FILTROS DE AMEAÇAS',
-                        style: TextStyle(
-                          color: _kYellow,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (hasAnyFilters)
-                        GestureDetector(
-                          onTap: () => setState(() {
-                            _gruposWindow = '2h';
-                            _gruposGroupSizes = '2,3';
-                            _gruposMinCameras = 2;
-                            _gruposOrderMode = 'any';
-                            _gruposCoWindow = 300;
-                            _gruposLeaderRatio = 0.70;
-                            _gruposPayloadMaxFront = 0;
-                            _gruposPlate = '';
-                            _gruposPlateController.clear();
-                          }),
-                          child: const Text(
-                            'Limpar',
-                            style: TextStyle(
-                              color: _kMuted,
-                              fontSize: 13,
-                              decoration: TextDecoration.underline,
-                              decorationColor: _kMuted,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                // Campo de filtro por placa
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Filtrar por placa',
-                      style: TextStyle(
-                        color: _kMuted,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    PlateSearchField(
-                      controller: _gruposPlateController,
-                      hintText: 'Digite a placa (ex: ABC1234)',
-                      onChanged: (v) {
-                        final upperText = v.trim().toUpperCase();
-                        setState(() => _gruposPlate = upperText);
-                      },
-                    ),
-                  ],
-                ),
-                  const SizedBox(height: 12),
-                // Linha 1: Janela de tempo + Tamanho grupo
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildFilterSelect(
-                        label: 'Janela',
-                        value: _gruposWindow,
-                        options: const ['30m', '1h', '2h', '6h', '12h', '24h'],
-                        onChanged: (v) => setState(() => _gruposWindow = v),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: _buildFilterSelect(
-                        label: 'Grupo',
-                        value: _gruposGroupSizes,
-                        options: const ['2', '3', '2,3'],
-                        onChanged: (v) => setState(() => _gruposGroupSizes = v),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Linha 2: Mín câmeras + Modo liderança
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildFilterSelect(
-                        label: 'Mín câm.',
-                        value: _gruposMinCameras.toString(),
-                        options: const ['1', '2', '3', '4', '5'],
-                        onChanged: (v) =>
-                            setState(() => _gruposMinCameras = int.parse(v)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: _buildFilterSelect(
-                        label: 'Liderança',
-                        value: _gruposOrderMode,
-                        options: const ['any', 'leader_front'],
-                        optionLabels: const ['Qualquer', 'Líder na frente'],
-                        onChanged: (v) => setState(() => _gruposOrderMode = v),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Linha 3: Janela co-detecção + Leader ratio
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildFilterSelect(
-                        label: 'Co-window',
-                        value: _gruposCoWindow.toString(),
-                        options: const ['60', '120', '300', '600', '900', '1800'],
-                        optionLabels: const ['1m', '2m', '5m', '10m', '15m', '30m'],
-                        onChanged: (v) =>
-                            setState(() => _gruposCoWindow = int.parse(v)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Líder ≥',
-                              style: TextStyle(
-                                  color: _kMuted,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Slider(
-                                  value: _gruposLeaderRatio,
-                                  min: 0.5,
-                                  max: 1.0,
-                                  divisions: 10,
-                                  activeColor: _kYellow,
-                                  inactiveColor: _kBorder,
-                                  onChanged: (v) =>
-                                      setState(() => _gruposLeaderRatio = v),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${(_gruposLeaderRatio * 100).toStringAsFixed(0)}%',
-                                style: const TextStyle(
-                                    color: _kYellow,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Linha 4: Botões de ação (padrão visual da Pesquisa)
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton.icon(
-                          onPressed: _loadGruposComboio,
-                          icon: const Icon(Icons.search, size: 20),
-                          label: const Text('Buscar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kYellow,
-                            foregroundColor: Colors.black,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: .4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: () => setState(() {
-                          _gruposWindow = '2h';
-                          _gruposGroupSizes = '2,3';
-                          _gruposMinCameras = 2;
-                          _gruposOrderMode = 'any';
-                          _gruposCoWindow = 300;
-                          _gruposLeaderRatio = 0.70;
-                          _gruposPayloadMaxFront = 0;
-                          _gruposPlate = '';
-                          _gruposPlateController.clear();
-                        }),
-                        icon: const Icon(Icons.refresh, size: 20),
-                        label: const Text('Limpar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kCard,
-                          foregroundColor: _kMuted,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: _kBorder),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: .4,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          ),
-          // Content
+
+          // Resultados
           Expanded(
             child: _centralResults.isNotEmpty
                 ? _buildCentralResultsList()
@@ -1407,11 +1191,335 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             backgroundColor: _kCard,
                             child: ListView.builder(
                               itemCount: _gruposComboio.length,
-                              itemBuilder: (_, i) => _buildGrupoCard(_gruposComboio[i]),
+                              itemBuilder: (_, i) =>
+                                  _buildGrupoCard(_gruposComboio[i]),
                             ),
                           ),
           ),
+
+          // Painel inferior de filtros (padrão da aba Pesquisa)
+          SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: _kCard,
+                border: Border(top: BorderSide(color: _kBorder)),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.38,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Campo da placa
+                      _buildAmeacasPlateField(),
+                      const SizedBox(height: 5),
+                      // Filtros
+                      _buildAmeacasFilterCard(),
+                      const SizedBox(height: 5),
+                      // Botão Buscar
+                      SizedBox(
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          onPressed: _loadGruposComboio,
+                          icon: const Icon(Icons.crisis_alert_rounded, size: 16),
+                          label: const Text('Buscar Ameaças'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _kYellow,
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: .4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAmeacasPlateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'FILTRAR POR PLACA',
+          style: TextStyle(
+            color: _kMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2.0,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _kYellow.withValues(alpha: 0.4)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: PlateSearchField(
+            controller: _gruposPlateController,
+            hintText: 'ABC1234',
+            onChanged: (v) {
+              final upperText = v.trim().toUpperCase();
+              setState(() => _gruposPlate = upperText);
+            },
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.camera_alt_rounded, color: _kYellow, size: 20),
+                  tooltip: 'Fotografar placa',
+                  onPressed: _ameacasScanning ? null : _scanAmeacasPlate,
+                  padding: const EdgeInsets.all(6),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear_rounded, color: _kMuted, size: 18),
+                  tooltip: 'Limpar placa',
+                  onPressed: () {
+                    _gruposPlateController.clear();
+                    setState(() => _gruposPlate = '');
+                  },
+                  padding: const EdgeInsets.all(6),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAmeacasFilterCard() {
+    final hasAnyFilters =
+        _gruposWindow != '2h' ||
+        _gruposGroupSizes != '2,3' ||
+        _gruposMinCameras != 2 ||
+        _gruposOrderMode != 'any' ||
+        _gruposCoWindow != 300 ||
+        _gruposLeaderRatio != 0.70 ||
+        _gruposPayloadMaxFront != 0 ||
+        _gruposPlate.isNotEmpty ||
+        _gruposPeriod != null;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Cabeçalho
+          Row(
+            children: [
+              const Icon(Icons.filter_list_rounded, color: _kYellow, size: 13),
+              const SizedBox(width: 5),
+              const Text(
+                'FILTROS DE AMEAÇAS',
+                style: TextStyle(
+                  color: _kYellow,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const Spacer(),
+              if (hasAnyFilters)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _gruposWindow = '2h';
+                    _gruposGroupSizes = '2,3';
+                    _gruposMinCameras = 2;
+                    _gruposOrderMode = 'any';
+                    _gruposCoWindow = 300;
+                    _gruposLeaderRatio = 0.70;
+                    _gruposPayloadMaxFront = 0;
+                    _gruposPlate = '';
+                    _gruposPlateController.clear();
+                    _gruposPeriod = null;
+                  }),
+                  child: const Text('Limpar',
+                      style: TextStyle(
+                        color: _kMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: _kMuted,
+                      )),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // Linha 1: Janela + Grupo
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterSelect(
+                  label: 'Janela',
+                  value: _gruposWindow,
+                  options: const ['30m', '1h', '2h', '6h', '12h', '24h'],
+                  onChanged: (v) => setState(() => _gruposWindow = v),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFilterSelect(
+                  label: 'Grupo',
+                  value: _gruposGroupSizes,
+                  options: const ['2', '3', '2,3'],
+                  onChanged: (v) => setState(() => _gruposGroupSizes = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Linha 2: Mín câmeras + Liderança
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterSelect(
+                  label: 'Mín câm.',
+                  value: _gruposMinCameras.toString(),
+                  options: const ['1', '2', '3', '4', '5'],
+                  onChanged: (v) =>
+                      setState(() => _gruposMinCameras = int.parse(v)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildFilterSelect(
+                  label: 'Liderança',
+                  value: _gruposOrderMode,
+                  options: const ['any', 'leader_front'],
+                  optionLabels: const ['Qualquer', 'Líder na frente'],
+                  onChanged: (v) => setState(() => _gruposOrderMode = v),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          // Linha 3: Co-window + Líder ratio
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterSelect(
+                  label: 'Co-window',
+                  value: _gruposCoWindow.toString(),
+                  options: const ['60', '120', '300', '600', '900', '1800'],
+                  optionLabels: const ['1m', '2m', '5m', '10m', '15m', '30m'],
+                  onChanged: (v) =>
+                      setState(() => _gruposCoWindow = int.parse(v)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Líder ≥',
+                        style: TextStyle(
+                            color: _kMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Slider(
+                            value: _gruposLeaderRatio,
+                            min: 0.5,
+                            max: 1.0,
+                            divisions: 10,
+                            activeColor: _kYellow,
+                            inactiveColor: _kBorder,
+                            onChanged: (v) =>
+                                setState(() => _gruposLeaderRatio = v),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${(_gruposLeaderRatio * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                              color: _kYellow,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          _buildAmeacasPeriodChip(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmeacasPeriodChip() {
+    final active = _gruposPeriod != null;
+    return GestureDetector(
+      onTap: () async {
+        final res = await PeriodFilterSheet.show(
+          context,
+          current: _gruposPeriod,
+        );
+        if (res.confirmed && mounted) {
+          setState(() => _gruposPeriod = res.filter);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? _kYellow.withValues(alpha: 0.1) : _kBg.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(
+            color: active ? _kYellow.withValues(alpha: 0.6) : _kBorder,
+            width: active ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.schedule_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                active ? _gruposPeriod!.displayLabel : 'Período',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active ? Colors.white : _kMuted,
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(Icons.expand_more_rounded,
+                color: active ? _kYellow : _kMuted, size: 13),
+          ],
+        ),
       ),
     );
   }
@@ -1428,13 +1536,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Text(label,
             style: const TextStyle(
-                color: _kMuted, fontSize: 12, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 3),
+                color: _kMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
         Container(
           decoration: BoxDecoration(
             color: _kBg2,
             border: Border.all(color: _kBorder),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(5),
           ),
           child: DropdownButton<String>(
             value: value,

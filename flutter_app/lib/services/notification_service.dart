@@ -65,7 +65,11 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     'data=${message.data}',
   );
 
-  if (message.notification == null && message.data.isNotEmpty) {
+  // Exibe notificação local tanto para data-only quanto para notification+data.
+  // Para notification+data, o FCM SDK normalmente exibe pelo sistema, mas se o
+  // canal ainda não foi criado (app nunca aberto), a notificação pode não aparecer.
+  // Exibir via local_notifications garante que o canal correto seja usado.
+  if (message.data.isNotEmpty || message.notification != null) {
     await NotificationService.showBackgroundDataNotification(message);
   }
 }
@@ -284,6 +288,7 @@ class NotificationService {
     final androidPlugin =
         plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(_criticalNotificationChannel);
+    await androidPlugin?.createNotificationChannel(_alarmNotificationChannel);
     await androidPlugin?.createNotificationChannel(_normalNotificationChannel);
   }
 
