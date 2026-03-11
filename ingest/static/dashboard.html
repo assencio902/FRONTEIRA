@@ -5550,17 +5550,17 @@ async function _loadTrajetoria(windowKey) {
   st.innerHTML = '<span class="spinner"></span> Buscando passagens…';
 
   var now = Date.now();
-  var tsFrom, tsTo = new Date(now).toISOString();
-  if (windowKey === '12h')   tsFrom = new Date(now - 12  * 3600000).toISOString();
-  else if (windowKey === '24h')  tsFrom = new Date(now - 24  * 3600000).toISOString();
-  else if (windowKey === '7d')   tsFrom = new Date(now -  7  * 86400000).toISOString();
-  else if (windowKey === '30d')  tsFrom = new Date(now - 30  * 86400000).toISOString();
+  var tsFrom, tsTo = _toLocalDTInput(new Date(now));
+  if (windowKey === '12h')   tsFrom = _toLocalDTInput(new Date(now - 12  * 3600000));
+  else if (windowKey === '24h')  tsFrom = _toLocalDTInput(new Date(now - 24  * 3600000));
+  else if (windowKey === '7d')   tsFrom = _toLocalDTInput(new Date(now -  7  * 86400000));
+  else if (windowKey === '30d')  tsFrom = _toLocalDTInput(new Date(now - 30  * 86400000));
   else if (windowKey === 'custom') {
     var f = document.getElementById('traj-custom-from').value;
     var t = document.getElementById('traj-custom-to').value;
     if (!f || !t) { st.textContent = '\u26a0\ufe0f Informe as datas De e At\u00e9.'; return; }
-    tsFrom = new Date(f).toISOString();
-    tsTo   = new Date(t).toISOString();
+    tsFrom = f;
+    tsTo   = t;
   }
 
   try {
