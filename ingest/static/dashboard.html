@@ -2593,6 +2593,8 @@ function switchTab(name, el) {
   if (name === 'alarmes')  loadAlarmes();
   if (name === 'config')   initConfigTab();
 }
+// garante acesso global mesmo em contextos de onclick attribute
+window.switchTab = switchTab;
 
 function switchBatTab(name, el) {
   // para o monitoramento ao vivo da Central se sair dela
@@ -3720,7 +3722,7 @@ function _addPlateAsAlvo(plate) {
   var inp = document.getElementById('alvo-plate-input');
   if (inp) inp.value = plate;
   closeModal('detail-modal');
-  var batTab = document.querySelector('.tab-btn[data-tab="batedor"]');
+  var batTab = document.querySelector('.nav-item[onclick*="batedor"]');
   if (batTab) switchTab('batedor', batTab);
   var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
   if (alvosBtn) switchBatTab('alvos', alvosBtn);
@@ -3728,7 +3730,7 @@ function _addPlateAsAlvo(plate) {
 }
 function _navigateToAlvos() {
   closeModal('detail-modal');
-  var batTab = document.querySelector('.tab-btn[data-tab="batedor"]');
+  var batTab = document.querySelector('.nav-item[onclick*="batedor"]');
   if (batTab) switchTab('batedor', batTab);
   var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
   if (alvosBtn) switchBatTab('alvos', alvosBtn);
@@ -5608,8 +5610,8 @@ async function _loadTrajetoria(windowKey) {
 
     closeModal('traj-picker-modal');
     closeModal('detail-modal');
-    var nav = document.querySelector('[onclick*="\'mapa\'"]');
-    if (nav) nav.click();
+    var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
+    if (mapaNav) switchTab('mapa', mapaNav);
     setTimeout(_plotarTrajetoria, 400);
   } catch(e) {
     st.textContent = 'Erro: ' + e.message;
@@ -5619,8 +5621,8 @@ async function _loadTrajetoria(windowKey) {
 function verTrajetoriaNoMapa() {
   if (!_mapaTrajetoria) return;
   closeModal('detail-modal');
-  var nav = document.querySelector('[onclick*="\'mapa\'"]');
-  if (nav) nav.click();
+  var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
+  if (mapaNav) switchTab('mapa', mapaNav);
 }
 
 // ── Segmentação inteligente: quebra pontos em trechos ────────────────────
