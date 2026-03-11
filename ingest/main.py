@@ -3779,28 +3779,38 @@ def vehicle_trajectory(
             ]
         }
     """
-    plate = plate.strip().upper()
-    if not plate:
+    # Normaliza placa: remove não-alfanuméricos e força maiúsculo
+    import re as _re
+    plate_raw = plate.strip().upper()
+    plate_norm = _re.sub(r'[^A-Z0-9]', '', plate_raw)
+    if not plate_norm:
         raise HTTPException(status_code=422, detail="plate é obrigatório")
-    
+
     # Parse datas
     try:
         dt_start = datetime.fromisoformat(start.replace('Z', '').replace(' ', 'T'))
         dt_end   = datetime.fromisoformat(end.replace('Z', '').replace(' ', 'T'))
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Formato de data inválido: {e}")
-    
-    # Garante timezone UTC se não fornecido
+
+    # Se não tiver tzinfo, assume fuso local -03:00 (Brasília)
+    tz_brt = timezone(timedelta(hours=-3))
     if dt_start.tzinfo is None:
-        dt_start = dt_start.replace(tzinfo=timezone.utc)
+        dt_start = dt_start.replace(tzinfo=tz_brt)
     if dt_end.tzinfo is None:
-        dt_end = dt_end.replace(tzinfo=timezone.utc)
-    
+        dt_end = dt_end.replace(tzinfo=tz_brt)
+
     dedupe_seconds = max(0, min(60, int(dedupe_seconds)))
-    
+
+    logging.info(
+        "[trajectory] plate_raw=%r plate_norm=%r dt_start=%s dt_end=%s",
+        plate_raw, plate_norm, dt_start.isoformat(), dt_end.isoformat()
+    )
+
     with _conn() as conn:
         with conn.cursor() as cur:
-            # Query com JOIN para enriquecer com lat/lon da câmera
+            # Query com JOIN para enriquecer com lat/lon da câmera.
+            # Comparação normalizada: remove traço/ponto/espaço antes de comparar.
             cur.execute("""
                 SELECT
                     e.id                                                AS event_id,
@@ -3813,7 +3823,7 @@ def vehicle_trajectory(
                     c.longitude,
                     COALESCE(NULLIF(e.direcao,''), c.direcao)           AS direction,
                     COALESCE(e.confidence, 0.0)                         AS confidence,
-                    COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw', 
+                    COALESCE(e.yolo_result->'target_vehicle'->>'tipo_raw',
                              e.cam_meta->>'vehicle_type', '')            AS vehicle_type,
                     COALESCE(e.yolo_result->'target_vehicle'->>'cor', '') AS vehicle_color,
                     e.image_path
@@ -3823,21 +3833,25 @@ def vehicle_trajectory(
                     OR c.ip = e.camera_id
                     OR c.ip = e.camera_ip
                 )
-                WHERE UPPER(e.plate) = %s
+                WHERE regexp_replace(upper(coalesce(e.plate,'')), '[^A-Z0-9]', '', 'g')
+                      = regexp_replace(upper(%s), '[^A-Z0-9]', '', 'g')
                   AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
                 ORDER BY COALESCE(e.occurred_at, e.ts) ASC
                 LIMIT 2000
-            """, (plate, dt_start, dt_end))
+            """, (plate_norm, dt_start, dt_end))
             rows = cur.fetchall()
-    
+
+    logging.info("[trajectory] plate_norm=%r rows_returned=%d", plate_norm, len(rows))
+
     if not rows:
         return {
-            "plate": plate,
-            "start": dt_start.isoformat(),
-            "end": dt_end.isoformat(),
-            "total_points": 0,
+            "plate":             plate_norm,
+            "start":             dt_start.isoformat(),
+            "end":               dt_end.isoformat(),
+            "total_events":      0,
+            "total_points":      0,
             "cameras_without_gps": [],
-            "points": []
+            "points":            []
         }
     
     # Processa e deduplica
@@ -3888,7 +3902,7 @@ def vehicle_trajectory(
         })
     
     return {
-        "plate":                plate,
+        "plate":                plate_norm,
         "start":                dt_start.isoformat(),
         "end":                  dt_end.isoformat(),
         "total_points":         len(points),
