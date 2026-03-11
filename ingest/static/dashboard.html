@@ -518,6 +518,59 @@
     .date-range-row input[type=datetime-local] { background:var(--input-bg);
       border:1px solid var(--input-border); border-radius:var(--radius); color:var(--text);
       padding:5px 8px; font-size:var(--fs-input); line-height:var(--lh-tight); }
+    /* ---- Central de Ameaças — toolbar padronizada ---- */
+    #bat-sub-central .cen-tb {
+      display:flex; align-items:center; flex-wrap:wrap;
+      gap:8px 10px; margin-bottom:14px;
+    }
+    #bat-sub-central .cen-lbl {
+      display:inline-flex; align-items:center; gap:5px;
+      font-size:.81rem; color:var(--muted); white-space:nowrap;
+      font-weight:500; line-height:1;
+    }
+    #bat-sub-central .cen-lbl.accent { color:var(--accent); font-weight:700; }
+    #bat-sub-central .cen-ctl {
+      height:32px; padding:0 8px;
+      border:1px solid var(--border); border-radius:6px;
+      background:var(--bg2); color:var(--text);
+      font-size:.81rem; font-family:inherit;
+      outline:none; box-sizing:border-box; line-height:32px;
+    }
+    #bat-sub-central .cen-ctl:focus {
+      border-color:var(--accent);
+      box-shadow:0 0 0 2px rgba(250,204,21,.12);
+    }
+    #bat-sub-central .cen-ctl.accent-border { border-color:var(--accent); }
+    #bat-sub-central .cen-ctl-plate  { width:110px; text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+    #bat-sub-central .cen-ctl-narrow { width:58px; text-align:center; }
+    #bat-sub-central .cen-ctl-xnarrow{ width:46px; text-align:center; }
+    #bat-sub-central input[type=datetime-local].cen-ctl { width:172px; color-scheme:dark; }
+    /* Botão Aplicar */
+    #bat-sub-central .cen-btn-apply {
+      display:inline-flex; align-items:center; justify-content:center; gap:5px;
+      height:32px; padding:0 16px; border-radius:6px;
+      background:var(--accent,#facc15); color:#111;
+      border:1px solid var(--accent,#facc15);
+      font-size:.81rem; font-weight:700; font-family:inherit;
+      cursor:pointer; white-space:nowrap; line-height:1;
+      transition:background .15s, border-color .15s, opacity .15s;
+    }
+    #bat-sub-central .cen-btn-apply:hover  { background:#e2b800; border-color:#e2b800; }
+    #bat-sub-central .cen-btn-apply:active { opacity:.82; }
+    #bat-sub-central .cen-btn-apply:disabled { opacity:.4; cursor:not-allowed; }
+    /* Botão Limpar */
+    #bat-sub-central .cen-btn-clear {
+      display:inline-flex; align-items:center; justify-content:center; gap:5px;
+      height:32px; padding:0 12px; border-radius:6px;
+      background:transparent; color:var(--muted);
+      border:1px solid var(--border);
+      font-size:.81rem; font-weight:500; font-family:inherit;
+      cursor:pointer; white-space:nowrap; line-height:1;
+      transition:background .15s, border-color .15s, color .15s;
+    }
+    #bat-sub-central .cen-btn-clear:hover  { background:rgba(255,255,255,.06); border-color:var(--text); color:var(--text); }
+    #bat-sub-central .cen-btn-clear:active { opacity:.8; }
+    #bat-sub-central .cen-btn-clear:disabled { opacity:.4; cursor:not-allowed; }
     .form-input { background:var(--input-bg); border:1px solid var(--input-border); border-radius:var(--radius);
       color:var(--text); padding:8px 12px; font-size:var(--fs-input); outline:none; line-height:var(--lh-tight); }
     .form-input:focus { border-color:var(--accent); box-shadow:var(--input-focus-shadow); }
@@ -680,13 +733,13 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Eventos
   </div>
-  <div class="nav-item" onclick="switchTab('mapa',this)">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
-    Mapa de C&#226;meras
-  </div>
   <div class="nav-item" onclick="switchTab('batedor',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-    Batedor de Suspeitos
+    Batedor
+  </div>
+  <div class="nav-item" onclick="switchTab('mapa',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+    Rotas
   </div>
   <div class="sidebar-section">Cadastro</div>
   <div class="nav-item" onclick="switchTab('veiculos',this)">
@@ -925,17 +978,18 @@
           <div class="card"><div class="card-icon">&#128293;</div><div class="card-label card-label-special">Top score</div><div class="card-value" id="cen-top-score">&#8212;</div></div>
           <div class="card"><div class="card-icon">&#127919;</div><div class="card-label card-label-special">Alvos na janela</div><div class="card-value" id="cen-alvos">&#8212;</div></div>
         </div>
-        <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px">
-          <label style="display:flex;align-items:center;gap:6px">&#128269; Placa:
-            <input type="text" id="cen-filter-plate" placeholder="ex: ABC1234"
+        <div class="cen-tb">
+          <!-- Placa -->
+          <label class="cen-lbl">&#128269; Placa:
+            <input type="text" id="cen-filter-plate" placeholder="ABC1234"
               maxlength="7"
               oninput="_cenPlateInput(this)"
               onkeydown="if(event.key==='Enter'&&this.value.trim())openBatedorReport(this.value.trim().toUpperCase())"
-              style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
-            <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('cen-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
+              class="cen-ctl cen-ctl-plate">
           </label>
-          <label>Janela de tempo:
-            <select id="cen-window" onchange="cenWindowChange()" style="margin-left:6px">
+          <!-- Período -->
+          <label class="cen-lbl">Per&iacute;odo:
+            <select id="cen-window" onchange="cenWindowChange()" class="cen-ctl">
               <option value="1m">1 minuto</option>
               <option value="5m">5 minutos</option>
               <option value="10m">10 minutos</option>
@@ -950,26 +1004,28 @@
               <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
             </select>
           </label>
-          <span id="cen-filter-cameras"><label>M&iacute;n. c&acirc;meras:
-            <select id="cen-min-cameras" style="margin-left:6px" onchange="cenApplyFilter()">
+          <!-- Mín. câmeras -->
+          <span id="cen-filter-cameras"><label class="cen-lbl">M&iacute;n. c&acirc;meras:
+            <select id="cen-min-cameras" onchange="cenApplyFilter()" class="cen-ctl">
               <option value="0">Todas</option>
-              <option value="1">&gt;= 1 c&acirc;mera</option>
-              <option value="2" selected>&gt;= 2 c&acirc;meras</option>
-              <option value="3">&gt;= 3 c&acirc;meras</option>
-              <option value="4">&gt;= 4 c&acirc;meras</option>
-              <option value="5">&gt;= 5 c&acirc;meras</option>
+              <option value="1">&gt;= 1</option>
+              <option value="2" selected>&gt;= 2</option>
+              <option value="3">&gt;= 3</option>
+              <option value="4">&gt;= 4</option>
+              <option value="5">&gt;= 5</option>
             </select>
           </label></span>
-          <!-- Filtros de Comboio -->
-          <label style="font-weight:700;color:var(--accent)">&#128101; Grupo:
-            <select id="cen-gsizes" style="margin-left:4px;border-color:var(--accent)" onchange="cenGroupSizeChange()">
-              <option value="2" selected>2 ve&iacute;culos</option>
-              <option value="3">3 ve&iacute;culos</option>
-              <option value="2,3">2 ou 3</option>
+          <!-- Grupo -->
+          <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
+            <select id="cen-gsizes" onchange="cenGroupSizeChange()" class="cen-ctl"
+              title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">
+              <option value="2" selected>2 ve&iacute;culos juntos</option>
+              <option value="3+">3 ve&iacute;culos ou mais</option>
             </select>
           </label>
-          <label>&#9201; Janela/c&acirc;m (m&aacute;x 1h):
-            <select id="cen-cowin" style="margin-left:4px" onchange="loadCentral(true)">
+          <!-- Janela/câm -->
+          <label class="cen-lbl">&#9201; Janela/c&acirc;m:
+            <select id="cen-cowin" onchange="loadCentral(true)" class="cen-ctl">
               <option value="60">1 min</option>
               <option value="120">2 min</option>
               <option value="300" selected>5 min</option>
@@ -979,42 +1035,36 @@
               <option value="3600">1 hora</option>
             </select>
           </label>
-          <label>&#128110; Modo:
-            <select id="cen-ordermode" style="margin-left:4px" onchange="cenOrderModeChange()">
+          <!-- Modo -->
+          <label class="cen-lbl">&#128110; Modo:
+            <select id="cen-ordermode" onchange="cenOrderModeChange()" class="cen-ctl">
               <option value="any" selected>Qualquer ordem</option>
               <option value="leader_front">L&iacute;der na frente</option>
             </select>
           </label>
-          <span id="cen-leader-opts" style="display:none">
-            <label>&#127942; L&iacute;der &gt;= <input id="cen-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" style="width:54px;margin-left:2px">%</label>
-            <label id="cen-payload-label" style="display:none">&#128230; Payload 1&ordm; &le; <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" style="width:44px;margin-left:2px"> c&acirc;m.</label>
+          <span id="cen-leader-opts" style="display:none;align-items:center;gap:8px">
+            <label class="cen-lbl">&#127942; L&iacute;der &gt;=
+              <input id="cen-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" class="cen-ctl cen-ctl-narrow">%
+            </label>
+            <label id="cen-payload-label" class="cen-lbl" style="display:none">&#128230; Payload 1&ordm; &le;
+              <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
+            </label>
           </span>
-          <button class="btn btn-primary btn-sm" onclick="loadCentral(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
-          <button class="btn btn-outline btn-sm" onclick="_resetCenFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
-            <select id="cen-interval" style="margin-left:4px">
-              <option value="30">30s</option>
-              <option value="60" selected>1 min</option>
-              <option value="120">2 min</option>
-              <option value="300">5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-              <option value="1800">30 min</option>
-              <option value="3600">1 hora</option>
-            </select>
-          </label>
-          <span class="date-range-row" id="cen-date-row" style="padding:0">
-            <span>Per&iacute;odo &mdash; De</span>
-            <input type="datetime-local" id="cen-ts-from">
-            <span>At&eacute;</span>
-            <input type="datetime-local" id="cen-ts-to">
-            <button class="btn btn-outline btn-xs" onclick="loadCentral(true)">&#9654; Aplicar</button>
+          <!-- Ações -->
+          <button class="cen-btn-apply" onclick="loadCentral(true)">&#128269; Filtrar</button>
+          <button class="cen-btn-clear" onclick="_resetCenFilters()">Limpar</button>
+          <!-- Período personalizado -->
+          <span class="date-range-row" id="cen-date-row">
+            <span class="cen-lbl">De</span>
+            <input type="datetime-local" id="cen-ts-from" class="cen-ctl">
+            <span class="cen-lbl">At&eacute;</span>
+            <input type="datetime-local" id="cen-ts-to" class="cen-ctl">
+            <button class="cen-btn-apply" onclick="loadCentral(true)">&#9654; Aplicar</button>
           </span>
-          <button id="btn-cen-live" class="btn btn-outline btn-sm" onclick="toggleCenLive()" style="display:flex;align-items:center;gap:6px">
-            &#9654; <span id="cen-live-label">Monitorar</span>
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="loadCentral(true)">&#8635; Agora</button>
-          <span class="status-line" id="central-status"></span>
+          <!-- Campo oculto — lido por _cenScheduleNext/_resetCenFilters -->
+          <input type="hidden" id="cen-interval" value="60">
+          <!-- central-status: mantido no DOM para compatibilidade JS, não exibido visualmente -->
+          <span id="central-status" style="display:none"></span>
         </div>
         <div class="table-wrap">
           <table><thead><tr>
@@ -1029,7 +1079,7 @@
             <th>&Uacute;ltimo visto</th>
             <th>A&#231;&otilde;es</th>
           </tr></thead>
-          <tbody id="central-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em &ldquo;&#9654; Monitorar&rdquo; para iniciar o monitoramento em tempo real.</td></tr></tbody>
+          <tbody id="central-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em <strong>&#10003; Aplicar</strong> para iniciar o monitoramento.</td></tr></tbody>
           </table>
         </div>
         <div id="cen-pagination" style="display:none;align-items:center;gap:10px;padding:10px 0;justify-content:center;flex-wrap:wrap">
@@ -1063,9 +1113,8 @@
           </label>
           <label>Tamanho do grupo:
             <select id="grupos-sizes" onchange="loadGruposComboio(true)" style="margin-left:6px">
-              <option value="2">2 ve&iacute;culos</option>
-              <option value="3">3 ve&iacute;culos</option>
-              <option value="2,3" selected>2 ou 3</option>
+              <option value="2" selected>2 ve&iacute;culos juntos</option>
+              <option value="3+">3 ve&iacute;culos ou mais</option>
             </select>
           </label>
           <label>M&iacute;n. câmeras:
@@ -2605,14 +2654,16 @@ function switchBatTab(name, el) {
                   livBtn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
   }
   document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  ['central','alvos'].forEach(function(n){
+  // CORREÇÃO: 'grupos' estava ausente da lista — causava duplicação de filtros ao
+  // navegar de "Grupos" → "Ameaças" (bat-sub-grupos ficava ativo simultaneamente)
+  ['central', 'grupos', 'alvos'].forEach(function(n){
     var el2 = document.getElementById('bat-sub-'+n);
     if (el2) el2.classList.remove('active');
   });
   el.classList.add('active');
   el.setAttribute('data-bat', name);
   document.getElementById('bat-sub-' + name).classList.add('active');
-  if (name === 'central')    { /* aguarda clique em Monitorar */ }
+  if (name === 'central')    { /* aguarda clique em Filtrar */ }
   else if (name === 'alvos') { loadAlvos(); _loadAlvoCameras(); }
 }
 
@@ -3273,7 +3324,7 @@ function cenGroupSizeChange() {
   var gs = (document.getElementById('cen-gsizes') || {}).value || '2';
   var mode = (document.getElementById('cen-ordermode') || {}).value;
   var plLabel = document.getElementById('cen-payload-label');
-  if (plLabel) plLabel.style.display = (mode === 'leader_front' && (gs === '3' || gs === '2,3')) ? 'inline' : 'none';
+  if (plLabel) plLabel.style.display = (mode === 'leader_front' && gs === '3+') ? 'inline' : 'none';
   loadCentral(true);
 }
 
@@ -3295,7 +3346,8 @@ async function loadCentral(showSpinner) {
   var payloadM  = (document.getElementById('cen-payload-max') || {}).value || '0';
 
   if (showSpinner) {
-    document.getElementById('central-status').innerHTML = '<span class="spinner"></span>';
+    var _cst = document.getElementById('central-status');
+    if (_cst) _cst.innerHTML = '<span class="spinner"></span>';
     document.getElementById('central-tbody').innerHTML =
       '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando…</td></tr>';
   }
@@ -3315,11 +3367,13 @@ async function loadCentral(showSpinner) {
     document.getElementById('cen-alvos').textContent = all.filter(function(i){ return i.is_alvo; }).length || '-';
     _cenRenderPage();
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    document.getElementById('central-status').textContent = 'Atualizado às ' + ts;
+    var _cst = document.getElementById('central-status');
+    if (_cst) _cst.textContent = '';
     // ---- Grupos em Comboio integrado ----
     _loadCenGrupos(w, cowin, gsizes, orderMode, leaderR, payloadM, tsFrom, tsTo);
   } catch(e) {
-    document.getElementById('central-status').textContent = 'Erro: ' + e.message;
+    var _cst = document.getElementById('central-status');
+    if (_cst) _cst.textContent = 'Erro: ' + e.message;
     if (showSpinner)
       document.getElementById('central-tbody').innerHTML =
         '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
@@ -6709,7 +6763,7 @@ function _resetGruposFilters() {
     var el = document.getElementById(id);
     if (el) {
       if (id === 'grupos-window') el.value = '2h';
-      else if (id === 'grupos-sizes') el.value = '2,3';
+      else if (id === 'grupos-sizes') el.value = '2';
       else if (id === 'grupos-min-cameras') el.value = '2';
       else if (id === 'grupos-order-mode') el.value = 'any';
       else if (id === 'grupos-interval') el.value = '60';

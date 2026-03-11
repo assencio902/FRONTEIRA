@@ -2920,7 +2920,7 @@ def batedor_trajeto(
 def batedor_grupos_comboio(
     window:              str   = "2h",
     co_window:           int   = 300,      # segundos: janela por câmera (1..1000)
-    group_sizes:         str   = "2",      # "2", "3" ou "2,3"
+    group_sizes:         str   = "2",      # "2" (exatamente 2) ou "3+" (3 ou mais)
     min_cameras:         int   = 2,        # mín câmeras p/ grupo (fixo >= 2)
     max_trip_gap:        int   = 3600,     # máx span viagem entre câmeras (s)
     order_mode:          str   = "any",    # "any" | "leader_front"
@@ -2959,12 +2959,16 @@ def batedor_grupos_comboio(
             )
 
     # ── Parseia group_sizes ────────────────────────────────────────────────────
-    valid_sizes = set()
+    # Valores aceitos: "2" (exatamente 2), "3+" (3 ou mais), "3" (legacy → equivale a 3+)
+    valid_sizes: set = set()
+    allow_3plus = False
     for s in str(group_sizes).split(","):
         s = s.strip()
-        if s in ("2", "3"):
-            valid_sizes.add(int(s))
-    if not valid_sizes:
+        if s == "2":
+            valid_sizes.add(2)
+        elif s in ("3+", "3"):
+            allow_3plus = True
+    if not valid_sizes and not allow_3plus:
         valid_sizes = {2}
 
     order = str(order_mode).strip().lower()
@@ -2993,7 +2997,11 @@ def batedor_grupos_comboio(
             )
 
     # ── Filtra por group_sizes ─────────────────────────────────────────────
-    raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes]
+    # "2" = exatamente 2 veículos; "3+" = 3 ou mais veículos (quantidade_veiculos >= 3)
+    if allow_3plus:
+        raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes or g["group_size"] >= 3]
+    else:
+        raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes]
 
     # ── Aplica análise de liderança e filtro order_mode ────────────────────
     groups: list = []
@@ -3063,12 +3071,16 @@ def batedor_grupos_comboio(
         groups.append(g)
 
     groups.sort(key=lambda g: (g["cameras_count"], g.get("leader_ratio", 0), g["group_size"]), reverse=True)
+    # Monta echo do filtro de grupo para a resposta
+    sizes_echo = sorted(str(s) for s in valid_sizes)
+    if allow_3plus:
+        sizes_echo.append("3+")
     return {
         "groups":       groups[:lim],
         "total":        len(groups),
         "window":       window,
         "co_window":    co_win_s,
-        "group_sizes":  sorted(list(valid_sizes)),
+        "group_sizes":  sizes_echo,
         "min_cameras":  min_cam,
         "max_trip_gap_s": trip_gap,
         "order_mode":   order,
