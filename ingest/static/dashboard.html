@@ -6235,7 +6235,7 @@ async function loadVehicleTrajectory() {
     
     var resp = await fetch(url);
     if (!resp.ok) {
-      var errData = await resp.json().catch(() => ({detail: 'HTTP ' + resp.status}));
+      var errData = await resp.json().catch(function() { return {detail: 'HTTP ' + resp.status}; });
       throw new Error(errData.detail || 'HTTP ' + resp.status);
     }
 
