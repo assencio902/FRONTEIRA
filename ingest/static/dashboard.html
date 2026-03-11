@@ -6249,9 +6249,14 @@ async function loadVehicleTrajectory() {
 
 function renderVehicleTrajectory(data) {
   if (!data || !data.points || data.points.length === 0) {
-    var msg = '⚠️ Nenhum ponto com coordenadas GPS encontrado';
-    if (data && data.cameras_without_gps && data.cameras_without_gps.length > 0) {
-      msg += ' (câmeras sem GPS: ' + data.cameras_without_gps.join(', ') + ')';
+    var msg;
+    if (!data || !data.total_events) {
+      msg = '⚠️ Nenhum registro para esse veículo no período selecionado';
+    } else {
+      msg = '⚠️ Nenhum ponto com coordenadas GPS encontrado';
+      if (data.cameras_without_gps && data.cameras_without_gps.length > 0) {
+        msg += ' (câmeras sem GPS: ' + data.cameras_without_gps.join(', ') + ')';
+      }
     }
     document.getElementById('traj-map-status').innerHTML = msg;
     return;
