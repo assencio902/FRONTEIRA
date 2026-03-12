@@ -7429,65 +7429,55 @@ async function testAlarme(id) {
       headers: {'Content-Type': 'application/json'},
       body: '{}'
     });
-    
-    if (!r.ok) {
-      var ed = await r.json().catch(function() { return {}; });
-      console.error('[Alarmes] Erro no teste:', ed);
-      throw new Error(ed.detail || 'HTTP ' + r.status);
-    }
-    
-    var d = await r.json();
-    console.log('[Alarmes] Resultado do teste:', d);
-
-    // Exibir mensagem exata retornada pelo backend
-    var msg = '';
-    if (typeof d.message === 'string' && d.message.trim()) {
-      msg = d.message;
-    } else if (typeof d.detail === 'string' && d.detail.trim()) {
-      msg = d.detail;
-    } else {
-      msg = JSON.stringify(d, null, 2);
-    }
-
-    alert(msg);
-  } catch(e) {
-    console.error('[Alarmes] Erro ao testar alarme:', e.message);
-    alert('❌ Erro ao testar: ' + e.message);
-  }
-}
-
-async function testAlarme(id) {
-  if (!confirm('Enviar notificação push de TESTE para este alarme?')) return;
-  try {
-    console.log('[Alarmes] Testando alarme id=' + id);
-    var r = await fetch('/api/alarmes/' + id + '/test', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: '{}'
-    });
 
     if (!r.ok) {
       var ed = await r.json().catch(function() { return {}; });
-      console.error('[Alarmes] Erro no teste:', ed);
-      // Mostrar mensagem amigável de erro ao usuário
-      alert(ed.error || ed.detail || 'Falha ao testar alarme.');
+      console.error('[Alarmes] Erro no teste (HTTP ' + r.status + '):', ed);
+      var errMsg = ed.detail || ed.error || ed.message || ('HTTP ' + r.status);
+      alert('❌ Erro ao testar alarme (' + r.status + '):\n' + errMsg);
       return;
     }
 
     var data = await r.json();
     console.log('[Alarmes] Resultado do teste:', data);
-    console.log('Resposta teste alarme:', data);
 
-    if (data && data.ok === true) {
-      var name = data.alarm_name || data.alarm_id || id;
-      var tokens = data.tokens_encontrados || 0;
-      alert(`Teste enviado com sucesso.\nAlarme: ${name}\nDispositivos encontrados: ${tokens}`);
+    var name   = data.alarm_name  || ('ID ' + id);
+    var tokens = data.tokens_encontrados != null ? data.tokens_encontrados : 0;
+    var linked = data.linked_users       != null ? data.linked_users       : '?';
+    var sent   = data.sent               != null ? data.sent               : 0;
+    var failed = data.failed             != null ? data.failed             : 0;
+
+    if (data.ok === true) {
+      alert(
+        '✅ Notificação de teste enviada!\n\n' +
+        'Alarme: ' + name + '\n' +
+        'Usuários vinculados: ' + linked + '\n' +
+        'Dispositivos encontrados: ' + tokens + '\n' +
+        'Enviados: ' + sent + '\n' +
+        'Falhas: ' + failed
+      );
     } else {
-      alert(data.error || data.detail || 'Falha ao testar alarme.');
+      // ok === false: alarme existe mas sem tokens FCM cadastrados ou todos falharam
+      var reason = '';
+      if (tokens === 0) {
+        reason = 'Nenhum dispositivo FCM cadastrado para os usuários vinculados a este alarme.';
+      } else if (sent === 0 && failed > 0) {
+        reason = 'Todos os ' + failed + ' envio(s) falharam. Verifique as credenciais FCM no servidor.';
+      } else {
+        reason = data.detail || data.error || data.message || 'Nenhuma notificação foi entregue.';
+      }
+      alert(
+        '⚠️ Teste concluído sem entregas.\n\n' +
+        'Alarme: ' + name + '\n' +
+        'Usuários vinculados: ' + linked + '\n' +
+        'Dispositivos encontrados: ' + tokens + '\n' +
+        'Enviados: ' + sent + ' | Falhas: ' + failed + '\n\n' +
+        reason
+      );
     }
   } catch (e) {
     console.error('[Alarmes] Erro ao testar alarme:', e);
-    alert('Erro de comunicação ao testar alarme.');
+    alert('❌ Erro de comunicação ao testar alarme:\n' + e.message);
   }
 }
 
