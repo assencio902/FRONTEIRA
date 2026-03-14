@@ -1,0 +1,21 @@
+NVMe 512 GB:
+- Linux
+- Docker
+- Postgres
+- Redis
+- app
+
+/dados (240 GB):
+- imagens ativas
+- uploads atuais
+- /dados/fotos_veiculos
+
+/backup (1 TB):
+- backups
+- imagens antigas
+- logs
+- /backup/imagens_antigas/fotos_veiculos
+- /backup/postgres
+
+Cron configurado no Linux:
+10 2 * * * /home/rosuporte/scripts/mover_imagens_antigas.sh >> /backup/logs/cron_mover_imagens.log 2>&1
