@@ -50,12 +50,15 @@ DOUBLE_CONFIRM_SECONDS = int(os.getenv("DOUBLE_CONFIRM_SECONDS", "10"))
 
 
 def _is_valid_plate_format(plate_normalized: str) -> bool:
-    """Valida formato de placa brasileiro: antigo AAA1234 ou Mercosul AAA1A23."""
+    """Valida placa: 7 caracteres compostos apenas de A-Z e 0-9.
+
+    Aceita padrão DENATRAN (AAA1234, AAA1A23), Mercosul e qualquer variação
+    alfanumérica de 7 chars — ex: 0TF6A67, RAN1234, etc.
+    Rejeita: vazio, tamanho != 7, caracteres fora de A-Z0-9.
+    """
     if not plate_normalized or len(plate_normalized) != 7:
         return False
-    old_re = re.compile(r'^[A-Z]{3}[0-9]{4}$')
-    mer_re = re.compile(r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$')
-    return bool(old_re.match(plate_normalized) or mer_re.match(plate_normalized))
+    return bool(re.match(r'^[A-Z0-9]{7}$', plate_normalized))
 
 
 def _is_nonstandard_plate(plate_normalized: str) -> bool:

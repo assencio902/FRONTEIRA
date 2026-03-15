@@ -2007,7 +2007,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             #       confidence=-1 (tag ausente, câmera não informa) NÃO descarta
             _plate_is_empty_or_junk = (
                 not _plate_raw_lower
-                or _plate_raw_lower in ("unknown", "none", "null")
+                or _plate_raw_lower in ("unknown", "none", "null", "no_plate", "noplate")
             )
             _anpr_no_read = (
                 _plate_is_empty_or_junk
@@ -2207,7 +2207,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
             # -- Classificação de placa pós-persistência --
             _diag_plate_up = (plate or "").strip().upper()
-            _is_missing    = not _diag_plate_up or _diag_plate_up in ("UNKNOWN", "NONE", "NULL")
+            _is_missing    = not _diag_plate_up or _diag_plate_up in ("UNKNOWN", "NONE", "NULL", "NO_PLATE", "NOPLATE")
             _is_std        = not _is_missing and _is_valid_plate_format(_diag_plate_up)
             _is_nonstd     = not _is_missing and not _is_std and _is_nonstandard_plate(_diag_plate_up)
             _is_invalid    = not _is_missing and not _is_std and not _is_nonstd
