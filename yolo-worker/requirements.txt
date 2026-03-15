@@ -4,4 +4,5 @@ redis==5.0.8
 rq==1.16.2
 Pillow==10.4.0
 psycopg2-binary==2.9.9
+pytesseract==0.3.13
 # torch e torchvision já vêm na imagem base pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime

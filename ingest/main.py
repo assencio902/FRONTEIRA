@@ -2222,6 +2222,10 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     if _cm:
         cam_meta = _cm
 
+    # Se não houver placa mas houver imagem, solicita OCR automático no worker
+    if not plate and images:
+        lpr_meta["needs_ocr"] = True
+
     # ── Salva imagem enviada no POST (se houver) ──────────────────────────
     for _img_name, data in images:
         day   = (occurred_at or _utcnow()).strftime("%Y-%m-%d")
@@ -2281,6 +2285,11 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 camera_id,
                 channel_name,
             )
+            if lpr_meta.get("needs_ocr"):
+                logger.info(
+                    "[WEBHOOK-OCR-FALLBACK] evento id=%s enfileirado sem placa — worker tentará OCR na imagem",
+                    event_id,
+                )
 
             # -- Classificação de placa pós-persistência --
             _diag_plate_up = (plate or "").strip().upper()

@@ -443,6 +443,86 @@ def _compute_sem_placa_motivo(output: dict, plate_raw: str) -> "str | None":
 # Banco de dados
 # ---------------------------------------------------------------------------
 
+def _update_db_plate(image_path: str, plate: str) -> bool:
+    """Atualiza a coluna plate do evento no banco — apenas se ainda estiver vazia."""
+    try:
+        p = Path(image_path)
+        parts = p.parts
+        try:
+            uploads_idx = next(i for i, x in enumerate(parts) if x == "uploads")
+            rel_path = "/" + "/".join(parts[uploads_idx:])
+        except StopIteration:
+            rel_path = image_path
+
+        conn = psycopg2.connect(
+            host=os.getenv("POSTGRES_HOST", "postgres"),
+            port=os.getenv("POSTGRES_PORT", "5432"),
+            dbname=os.getenv("POSTGRES_DB", "monitor"),
+            user=os.getenv("POSTGRES_USER", "monitor_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "monitor_pass"),
+        )
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE lpr_events SET plate = %s "
+                    "WHERE image_path = %s AND (plate IS NULL OR plate = '')",
+                    (plate, rel_path),
+                )
+                updated = cur.rowcount
+        conn.close()
+        return updated > 0
+    except Exception as e:
+        print(f"[YOLO][OCR_DB_ERRO] {e}", flush=True)
+        return False
+
+
+def _attempt_plate_ocr(img_bgr, xyxy: list) -> str:
+    """
+    Tenta extrair a placa via OCR do terço inferior do bounding box do veículo.
+    Usa pytesseract com whitelist A-Z0-9 e PSM 7 (linha única).
+    Retorna placa com 7 chars A-Z0-9 ou "" se não encontrar / OCR indisponível.
+    """
+    try:
+        import cv2
+        import numpy as np
+        import pytesseract
+    except ImportError:
+        return ""
+
+    try:
+        h_img, w_img = img_bgr.shape[:2]
+        x1, y1, x2, y2 = [int(v) for v in xyxy]
+        x1, x2 = max(0, x1), min(w_img, x2)
+        y1, y2 = max(0, y1), min(h_img, y2)
+        altura = y2 - y1
+        # Terço inferior do veículo — onde fica a placa
+        plate_y1 = y1 + int(altura * 0.65)
+        crop = img_bgr[plate_y1:y2, x1:x2]
+        if crop.size == 0:
+            return ""
+
+        # Escala 3× para melhorar OCR em imagens pequenas
+        crop = cv2.resize(crop, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        # Threshold OTSU + pequena dilatação para destacar caracteres
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        kernel = np.ones((2, 2), np.uint8)
+        thresh = cv2.dilate(thresh, kernel, iterations=1)
+
+        config = (
+            "--psm 7 "
+            "-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        )
+        text = pytesseract.image_to_string(thresh, config=config)
+        text = "".join(c for c in text.upper() if c.isalnum())
+        if len(text) == 7:
+            return text
+        return ""
+    except Exception as ocr_err:
+        print(f"[YOLO][OCR_ERRO] {ocr_err}", flush=True)
+        return ""
+
+
 def _update_db(image_path: str, result: dict) -> bool:
     """Salva yolo_result no banco buscando pelo image_path relativo."""
     try:
@@ -591,6 +671,31 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
                     target_vehicle["tipo"]     = VEHICLE_CLASS_PT.get(xml_type, xml_type)
                     target_vehicle["tipo_raw"] = xml_type
 
+        # ── OCR fallback — tenta ler placa quando worker recebe needs_ocr=True ──
+        ocr_plate = ""
+        if not plate_raw and lpr_meta.get("needs_ocr") and target_vehicle is not None:
+            ocr_plate = _attempt_plate_ocr(img_bgr, target_vehicle["xyxy"])
+            if ocr_plate:
+                updated = _update_db_plate(image_path, ocr_plate)
+                if updated:
+                    print(
+                        f"[WEBHOOK-OCR-FALLBACK] placa encontrada via OCR: {ocr_plate} "
+                        f"— {Path(image_path).name}",
+                        flush=True,
+                    )
+                else:
+                    print(
+                        f"[WEBHOOK-OCR-FALLBACK] OCR={ocr_plate} mas DB não atualizado "
+                        f"(placa já preenchida?) — {Path(image_path).name}",
+                        flush=True,
+                    )
+            else:
+                print(
+                    f"[WEBHOOK-OCR-FALLBACK] nenhuma placa encontrada via OCR "
+                    f"— {Path(image_path).name}",
+                    flush=True,
+                )
+
         # ── Motivo de falha na leitura da placa ───────────────────────────
         sem_placa_motivo = _compute_sem_placa_motivo(
             {
@@ -612,6 +717,7 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
             "target_vehicle":    target_vehicle,   # veículo da placa
             "image_quality":     image_quality,
             "sem_placa_motivo":  sem_placa_motivo,
+            "ocr_plate":         ocr_plate,
             "model":             MODEL_PATH,
             "conf_threshold":    CONFIDENCE,
         }
