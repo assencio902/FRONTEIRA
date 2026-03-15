@@ -64,7 +64,18 @@ logger = logging.getLogger(__name__)
 # ===========================
 
 UPLOAD_DIR = Path("uploads")
+
+# Inicialização robusta: detecta se o path existe como arquivo (erro comum de
+# bind mount incorreto no Docker, ex: host tem arquivo 'uploads' em vez de dir).
+if UPLOAD_DIR.exists() and not UPLOAD_DIR.is_dir():
+    raise RuntimeError(
+        f"UPLOAD_DIR '{UPLOAD_DIR.resolve()}' existe mas é um arquivo regular, "
+        "não um diretório. Remova ou renomeie o arquivo antes de iniciar o serviço. "
+        "No host Docker verifique se './uploads' no docker-compose.yml aponta para "
+        "um diretório, não para um arquivo."
+    )
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+logger.info("UPLOAD_DIR inicializado: %s", UPLOAD_DIR.resolve())
 
 MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
 
@@ -449,6 +460,37 @@ def _init_db():
                     PRIMARY KEY (alarme_id, usuario_id)
                 );
             """)
+
+            # Cadastro Policial — Pessoas
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pessoas (
+                    id SERIAL PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    apelido TEXT,
+                    contato TEXT,
+                    profissao TEXT,
+                    cpf TEXT,
+                    rg TEXT,
+                    data_nascimento DATE,
+                    naturalidade TEXT,
+                    estado_naturalidade TEXT,
+                    nome_mae TEXT,
+                    nome_pai TEXT,
+                    data_cadastro TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_pessoas_nome ON pessoas(nome);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_pessoas_cpf  ON pessoas(cpf);")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS apelido TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS contato TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS profissao TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS cpf TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS rg TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS data_nascimento DATE;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS naturalidade TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS estado_naturalidade TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_mae TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_pai TEXT;")
 
 
 # ===========================
@@ -1849,7 +1891,13 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                     el = root.find(".//" + tag)  # fallback sem namespace
                 return el.text.strip() if el is not None and el.text else None
 
-            plate_raw        = x("licensePlate") or ""
+            plate_raw        = (
+                x("licensePlate")       # formato padrão ISAPI moderno
+                or x("plateNumber")     # firmware antigo Hikvision
+                or x("anprLicensePlate")
+                or x("PlateNumber")
+                or ""
+            )
             plate            = _normalize_plate(plate_raw)
 
             # ── Log diagnóstico da extração da placa ───────────────────────────
@@ -5829,6 +5877,180 @@ def rotas_plate(plate: str, limit: int = 1000,
         })
 
     return {"plate": plate, "total": len(rotas), "rotas": rotas}
+
+
+# ===========================
+# CADASTRO POLICIAL — PESSOAS
+# ===========================
+
+def _pessoa_row_to_dict(r) -> dict:
+    return {
+        "id":                  r[0],
+        "nome":                r[1],
+        "apelido":             r[2],
+        "contato":             r[3],
+        "profissao":           r[4],
+        "cpf":                 r[5],
+        "rg":                  r[6],
+        "data_nascimento":     r[7].isoformat() if r[7] else None,
+        "naturalidade":        r[8],
+        "estado_naturalidade": r[9],
+        "nome_mae":            r[10],
+        "nome_pai":            r[11],
+        "data_cadastro":       r[12].isoformat() if r[12] else None,
+    }
+
+_PESSOA_SELECT = """
+    SELECT id, nome, apelido, contato, profissao, cpf, rg,
+           data_nascimento, naturalidade, estado_naturalidade,
+           nome_mae, nome_pai, data_cadastro
+    FROM pessoas
+"""
+
+@app.get("/api/pessoas")
+def listar_pessoas(q: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """Lista pessoas com busca opcional por nome, apelido ou CPF."""
+    limit  = max(1, min(200, int(limit)))
+    offset = max(0, int(offset))
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            if q and q.strip():
+                term = f"%{q.strip()}%"
+                cur.execute(
+                    _PESSOA_SELECT +
+                    " WHERE nome ILIKE %s OR apelido ILIKE %s OR cpf LIKE %s "
+                    " ORDER BY nome ASC LIMIT %s OFFSET %s",
+                    (term, term, term, limit, offset),
+                )
+            else:
+                cur.execute(
+                    _PESSOA_SELECT + " ORDER BY nome ASC LIMIT %s OFFSET %s",
+                    (limit, offset),
+                )
+            rows = cur.fetchall()
+            cur.execute(
+                "SELECT COUNT(*) FROM pessoas"
+                + (" WHERE nome ILIKE %s OR apelido ILIKE %s OR cpf LIKE %s" if q and q.strip() else ""),
+                (f"%{q.strip()}%", f"%{q.strip()}%", f"%{q.strip()}%") if q and q.strip() else (),
+            )
+            total = cur.fetchone()[0]
+    return {"total": total, "pessoas": [_pessoa_row_to_dict(r) for r in rows]}
+
+
+@app.get("/api/pessoas/{pessoa_id}")
+def buscar_pessoa_por_id(pessoa_id: int):
+    """Retorna uma pessoa pelo id."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(_PESSOA_SELECT + " WHERE id = %s LIMIT 1", (pessoa_id,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+    return _pessoa_row_to_dict(row)
+
+
+@app.post("/api/pessoas", status_code=201)
+async def criar_pessoa(request: Request):
+    """Cria uma nova pessoa no cadastro policial."""
+    data = await request.json()
+    nome = (data.get("nome") or "").strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="nome é obrigatório")
+    cpf_raw = "".join(ch for ch in (data.get("cpf") or "") if ch.isdigit())
+    if cpf_raw and len(cpf_raw) > 11:
+        raise HTTPException(status_code=400, detail="CPF deve ter no máximo 11 dígitos")
+    dn = data.get("data_nascimento") or None
+    if dn:
+        try:
+            from datetime import date as _date
+            _date.fromisoformat(dn)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO pessoas
+                    (nome, apelido, contato, profissao, cpf, rg,
+                     data_nascimento, naturalidade, estado_naturalidade, nome_mae, nome_pai)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
+                """,
+                (
+                    nome,
+                    (data.get("apelido") or "").strip() or None,
+                    (data.get("contato") or "").strip() or None,
+                    (data.get("profissao") or "").strip() or None,
+                    cpf_raw or None,
+                    (data.get("rg") or "").strip() or None,
+                    dn or None,
+                    (data.get("naturalidade") or "").strip() or None,
+                    (data.get("estado_naturalidade") or "").strip() or None,
+                    (data.get("nome_mae") or "").strip() or None,
+                    (data.get("nome_pai") or "").strip() or None,
+                ),
+            )
+            new_id = cur.fetchone()[0]
+    return {"ok": True, "id": new_id}
+
+
+@app.put("/api/pessoas/{pessoa_id}")
+async def atualizar_pessoa(pessoa_id: int, request: Request):
+    """Atualiza campos de uma pessoa existente."""
+    data = await request.json()
+    nome = (data.get("nome") or "").strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="nome é obrigatório")
+    cpf_raw = "".join(ch for ch in (data.get("cpf") or "") if ch.isdigit())
+    if cpf_raw and len(cpf_raw) > 11:
+        raise HTTPException(status_code=400, detail="CPF deve ter no máximo 11 dígitos")
+    dn = data.get("data_nascimento") or None
+    if dn:
+        try:
+            from datetime import date as _date
+            _date.fromisoformat(dn)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE pessoas SET
+                    nome = %s, apelido = %s, contato = %s, profissao = %s,
+                    cpf = %s, rg = %s, data_nascimento = %s,
+                    naturalidade = %s, estado_naturalidade = %s,
+                    nome_mae = %s, nome_pai = %s
+                WHERE id = %s
+                """,
+                (
+                    nome,
+                    (data.get("apelido") or "").strip() or None,
+                    (data.get("contato") or "").strip() or None,
+                    (data.get("profissao") or "").strip() or None,
+                    cpf_raw or None,
+                    (data.get("rg") or "").strip() or None,
+                    dn or None,
+                    (data.get("naturalidade") or "").strip() or None,
+                    (data.get("estado_naturalidade") or "").strip() or None,
+                    (data.get("nome_mae") or "").strip() or None,
+                    (data.get("nome_pai") or "").strip() or None,
+                    pessoa_id,
+                ),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+    return {"ok": True}
+
+
+@app.delete("/api/pessoas/{pessoa_id}", status_code=204)
+def excluir_pessoa(pessoa_id: int):
+    """Remove uma pessoa do cadastro."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM pessoas WHERE id = %s", (pessoa_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+    return None
 
 
 # ===========================
