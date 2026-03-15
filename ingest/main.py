@@ -1654,6 +1654,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         elif body.lstrip().startswith(b"<"):
             xml_bytes = body
             print(f"[WEBHOOK] evento XML direto de {client_ip} ({len(body)} bytes, ct={content_type or 'none'})")
+            print(body[:3000].decode('utf-8', errors='ignore'))
 
         else:
             print(f"[WEBHOOK] body não-XML ignorado de {client_ip} ({len(body)} bytes, ct={content_type})")
@@ -1766,16 +1767,17 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     logger.info("[WEBHOOK] Evento recebido ip=%s content_type=%s images=%d", client_ip, content_type, len(images))
     logger.info("[WEBHOOK] Placa extraida=%s", plate or "(vazia)")
 
-    # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
+        # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
     if not camera_id:
         header_ip = request.headers.get("X-Camera-IP", "").strip()
         if header_ip:
             camera_id = header_ip
-            xml_ip    = xml_ip or header_ip
+            xml_ip = xml_ip or header_ip
             logger.info("[WEBHOOK] camera_id resolvido via X-Camera-IP: %s", camera_id)
         else:
-            logger.warning("[WEBHOOK] evento sem camera_id ignorado (ip cliente=%s)", client_ip)
-            return JSONResponse({"ok": False, "detail": "camera não identificada no XML"}, status_code=400)
+            camera_id = client_ip
+            xml_ip = xml_ip or client_ip
+            logger.warning("[WEBHOOK] camera_id ausente no XML; usando ip cliente como fallback: %s", client_ip)
 
     if camera_id:
         # nome padrão = channelName do XML; fallback = próprio camera_id

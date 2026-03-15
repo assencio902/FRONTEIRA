@@ -1,0 +1,77 @@
+{
+  "image_path": "/app/uploads/2026-03-14/c1dc5e9a6a344eebb8e8f21105645858.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "car": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.7335,
+      "xyxy": [
+        1177.7,
+        359.2,
+        1827.3,
+        890.3
+      ]
+    },
+    {
+      "class": "traffic light",
+      "class_id": 9,
+      "conf": 0.3594,
+      "xyxy": [
+        1772.0,
+        514.4,
+        1883.6,
+        657.5
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.7335,
+      "cor": "Vermelho",
+      "plate_analysis": {
+        "blur_score": 48.49,
+        "brightness": 23.13,
+        "qualidade": "Ilegível (região muito escura)"
+      },
+      "xyxy": [
+        1177.7,
+        359.2,
+        1827.3,
+        890.3
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.7335,
+    "cor": "Vermelho",
+    "plate_analysis": {
+      "blur_score": 48.49,
+      "brightness": 23.13,
+      "qualidade": "Ilegível (região muito escura)"
+    },
+    "xyxy": [
+      1177.7,
+      359.2,
+      1827.3,
+      890.3
+    ]
+  },
+  "image_quality": {
+    "blur_score": 387.92,
+    "brightness": 33.41,
+    "contrast": 25.44,
+    "qualidade": "Ruim (muito escura)"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

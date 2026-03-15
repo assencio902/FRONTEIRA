@@ -3,6 +3,6 @@
 class AppConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://104.236.104.79:8000',
+    defaultValue: 'http://10.20.30.62:8000',
   );
 }

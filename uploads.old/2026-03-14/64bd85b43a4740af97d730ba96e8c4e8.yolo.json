@@ -1,0 +1,77 @@
+{
+  "image_path": "/app/uploads/2026-03-14/64bd85b43a4740af97d730ba96e8c4e8.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "motorcycle": 1
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.7969,
+      "xyxy": [
+        1191.8,
+        457.3,
+        1439.9,
+        822.5
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.6831,
+      "xyxy": [
+        1194.8,
+        348.3,
+        1413.3,
+        709.9
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.7969,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 2588.22,
+        "brightness": 92.98,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1191.8,
+        457.3,
+        1439.9,
+        822.5
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.7969,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 2588.22,
+      "brightness": 92.98,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1191.8,
+      457.3,
+      1439.9,
+      822.5
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1548.82,
+    "brightness": 86.73,
+    "contrast": 32.74,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Placa não localizada na imagem",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

@@ -1,0 +1,149 @@
+{
+  "image_path": "/app/uploads/2026-03-14/c654a5a6afb14f1eaba81e8a6e357018.jpg",
+  "vehicle_count": 3,
+  "vehicle_types": {
+    "truck": 1,
+    "motorcycle": 1,
+    "pickup": 1
+  },
+  "person_count": 3,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.7755,
+      "xyxy": [
+        71.5,
+        344.9,
+        520.6,
+        1083.1
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.7231,
+      "xyxy": [
+        2463.3,
+        6.3,
+        2645.2,
+        422.7
+      ]
+    },
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.5783,
+      "xyxy": [
+        1571.2,
+        0.0,
+        2671.3,
+        828.0
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.5782,
+      "xyxy": [
+        2132.9,
+        3.7,
+        2405.5,
+        409.0
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.441,
+      "xyxy": [
+        206.5,
+        786.9,
+        454.7,
+        1255.1
+      ]
+    },
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.4271,
+      "xyxy": [
+        1568.8,
+        0.5,
+        2659.3,
+        586.5
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "truck",
+      "class_pt": "Caminhão",
+      "conf": 0.5783,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1571.2,
+        0.0,
+        2671.3,
+        828.0
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.441,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 2140.45,
+        "brightness": 70.6,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        206.5,
+        786.9,
+        454.7,
+        1255.1
+      ]
+    },
+    {
+      "class": "pickup",
+      "class_pt": "Caminhonete",
+      "conf": 0.4271,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1568.8,
+        0.5,
+        2659.3,
+        586.5
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.441,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 2140.45,
+      "brightness": 70.6,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      206.5,
+      786.9,
+      454.7,
+      1255.1
+    ]
+  },
+  "image_quality": {
+    "blur_score": 3969.13,
+    "brightness": 109.7,
+    "contrast": 56.0,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

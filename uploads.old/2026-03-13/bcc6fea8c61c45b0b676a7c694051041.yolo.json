@@ -1,0 +1,66 @@
+{
+  "image_path": "/app/uploads/2026-03-13/bcc6fea8c61c45b0b676a7c694051041.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "motorcycle": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.5667,
+      "xyxy": [
+        1152.6,
+        192.4,
+        1505.3,
+        659.5
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.5667,
+      "cor": "Laranja",
+      "plate_analysis": {
+        "blur_score": 36.89,
+        "brightness": 28.41,
+        "qualidade": "Ilegível (região muito escura)"
+      },
+      "xyxy": [
+        1152.6,
+        192.4,
+        1505.3,
+        659.5
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.5667,
+    "cor": "Laranja",
+    "plate_analysis": {
+      "blur_score": 36.89,
+      "brightness": 28.41,
+      "qualidade": "Ilegível (região muito escura)"
+    },
+    "xyxy": [
+      1152.6,
+      192.4,
+      1505.3,
+      659.5
+    ]
+  },
+  "image_quality": {
+    "blur_score": 323.76,
+    "brightness": 21.99,
+    "contrast": 14.48,
+    "qualidade": "Ruim (muito escura)"
+  },
+  "sem_placa_motivo": "Iluminação insuficiente (brilho=22)",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

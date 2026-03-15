@@ -1,0 +1,41 @@
+{
+  "image_path": "/app/uploads/2026-03-14/bbe07e19fc894adfabc728d14f40462a.jpg",
+  "vehicle_count": 0,
+  "vehicle_types": {},
+  "person_count": 2,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8582,
+      "xyxy": [
+        1730.9,
+        25.1,
+        1944.2,
+        677.8
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.7908,
+      "xyxy": [
+        2208.9,
+        16.3,
+        2555.2,
+        412.5
+      ]
+    }
+  ],
+  "vehicle_details": [],
+  "target_vehicle": null,
+  "image_quality": {
+    "blur_score": 3769.47,
+    "brightness": 112.24,
+    "contrast": 50.38,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Nenhum veículo identificado na imagem",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

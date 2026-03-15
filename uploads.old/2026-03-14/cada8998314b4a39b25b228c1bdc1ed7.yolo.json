@@ -1,0 +1,77 @@
+{
+  "image_path": "/app/uploads/2026-03-14/cada8998314b4a39b25b228c1bdc1ed7.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "motorcycle": 1
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8213,
+      "xyxy": [
+        1826.2,
+        142.4,
+        2234.0,
+        780.0
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.5076,
+      "xyxy": [
+        1836.5,
+        381.1,
+        2231.9,
+        925.2
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.5076,
+      "cor": "Laranja",
+      "plate_analysis": {
+        "blur_score": 640.36,
+        "brightness": 78.35,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1836.5,
+        381.1,
+        2231.9,
+        925.2
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.5076,
+    "cor": "Laranja",
+    "plate_analysis": {
+      "blur_score": 640.36,
+      "brightness": 78.35,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1836.5,
+      381.1,
+      2231.9,
+      925.2
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2265.01,
+    "brightness": 105.1,
+    "contrast": 36.64,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

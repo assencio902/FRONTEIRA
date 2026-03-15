@@ -1,0 +1,112 @@
+{
+  "image_path": "/app/uploads/2026-03-14/193c21787e5a425fab206a3400d6f4fc.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "motorcycle": 2
+  },
+  "person_count": 2,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8773,
+      "xyxy": [
+        1034.5,
+        154.2,
+        1353.0,
+        733.8
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.7551,
+      "xyxy": [
+        1133.8,
+        482.0,
+        1349.3,
+        875.7
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.705,
+      "xyxy": [
+        2115.6,
+        241.0,
+        2490.8,
+        850.5
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.5523,
+      "xyxy": [
+        2164.7,
+        545.2,
+        2568.0,
+        1027.6
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.7551,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 1324.76,
+        "brightness": 59.96,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1133.8,
+        482.0,
+        1349.3,
+        875.7
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.5523,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        2164.7,
+        545.2,
+        2568.0,
+        1027.6
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.7551,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 1324.76,
+      "brightness": 59.96,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1133.8,
+      482.0,
+      1349.3,
+      875.7
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1389.31,
+    "brightness": 85.43,
+    "contrast": 32.09,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

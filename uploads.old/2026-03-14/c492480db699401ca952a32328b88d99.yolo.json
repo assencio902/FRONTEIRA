@@ -1,0 +1,66 @@
+{
+  "image_path": "/app/uploads/2026-03-14/c492480db699401ca952a32328b88d99.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "truck": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.7283,
+      "xyxy": [
+        725.5,
+        117.8,
+        1851.4,
+        1086.4
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "truck",
+      "class_pt": "Caminhão",
+      "conf": 0.7283,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 1336.88,
+        "brightness": 60.56,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        725.5,
+        117.8,
+        1851.4,
+        1086.4
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "truck",
+    "class_pt": "Caminhão",
+    "conf": 0.7283,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 1336.88,
+      "brightness": 60.56,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      725.5,
+      117.8,
+      1851.4,
+      1086.4
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2306.76,
+    "brightness": 101.47,
+    "contrast": 46.83,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

@@ -1,0 +1,66 @@
+{
+  "image_path": "/app/uploads/2026-03-14/c809312b85a046719717bdcb95e4c8cf.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "car": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.7454,
+      "xyxy": [
+        1544.2,
+        386.7,
+        2277.8,
+        878.5
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.7454,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 1018.43,
+        "brightness": 67.06,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1544.2,
+        386.7,
+        2277.8,
+        878.5
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.7454,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 1018.43,
+      "brightness": 67.06,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1544.2,
+      386.7,
+      2277.8,
+      878.5
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1326.83,
+    "brightness": 79.2,
+    "contrast": 32.33,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

@@ -269,7 +269,7 @@ def _analyze_plate_region(img_bgr, xyxy: list) -> dict:
     y1, y2 = max(0, y1), min(h_img, y2)
 
     altura   = y2 - y1
-    plate_y1 = y1 + int(altura * 0.60)
+    plate_y1 = y1 + int(altura * 0.45)
     crop     = img_bgr[plate_y1:y2, x1:x2]
 
     if crop.size == 0:

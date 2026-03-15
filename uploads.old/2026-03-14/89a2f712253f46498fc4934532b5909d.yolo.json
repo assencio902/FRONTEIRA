@@ -1,0 +1,91 @@
+{
+  "image_path": "/app/uploads/2026-03-14/89a2f712253f46498fc4934532b5909d.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "car": 1,
+    "bus": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.5144,
+      "xyxy": [
+        1.2,
+        123.0,
+        1462.7,
+        1141.6
+      ]
+    },
+    {
+      "class": "bus",
+      "class_id": 5,
+      "conf": 0.4208,
+      "xyxy": [
+        0.8,
+        122.2,
+        1462.5,
+        1152.7
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.5144,
+      "cor": "Vermelho",
+      "plate_analysis": {
+        "blur_score": 37.28,
+        "brightness": 48.46,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1.2,
+        123.0,
+        1462.7,
+        1141.6
+      ]
+    },
+    {
+      "class": "bus",
+      "class_pt": "Ônibus",
+      "conf": 0.4208,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        0.8,
+        122.2,
+        1462.5,
+        1152.7
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.5144,
+    "cor": "Vermelho",
+    "plate_analysis": {
+      "blur_score": 37.28,
+      "brightness": 48.46,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1.2,
+      123.0,
+      1462.7,
+      1141.6
+    ]
+  },
+  "image_quality": {
+    "blur_score": 322.75,
+    "brightness": 42.66,
+    "contrast": 29.08,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

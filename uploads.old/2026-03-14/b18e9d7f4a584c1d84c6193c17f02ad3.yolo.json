@@ -1,0 +1,77 @@
+{
+  "image_path": "/app/uploads/2026-03-14/b18e9d7f4a584c1d84c6193c17f02ad3.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "bicycle": 1
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8552,
+      "xyxy": [
+        2122.9,
+        299.8,
+        2276.7,
+        675.7
+      ]
+    },
+    {
+      "class": "bicycle",
+      "class_id": 1,
+      "conf": 0.6048,
+      "xyxy": [
+        2073.2,
+        493.0,
+        2280.3,
+        753.9
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "bicycle",
+      "class_pt": "Bicicleta",
+      "conf": 0.6048,
+      "cor": "Verde",
+      "plate_analysis": {
+        "blur_score": 1133.91,
+        "brightness": 106.12,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        2073.2,
+        493.0,
+        2280.3,
+        753.9
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "bicycle",
+    "class_pt": "Bicicleta",
+    "conf": 0.6048,
+    "cor": "Verde",
+    "plate_analysis": {
+      "blur_score": 1133.91,
+      "brightness": 106.12,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      2073.2,
+      493.0,
+      2280.3,
+      753.9
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1737.36,
+    "brightness": 102.15,
+    "contrast": 31.77,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Placa não localizada na imagem",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

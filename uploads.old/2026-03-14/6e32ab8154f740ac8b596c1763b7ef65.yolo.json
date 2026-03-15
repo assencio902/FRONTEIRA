@@ -1,0 +1,30 @@
+{
+  "image_path": "/app/uploads/2026-03-14/6e32ab8154f740ac8b596c1763b7ef65.jpg",
+  "vehicle_count": 0,
+  "vehicle_types": {},
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "suitcase",
+      "class_id": 28,
+      "conf": 0.6287,
+      "xyxy": [
+        795.2,
+        206.5,
+        1807.8,
+        1034.3
+      ]
+    }
+  ],
+  "vehicle_details": [],
+  "target_vehicle": null,
+  "image_quality": {
+    "blur_score": 1295.48,
+    "brightness": 90.33,
+    "contrast": 35.4,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Nenhum veículo identificado na imagem",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

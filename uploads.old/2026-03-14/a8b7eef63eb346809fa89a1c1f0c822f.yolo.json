@@ -1,0 +1,18 @@
+{
+  "image_path": "/app/uploads/2026-03-14/a8b7eef63eb346809fa89a1c1f0c822f.jpg",
+  "vehicle_count": 0,
+  "vehicle_types": {},
+  "person_count": 0,
+  "detections": [],
+  "vehicle_details": [],
+  "target_vehicle": null,
+  "image_quality": {
+    "blur_score": 325.86,
+    "brightness": 27.02,
+    "contrast": 20.38,
+    "qualidade": "Ruim (muito escura)"
+  },
+  "sem_placa_motivo": "Iluminação insuficiente (brilho=27)",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}
