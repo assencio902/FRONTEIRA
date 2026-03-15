@@ -1761,6 +1761,12 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         if "multipart/form-data" in ct_lower:
             # Starlette/python-multipart só processa multipart/form-data nativamente
             _parser_used = "multipart/form-data (form())"
+            # Nomes de campo reconhecidos como placa (ordem de prioridade)
+            _PLATE_FIELD_NAMES = (
+                "licensePlate", "plate", "anprLicensePlate",
+                "PlateNumber", "plateNumber", "ANPR.licensePlate", "ANPR_plate",
+            )
+            _form_text_fields: dict[str, str] = {}   # todos os campos texto recebidos
             try:
                 form = await request.form()
             except ClientDisconnect:
@@ -1768,6 +1774,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
             for field_name, v in form.multi_items():
                 if isinstance(v, str):
+                    _form_text_fields[field_name] = v
                     # XML enviado como campo de texto simples (sem filename)
                     if xml_bytes is None and v.strip().startswith("<"):
                         xml_bytes = v.encode("utf-8", errors="replace")
@@ -1796,7 +1803,18 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                         # Aceita como imagem independente de xml_bytes: câmeras podem enviar
                         # imagem antes do XML, ou só imagem (sem XML), com content-type binário
                         images.append((v.filename or "image.jpg", data))
+
+            # ── Log de diagnóstico HTTP-escuta: campos recebidos no form ─────
+            logger.info(
+                "[WEBHOOK-HTTP-ESCUTA] ip=%s campos_form=%r xml_bytes=%s images=%d",
+                client_ip,
+                list(_form_text_fields.keys()),
+                len(xml_bytes) if xml_bytes else 0,
+                len(images),
+            )
         else:
+            _form_text_fields = {}
+        if "multipart/mixed" in ct_lower or ("multipart/" in ct_lower and "form-data" not in ct_lower):
             # multipart/mixed ou outro subtipo — Starlette não processa; parse manual
             _parser_used = f"multipart/manual ({ct_lower.split(';')[0].strip()})"
             body_raw = await request.body()
@@ -1807,6 +1825,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             xml_bytes, images = _parse_multipart_body(content_type, body_raw)
 
     else:
+        _form_text_fields = {}
         body = await request.body()
 
         # ── Log de corpo não-multipart ────────────────────────────────────────
@@ -2035,7 +2054,32 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 xml_bytes[:200].decode("utf-8", errors="replace") if xml_bytes else "",
             )
 
-    # Mantém placa vazia se não houver no XML — será preenchida pelo YOLO ou permanecerã null
+    # ── Fallback HTTP-escuta: extrai placa dos campos do form se XML não a forneceu ──
+    if not plate and _form_text_fields:
+        _PLATE_FIELD_NAMES_FALLBACK = (
+            "licensePlate", "plate", "anprLicensePlate",
+            "PlateNumber", "plateNumber", "ANPR.licensePlate", "ANPR_plate",
+        )
+        for _pf in _PLATE_FIELD_NAMES_FALLBACK:
+            _raw_val = _form_text_fields.get(_pf, "").strip()
+            if _raw_val:
+                _candidate = _normalize_plate(_raw_val)
+                _candidate_lower = _raw_val.lower()
+                if _candidate and _candidate_lower not in ("unknown", "none", "null", "no_plate", "noplate"):
+                    plate = _candidate
+                    logger.info(
+                        "[WEBHOOK-HTTP-ESCUTA] placa extraída do campo form name=%r bruto=%r normalizado=%r",
+                        _pf, _raw_val, plate,
+                    )
+                    break
+        if not plate:
+            logger.info(
+                "[WEBHOOK-HTTP-ESCUTA] ip=%s — nenhuma placa encontrada nos campos do form %r — "
+                "evento salvo sem placa (aguarda YOLO/OCR)",
+                client_ip, list(_form_text_fields.keys()),
+            )
+
+    # Mantém placa vazia se não houver no XML nem no form — será preenchida pelo YOLO ou permanecerá null
     # NÃO usa "UNKNOWN" para evitar poluir alertas_criticos com placas falsas
 
     # ── WEBHOOK-NO-XML: chegou imagem mas sem XML útil ─────────────────────────
