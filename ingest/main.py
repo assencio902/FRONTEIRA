@@ -1865,6 +1865,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             xml_ip           = x("ipAddress")           # IP real: "172.21.151.16"
             channel_name_xml = x("channelName")         # nome do canal: "11_PRAINHA_1_CHACARAS"
             channel_id_xml   = x("channelID")           # fallback: "1"
+            xml_event_type   = x("eventType")           # ex: "ANPR", "scenechangedetection"
             xml_direction    = (x("direction") or "").lower() or None   # "forward" ou "reverse"
 
             # Cor e tipo do veículo já detectados pela câmera (vehicleInfo)
@@ -1945,6 +1946,20 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 confidence = float(x("confidenceLevel") or 0)
             except Exception:
                 confidence = 0.0
+
+            # ── Filtra eventos que não são leituras ANPR reais ─────────────────
+            if xml_event_type and xml_event_type.lower() != "anpr":
+                logger.info(
+                    "[WEBHOOK-NOT-ANPR] ip=%s eventType=%r — evento não é ANPR, placa descartada",
+                    client_ip, xml_event_type,
+                )
+                plate = ""
+            elif (plate_raw or "").strip().lower() == "unknown" or confidence == 0.0:
+                logger.info(
+                    "[WEBHOOK-ANPR-UNKNOWN] ip=%s eventType=%r licensePlate=%r confidence=%.3f — sem leitura real",
+                    client_ip, xml_event_type, plate_raw, confidence,
+                )
+                plate = ""
 
         except Exception as e:
             logger.exception(
