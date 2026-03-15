@@ -40,6 +40,7 @@ from services.fcm_service import (
     is_likely_fake_token,
     MIN_PLATE_CONF,
     _is_valid_plate_format,
+    _is_nonstandard_plate,
 )
 
 from cleanup_background import start_cleanup_background, stop_cleanup_background
@@ -2144,16 +2145,22 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 channel_name,
             )
 
-            # -- Log diagnóstico quando placa vazia/invalida --
+            # -- Classificação de placa pós-persistência --
             _diag_plate_up = (plate or "").strip().upper()
-            _diag_invalida = (
-                not _diag_plate_up
-                or _diag_plate_up in ("UNKNOWN", "NONE", "NULL")
-                or not _is_valid_plate_format(_diag_plate_up)
-            )
-            if _diag_invalida:
+            _is_missing    = not _diag_plate_up or _diag_plate_up in ("UNKNOWN", "NONE", "NULL")
+            _is_std        = not _is_missing and _is_valid_plate_format(_diag_plate_up)
+            _is_nonstd     = not _is_missing and not _is_std and _is_nonstandard_plate(_diag_plate_up)
+            _is_invalid    = not _is_missing and not _is_std and not _is_nonstd
+
+            if _is_nonstd:
+                logger.info(
+                    "[WEBHOOK-PLATE-NONSTANDARD] remote=%s event_id=%s plate=%r "
+                    "camera_id=%s channel=%s — formato fora do padrão DENATRAN, aceito",
+                    client_ip, event_id, _diag_plate_up, camera_id, channel_name,
+                )
+            elif _is_missing or _is_invalid:
                 logger.warning(
-                    "[WEBHOOK-DIAG-INVALID] remote=%s content_type=%r parser=%s "
+                    "[WEBHOOK-PLATE-INVALID] remote=%s content_type=%r parser=%s "
                     "event_id=%s plate=%r camera_id=%s channel=%s has_xml=%s images=%s",
                     client_ip,
                     content_type,
@@ -2199,14 +2206,26 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             else:
                 plate_normalized = normalize_plate(plate)
 
-                # Formato válido (AAA1234 ou AAA1A23)
-                if not _is_valid_plate_format(plate_normalized):
+                # Classifica formato: padrão (AAA1234/AAA1A23), não-padrão (RAN001), inválido
+                _plate_is_std    = _is_valid_plate_format(plate_normalized)
+                _plate_is_nonstd = not _plate_is_std and _is_nonstandard_plate(plate_normalized)
+                _plate_is_inv    = not _plate_is_std and not _plate_is_nonstd
+
+                if _plate_is_inv:
                     logger.warning(
-                        "[WEBHOOK] Alerta descartado por formato inválido event_id=%s plate=%s",
+                        "[WEBHOOK-PLATE-INVALID] Alerta descartado: formato inválido "
+                        "event_id=%s plate=%r",
                         event_id,
                         plate_normalized,
                     )
                 else:
+                    if _plate_is_nonstd:
+                        logger.info(
+                            "[WEBHOOK-PLATE-NONSTANDARD] Placa fora do padrão DENATRAN aceita "
+                            "para alerta event_id=%s plate=%r",
+                            event_id,
+                            plate_normalized,
+                        )
                     try:
                         conf_val = float(confidence or 0)
                     except Exception:
@@ -2219,12 +2238,6 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                             plate_normalized,
                             conf_val,
                             MIN_PLATE_CONF,
-                        )
-                    elif len(plate_normalized) < 7 or not plate_normalized.isalnum():
-                        logger.warning(
-                            "[WEBHOOK] Alerta descartado por leitura parcial event_id=%s plate=%s",
-                            event_id,
-                            plate_normalized,
                         )
                     else:
                         logger.info(

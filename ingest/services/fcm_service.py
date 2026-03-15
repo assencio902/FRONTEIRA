@@ -58,6 +58,20 @@ def _is_valid_plate_format(plate_normalized: str) -> bool:
     return bool(old_re.match(plate_normalized) or mer_re.match(plate_normalized))
 
 
+def _is_nonstandard_plate(plate_normalized: str) -> bool:
+    """Detecta placa alfanumérica curta real mas fora do padrão DENATRAN (AAA1234/AAA1A23).
+
+    Cobre formatos militares, especiais e legados – ex: RAN001, PB001, CC1234.
+    Critérios: 4–6 chars, somente letras maiúsculas e dígitos, padrão [A-Z]{2,4}[0-9]{2,4}.
+    """
+    if not plate_normalized:
+        return False
+    n = len(plate_normalized)
+    if n < 4 or n > 6:
+        return False
+    return bool(re.match(r'^[A-Z]{2,4}[0-9]{2,4}$', plate_normalized))
+
+
 def is_likely_fake_token(token: str | None) -> bool:
     """Detecta tokens de teste/mock para evitar uso em ambiente real."""
     val = (token or "").strip()
