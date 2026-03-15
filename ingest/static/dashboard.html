@@ -1598,6 +1598,38 @@
           </div>
         </div>
 
+        <!-- Bloco: Veículo -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128665; Ve&iacute;culo Abordado</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Placa
+              <input type="text" id="cad-veiculo-placa" maxlength="10" placeholder="ABC-1234"
+                oninput="this.value=this.value.toUpperCase()"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Modelo
+              <input type="text" id="cad-veiculo-modelo" maxlength="80" placeholder="Ex: Honda Civic"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Cor
+              <input type="text" id="cad-veiculo-cor" maxlength="40" placeholder="Ex: Prata"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+          </div>
+        </div>
+
+        <!-- Bloco: Ocupantes -->
+        <div style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">&#128101; Ocupantes do Ve&iacute;culo</div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="cadAdicionarOcupante()" style="font-size:.78rem">&#43; Adicionar Ocupante</button>
+          </div>
+          <div id="cad-ocupantes-list"></div>
+        </div>
+
         <!-- Bloco: Relatório da Abordagem -->
         <div style="margin-bottom:20px">
           <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128221; Relat&oacute;rio da Abordagem</div>
@@ -7859,6 +7891,11 @@ function cadastroLimparForm(fechar) {
   document.getElementById('cad-mae').value = '';
   document.getElementById('cad-pai').value = '';
   var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = '';
+  document.getElementById('cad-veiculo-placa').value = '';
+  document.getElementById('cad-veiculo-modelo').value = '';
+  document.getElementById('cad-veiculo-cor').value = '';
+  document.getElementById('cad-ocupantes-list').innerHTML = '';
+  _cadOcupanteIdx = 0;
   document.getElementById('cad-form-erro').textContent = '';
   document.getElementById('cad-form-ok').style.display = 'none';
   document.getElementById('cad-form-titulo').textContent = '📝 Nova Abordagem';
@@ -7879,6 +7916,12 @@ function cadastroPopularForm(p) {
   document.getElementById('cad-mae').value = p.nome_mae || '';
   document.getElementById('cad-pai').value = p.nome_pai || '';
   var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = p.relatorio_abordagem || '';
+  document.getElementById('cad-veiculo-placa').value = p.veiculo_placa || '';
+  document.getElementById('cad-veiculo-modelo').value = p.veiculo_modelo || '';
+  document.getElementById('cad-veiculo-cor').value = p.veiculo_cor || '';
+  document.getElementById('cad-ocupantes-list').innerHTML = '';
+  _cadOcupanteIdx = 0;
+  if (Array.isArray(p.ocupantes)) { p.ocupantes.forEach(function(oc) { cadAdicionarOcupante(oc); }); }
   document.getElementById('cad-form-erro').textContent = '';
   document.getElementById('cad-form-ok').style.display = 'none';
 }
@@ -7922,6 +7965,10 @@ async function cadastroSalvar() {
     nome_mae:            document.getElementById('cad-mae').value.trim(),
     nome_pai:            document.getElementById('cad-pai').value.trim(),
     relatorio_abordagem: (document.getElementById('cad-relatorio') ? document.getElementById('cad-relatorio').value.trim() : '') || null,
+    veiculo_placa:  document.getElementById('cad-veiculo-placa').value.trim().toUpperCase() || null,
+    veiculo_modelo: document.getElementById('cad-veiculo-modelo').value.trim() || null,
+    veiculo_cor:    document.getElementById('cad-veiculo-cor').value.trim() || null,
+    ocupantes:      cadColetarOcupantes(),
   };
 
   var id  = document.getElementById('cad-id').value;
@@ -7992,6 +8039,22 @@ async function cadastroVisualizar(id) {
       + row('Contato', p.contato) + row('Profissão', p.profissao)
       + row('Nome da Mãe', p.nome_mae) + row('Nome do Pai', p.nome_pai)
       + row('Cadastrado em', p.data_cadastro ? p.data_cadastro.substring(0,10) : '');
+    if (p.veiculo_placa || p.veiculo_modelo || p.veiculo_cor) {
+      html += '<div style="margin-top:12px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">&#128665; Ve&iacute;culo</div>';
+      html += row('Placa', p.veiculo_placa) + row('Modelo', p.veiculo_modelo) + row('Cor', p.veiculo_cor);
+    }
+    if (Array.isArray(p.ocupantes) && p.ocupantes.length) {
+      html += '<div style="margin-top:12px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">&#128101; Ocupantes</div>';
+      p.ocupantes.forEach(function(oc, i) {
+        html += '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px">'
+          + '<div style="font-size:.75rem;font-weight:700;color:var(--accent);margin-bottom:6px">Ocupante ' + (i+1) + '</div>'
+          + row('Nome', oc.nome) + row('Apelido', oc.apelido) + row('CPF', oc.cpf ? _fmtCpf(oc.cpf) : '') + row('RG', oc.rg)
+          + row('Data de Nasc.', oc.data_nascimento)
+          + row('Naturalidade', oc.naturalidade ? (oc.naturalidade + (oc.estado_naturalidade ? ' \u2013 ' + oc.estado_naturalidade : '')) : '')
+          + row('M\u00e3e', oc.nome_mae) + row('Pai', oc.nome_pai) + row('Contato', oc.contato) + row('Profiss\u00e3o', oc.profissao) + row('Endere\u00e7o', oc.endereco)
+          + '</div>';
+      });
+    }
     if (p.relatorio_abordagem && p.relatorio_abordagem.trim()) {
       html += '<div style="margin-top:14px">'
         + '<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">📄 Relatório da Abordagem</div>'
@@ -8004,6 +8067,71 @@ async function cadastroVisualizar(id) {
   } catch(e) {
     body.innerHTML = '<p style="color:var(--danger)">Erro: ' + _esc(e.message) + '</p>';
   }
+}
+
+// ── Ocupantes ─────────────────────────────────────────────────────────────────
+var _cadOcupanteIdx = 0;
+
+function _ufOptions(sel) {
+  var ufs = ['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RO','RR','RS','SC','SP','SE','TO'];
+  return ufs.map(function(u) {
+    return '<option value="'+u+'"'+(u===(sel||'RO')?' selected':'')+'>'+( u||'-- selecione --')+'</option>';
+  }).join('');
+}
+
+function cadAdicionarOcupante(dados) {
+  var idx = _cadOcupanteIdx++;
+  var d = dados || {};
+  var s = 'padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem';
+  function inp(field, lbl, ph, maxlen, extra) {
+    return '<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">'+lbl
+      +'<input type="text" id="ocp-'+idx+'-'+field+'" maxlength="'+(maxlen||120)+'" placeholder="'+(ph||'')+'"'+(extra||'')
+      +' style="'+s+'" value="'+_esc(String(d[field]||''))+'"></label>';
+  }
+  var html = '<div class="ocp-bloco" id="ocp-bloco-'+idx+'" style="border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;background:rgba(255,255,255,.03)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)">Ocupante</span>'
+    +'<button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.78rem" onclick="this.closest(\'.ocp-bloco\').remove()">&#10005; Remover</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">'
+    +inp('nome','Nome','Nome completo')
+    +inp('apelido','Apelido / Vulgo','Ex: Zé da Silva',80)
+    +inp('contato','Contato','(69) 9 9999-9999',20)
+    +inp('profissao','Profissão','Ex: Autônomo',80)
+    +inp('cpf','CPF','00000000000',11,' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"')
+    +inp('rg','RG','0000000',20)
+    +'<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Data de Nasc.'
+    +'<input type="date" id="ocp-'+idx+'-dn" style="'+s+'" value="'+(d.data_nascimento||'')+'"></label>'
+    +inp('naturalidade','Município de Nasc.','Ex: Porto Velho',80)
+    +'<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">UF de Nasc.'
+    +'<select id="ocp-'+idx+'-uf" style="'+s+'">'+_ufOptions(d.estado_naturalidade)+'</select></label>'
+    +inp('nome_mae','Nome da Mãe','Nome completo da mãe')
+    +inp('nome_pai','Nome do Pai','Nome completo do pai')
+    +inp('endereco','Endereço','Rua, número, bairro...',200)
+    +'</div>'
+    +'</div>';
+  var container = document.getElementById('cad-ocupantes-list');
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  container.appendChild(tmp.firstChild);
+}
+
+function cadColetarOcupantes() {
+  var blocos = document.querySelectorAll('#cad-ocupantes-list .ocp-bloco');
+  if (!blocos.length) return null;
+  var result = [];
+  blocos.forEach(function(bloco) {
+    var id = bloco.id.replace('ocp-bloco-','');
+    function g(field) { var el = bloco.querySelector('#ocp-'+id+'-'+field); return el ? el.value.trim() : ''; }
+    result.push({
+      nome: g('nome'), apelido: g('apelido'), contato: g('contato'),
+      profissao: g('profissao'), cpf: g('cpf').replace(/\D/g,''), rg: g('rg'),
+      data_nascimento: g('dn') || null, naturalidade: g('naturalidade'),
+      estado_naturalidade: g('uf'), nome_mae: g('nome_mae'), nome_pai: g('nome_pai'),
+      endereco: g('endereco'),
+    });
+  });
+  return result.length ? result : null;
 }
 
 (function() {

@@ -492,6 +492,10 @@ def _init_db():
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_mae TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_pai TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS relatorio_abordagem TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_placa TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_modelo TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_cor TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS ocupantes TEXT;")
 
 
 # ===========================
@@ -6126,6 +6130,7 @@ def rotas_plate(plate: str, limit: int = 1000,
 # ===========================
 
 def _pessoa_row_to_dict(r) -> dict:
+    import json as _json
     return {
         "id":                  r[0],
         "nome":                r[1],
@@ -6141,12 +6146,17 @@ def _pessoa_row_to_dict(r) -> dict:
         "nome_pai":            r[11],
         "data_cadastro":       r[12].isoformat() if r[12] else None,
         "relatorio_abordagem": r[13],
+        "veiculo_placa":       r[14],
+        "veiculo_modelo":      r[15],
+        "veiculo_cor":         r[16],
+        "ocupantes":           _json.loads(r[17]) if r[17] else None,
     }
 
 _PESSOA_SELECT = """
     SELECT id, nome, apelido, contato, profissao, cpf, rg,
            data_nascimento, naturalidade, estado_naturalidade,
-           nome_mae, nome_pai, data_cadastro, relatorio_abordagem
+           nome_mae, nome_pai, data_cadastro, relatorio_abordagem,
+           veiculo_placa, veiculo_modelo, veiculo_cor, ocupantes
     FROM pessoas
 """
 
@@ -6211,13 +6221,16 @@ async def criar_pessoa(request: Request):
             raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
     with _conn() as conn:
         with conn.cursor() as cur:
+            import json as _json
+            _ocupantes_raw = data.get("ocupantes")
+            _ocupantes_json = _json.dumps(_ocupantes_raw) if _ocupantes_raw else None
             cur.execute(
                 """
                 INSERT INTO pessoas
                     (nome, apelido, contato, profissao, cpf, rg,
                      data_nascimento, naturalidade, estado_naturalidade, nome_mae, nome_pai,
-                     relatorio_abordagem)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     relatorio_abordagem, veiculo_placa, veiculo_modelo, veiculo_cor, ocupantes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
                 """,
                 (
@@ -6233,6 +6246,10 @@ async def criar_pessoa(request: Request):
                     (data.get("nome_mae") or "").strip() or None,
                     (data.get("nome_pai") or "").strip() or None,
                     (data.get("relatorio_abordagem") or "").strip() or None,
+                    (data.get("veiculo_placa") or "").strip().upper() or None,
+                    (data.get("veiculo_modelo") or "").strip() or None,
+                    (data.get("veiculo_cor") or "").strip() or None,
+                    _ocupantes_json,
                 ),
             )
             new_id = cur.fetchone()[0]
@@ -6258,6 +6275,9 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
             raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
     with _conn() as conn:
         with conn.cursor() as cur:
+            import json as _json
+            _ocupantes_raw = data.get("ocupantes")
+            _ocupantes_json = _json.dumps(_ocupantes_raw) if _ocupantes_raw else None
             cur.execute(
                 """
                 UPDATE pessoas SET
@@ -6265,7 +6285,9 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
                     cpf = %s, rg = %s, data_nascimento = %s,
                     naturalidade = %s, estado_naturalidade = %s,
                     nome_mae = %s, nome_pai = %s,
-                    relatorio_abordagem = %s
+                    relatorio_abordagem = %s,
+                    veiculo_placa = %s, veiculo_modelo = %s, veiculo_cor = %s,
+                    ocupantes = %s
                 WHERE id = %s
                 """,
                 (
@@ -6281,6 +6303,10 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
                     (data.get("nome_mae") or "").strip() or None,
                     (data.get("nome_pai") or "").strip() or None,
                     (data.get("relatorio_abordagem") or "").strip() or None,
+                    (data.get("veiculo_placa") or "").strip().upper() or None,
+                    (data.get("veiculo_modelo") or "").strip() or None,
+                    (data.get("veiculo_cor") or "").strip() or None,
+                    _ocupantes_json,
                     pessoa_id,
                 ),
             )
