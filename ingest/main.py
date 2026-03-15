@@ -491,11 +491,132 @@ def _init_db():
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS estado_naturalidade TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_mae TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_pai TEXT;")
+            # Colunas legadas (mantidas para compatibilidade durante migração — NÃO remover ainda)
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS relatorio_abordagem TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_placa TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_modelo TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_cor TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS ocupantes TEXT;")
+            # Novo campo de endereço
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS endereco TEXT;")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_pessoas_rg ON pessoas(rg);")
+
+            # ==================================================
+            # MÓDULO ABORDAGENS — novas tabelas relacionais
+            # ==================================================
+
+            # Veículos de abordagem (entidade própria)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS veiculos_abordagem (
+                    id            SERIAL PRIMARY KEY,
+                    placa         TEXT,
+                    marca         TEXT,
+                    modelo        TEXT,
+                    cor           TEXT,
+                    ano           INT,
+                    tipo          TEXT,
+                    observacoes   TEXT,
+                    data_cadastro TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_veiculo_abord_placa ON veiculos_abordagem(placa);")
+
+            # Abordagem — entidade principal
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS abordagens (
+                    id            SERIAL PRIMARY KEY,
+                    data_hora     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    local         TEXT,
+                    equipe        TEXT,
+                    tipo_motivo   TEXT,
+                    observacoes   TEXT,
+                    veiculo_id    INT REFERENCES veiculos_abordagem(id) ON DELETE SET NULL,
+                    data_cadastro TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_abordagens_data ON abordagens(data_hora);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_abordagens_veiculo ON abordagens(veiculo_id);")
+
+            # Vínculo N:N abordagem ↔ pessoa com papel
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS abordagem_pessoas (
+                    id                  SERIAL PRIMARY KEY,
+                    abordagem_id        INT NOT NULL REFERENCES abordagens(id) ON DELETE CASCADE,
+                    pessoa_id           INT NOT NULL REFERENCES pessoas(id) ON DELETE CASCADE,
+                    papel               TEXT NOT NULL DEFAULT 'outro',
+                    observacao_pessoal  TEXT,
+                    data_cadastro       TIMESTAMPTZ DEFAULT NOW(),
+                    UNIQUE(abordagem_id, pessoa_id)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_abord_pess_abord ON abordagem_pessoas(abordagem_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_abord_pess_pess  ON abordagem_pessoas(pessoa_id);")
+
+            # ==================================================
+            # MIGRAÇÃO SEGURA — dados legados de pessoas
+            # Migra registros antigos que têm veiculo_placa preenchida
+            # para veiculos_abordagem + abordagens + abordagem_pessoas.
+            # Executa somente se ainda não migrado (flag _migracao_legado).
+            # ==================================================
+            cur.execute("""
+                DO $$
+                BEGIN
+                    -- Garante idempotência: só roda se coluna legada existir e migração não foi feita
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='pessoas' AND column_name='veiculo_placa'
+                    ) THEN
+                        -- Para cada pessoa antiga com veiculo e sem abordagem relacional
+                        INSERT INTO veiculos_abordagem (placa, marca, modelo, cor)
+                        SELECT DISTINCT
+                            UPPER(TRIM(veiculo_placa)),
+                            NULL,
+                            veiculo_modelo,
+                            veiculo_cor
+                        FROM pessoas
+                        WHERE veiculo_placa IS NOT NULL AND TRIM(veiculo_placa) <> ''
+                          AND NOT EXISTS (
+                            SELECT 1 FROM veiculos_abordagem v
+                             WHERE v.placa = UPPER(TRIM(pessoas.veiculo_placa))
+                          );
+
+                        -- Cria uma abordagem por pessoa que tinha veiculo/relatorio e não tem abordagem vinculada
+                        INSERT INTO abordagens (data_hora, local, tipo_motivo, observacoes, veiculo_id, data_cadastro)
+                        SELECT
+                            COALESCE(p.data_cadastro, NOW()),
+                            NULL,
+                            'Legado (migrado)',
+                            p.relatorio_abordagem,
+                            va.id,
+                            COALESCE(p.data_cadastro, NOW())
+                        FROM pessoas p
+                        LEFT JOIN veiculos_abordagem va
+                            ON va.placa = UPPER(TRIM(p.veiculo_placa))
+                        WHERE (p.veiculo_placa IS NOT NULL OR p.relatorio_abordagem IS NOT NULL)
+                          AND NOT EXISTS (
+                            SELECT 1 FROM abordagem_pessoas ap
+                             JOIN abordagens ab ON ab.id = ap.abordagem_id
+                            WHERE ap.pessoa_id = p.id AND ab.tipo_motivo = 'Legado (migrado)'
+                          );
+
+                        -- Vincula pessoa → abordagem legada criada acima
+                        INSERT INTO abordagem_pessoas (abordagem_id, pessoa_id, papel)
+                        SELECT
+                            ab.id,
+                            p.id,
+                            'outro'
+                        FROM pessoas p
+                        JOIN abordagens ab
+                            ON ab.tipo_motivo = 'Legado (migrado)'
+                           AND ab.data_hora = COALESCE(p.data_cadastro, NOW())
+                        WHERE (p.veiculo_placa IS NOT NULL OR p.relatorio_abordagem IS NOT NULL)
+                          AND NOT EXISTS (
+                            SELECT 1 FROM abordagem_pessoas ap2
+                             WHERE ap2.abordagem_id = ab.id AND ap2.pessoa_id = p.id
+                          );
+                    END IF;
+                END $$;
+            """)
 
 
 # ===========================
@@ -6126,11 +6247,43 @@ def rotas_plate(plate: str, limit: int = 1000,
 
 
 # ===========================
-# CADASTRO POLICIAL — PESSOAS
+# MÓDULO ABORDAGENS — HELPERS
 # ===========================
 
+def _parse_date(val: Optional[str]) -> Optional[str]:
+    """Valida e retorna data ISO 8601 ou None."""
+    if not val:
+        return None
+    try:
+        from datetime import date as _date
+        _date.fromisoformat(val)
+        return val
+    except ValueError:
+        return None
+
+
+def _clean_cpf(val: Optional[str]) -> Optional[str]:
+    raw = "".join(ch for ch in (val or "") if ch.isdigit())
+    return raw or None
+
+
+def _s(val: Optional[str]) -> Optional[str]:
+    """Strip string; retorna None se vazio."""
+    v = (val or "").strip()
+    return v or None
+
+
+# ──────────────── PESSOAS ────────────────────────────────────────────────────
+
+_PESSOA_SELECT = """
+    SELECT id, nome, apelido, contato, profissao, cpf, rg,
+           data_nascimento, naturalidade, estado_naturalidade,
+           nome_mae, nome_pai, data_cadastro, endereco
+    FROM pessoas
+"""
+
+
 def _pessoa_row_to_dict(r) -> dict:
-    import json as _json
     return {
         "id":                  r[0],
         "nome":                r[1],
@@ -6145,57 +6298,40 @@ def _pessoa_row_to_dict(r) -> dict:
         "nome_mae":            r[10],
         "nome_pai":            r[11],
         "data_cadastro":       r[12].isoformat() if r[12] else None,
-        "relatorio_abordagem": r[13],
-        "veiculo_placa":       r[14],
-        "veiculo_modelo":      r[15],
-        "veiculo_cor":         r[16],
-        "ocupantes":           _json.loads(r[17]) if r[17] else None,
+        "endereco":            r[13],
     }
 
-_PESSOA_SELECT = """
-    SELECT id, nome, apelido, contato, profissao, cpf, rg,
-           data_nascimento, naturalidade, estado_naturalidade,
-           nome_mae, nome_pai, data_cadastro, relatorio_abordagem,
-           veiculo_placa, veiculo_modelo, veiculo_cor, ocupantes
-    FROM pessoas
-"""
 
 @app.get("/api/pessoas")
 def listar_pessoas(q: Optional[str] = None, limit: int = 50, offset: int = 0):
-    """Lista pessoas com busca opcional por nome, apelido ou CPF."""
+    """Lista pessoas. Busca por nome, apelido, CPF ou RG."""
     limit  = max(1, min(200, int(limit)))
     offset = max(0, int(offset))
     with _conn() as conn:
         with conn.cursor() as cur:
             if q and q.strip():
                 term = f"%{q.strip()}%"
+                where = " WHERE nome ILIKE %s OR apelido ILIKE %s OR cpf LIKE %s OR rg ILIKE %s "
                 cur.execute(
-                    _PESSOA_SELECT +
-                    " WHERE nome ILIKE %s OR apelido ILIKE %s OR cpf LIKE %s "
-                    " ORDER BY nome ASC LIMIT %s OFFSET %s",
-                    (term, term, term, limit, offset),
+                    _PESSOA_SELECT + where + "ORDER BY nome ASC LIMIT %s OFFSET %s",
+                    (term, term, term, term, limit, offset),
                 )
+                rows = cur.fetchall()
+                cur.execute("SELECT COUNT(*) FROM pessoas" + where, (term, term, term, term))
             else:
-                cur.execute(
-                    _PESSOA_SELECT + " ORDER BY nome ASC LIMIT %s OFFSET %s",
-                    (limit, offset),
-                )
-            rows = cur.fetchall()
-            cur.execute(
-                "SELECT COUNT(*) FROM pessoas"
-                + (" WHERE nome ILIKE %s OR apelido ILIKE %s OR cpf LIKE %s" if q and q.strip() else ""),
-                (f"%{q.strip()}%", f"%{q.strip()}%", f"%{q.strip()}%") if q and q.strip() else (),
-            )
+                cur.execute(_PESSOA_SELECT + "ORDER BY nome ASC LIMIT %s OFFSET %s", (limit, offset))
+                rows = cur.fetchall()
+                cur.execute("SELECT COUNT(*) FROM pessoas")
             total = cur.fetchone()[0]
     return {"total": total, "pessoas": [_pessoa_row_to_dict(r) for r in rows]}
 
 
 @app.get("/api/pessoas/{pessoa_id}")
 def buscar_pessoa_por_id(pessoa_id: int):
-    """Retorna uma pessoa pelo id."""
+    """Retorna dados de uma pessoa pelo id."""
     with _conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(_PESSOA_SELECT + " WHERE id = %s LIMIT 1", (pessoa_id,))
+            cur.execute(_PESSOA_SELECT + "WHERE id = %s LIMIT 1", (pessoa_id,))
             row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Pessoa não encontrada")
@@ -6204,52 +6340,45 @@ def buscar_pessoa_por_id(pessoa_id: int):
 
 @app.post("/api/pessoas", status_code=201)
 async def criar_pessoa(request: Request):
-    """Cria uma nova pessoa no cadastro policial."""
+    """
+    Cria pessoa no cadastro individual.
+    Payload (JSON):
+      nome*, apelido, contato, profissao, cpf, rg,
+      data_nascimento (AAAA-MM-DD), naturalidade, estado_naturalidade,
+      nome_mae, nome_pai, endereco
+    """
     data = await request.json()
-    nome = (data.get("nome") or "").strip()
+    nome = _s(data.get("nome"))
     if not nome:
         raise HTTPException(status_code=400, detail="nome é obrigatório")
-    cpf_raw = "".join(ch for ch in (data.get("cpf") or "") if ch.isdigit())
+    cpf_raw = _clean_cpf(data.get("cpf"))
     if cpf_raw and len(cpf_raw) > 11:
         raise HTTPException(status_code=400, detail="CPF deve ter no máximo 11 dígitos")
-    dn = data.get("data_nascimento") or None
-    if dn:
-        try:
-            from datetime import date as _date
-            _date.fromisoformat(dn)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
+    dn = _parse_date(data.get("data_nascimento"))
     with _conn() as conn:
         with conn.cursor() as cur:
-            import json as _json
-            _ocupantes_raw = data.get("ocupantes")
-            _ocupantes_json = _json.dumps(_ocupantes_raw) if _ocupantes_raw else None
             cur.execute(
                 """
                 INSERT INTO pessoas
                     (nome, apelido, contato, profissao, cpf, rg,
-                     data_nascimento, naturalidade, estado_naturalidade, nome_mae, nome_pai,
-                     relatorio_abordagem, veiculo_placa, veiculo_modelo, veiculo_cor, ocupantes)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     data_nascimento, naturalidade, estado_naturalidade,
+                     nome_mae, nome_pai, endereco)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
                 """,
                 (
                     nome,
-                    (data.get("apelido") or "").strip() or None,
-                    (data.get("contato") or "").strip() or None,
-                    (data.get("profissao") or "").strip() or None,
-                    cpf_raw or None,
-                    (data.get("rg") or "").strip() or None,
-                    dn or None,
-                    (data.get("naturalidade") or "").strip() or None,
-                    (data.get("estado_naturalidade") or "").strip() or None,
-                    (data.get("nome_mae") or "").strip() or None,
-                    (data.get("nome_pai") or "").strip() or None,
-                    (data.get("relatorio_abordagem") or "").strip() or None,
-                    (data.get("veiculo_placa") or "").strip().upper() or None,
-                    (data.get("veiculo_modelo") or "").strip() or None,
-                    (data.get("veiculo_cor") or "").strip() or None,
-                    _ocupantes_json,
+                    _s(data.get("apelido")),
+                    _s(data.get("contato")),
+                    _s(data.get("profissao")),
+                    cpf_raw,
+                    _s(data.get("rg")),
+                    dn,
+                    _s(data.get("naturalidade")),
+                    _s(data.get("estado_naturalidade")),
+                    _s(data.get("nome_mae")),
+                    _s(data.get("nome_pai")),
+                    _s(data.get("endereco")),
                 ),
             )
             new_id = cur.fetchone()[0]
@@ -6258,55 +6387,39 @@ async def criar_pessoa(request: Request):
 
 @app.put("/api/pessoas/{pessoa_id}")
 async def atualizar_pessoa(pessoa_id: int, request: Request):
-    """Atualiza campos de uma pessoa existente."""
+    """Atualiza cadastro individual de pessoa."""
     data = await request.json()
-    nome = (data.get("nome") or "").strip()
+    nome = _s(data.get("nome"))
     if not nome:
         raise HTTPException(status_code=400, detail="nome é obrigatório")
-    cpf_raw = "".join(ch for ch in (data.get("cpf") or "") if ch.isdigit())
+    cpf_raw = _clean_cpf(data.get("cpf"))
     if cpf_raw and len(cpf_raw) > 11:
         raise HTTPException(status_code=400, detail="CPF deve ter no máximo 11 dígitos")
-    dn = data.get("data_nascimento") or None
-    if dn:
-        try:
-            from datetime import date as _date
-            _date.fromisoformat(dn)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="data_nascimento inválida (use AAAA-MM-DD)")
+    dn = _parse_date(data.get("data_nascimento"))
     with _conn() as conn:
         with conn.cursor() as cur:
-            import json as _json
-            _ocupantes_raw = data.get("ocupantes")
-            _ocupantes_json = _json.dumps(_ocupantes_raw) if _ocupantes_raw else None
             cur.execute(
                 """
                 UPDATE pessoas SET
-                    nome = %s, apelido = %s, contato = %s, profissao = %s,
-                    cpf = %s, rg = %s, data_nascimento = %s,
-                    naturalidade = %s, estado_naturalidade = %s,
-                    nome_mae = %s, nome_pai = %s,
-                    relatorio_abordagem = %s,
-                    veiculo_placa = %s, veiculo_modelo = %s, veiculo_cor = %s,
-                    ocupantes = %s
-                WHERE id = %s
+                    nome=%s, apelido=%s, contato=%s, profissao=%s,
+                    cpf=%s, rg=%s, data_nascimento=%s,
+                    naturalidade=%s, estado_naturalidade=%s,
+                    nome_mae=%s, nome_pai=%s, endereco=%s
+                WHERE id=%s
                 """,
                 (
                     nome,
-                    (data.get("apelido") or "").strip() or None,
-                    (data.get("contato") or "").strip() or None,
-                    (data.get("profissao") or "").strip() or None,
-                    cpf_raw or None,
-                    (data.get("rg") or "").strip() or None,
-                    dn or None,
-                    (data.get("naturalidade") or "").strip() or None,
-                    (data.get("estado_naturalidade") or "").strip() or None,
-                    (data.get("nome_mae") or "").strip() or None,
-                    (data.get("nome_pai") or "").strip() or None,
-                    (data.get("relatorio_abordagem") or "").strip() or None,
-                    (data.get("veiculo_placa") or "").strip().upper() or None,
-                    (data.get("veiculo_modelo") or "").strip() or None,
-                    (data.get("veiculo_cor") or "").strip() or None,
-                    _ocupantes_json,
+                    _s(data.get("apelido")),
+                    _s(data.get("contato")),
+                    _s(data.get("profissao")),
+                    cpf_raw,
+                    _s(data.get("rg")),
+                    dn,
+                    _s(data.get("naturalidade")),
+                    _s(data.get("estado_naturalidade")),
+                    _s(data.get("nome_mae")),
+                    _s(data.get("nome_pai")),
+                    _s(data.get("endereco")),
                     pessoa_id,
                 ),
             )
@@ -6317,13 +6430,873 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
 
 @app.delete("/api/pessoas/{pessoa_id}", status_code=204)
 def excluir_pessoa(pessoa_id: int):
-    """Remove uma pessoa do cadastro."""
+    """Remove uma pessoa do cadastro (só se não tiver abordagens vinculadas)."""
     with _conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM pessoas WHERE id = %s", (pessoa_id,))
+            cur.execute(
+                "SELECT COUNT(*) FROM abordagem_pessoas WHERE pessoa_id=%s", (pessoa_id,)
+            )
+            if cur.fetchone()[0] > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Pessoa possui abordagens vinculadas. Desvincule antes de excluir.",
+                )
+            cur.execute("DELETE FROM pessoas WHERE id=%s", (pessoa_id,))
             if cur.rowcount == 0:
                 raise HTTPException(status_code=404, detail="Pessoa não encontrada")
     return None
+
+
+# ──────────────── VEÍCULOS DE ABORDAGEM ──────────────────────────────────────
+
+def _veiculo_row_to_dict(r) -> dict:
+    return {
+        "id":           r[0],
+        "placa":        r[1],
+        "marca":        r[2],
+        "modelo":       r[3],
+        "cor":          r[4],
+        "ano":          r[5],
+        "tipo":         r[6],
+        "observacoes":  r[7],
+        "data_cadastro": r[8].isoformat() if r[8] else None,
+    }
+
+_VEICULO_SELECT = """
+    SELECT id, placa, marca, modelo, cor, ano, tipo, observacoes, data_cadastro
+    FROM veiculos_abordagem
+"""
+
+
+@app.get("/api/veiculos-abordagem")
+def listar_veiculos_abordagem(q: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """Lista veículos de abordagem. Busca por placa, marca ou modelo."""
+    limit  = max(1, min(200, int(limit)))
+    offset = max(0, int(offset))
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            if q and q.strip():
+                term = f"%{q.strip().upper()}%"
+                where = " WHERE placa ILIKE %s OR marca ILIKE %s OR modelo ILIKE %s "
+                cur.execute(
+                    _VEICULO_SELECT + where + "ORDER BY placa ASC LIMIT %s OFFSET %s",
+                    (term, term, term, limit, offset),
+                )
+                rows = cur.fetchall()
+                cur.execute(
+                    "SELECT COUNT(*) FROM veiculos_abordagem" + where, (term, term, term)
+                )
+            else:
+                cur.execute(_VEICULO_SELECT + "ORDER BY placa ASC LIMIT %s OFFSET %s", (limit, offset))
+                rows = cur.fetchall()
+                cur.execute("SELECT COUNT(*) FROM veiculos_abordagem")
+            total = cur.fetchone()[0]
+    return {"total": total, "veiculos": [_veiculo_row_to_dict(r) for r in rows]}
+
+
+@app.get("/api/veiculos-abordagem/busca")
+def buscar_veiculo_por_placa(placa: str):
+    """Busca um veículo pela placa exata (case-insensitive)."""
+    placa = (placa or "").strip().upper()
+    if not placa:
+        raise HTTPException(status_code=400, detail="placa é obrigatória")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(_VEICULO_SELECT + "WHERE placa = %s LIMIT 1", (placa,))
+            row = cur.fetchone()
+    if not row:
+        return {"found": False, "veiculo": None}
+    return {"found": True, "veiculo": _veiculo_row_to_dict(row)}
+
+
+@app.get("/api/veiculos-abordagem/{veiculo_id}")
+def buscar_veiculo_abordagem_por_id(veiculo_id: int):
+    """Retorna um veículo de abordagem pelo id."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(_VEICULO_SELECT + "WHERE id=%s LIMIT 1", (veiculo_id,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    return _veiculo_row_to_dict(row)
+
+
+@app.post("/api/veiculos-abordagem", status_code=201)
+async def criar_veiculo_abordagem(request: Request):
+    """
+    Cria ou retorna veículo de abordagem.
+    Payload (JSON):
+      placa*, marca, modelo, cor, ano (int), tipo, observacoes
+    Se a placa já existir, retorna o existente sem duplicar (upsert por placa).
+    """
+    data = await request.json()
+    placa = (_s(data.get("placa")) or "").upper()
+    if not placa:
+        raise HTTPException(status_code=400, detail="placa é obrigatória")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # Upsert: se já existe pela placa, retorna
+            cur.execute(_VEICULO_SELECT + "WHERE placa=%s LIMIT 1", (placa,))
+            existing = cur.fetchone()
+            if existing:
+                return {"ok": True, "id": existing[0], "created": False,
+                        "veiculo": _veiculo_row_to_dict(existing)}
+            ano_raw = data.get("ano")
+            ano = int(ano_raw) if ano_raw and str(ano_raw).isdigit() else None
+            cur.execute(
+                """
+                INSERT INTO veiculos_abordagem (placa, marca, modelo, cor, ano, tipo, observacoes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id
+                """,
+                (
+                    placa,
+                    _s(data.get("marca")),
+                    _s(data.get("modelo")),
+                    _s(data.get("cor")),
+                    ano,
+                    _s(data.get("tipo")),
+                    _s(data.get("observacoes")),
+                ),
+            )
+            new_id = cur.fetchone()[0]
+    return {"ok": True, "id": new_id, "created": True}
+
+
+@app.put("/api/veiculos-abordagem/{veiculo_id}")
+async def atualizar_veiculo_abordagem(veiculo_id: int, request: Request):
+    """Atualiza dados de um veículo de abordagem."""
+    data = await request.json()
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(_VEICULO_SELECT + "WHERE id=%s LIMIT 1", (veiculo_id,))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Veículo não encontrado")
+            placa = (_s(data.get("placa")) or "").upper() or None
+            ano_raw = data.get("ano")
+            ano = int(ano_raw) if ano_raw and str(ano_raw).isdigit() else None
+            cur.execute(
+                """
+                UPDATE veiculos_abordagem
+                SET placa=%s, marca=%s, modelo=%s, cor=%s, ano=%s, tipo=%s, observacoes=%s
+                WHERE id=%s
+                """,
+                (
+                    placa,
+                    _s(data.get("marca")),
+                    _s(data.get("modelo")),
+                    _s(data.get("cor")),
+                    ano,
+                    _s(data.get("tipo")),
+                    _s(data.get("observacoes")),
+                    veiculo_id,
+                ),
+            )
+    return {"ok": True}
+
+
+# ──────────────── ABORDAGENS ─────────────────────────────────────────────────
+
+_PAPEIS_VALIDOS = {"motorista", "proprietario", "passageiro", "garupa", "outro"}
+
+
+def _abordagem_row_to_dict(r) -> dict:
+    return {
+        "id":           r[0],
+        "data_hora":    r[1].isoformat() if r[1] else None,
+        "local":        r[2],
+        "equipe":       r[3],
+        "tipo_motivo":  r[4],
+        "observacoes":  r[5],
+        "veiculo_id":   r[6],
+        "data_cadastro": r[7].isoformat() if r[7] else None,
+    }
+
+
+@app.get("/api/abordagens")
+def listar_abordagens(
+    q: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    dt_from: Optional[str] = None,
+    dt_to: Optional[str] = None,
+):
+    """
+    Lista abordagens com filtros opcionais.
+    q      → busca em local, equipe, tipo_motivo
+    dt_from / dt_to → filtro de período (AAAA-MM-DD)
+    Retorna abordagem + veículo + lista de pessoas vinculadas.
+    """
+    limit  = max(1, min(200, int(limit)))
+    offset = max(0, int(offset))
+    clauses, params = [], []
+    if q and q.strip():
+        t = f"%{q.strip()}%"
+        clauses.append("(a.local ILIKE %s OR a.equipe ILIKE %s OR a.tipo_motivo ILIKE %s)")
+        params += [t, t, t]
+    if dt_from:
+        clauses.append("a.data_hora >= %s")
+        params.append(dt_from)
+    if dt_to:
+        clauses.append("a.data_hora <= %s")
+        params.append(dt_to + " 23:59:59")
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
+                       a.observacoes, a.veiculo_id, a.data_cadastro,
+                       v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo
+                FROM abordagens a
+                LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
+                {where}
+                ORDER BY a.data_hora DESC
+                LIMIT %s OFFSET %s
+                """,
+                (*params, limit, offset),
+            )
+            rows = cur.fetchall()
+            cur.execute(
+                f"SELECT COUNT(*) FROM abordagens a {where}", params
+            )
+            total = cur.fetchone()[0]
+
+    result = []
+    for r in rows:
+        ab = {
+            "id":           r[0],
+            "data_hora":    r[1].isoformat() if r[1] else None,
+            "local":        r[2],
+            "equipe":       r[3],
+            "tipo_motivo":  r[4],
+            "observacoes":  r[5],
+            "veiculo_id":   r[6],
+            "data_cadastro": r[7].isoformat() if r[7] else None,
+            "veiculo": {
+                "placa":  r[8], "marca":  r[9],
+                "modelo": r[10], "cor":   r[11],
+                "ano":    r[12], "tipo":  r[13],
+            } if r[8] else None,
+            "pessoas": [],
+        }
+        result.append(ab)
+
+    # Busca pessoas vinculadas para as abordagens retornadas
+    if result:
+        ids = [ab["id"] for ab in result]
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT ap.abordagem_id, ap.papel, ap.observacao_pessoal,
+                           p.id, p.nome, p.apelido, p.cpf, p.rg
+                    FROM abordagem_pessoas ap
+                    JOIN pessoas p ON p.id = ap.pessoa_id
+                    WHERE ap.abordagem_id = ANY(%s)
+                    ORDER BY ap.abordagem_id, p.nome
+                    """,
+                    (ids,),
+                )
+                for pr in cur.fetchall():
+                    for ab in result:
+                        if ab["id"] == pr[0]:
+                            ab["pessoas"].append({
+                                "papel":              pr[1],
+                                "observacao_pessoal": pr[2],
+                                "id":     pr[3], "nome":   pr[4],
+                                "apelido": pr[5], "cpf":   pr[6], "rg": pr[7],
+                            })
+                            break
+
+    return {"total": total, "abordagens": result}
+
+
+@app.get("/api/abordagens/{abordagem_id}")
+def buscar_abordagem_por_id(abordagem_id: int):
+    """Retorna uma abordagem completa: dados + veículo + todas as pessoas vinculadas."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
+                       a.observacoes, a.veiculo_id, a.data_cadastro,
+                       v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.observacoes
+                FROM abordagens a
+                LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
+                WHERE a.id = %s LIMIT 1
+                """,
+                (abordagem_id,),
+            )
+            r = cur.fetchone()
+            if not r:
+                raise HTTPException(status_code=404, detail="Abordagem não encontrada")
+            ab = {
+                "id":           r[0],
+                "data_hora":    r[1].isoformat() if r[1] else None,
+                "local":        r[2],
+                "equipe":       r[3],
+                "tipo_motivo":  r[4],
+                "observacoes":  r[5],
+                "veiculo_id":   r[6],
+                "data_cadastro": r[7].isoformat() if r[7] else None,
+                "veiculo": {
+                    "placa": r[8], "marca": r[9], "modelo": r[10],
+                    "cor": r[11], "ano": r[12], "tipo": r[13],
+                    "observacoes": r[14],
+                } if r[8] else None,
+                "pessoas": [],
+            }
+            cur.execute(
+                """
+                SELECT ap.papel, ap.observacao_pessoal,
+                       p.id, p.nome, p.apelido, p.cpf, p.rg,
+                       p.data_nascimento, p.naturalidade, p.estado_naturalidade,
+                       p.nome_mae, p.nome_pai, p.contato, p.profissao, p.endereco
+                FROM abordagem_pessoas ap
+                JOIN pessoas p ON p.id = ap.pessoa_id
+                WHERE ap.abordagem_id = %s
+                ORDER BY p.nome
+                """,
+                (abordagem_id,),
+            )
+            for pr in cur.fetchall():
+                ab["pessoas"].append({
+                    "papel":              pr[0],
+                    "observacao_pessoal": pr[1],
+                    "id":       pr[2],  "nome":               pr[3],
+                    "apelido":  pr[4],  "cpf":                pr[5],
+                    "rg":       pr[6],
+                    "data_nascimento":    pr[7].isoformat() if pr[7] else None,
+                    "naturalidade":       pr[8],
+                    "estado_naturalidade": pr[9],
+                    "nome_mae":  pr[10], "nome_pai":  pr[11],
+                    "contato":   pr[12], "profissao": pr[13],
+                    "endereco":  pr[14],
+                })
+    return ab
+
+
+@app.post("/api/abordagens", status_code=201)
+async def criar_abordagem(request: Request):
+    """
+    Cria uma abordagem completa em uma única operação.
+
+    Payload (JSON):
+    {
+      "data_hora": "2026-03-15T14:30:00",   // opcional; default = agora
+      "local": "BR-364 KM 12",
+      "equipe": "EQ-01 Sgto. Silva",
+      "tipo_motivo": "Blitz ostensiva",
+      "observacoes": "Veículo em atitude suspeita",
+
+      // Veículo — omitir o bloco inteiro se não houver
+      "veiculo": {
+        "placa": "ABC1234",       // se já existir, vincula sem duplicar
+        "marca": "Honda",
+        "modelo": "Civic",
+        "cor": "Prata",
+        "ano": 2020,
+        "tipo": "automóvel",
+        "observacoes": ""
+      },
+
+      // Lista de pessoas envolvidas
+      "pessoas": [
+        {
+          "papel": "motorista",             // motorista|proprietario|passageiro|garupa|outro
+          "observacao_pessoal": "",
+          // Se person_id informado, vincula cadastro existente
+          "pessoa_id": null,
+          // Campos abaixo usados para localizar ou criar pessoa nova
+          "nome": "João da Silva",
+          "apelido": "Joãozinho",
+          "cpf": "12345678901",
+          "rg": "1234567",
+          "data_nascimento": "1990-05-10",
+          "naturalidade": "Porto Velho",
+          "estado_naturalidade": "RO",
+          "nome_mae": "Maria da Silva",
+          "nome_pai": "José da Silva",
+          "contato": "(69) 99999-9999",
+          "profissao": "Autônomo",
+          "endereco": "Rua A, 100, Bairro X"
+        }
+      ]
+    }
+
+    Retorno: { "ok": true, "id": <abordagem_id> }
+    """
+    data = await request.json()
+
+    # ── Veículo ──────────────────────────────────────────────────────────────
+    veiculo_id = None
+    v_data = data.get("veiculo")
+    if v_data and _s(v_data.get("placa")):
+        placa = _s(v_data["placa"]).upper()
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id FROM veiculos_abordagem WHERE placa=%s LIMIT 1", (placa,)
+                )
+                existing = cur.fetchone()
+                if existing:
+                    veiculo_id = existing[0]
+                    # Atualiza dados se informados
+                    ano_raw = v_data.get("ano")
+                    ano = int(ano_raw) if ano_raw and str(ano_raw).isdigit() else None
+                    cur.execute(
+                        """UPDATE veiculos_abordagem
+                           SET marca=COALESCE(%s, marca), modelo=COALESCE(%s, modelo),
+                               cor=COALESCE(%s, cor), ano=COALESCE(%s, ano),
+                               tipo=COALESCE(%s, tipo), observacoes=COALESCE(%s, observacoes)
+                           WHERE id=%s""",
+                        (
+                            _s(v_data.get("marca")), _s(v_data.get("modelo")),
+                            _s(v_data.get("cor")), ano,
+                            _s(v_data.get("tipo")), _s(v_data.get("observacoes")),
+                            veiculo_id,
+                        ),
+                    )
+                else:
+                    ano_raw = v_data.get("ano")
+                    ano = int(ano_raw) if ano_raw and str(ano_raw).isdigit() else None
+                    cur.execute(
+                        """INSERT INTO veiculos_abordagem
+                               (placa, marca, modelo, cor, ano, tipo, observacoes)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                        (
+                            placa, _s(v_data.get("marca")), _s(v_data.get("modelo")),
+                            _s(v_data.get("cor")), ano,
+                            _s(v_data.get("tipo")), _s(v_data.get("observacoes")),
+                        ),
+                    )
+                    veiculo_id = cur.fetchone()[0]
+
+    # ── Abordagem ─────────────────────────────────────────────────────────────
+    dh_raw = _s(data.get("data_hora"))
+    dh = None
+    if dh_raw:
+        try:
+            dh = datetime.fromisoformat(dh_raw.replace("Z", "+00:00"))
+        except ValueError:
+            dh = None
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO abordagens (data_hora, local, equipe, tipo_motivo, observacoes, veiculo_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    dh or _utcnow(),
+                    _s(data.get("local")),
+                    _s(data.get("equipe")),
+                    _s(data.get("tipo_motivo")),
+                    _s(data.get("observacoes")),
+                    veiculo_id,
+                ),
+            )
+            abordagem_id = cur.fetchone()[0]
+
+    # ── Pessoas ───────────────────────────────────────────────────────────────
+    for p_data in (data.get("pessoas") or []):
+        papel = (p_data.get("papel") or "outro").strip().lower()
+        if papel not in _PAPEIS_VALIDOS:
+            papel = "outro"
+        obs_pessoal = _s(p_data.get("observacao_pessoal"))
+
+        # Resolve pessoa_id: usa explícito, ou localiza por CPF, ou cria nova
+        pessoa_id = p_data.get("pessoa_id")
+        if pessoa_id:
+            pessoa_id = int(pessoa_id)
+        else:
+            cpf_raw = _clean_cpf(p_data.get("cpf"))
+            found_id = None
+            if cpf_raw:
+                with _conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "SELECT id FROM pessoas WHERE cpf=%s LIMIT 1", (cpf_raw,)
+                        )
+                        row = cur.fetchone()
+                        if row:
+                            found_id = row[0]
+            if not found_id:
+                rg = _s(p_data.get("rg"))
+                if rg:
+                    with _conn() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                "SELECT id FROM pessoas WHERE rg=%s LIMIT 1", (rg,)
+                            )
+                            row = cur.fetchone()
+                            if row:
+                                found_id = row[0]
+            if found_id:
+                pessoa_id = found_id
+            else:
+                # Cria pessoa nova
+                nome = _s(p_data.get("nome"))
+                if not nome:
+                    continue  # ignora entrada sem nome
+                dn = _parse_date(p_data.get("data_nascimento"))
+                with _conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            INSERT INTO pessoas
+                                (nome, apelido, contato, profissao, cpf, rg,
+                                 data_nascimento, naturalidade, estado_naturalidade,
+                                 nome_mae, nome_pai, endereco)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            RETURNING id
+                            """,
+                            (
+                                nome,
+                                _s(p_data.get("apelido")),
+                                _s(p_data.get("contato")),
+                                _s(p_data.get("profissao")),
+                                cpf_raw,
+                                _s(p_data.get("rg")),
+                                dn,
+                                _s(p_data.get("naturalidade")),
+                                _s(p_data.get("estado_naturalidade")),
+                                _s(p_data.get("nome_mae")),
+                                _s(p_data.get("nome_pai")),
+                                _s(p_data.get("endereco")),
+                            ),
+                        )
+                        pessoa_id = cur.fetchone()[0]
+
+        # Vincula pessoa ↔ abordagem (ignora duplicata silenciosamente)
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO abordagem_pessoas
+                        (abordagem_id, pessoa_id, papel, observacao_pessoal)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (abordagem_id, pessoa_id) DO UPDATE
+                        SET papel=EXCLUDED.papel,
+                            observacao_pessoal=EXCLUDED.observacao_pessoal
+                    """,
+                    (abordagem_id, pessoa_id, papel, obs_pessoal),
+                )
+
+    return {"ok": True, "id": abordagem_id}
+
+
+@app.put("/api/abordagens/{abordagem_id}")
+async def atualizar_abordagem(abordagem_id: int, request: Request):
+    """
+    Atualiza dados gerais de uma abordagem (não altera pessoas/veículo aqui).
+    Payload: data_hora, local, equipe, tipo_motivo, observacoes, veiculo_id
+    """
+    data = await request.json()
+    dh_raw = _s(data.get("data_hora"))
+    dh = None
+    if dh_raw:
+        try:
+            dh = datetime.fromisoformat(dh_raw.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE abordagens
+                SET data_hora=COALESCE(%s, data_hora),
+                    local=%s, equipe=%s, tipo_motivo=%s, observacoes=%s,
+                    veiculo_id=COALESCE(%s, veiculo_id)
+                WHERE id=%s
+                """,
+                (
+                    dh,
+                    _s(data.get("local")),
+                    _s(data.get("equipe")),
+                    _s(data.get("tipo_motivo")),
+                    _s(data.get("observacoes")),
+                    data.get("veiculo_id"),
+                    abordagem_id,
+                ),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Abordagem não encontrada")
+    return {"ok": True}
+
+
+@app.post("/api/abordagens/{abordagem_id}/pessoas", status_code=201)
+async def vincular_pessoa_abordagem(abordagem_id: int, request: Request):
+    """
+    Vincula ou atualiza uma pessoa em uma abordagem existente.
+    Payload: { "pessoa_id": 5, "papel": "passageiro", "observacao_pessoal": "" }
+    """
+    data = await request.json()
+    pessoa_id = data.get("pessoa_id")
+    if not pessoa_id:
+        raise HTTPException(status_code=400, detail="pessoa_id é obrigatório")
+    papel = (data.get("papel") or "outro").strip().lower()
+    if papel not in _PAPEIS_VALIDOS:
+        papel = "outro"
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id FROM abordagens WHERE id=%s LIMIT 1", (abordagem_id,)
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Abordagem não encontrada")
+            cur.execute(
+                "SELECT id FROM pessoas WHERE id=%s LIMIT 1", (pessoa_id,)
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+            cur.execute(
+                """
+                INSERT INTO abordagem_pessoas
+                    (abordagem_id, pessoa_id, papel, observacao_pessoal)
+                VALUES (%s,%s,%s,%s)
+                ON CONFLICT (abordagem_id, pessoa_id) DO UPDATE
+                    SET papel=EXCLUDED.papel,
+                        observacao_pessoal=EXCLUDED.observacao_pessoal
+                """,
+                (abordagem_id, int(pessoa_id), papel, _s(data.get("observacao_pessoal"))),
+            )
+    return {"ok": True}
+
+
+@app.delete("/api/abordagens/{abordagem_id}/pessoas/{pessoa_id}", status_code=204)
+def desvincular_pessoa_abordagem(abordagem_id: int, pessoa_id: int):
+    """Remove o vínculo de uma pessoa em uma abordagem."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM abordagem_pessoas WHERE abordagem_id=%s AND pessoa_id=%s",
+                (abordagem_id, pessoa_id),
+            )
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Vínculo não encontrado")
+    return None
+
+
+@app.delete("/api/abordagens/{abordagem_id}", status_code=204)
+def excluir_abordagem(abordagem_id: int):
+    """Remove uma abordagem e todos os seus vínculos (CASCADE)."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM abordagens WHERE id=%s", (abordagem_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Abordagem não encontrada")
+    return None
+
+
+# ──────────────── CONSULTA / RELATÓRIO ───────────────────────────────────────
+
+@app.get("/api/consulta-relatorio")
+def consulta_relatorio(q: Optional[str] = None):
+    """
+    Pesquisa unificada por nome, CPF ou placa.
+    Retorna ficha + histórico completo de abordagens.
+
+    Parâmetro:
+      q → string de busca (nome, CPF ou placa de veículo)
+
+    Tipo do resultado detectado automaticamente:
+      - placa  → 7-8 chars alfanuméricos (ABC1234 ou ABC1C34)
+      - cpf    → 11 dígitos numéricos
+      - nome   → qualquer outra coisa
+
+    Resposta:
+    {
+      "tipo": "pessoa" | "veiculo",
+      "total_resultados": N,
+      "resultados": [
+        {
+          "tipo": "pessoa",
+          "ficha": { ...dados da pessoa... },
+          "total_abordagens": N,
+          "abordagens": [ { ...abordagem..., veiculo: {...}, ocupantes: [...] } ]
+        }
+      ]
+    }
+    """
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Parâmetro q é obrigatório")
+
+    termo = q.strip()
+    digitos = "".join(ch for ch in termo if ch.isdigit())
+
+    # Detecta tipo de busca
+    placa_pattern = re.compile(r'^[A-Za-z]{3}[\w]{4,5}$')
+    if placa_pattern.match(termo.replace("-", "").replace(" ", "")):
+        tipo_busca = "placa"
+    elif len(digitos) == 11:
+        tipo_busca = "cpf"
+    else:
+        tipo_busca = "nome"
+
+    resultados = []
+
+    # ── Busca por PLACA ───────────────────────────────────────────────────────
+    if tipo_busca == "placa":
+        placa_norm = termo.replace("-", "").replace(" ", "").upper()
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    _VEICULO_SELECT + "WHERE placa ILIKE %s LIMIT 10",
+                    (f"%{placa_norm}%",),
+                )
+                veiculos = [_veiculo_row_to_dict(r) for r in cur.fetchall()]
+
+        for v in veiculos:
+            abordagens_v = _abordagens_do_veiculo(v["id"])
+            resultados.append({
+                "tipo":             "veiculo",
+                "ficha":            v,
+                "total_abordagens": len(abordagens_v),
+                "abordagens":       abordagens_v,
+            })
+
+    # ── Busca por CPF ─────────────────────────────────────────────────────────
+    elif tipo_busca == "cpf":
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    _PESSOA_SELECT + "WHERE cpf=%s LIMIT 10", (digitos,)
+                )
+                pessoas = [_pessoa_row_to_dict(r) for r in cur.fetchall()]
+        for p in pessoas:
+            abordagens_p = _abordagens_da_pessoa(p["id"])
+            resultados.append({
+                "tipo":             "pessoa",
+                "ficha":            p,
+                "total_abordagens": len(abordagens_p),
+                "abordagens":       abordagens_p,
+            })
+
+    # ── Busca por NOME ────────────────────────────────────────────────────────
+    else:
+        term = f"%{termo}%"
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    _PESSOA_SELECT + "WHERE nome ILIKE %s OR apelido ILIKE %s LIMIT 20",
+                    (term, term),
+                )
+                pessoas = [_pessoa_row_to_dict(r) for r in cur.fetchall()]
+        for p in pessoas:
+            abordagens_p = _abordagens_da_pessoa(p["id"])
+            resultados.append({
+                "tipo":             "pessoa",
+                "ficha":            p,
+                "total_abordagens": len(abordagens_p),
+                "abordagens":       abordagens_p,
+            })
+
+    return {
+        "tipo_busca":       tipo_busca,
+        "total_resultados": len(resultados),
+        "resultados":       resultados,
+    }
+
+
+def _abordagens_da_pessoa(pessoa_id: int) -> list:
+    """Retorna histórico de abordagens de uma pessoa, com veículo e ocupantes."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
+                       a.observacoes, ap.papel, ap.observacao_pessoal,
+                       v.placa, v.marca, v.modelo, v.cor, v.ano
+                FROM abordagem_pessoas ap
+                JOIN abordagens a ON a.id = ap.abordagem_id
+                LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
+                WHERE ap.pessoa_id = %s
+                ORDER BY a.data_hora DESC
+                """,
+                (pessoa_id,),
+            )
+            rows = cur.fetchall()
+
+    result = []
+    for r in rows:
+        ab_id = r[0]
+        ab = {
+            "id":                r[0],
+            "data_hora":         r[1].isoformat() if r[1] else None,
+            "local":             r[2],
+            "equipe":            r[3],
+            "tipo_motivo":       r[4],
+            "observacoes":       r[5],
+            "papel_nesta":       r[6],
+            "obs_pessoal":       r[7],
+            "veiculo": {
+                "placa": r[8], "marca": r[9], "modelo": r[10],
+                "cor": r[11], "ano": r[12],
+            } if r[8] else None,
+            "ocupantes": _ocupantes_da_abordagem(ab_id),
+        }
+        result.append(ab)
+    return result
+
+
+def _abordagens_do_veiculo(veiculo_id: int) -> list:
+    """Retorna histórico de abordagens de um veículo, com todos os ocupantes."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo, a.observacoes
+                FROM abordagens a
+                WHERE a.veiculo_id = %s
+                ORDER BY a.data_hora DESC
+                """,
+                (veiculo_id,),
+            )
+            rows = cur.fetchall()
+
+    result = []
+    for r in rows:
+        ab_id = r[0]
+        result.append({
+            "id":          r[0],
+            "data_hora":   r[1].isoformat() if r[1] else None,
+            "local":       r[2],
+            "equipe":      r[3],
+            "tipo_motivo": r[4],
+            "observacoes": r[5],
+            "ocupantes":   _ocupantes_da_abordagem(ab_id),
+        })
+    return result
+
+
+def _ocupantes_da_abordagem(abordagem_id: int) -> list:
+    """Retorna lista de ocupantes (pessoa + papel) de uma abordagem."""
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.id, p.nome, p.apelido, p.cpf, p.rg,
+                       ap.papel, ap.observacao_pessoal
+                FROM abordagem_pessoas ap
+                JOIN pessoas p ON p.id = ap.pessoa_id
+                WHERE ap.abordagem_id = %s
+                ORDER BY p.nome
+                """,
+                (abordagem_id,),
+            )
+            return [
+                {
+                    "id": r[0], "nome": r[1], "apelido": r[2],
+                    "cpf": r[3], "rg": r[4],
+                    "papel": r[5], "observacao_pessoal": r[6],
+                }
+                for r in cur.fetchall()
+            ]
 
 
 # ===========================
