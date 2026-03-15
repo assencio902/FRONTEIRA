@@ -2049,9 +2049,21 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 # confidence=0 SÓ descarta quando a tag estava presente no XML;
                 # câmeras que omitem confidenceLevel recebem confidence=-1 e passam aqui
             )
-            if xml_event_type and xml_event_type.lower() != "anpr":
+            # Tipos de evento Hikvision que indicam leitura LPR/ANPR:
+            # - "ANPR"                → firmware moderno ISAPI
+            # - "vehicleDetection"   → firmware antigo (< V4.x) e câmeras DS-2CD série
+            # - "trafficVehicle"     → câmeras de tráfego Hikvision
+            # - "anprdetection"      → alias encontrado em alguns firmwares
+            # Se xml_event_type está ausente (None), não descarta — câmera pode omitir
+            _LPR_EVENT_TYPES = {"anpr", "vehicledetection", "trafficvehicle", "anprdetection",
+                                 "vehiclepassage", "vehicleevent", "licenseplate"}
+            _is_non_lpr_event = (
+                xml_event_type is not None
+                and xml_event_type.lower() not in _LPR_EVENT_TYPES
+            )
+            if _is_non_lpr_event:
                 logger.info(
-                    "[WEBHOOK-NOT-ANPR] ip=%s eventType=%r — evento não é ANPR, placa descartada",
+                    "[WEBHOOK-NOT-ANPR] ip=%s eventType=%r — evento não é LPR/ANPR, placa descartada",
                     client_ip, xml_event_type,
                 )
                 plate = ""
