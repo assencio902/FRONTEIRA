@@ -2102,6 +2102,39 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
             "câmera enviando HTTPS em porta HTTP (\"Invalid HTTP request received\").",
             client_ip, content_type, _parser_used,
         )
+        # ── [WEBHOOK-FORM-DEBUG] logs temporários para diagnóstico de câmera HTTP-escuta ──
+        logger.warning("[WEBHOOK-FORM-DEBUG] ip=%s content_type=%r parser=%s", client_ip, content_type, _parser_used)
+        if _form_text_fields:
+            logger.warning("[WEBHOOK-FORM-DEBUG] campos_texto recebidos: %r", list(_form_text_fields.keys()))
+            for _dbg_name, _dbg_val in _form_text_fields.items():
+                _dbg_preview = _dbg_val[:200] if len(_dbg_val) > 200 else _dbg_val
+                if _dbg_val.strip().startswith("<"):
+                    logger.warning(
+                        "[WEBHOOK-FORM-DEBUG] campo XML name=%r primeiros_300=%r",
+                        _dbg_name, _dbg_val[:300],
+                    )
+                else:
+                    logger.warning(
+                        "[WEBHOOK-FORM-DEBUG] campo texto name=%r valor=%r",
+                        _dbg_name, _dbg_preview,
+                    )
+        else:
+            logger.warning("[WEBHOOK-FORM-DEBUG] nenhum campo de texto no form (form vazio ou não é form-data)")
+        if images:
+            for _dbg_i, (_dbg_fname, _dbg_data) in enumerate(images):
+                logger.warning(
+                    "[WEBHOOK-FORM-DEBUG] imagem[%d] filename=%r tamanho=%d bytes",
+                    _dbg_i, _dbg_fname, len(_dbg_data),
+                )
+        else:
+            logger.warning("[WEBHOOK-FORM-DEBUG] nenhuma imagem recebida no form")
+        if xml_bytes:
+            logger.warning(
+                "[WEBHOOK-FORM-DEBUG] xml_bytes presente len=%d primeiros_300=%r",
+                len(xml_bytes), xml_bytes[:300].decode("utf-8", errors="replace"),
+            )
+        else:
+            logger.warning("[WEBHOOK-FORM-DEBUG] xml_bytes ausente")
 
     # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
     if not camera_id:
