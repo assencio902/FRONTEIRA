@@ -7306,7 +7306,11 @@ function _renderUsersTable(items) {
 
 var _userEditId = null;
 function openUserModal(encodedOrObj) {
-  var u = encodedOrObj ? (typeof encodedOrObj === 'string' ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj) : null;
+  // encodedOrObj pode ser: objeto direto, string JSON já decodificada (vinda do onclick)
+  // NÃO fazer decodeURIComponent aqui — o onclick já decodifica antes de chamar a função
+  var u = encodedOrObj
+    ? (typeof encodedOrObj === 'string' ? JSON.parse(encodedOrObj) : encodedOrObj)
+    : null;
   _userEditId = u ? u.id : null;
   document.getElementById('user-modal-title').textContent = u ? 'Editar Usu\u00e1rio' : 'Novo Usu\u00e1rio';
   document.getElementById('um-username').value  = u ? (u.username||'') : '';
@@ -7516,7 +7520,11 @@ async function _preloadAlarmSelects() {
 
 var _almEditId = null;
 function openAlarmeModal(encodedOrObj) {
-  var a = encodedOrObj ? (typeof encodedOrObj === 'string' ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj) : null;
+  // encodedOrObj pode ser: objeto direto, string JSON já decodificada (vinda do onclick)
+  // NÃO fazer decodeURIComponent aqui — o onclick já decodifica antes de chamar a função
+  var a = encodedOrObj
+    ? (typeof encodedOrObj === 'string' ? JSON.parse(encodedOrObj) : encodedOrObj)
+    : null;
   _almEditId = a ? a.id : null;
   document.getElementById('alarme-modal-title').textContent = a ? 'Editar Alarme' : 'Novo Alarme';
   document.getElementById('alarme-form-error').textContent = '';
