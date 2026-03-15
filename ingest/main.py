@@ -2010,11 +2010,13 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 if (plate_rect["x"] + plate_rect["w"]) <= pw * 1.1:
                     coord_type = "pixels"
 
-            # camera_id = IP real da câmera extraído do XML.
-            # channelName e channelID NÃO definem a identidade principal; servem como
-            # nome/canal auxiliar apenas. A identidade final é resolvida abaixo,
-            # priorizando X-Camera-IP > xml_ip > client_ip.
-            camera_id = xml_ip or None   # None → resolvido após o bloco XML
+            # camera_id a partir do XML: apenas o IP real do XML.
+            # channel_name_xml e channel_id_xml NÃO definem camera_id —
+            # são usados somente como nome/canal auxiliar.
+            # A resolução final de camera_id acontece abaixo, fora do bloco XML,
+            # com prioridade: X-Camera-IP > xml_ip > client_ip.
+            if xml_ip:
+                camera_id = xml_ip
 
             dt = x("dateTime")
             if dt:
@@ -2247,30 +2249,32 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         else:
             logger.warning("[WEBHOOK-FORM-DEBUG] xml_bytes ausente")
 
-    # ── Resolução final de camera_id ────────────────────────────────────────
-    # Prioridade obrigatória: X-Camera-IP > xml_ip > client_ip
-    # channelName e channelID NUNCA definem a identidade principal quando há IP disponível.
+    # ── Resolução final de camera_id ──────────────────────────────────────────
+    # Prioridade: X-Camera-IP (header) > xml_ip (do XML) > client_ip (TCP)
+    # channel_name_xml e channel_id_xml NUNCA são usados como identidade da câmera;
+    # servem apenas como nome/canal auxiliar para exibição.
     _header_ip = request.headers.get("X-Camera-IP", "").strip()
     if _header_ip:
-        # Câmera-poller enviou o IP real via header — prioridade máxima
+        # X-Camera-IP tem prioridade máxima — enviado pelo camera-poller ou proxy
         camera_id = _header_ip
         xml_ip    = xml_ip or _header_ip
     elif xml_ip:
-        # IP veio no XML (<ipAddress>) — confiável
+        # IP real extraído do XML <ipAddress> — confiável quando presente
         camera_id = xml_ip
     else:
-        # Sem IP no XML e sem header — usa IP de origem da conexão HTTP
+        # Fallback: IP TCP da conexão HTTP (client_ip)
         camera_id = client_ip
         xml_ip    = client_ip
 
+    # Log obrigatório: mostra todos os candidatos e a decisão final
     logger.info(
         "[WEBHOOK-CAM-RESOLVE] client_ip=%s header_ip=%s xml_ip=%s "
-        "channel_name_xml=%r channel_id_xml=%r camera_id_final=%s",
+        "channel_name_xml=%r channel_id_xml=%r → camera_id=%s",
         client_ip,
         _header_ip or "-",
         xml_ip or "-",
         channel_name_xml or "-",
-        channel_id_xml   or "-",
+        channel_id_xml if 'channel_id_xml' in dir() else "-",
         camera_id,
     )
 
