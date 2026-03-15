@@ -836,6 +836,12 @@
           <div class="card-value" style="color:var(--danger)" id="pn-alerts">&#8212;</div>
           <div class="card-sub">placas monitoradas</div>
         </div>
+        <div class="card" style="cursor:pointer;border-color:rgba(34,197,94,.3)" onclick="openPessoasModal()" title="Ver todas as pessoas cadastradas">
+          <div class="card-icon" style="background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#4ade80">&#128100;</div>
+          <div class="card-label" style="color:#86efac">Pessoas Cadastradas</div>
+          <div class="card-value" style="color:#4ade80" id="pn-pessoas">&#8212;</div>
+          <div class="card-sub" style="color:#86efac">clique para ver</div>
+        </div>
       </div>
 
       <!-- linha 1: eventos/hora + eventos/dia -->
@@ -1664,6 +1670,55 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
       <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" onclick="">&#9998; Editar</button>
       <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Pessoas Cadastradas (painel) -->
+<div class="modal-overlay" id="pm-pessoas-modal" onclick="if(event.target===this)closeModal('pm-pessoas-modal')">
+  <div class="modal" style="max-width:900px;width:97%">
+    <div class="modal-header">
+      <h2>&#128100; Pessoas Cadastradas</h2>
+      <button class="modal-close" onclick="closeModal('pm-pessoas-modal')">&times;</button>
+    </div>
+    <!-- busca -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="pm-busca" type="text" placeholder="Buscar por nome, apelido ou CPF..."
+        style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+        oninput="pmBuscar()" onkeydown="if(event.key==='Enter')pmBuscar()">
+      <button class="btn btn-primary btn-sm" onclick="pmBuscar()">&#128269; Buscar</button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('pm-busca').value='';pmBuscar()">Limpar</button>
+    </div>
+    <!-- tabela -->
+    <div class="table-wrap" style="max-height:55vh;overflow-y:auto">
+      <table class="table" style="font-size:.82rem">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>Apelido</th>
+            <th>CPF</th>
+            <th>Contato</th>
+            <th>Ve&iacute;culo</th>
+            <th>Ocup.</th>
+            <th style="text-align:center">A&ccedil;&otilde;es</th>
+          </tr>
+        </thead>
+        <tbody id="pm-tbody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="pm-rodape" style="font-size:.78rem;color:var(--muted);margin-top:8px;display:flex;align-items:center;justify-content:space-between">
+      <span id="pm-total-txt"></span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" id="pm-prev-btn" onclick="pmPagina(-1)" style="display:none">&#8592; Ant.</button>
+        <span id="pm-pagina-txt" style="font-size:.78rem;align-self:center"></span>
+        <button class="btn btn-outline btn-sm" id="pm-next-btn" onclick="pmPagina(1)" style="display:none">Pr&oacute;x. &#8594;</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('pm-pessoas-modal')">Fechar</button>
     </div>
   </div>
 </div>
@@ -2718,6 +2773,11 @@ async function loadPainel() {
     document.getElementById('pn-monitored').textContent = (ov.monitored_plates || 0).toLocaleString('pt-BR');
     document.getElementById('pn-alerts').textContent    = (ov.alerts_today    || ov.alerts || 0).toLocaleString('pt-BR');
   } catch(e) { console.error('overview', e); }
+
+  try {
+    var pq = await fetch('/api/pessoas?limit=1').then(function(r){ return r.json(); });
+    document.getElementById('pn-pessoas').textContent = (pq.total || 0).toLocaleString('pt-BR');
+  } catch(e) { console.error('pessoas count', e); }
 
   try {
     var ph = await fetch('/api/stats/events-per-hour').then(function(r){ return r.json(); });
@@ -8067,6 +8127,90 @@ async function cadastroVisualizar(id) {
   } catch(e) {
     body.innerHTML = '<p style="color:var(--danger)">Erro: ' + _esc(e.message) + '</p>';
   }
+}
+
+// ── Modal Pessoas (painel) ────────────────────────────────────────────────────
+var _pmOffset = 0, _pmLimit = 20, _pmTotal = 0, _pmQ = '';
+
+async function openPessoasModal() {
+  _pmOffset = 0; _pmQ = ''; _pmTotal = 0;
+  document.getElementById('pm-busca').value = '';
+  openModal('pm-pessoas-modal');
+  await pmCarregar();
+}
+
+async function pmBuscar() {
+  _pmOffset = 0;
+  _pmQ = document.getElementById('pm-busca').value.trim();
+  await pmCarregar();
+}
+
+function pmPagina(dir) {
+  _pmOffset = Math.max(0, _pmOffset + dir * _pmLimit);
+  pmCarregar();
+}
+
+async function pmCarregar() {
+  var tbody = document.getElementById('pm-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Carregando...</td></tr>';
+  try {
+    var url = '/api/pessoas?limit=' + _pmLimit + '&offset=' + _pmOffset + (_pmQ ? '&q=' + encodeURIComponent(_pmQ) : '');
+    var resp = await fetch(url);
+    if (!resp.ok) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger);text-align:center">Erro ' + resp.status + '</td></tr>'; return; }
+    var data = await resp.json();
+    _pmTotal = data.total || 0;
+    var pessoas = data.pessoas || [];
+    if (!pessoas.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+    } else {
+      tbody.innerHTML = pessoas.map(function(p) {
+        var cpfFmt = p.cpf ? _fmtCpf(p.cpf) : '—';
+        var veiculo = [p.veiculo_placa, p.veiculo_modelo, p.veiculo_cor].filter(Boolean).join(' · ') || '—';
+        var nOcup = Array.isArray(p.ocupantes) ? p.ocupantes.length : 0;
+        return '<tr>'
+          + '<td style="color:var(--muted)">' + p.id + '</td>'
+          + '<td style="font-weight:600">' + _esc(p.nome || '') + '</td>'
+          + '<td>' + _esc(p.apelido || '—') + '</td>'
+          + '<td style="font-family:monospace">' + _esc(cpfFmt) + '</td>'
+          + '<td>' + _esc(p.contato || '—') + '</td>'
+          + '<td style="font-size:.78rem">' + _esc(veiculo) + '</td>'
+          + '<td style="text-align:center">' + (nOcup || '—') + '</td>'
+          + '<td style="text-align:center;white-space:nowrap">'
+          + '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.76rem" onclick="pmVerDetalhes(' + p.id + ')">&#128269; Ver</button>'
+          + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+    // rodapé paginação
+    var pagAtual = Math.floor(_pmOffset / _pmLimit) + 1;
+    var pagTotal = Math.ceil(_pmTotal / _pmLimit) || 1;
+    document.getElementById('pm-total-txt').textContent = _pmTotal.toLocaleString('pt-BR') + ' pessoa(s)';
+    document.getElementById('pm-pagina-txt').textContent = 'Pág. ' + pagAtual + ' / ' + pagTotal;
+    document.getElementById('pm-prev-btn').style.display = _pmOffset > 0 ? '' : 'none';
+    document.getElementById('pm-next-btn').style.display = (_pmOffset + _pmLimit) < _pmTotal ? '' : 'none';
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger);text-align:center">Erro: ' + _esc(e.message) + '</td></tr>';
+  }
+}
+
+async function pmVerDetalhes(id) {
+  closeModal('pm-pessoas-modal');
+  await cadastroVisualizar(id);
+  // ao fechar o view, reabrir o modal de listagem
+  var origClose = document.querySelector('#cad-view-modal .modal-close').onclick;
+  document.querySelector('#cad-view-modal .modal-close').onclick = function() {
+    closeModal('cad-view-modal');
+    openPessoasModal();
+    document.querySelector('#cad-view-modal .modal-close').onclick = origClose;
+  };
+  var origOverlay = document.getElementById('cad-view-modal').onclick;
+  document.getElementById('cad-view-modal').onclick = function(ev) {
+    if (ev.target === this) {
+      closeModal('cad-view-modal');
+      openPessoasModal();
+      document.getElementById('cad-view-modal').onclick = origOverlay;
+    }
+  };
 }
 
 // ── Ocupantes ─────────────────────────────────────────────────────────────────
