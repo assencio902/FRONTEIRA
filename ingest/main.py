@@ -2079,6 +2079,104 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 client_ip, list(_form_text_fields.keys()),
             )
 
+    # ── Fallback query string: Hikvision HTTP-escuta que envia dados pela URL ────
+    # Exemplo real capturado por pcap:
+    # POST /api/simple-webhook?channelID=1&dateTime=20260315T112740-300
+    #   &eventType=vehicleDetection&licensePlate=THJ2G50&direction=reverse&confidenceLevel=97
+    _qs = request.query_params
+    _qs_plate_raw = _qs.get("licensePlate", "").strip()
+    if _qs_plate_raw:
+        # Palavras-chave que indicam ausência de leitura real
+        _QS_EMPTY_KEYWORDS = {"noplate", "no_plate", "unknown", "none", "null", ""}
+        _qs_event_type   = _qs.get("eventType", "").strip()
+        _qs_channel_id   = _qs.get("channelID", "").strip()
+        _qs_datetime_raw = _qs.get("dateTime", "").strip()
+        _qs_direction    = _qs.get("direction", "").strip().lower() or None
+        _qs_country      = _qs.get("country", "").strip()
+        _qs_lane         = _qs.get("lane", "").strip()
+        try:
+            _qs_confidence = float(_qs.get("confidenceLevel", "").strip())
+        except (ValueError, AttributeError):
+            _qs_confidence = -1.0  # não informado
+
+        # Decide se a placa é válida ou deve ser tratada como vazia
+        _qs_plate_lower = _qs_plate_raw.lower()
+        _qs_plate_is_empty = (
+            _qs_plate_lower in _QS_EMPTY_KEYWORDS
+            or _qs_confidence == 0.0
+        )
+        # Normaliza para maiúsculas e valida 7 chars A-Z0-9
+        _qs_plate_candidate = _normalize_plate(_qs_plate_raw) if not _qs_plate_is_empty else ""
+
+        # Só sobrescreve a placa se o XML/form não a forneceu
+        if not plate and _qs_plate_candidate:
+            plate = _qs_plate_candidate
+
+        # Parse do dateTime compacto Hikvision: 20260315T112740-300
+        # Formato: YYYYMMDDTHHmmss[±][H]HMM  (sem separadores)
+        def _parse_hikvision_qs_datetime(dt_str: str) -> "datetime | None":
+            import re as _re
+            _m = _re.match(
+                r"^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})([+-]\d{3,4})?$",
+                dt_str,
+            )
+            if not _m:
+                return None
+            yr, mo, dy, hh, mi, ss, tz_raw = _m.groups()
+            tz_info = timezone.utc
+            if tz_raw:
+                sign = 1 if tz_raw[0] == "+" else -1
+                tz_digits = tz_raw[1:]          # "300" ou "0300"
+                if len(tz_digits) <= 3:         # "300" → 3h00m | "30" → 0h30m
+                    tz_h = int(tz_digits[:-2]) if len(tz_digits) > 2 else 0
+                    tz_m = int(tz_digits[-2:])
+                else:                            # "0300" → 3h00m
+                    tz_h = int(tz_digits[:2])
+                    tz_m = int(tz_digits[2:])
+                from datetime import timedelta as _td
+                tz_info = timezone(_td(hours=sign * tz_h, minutes=sign * tz_m))
+            try:
+                return datetime(int(yr), int(mo), int(dy), int(hh), int(mi), int(ss), tzinfo=tz_info)
+            except Exception:
+                return None
+
+        # Preenche variáveis apenas quando XML não as forneceu
+        if not occurred_at and _qs_datetime_raw:
+            occurred_at = _parse_hikvision_qs_datetime(_qs_datetime_raw)
+
+        if not xml_direction and _qs_direction:
+            xml_direction = _qs_direction
+
+        if confidence < 0.0 and _qs_confidence >= 0.0:
+            confidence = _qs_confidence
+
+        # camera_id a partir do channelID da query string (usado apenas se XML não forneceu)
+        _qs_camera_id_candidate = (
+            request.headers.get("X-Camera-IP", "").strip()
+            or _qs_channel_id
+            or None
+        )
+        if not camera_id and _qs_camera_id_candidate:
+            camera_id = _qs_camera_id_candidate
+            channel_name_xml = channel_name_xml or _qs_channel_id
+
+        # Log obrigatório exigido por requisito
+        logger.info(
+            "[SIMPLE-WEBHOOK-QUERY] ip=%s plate=%s channelID=%s dateTime=%s "
+            "direction=%s confidence=%s eventType=%s country=%s lane=%s "
+            "plate_was_empty=%s",
+            client_ip,
+            _qs_plate_candidate or "(vazia)",
+            _qs_channel_id or "-",
+            _qs_datetime_raw or "-",
+            _qs_direction or "-",
+            _qs_confidence if _qs_confidence >= 0 else "-",
+            _qs_event_type or "-",
+            _qs_country or "-",
+            _qs_lane or "-",
+            _qs_plate_is_empty,
+        )
+
     # Mantém placa vazia se não houver no XML nem no form — será preenchida pelo YOLO ou permanecerá null
     # NÃO usa "UNKNOWN" para evitar poluir alertas_criticos com placas falsas
 
