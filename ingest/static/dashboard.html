@@ -1499,7 +1499,7 @@
       </div>
 
       <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO -->
-      <div id="cad-form-wrap">
+      <div id="cad-form-wrap" style="display:none">
         <div style="font-weight:600;font-size:.92rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
           <span id="cad-form-titulo">&#128221; Nova Pessoa</span>
         </div>
@@ -1598,15 +1598,43 @@
           </div>
         </div>
 
+        <!-- Bloco: Relatório da Abordagem -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128221; Relat&oacute;rio da Abordagem</div>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Hist&oacute;rico / Ocorr&ecirc;ncias <span style="font-size:.72rem;color:var(--muted)">(opcional)</span>
+            <textarea id="cad-relatorio" rows="5" maxlength="4000"
+              placeholder="Descreva o contexto, local, motivo da abordagem, atitudes observadas, ve&iacute;culos, armas, drogas, antecedentes verificados..."
+              style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;resize:vertical;width:100%;box-sizing:border-box"></textarea>
+          </label>
+        </div>
+
         <!-- Ações do formulário -->
         <div id="cad-form-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="cadastroSalvar()">&#128190; Salvar</button>
-          <button class="btn btn-outline btn-sm" onclick="cadastroLimparForm()">&#10007; Cancelar</button>
+          <button class="btn btn-outline btn-sm" onclick="cadastroLimparForm(true)">&#10007; Cancelar</button>
         </div>
         <div id="cad-form-ok" style="color:#4ade80;font-size:.82rem;margin-top:8px;display:none"></div>
       </div>
     </div><!-- /tab-cadastro -->
+
+<!-- Modal de Visualização de Pessoa (somente leitura) -->
+<div class="modal-overlay" id="cad-view-modal" onclick="if(event.target===this)closeModal('cad-view-modal')">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <h2 id="cad-view-titulo">&#128100; Dados da Pessoa</h2>
+      <button class="modal-close" onclick="closeModal('cad-view-modal')">&times;</button>
+    </div>
+    <div id="cad-view-body" style="font-size:.87rem;line-height:1.7">
+      <!-- preenchido por cadastroVisualizar() -->
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" onclick="">&#9998; Editar</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
 
     <!-- ===== ABA USUÁRIOS ===== -->
     <!-- ===== ABA ALARMES ===== -->
@@ -7742,50 +7770,55 @@ function cadastroCarregar() {
 
 function cadastroLimparBusca() {
   document.getElementById('cad-busca').value = '';
-  document.getElementById('cad-resultado').style.display = 'none';
   document.getElementById('cad-status').textContent = '';
   _cadOffset = 0;
+  cadastroBuscar();
 }
 
 async function cadastroBuscar() {
   var q = (document.getElementById('cad-busca').value || '').trim();
   var url = '/api/pessoas?limit=' + _cadLimit + '&offset=' + _cadOffset;
   if (q) url += '&q=' + encodeURIComponent(q);
+  var tb = document.getElementById('cad-tbody');
+  if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Buscando...</td></tr>';
   try {
     var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     _cadTotal = data.total || 0;
     renderCadResultado(data.pessoas || []);
-    document.getElementById('cad-resultado').style.display = 'block';
     document.getElementById('cad-status').textContent =
       _cadTotal + ' pessoa(s) encontrada(s).' +
       (_cadTotal > _cadLimit ? ' Mostrando primeiras ' + _cadLimit + '.' : '');
   } catch(e) {
-    document.getElementById('cad-status').textContent = 'Erro ao buscar: ' + e;
+    if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px">Erro ao buscar.</td></tr>';
+    document.getElementById('cad-status').textContent = '';
   }
 }
 
 function renderCadResultado(pessoas) {
   var tb = document.getElementById('cad-tbody');
+  if (!tb) return;
   if (!pessoas.length) {
-    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
     return;
   }
   tb.innerHTML = pessoas.map(function(p) {
-    var dn = p.data_nascimento ? p.data_nascimento : '—';
-    var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '—';
+    var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '\u2014';
+    var temRelatorio = !!(p.relatorio_abordagem && p.relatorio_abordagem.trim());
     return '<tr>' +
-      '<td>' + p.id + '</td>' +
-      '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
-      '<td>' + _esc(p.apelido || '—') + '</td>' +
-      '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '—') + '</td>' +
-      '<td>' + _esc(p.rg || '—') + '</td>' +
-      '<td>' + dn + '</td>' +
-      '<td>' + _esc(p.contato || '—') + '</td>' +
+      '<td style="color:var(--muted);font-size:.8rem">' + p.id + '</td>' +
+      '<td style="font-weight:600">' + _esc(p.nome) +
+        (temRelatorio ? ' <span title="Possui relat\u00f3rio de abordagem" style="color:var(--accent);font-size:.72rem">\ud83d\udcc4</span>' : '') +
+      '</td>' +
+      '<td>' + _esc(p.apelido || '\u2014') + '</td>' +
+      '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '\u2014') + '</td>' +
+      '<td>' + _esc(p.contato || '\u2014') + '</td>' +
       '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
       '<td style="text-align:center;white-space:nowrap">' +
+        '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar dados">&#128269;</button> ' +
         '<button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button> ' +
-        '<button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',\'' + _esc(p.nome).replace(/'/g, "\\'") + '\')" title="Excluir">&#128465;</button>' +
+        '<button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>' +
       '</td>' +
       '</tr>';
   }).join('');
@@ -7807,12 +7840,12 @@ function _fmtCpf(cpf) {
 // ── Formulário ────────────────────────────────────────────────────────────────
 function cadastroNovaPessoa() {
   cadastroLimparForm();
-  document.getElementById('cad-form-titulo').textContent = '📝 Nova Pessoa';
+  document.getElementById('cad-form-titulo').textContent = '📝 Nova Abordagem';
   document.getElementById('cad-form-wrap').style.display = '';
   document.getElementById('cad-nome').focus();
 }
 
-function cadastroLimparForm() {
+function cadastroLimparForm(fechar) {
   document.getElementById('cad-id').value = '';
   document.getElementById('cad-nome').value = '';
   document.getElementById('cad-apelido').value = '';
@@ -7825,9 +7858,11 @@ function cadastroLimparForm() {
   document.getElementById('cad-uf').value = 'RO';
   document.getElementById('cad-mae').value = '';
   document.getElementById('cad-pai').value = '';
+  var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = '';
   document.getElementById('cad-form-erro').textContent = '';
   document.getElementById('cad-form-ok').style.display = 'none';
-  document.getElementById('cad-form-titulo').textContent = '📝 Nova Pessoa';
+  document.getElementById('cad-form-titulo').textContent = '📝 Nova Abordagem';
+  if (fechar) document.getElementById('cad-form-wrap').style.display = 'none';
 }
 
 function cadastroPopularForm(p) {
@@ -7843,6 +7878,7 @@ function cadastroPopularForm(p) {
   document.getElementById('cad-uf').value = p.estado_naturalidade || 'RO';
   document.getElementById('cad-mae').value = p.nome_mae || '';
   document.getElementById('cad-pai').value = p.nome_pai || '';
+  var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = p.relatorio_abordagem || '';
   document.getElementById('cad-form-erro').textContent = '';
   document.getElementById('cad-form-ok').style.display = 'none';
 }
@@ -7885,6 +7921,7 @@ async function cadastroSalvar() {
     estado_naturalidade: document.getElementById('cad-uf').value,
     nome_mae:            document.getElementById('cad-mae').value.trim(),
     nome_pai:            document.getElementById('cad-pai').value.trim(),
+    relatorio_abordagem: (document.getElementById('cad-relatorio') ? document.getElementById('cad-relatorio').value.trim() : '') || null,
   };
 
   var id  = document.getElementById('cad-id').value;
@@ -7909,7 +7946,8 @@ async function cadastroSalvar() {
   }
 }
 
-async function cadastroExcluir(id, nome) {
+async function cadastroExcluir(id, elOrNome) {
+  var nome = (typeof elOrNome === 'string') ? elOrNome : (elOrNome && elOrNome.dataset ? elOrNome.dataset.nome : String(id));
   if (!confirm('Excluir a pessoa "' + nome + '"?\nEsta ação não pode ser desfeita.')) return;
   try {
     var resp = await fetch('/api/pessoas/' + id, {method:'DELETE'});
@@ -7926,6 +7964,48 @@ async function cadastroExcluir(id, nome) {
 }
 
 // Carrega automaticamente ao entrar na aba
+async function cadastroVisualizar(id) {
+  var modal  = document.getElementById('cad-view-modal');
+  var body   = document.getElementById('cad-view-body');
+  var titulo = document.getElementById('cad-view-titulo');
+  var editBtn = document.getElementById('cad-view-edit-btn');
+  if (!modal) return;
+  body.innerHTML = '<div style="text-align:center;padding:20px"><span class="spinner"></span> Carregando...</div>';
+  openModal('cad-view-modal');
+  try {
+    var resp = await fetch('/api/pessoas/' + id);
+    if (!resp.ok) { body.innerHTML = '<p style="color:var(--danger)">Erro ao carregar.</p>'; return; }
+    var p = await resp.json();
+    titulo.textContent = '👤 ' + (p.nome || 'Pessoa #' + id);
+    editBtn.onclick = function() { closeModal('cad-view-modal'); cadastroEditar(id); };
+    function row(label, val) {
+      if (!val) return '';
+      return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)">' +
+        '<span style="min-width:160px;color:var(--muted);font-size:.8rem">' + label + '</span>' +
+        '<span style="flex:1;word-break:break-word">' + _esc(String(val)) + '</span></div>';
+    }
+    var cpfFmt = p.cpf ? _fmtCpf(p.cpf) : '';
+    var html = row('Nome', p.nome) + row('Apelido / Vulgo', p.apelido)
+      + row('CPF', cpfFmt) + row('RG', p.rg)
+      + row('Data de Nascimento', p.data_nascimento)
+      + row('Naturalidade', p.naturalidade ? (p.naturalidade + (p.estado_naturalidade ? ' – ' + p.estado_naturalidade : '')) : '')
+      + row('Contato', p.contato) + row('Profissão', p.profissao)
+      + row('Nome da Mãe', p.nome_mae) + row('Nome do Pai', p.nome_pai)
+      + row('Cadastrado em', p.data_cadastro ? p.data_cadastro.substring(0,10) : '');
+    if (p.relatorio_abordagem && p.relatorio_abordagem.trim()) {
+      html += '<div style="margin-top:14px">'
+        + '<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">📄 Relatório da Abordagem</div>'
+        + '<div style="background:rgba(255,255,255,.05);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 var(--radius) var(--radius) 0;white-space:pre-wrap;font-size:.85rem;line-height:1.6">'
+        + _esc(p.relatorio_abordagem) + '</div></div>';
+    } else {
+      html += '<div style="margin-top:12px;color:var(--muted);font-size:.8rem;font-style:italic">Nenhum relatório de abordagem registrado.</div>';
+    }
+    body.innerHTML = html;
+  } catch(e) {
+    body.innerHTML = '<p style="color:var(--danger)">Erro: ' + _esc(e.message) + '</p>';
+  }
+}
+
 (function() {
   var _origSwitchTab = window.switchTab;
   window.switchTab = function(name, el) {

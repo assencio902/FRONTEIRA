@@ -491,6 +491,7 @@ def _init_db():
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS estado_naturalidade TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_mae TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_pai TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS relatorio_abordagem TEXT;")
 
 
 # ===========================
@@ -6139,12 +6140,13 @@ def _pessoa_row_to_dict(r) -> dict:
         "nome_mae":            r[10],
         "nome_pai":            r[11],
         "data_cadastro":       r[12].isoformat() if r[12] else None,
+        "relatorio_abordagem": r[13],
     }
 
 _PESSOA_SELECT = """
     SELECT id, nome, apelido, contato, profissao, cpf, rg,
            data_nascimento, naturalidade, estado_naturalidade,
-           nome_mae, nome_pai, data_cadastro
+           nome_mae, nome_pai, data_cadastro, relatorio_abordagem
     FROM pessoas
 """
 
@@ -6213,8 +6215,9 @@ async def criar_pessoa(request: Request):
                 """
                 INSERT INTO pessoas
                     (nome, apelido, contato, profissao, cpf, rg,
-                     data_nascimento, naturalidade, estado_naturalidade, nome_mae, nome_pai)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     data_nascimento, naturalidade, estado_naturalidade, nome_mae, nome_pai,
+                     relatorio_abordagem)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id
                 """,
                 (
@@ -6229,6 +6232,7 @@ async def criar_pessoa(request: Request):
                     (data.get("estado_naturalidade") or "").strip() or None,
                     (data.get("nome_mae") or "").strip() or None,
                     (data.get("nome_pai") or "").strip() or None,
+                    (data.get("relatorio_abordagem") or "").strip() or None,
                 ),
             )
             new_id = cur.fetchone()[0]
@@ -6260,7 +6264,8 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
                     nome = %s, apelido = %s, contato = %s, profissao = %s,
                     cpf = %s, rg = %s, data_nascimento = %s,
                     naturalidade = %s, estado_naturalidade = %s,
-                    nome_mae = %s, nome_pai = %s
+                    nome_mae = %s, nome_pai = %s,
+                    relatorio_abordagem = %s
                 WHERE id = %s
                 """,
                 (
@@ -6275,6 +6280,7 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
                     (data.get("estado_naturalidade") or "").strip() or None,
                     (data.get("nome_mae") or "").strip() or None,
                     (data.get("nome_pai") or "").strip() or None,
+                    (data.get("relatorio_abordagem") or "").strip() or None,
                     pessoa_id,
                 ),
             )
