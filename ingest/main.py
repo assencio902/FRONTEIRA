@@ -1750,7 +1750,9 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                         )
                     elif ct_part.startswith("image/") and len(data) >= 10_000:
                         images.append((v.filename or "image.jpg", data))
-                    elif not is_xml_part and len(data) >= 10_000 and xml_bytes is not None:
+                    elif not is_xml_part and len(data) >= 10_000:
+                        # Aceita como imagem independente de xml_bytes: câmeras podem enviar
+                        # imagem antes do XML, ou só imagem (sem XML), com content-type binário
                         images.append((v.filename or "image.jpg", data))
         else:
             # multipart/mixed ou outro subtipo — Starlette não processa; parse manual
@@ -1943,17 +1945,27 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 except Exception:
                     occurred_at = None
 
+            _confidence_raw = x("confidenceLevel")
             try:
-                confidence = float(x("confidenceLevel") or 0)
+                # Se a tag não existir, _confidence_raw é None → usamos -1 como sentinela
+                # (significa "não informado"), para não confundir com confidence=0 explícito
+                confidence = float(_confidence_raw) if _confidence_raw is not None else -1.0
             except Exception:
-                confidence = 0.0
+                confidence = -1.0
 
             # ── Filtra eventos que não são leituras ANPR reais ─────────────────
             _plate_raw_lower = (plate_raw or "").strip().lower()
-            _anpr_no_read = (
+            # Nota: confidence=0 explícito (câmera informou 0) descarta;
+            #       confidence=-1 (tag ausente, câmera não informa) NÃO descarta
+            _plate_is_empty_or_junk = (
                 not _plate_raw_lower
                 or _plate_raw_lower in ("unknown", "none", "null")
-                or confidence == 0.0
+            )
+            _anpr_no_read = (
+                _plate_is_empty_or_junk
+                or (_confidence_raw is not None and confidence == 0.0)
+                # confidence=0 SÓ descarta quando a tag estava presente no XML;
+                # câmeras que omitem confidenceLevel recebem confidence=-1 e passam aqui
             )
             if xml_event_type and xml_event_type.lower() != "anpr":
                 logger.info(
@@ -2129,7 +2141,7 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 camera_id,
                 channel_name,
                 xml_ip or client_ip,   # usa o IP real da câmera (do XML); fallback: IP do cliente HTTP
-                confidence,
+                confidence if confidence >= 0.0 else None,  # -1.0 (tag ausente) → NULL no banco
                 image_path,
                 occurred_at,
                 event_direcao,         # direção derivada: XML direction + direcao da câmera
@@ -2227,11 +2239,12 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                             plate_normalized,
                         )
                     try:
-                        conf_val = float(confidence or 0)
+                        conf_val = float(confidence) if confidence >= 0.0 else None
                     except Exception:
-                        conf_val = 0.0
+                        conf_val = None
 
-                    if conf_val < MIN_PLATE_CONF:
+                    # confidence=-1 significa "tag ausente na câmera" → não penaliza
+                    if conf_val is not None and conf_val < MIN_PLATE_CONF:
                         logger.warning(
                             "[WEBHOOK] Alerta descartado por baixa confiança event_id=%s plate=%s conf=%.3f min_required=%.3f",
                             event_id,
