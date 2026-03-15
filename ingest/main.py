@@ -2116,6 +2116,26 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 channel_name,
             )
 
+            # -- Log XML bruto quando placa vazia/invalida --
+            _diag_plate_up = (plate or "").strip().upper()
+            _diag_invalida = (
+                not _diag_plate_up
+                or _diag_plate_up in ("UNKNOWN", "NONE", "NULL")
+                or not _is_valid_plate_format(_diag_plate_up)
+            )
+            if _diag_invalida and xml_bytes:
+                _xml_snippet = xml_bytes[:1200].decode("utf-8", errors="replace")
+                logger.warning(
+                    "[WEBHOOK-RAW-XML] remote=%s content_type=%r parser=%s "
+                    "event_id=%s plate=%r xml=%s",
+                    client_ip,
+                    content_type,
+                    _parser_used,
+                    event_id,
+                    plate or "",
+                    _xml_snippet,
+                )
+
             # Disparo automático de push: aplicar validações rígidas para evitar falsos positivos
             plate_test = plate and plate.strip()
             plate_upper = plate.strip().upper() if plate_test else ""
