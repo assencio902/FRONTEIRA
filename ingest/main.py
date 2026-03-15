@@ -1948,13 +1948,19 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 confidence = 0.0
 
             # ── Filtra eventos que não são leituras ANPR reais ─────────────────
+            _plate_raw_lower = (plate_raw or "").strip().lower()
+            _anpr_no_read = (
+                not _plate_raw_lower
+                or _plate_raw_lower in ("unknown", "none", "null")
+                or confidence == 0.0
+            )
             if xml_event_type and xml_event_type.lower() != "anpr":
                 logger.info(
                     "[WEBHOOK-NOT-ANPR] ip=%s eventType=%r — evento não é ANPR, placa descartada",
                     client_ip, xml_event_type,
                 )
                 plate = ""
-            elif (plate_raw or "").strip().lower() == "unknown" or confidence == 0.0:
+            elif _anpr_no_read:
                 logger.info(
                     "[WEBHOOK-ANPR-UNKNOWN] ip=%s eventType=%r licensePlate=%r confidence=%.3f — sem leitura real",
                     client_ip, xml_event_type, plate_raw, confidence,
@@ -1970,6 +1976,13 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
     # Mantém placa vazia se não houver no XML — será preenchida pelo YOLO ou permanecerã null
     # NÃO usa "UNKNOWN" para evitar poluir alertas_criticos com placas falsas
+
+    # ── WEBHOOK-NO-XML: chegou imagem mas sem XML útil ─────────────────────────
+    if images and not xml_bytes:
+        logger.info(
+            "[WEBHOOK-NO-XML] ip=%s content_type=%r parser=%s images=%d — imagem recebida sem XML anexo",
+            client_ip, content_type, _parser_used, len(images),
+        )
 
     logger.info(
         "[WEBHOOK] Evento recebido ip=%s content_type=%r parser=%s images=%d xml_len=%s plate=%r",
