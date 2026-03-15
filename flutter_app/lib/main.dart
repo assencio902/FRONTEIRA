@@ -5,7 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
-import 'services/auth_storage.dart';
+import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
@@ -84,16 +84,13 @@ class _SplashState extends State<_Splash> {
   }
 
   Future<void> _check() async {
-    final token = await AuthStorage.getToken();
-    final expired = await AuthStorage.isTokenExpired();
-    if (expired) {
-      await AuthStorage.clear();
-    }
+    // Tenta restaurar sessão: usa access_token válido ou faz refresh automático.
+    // Só redireciona para login se não houver sessão recuperável.
+    final restored = await AuthService.instance.restoreSession();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) =>
-            (token != null && token.isNotEmpty && !expired) ? const DashboardScreen() : const LoginScreen(),
+        builder: (_) => restored ? const DashboardScreen() : const LoginScreen(),
       ),
     );
   }

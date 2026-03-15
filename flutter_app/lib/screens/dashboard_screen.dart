@@ -15,6 +15,7 @@ import '../screens/event_detail_screen.dart';
 import '../services/alarm_service.dart';
 import '../services/alarm_history_service.dart';
 import '../services/api.dart';
+import '../services/auth_service.dart';
 import '../services/auth_storage.dart';
 import '../services/notification_service.dart';
 import '../services/watchlist_service.dart';
@@ -592,6 +593,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleSessionExpired() async {
+    debugPrint('[Dashboard] Sessão expirada — tentando refresh automático...');
+    final restored = await AuthService.instance.refreshToken();
+    if (restored) {
+      debugPrint('[Dashboard] Sessão restaurada via refresh — recarregando dashboard.');
+      if (mounted) _loadDashboard();
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

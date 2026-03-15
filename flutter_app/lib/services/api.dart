@@ -40,7 +40,7 @@ class Api {
 
   // ─── Login ────────────────────────────────────────────────────────────────
 
-  /// POST /api/auth/login — salva o access_token no [AuthStorage].
+  /// POST /api/auth/login — salva o access_token e refresh_token no [AuthStorage].
   static Future<void> login(String username, String password) async {
     final url = Uri.parse('$baseUrl/api/auth/login');
     debugPrint('REQ: POST $url');
@@ -49,13 +49,16 @@ class Api {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
     ).timeout(const Duration(seconds: 10));
-    debugPrint('RES login: ${res.statusCode} body=${res.body}');
+    debugPrint('RES login: \${res.statusCode} body=\${res.body}');
     if (res.statusCode != 200) {
-      throw Exception('Login falhou (${res.statusCode}): ${res.body}');
+      throw Exception('Login falhou (\${res.statusCode}): \${res.body}');
     }
     final data = jsonDecode(res.body) as Map<String, dynamic>;
-    final token = data['access_token'] as String;
-    await AuthStorage.saveToken(token);
+    await AuthStorage.saveToken(data['access_token'] as String);
+    final refreshToken = (data['refresh_token'] ?? '').toString();
+    if (refreshToken.isNotEmpty) {
+      await AuthStorage.saveRefreshToken(refreshToken);
+    }
   }
 
   // ─── Placas ───────────────────────────────────────────────────────────────

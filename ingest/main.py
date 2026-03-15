@@ -70,9 +70,10 @@ MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
 # ===========================
 # AUTH / JWT
 # ===========================
-JWT_SECRET  = os.getenv("JWT_SECRET", "bpfron-change-me-in-production")
-JWT_ALG     = "HS256"
-JWT_EXPIRE  = int(os.getenv("JWT_EXPIRE_HOURS", "8"))  # horas
+JWT_SECRET         = os.getenv("JWT_SECRET", "bpfron-change-me-in-production")
+JWT_ALG            = "HS256"
+JWT_EXPIRE         = int(os.getenv("JWT_EXPIRE_HOURS", "8"))   # horas
+JWT_REFRESH_EXPIRE = int(os.getenv("JWT_REFRESH_EXPIRE_DAYS", "30"))  # dias
 
 _pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -87,12 +88,18 @@ def _make_token(sub: str, role: str, full_name: str) -> str:
     safe_role = normalize_role(role)
     return _jwt.encode({"sub": sub, "role": safe_role, "name": full_name, "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
 
+def _make_refresh_token(sub: str) -> str:
+    """Gera refresh token de longa duração (sem role — só para renovar access_token)."""
+    exp = datetime.now(timezone.utc) + timedelta(days=JWT_REFRESH_EXPIRE)
+    return _jwt.encode({"sub": sub, "type": "refresh", "exp": exp}, JWT_SECRET, algorithm=JWT_ALG)
+
 def _decode_token(token: str) -> dict:
     return _jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
 # Paths públicos (não exigem JWT)
 _PUBLIC_PREFIXES = ("/api/health", "/static", "/uploads", "/login", "/api/webhook", "/api/simple-webhook", "/webhook", "/api/ingest", "/api/catchall", "/catchall")
 _PUBLIC_EXACT    = {"/", "/dashboard", "/favicon.ico", "/api/auth/login",
+                    "/api/auth/refresh",
                     "/docs", "/redoc", "/openapi.json"}
 
 # Regex para endpoints de imagem que o browser carrega diretamente (sem JWT header)
@@ -727,13 +734,16 @@ async def auth_login(request: Request):
         raise HTTPException(status_code=403, detail="Usuário inativo")
     if not _verify_pw(password, pw_hash):
         raise HTTPException(status_code=401, detail="Usuário ou senha inválidos")
-    token = _make_token(uname, role, full_name or uname)
+    token         = _make_token(uname, role, full_name or uname)
+    refresh_token = _make_refresh_token(uname)
     return {
-        "access_token": token,
-        "token_type": "bearer",
-        "role": role,
-        "full_name": full_name or uname,
-        "username": uname,
+        "access_token":  token,
+        "refresh_token": refresh_token,
+        "token_type":    "bearer",
+        "expires_in":    JWT_EXPIRE * 3600,
+        "role":          role,
+        "full_name":     full_name or uname,
+        "username":      uname,
     }
 
 @app.get("/api/auth/me")
@@ -745,6 +755,47 @@ async def auth_me(request: Request):
         "username": user.get("sub"),
         "role": normalize_role(user.get("role")),
         "full_name": user.get("name"),
+    }
+
+@app.post("/api/auth/refresh")
+async def auth_refresh(request: Request):
+    """Renova access_token usando um refresh_token válido (rota pública)."""
+    data = await request.json()
+    refresh_tk = str(data.get("refresh_token") or "").strip()
+    if not refresh_tk:
+        raise HTTPException(status_code=400, detail="refresh_token obrigatório")
+    try:
+        payload = _jwt.decode(refresh_tk, JWT_SECRET, algorithms=[JWT_ALG])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Token inválido (tipo incorreto)")
+        sub = payload.get("sub")
+        if not sub:
+            raise HTTPException(status_code=401, detail="Token inválido")
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Refresh token expirado. Faça login novamente.")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Refresh token inválido")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT username, full_name, role, ativa FROM users WHERE username=%s LIMIT 1",
+                (sub,),
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+    uname, full_name, role, ativa = row
+    if not ativa:
+        raise HTTPException(status_code=403, detail="Usuário inativo")
+    role = normalize_role(role)
+    new_access  = _make_token(uname, role, full_name or uname)
+    new_refresh = _make_refresh_token(uname)
+    logger.info("[AUTH] refresh bem-sucedido sub=%s", uname)
+    return {
+        "access_token":  new_access,
+        "refresh_token": new_refresh,
+        "token_type":    "bearer",
+        "expires_in":    JWT_EXPIRE * 3600,
     }
 
 @app.put("/api/auth/password")

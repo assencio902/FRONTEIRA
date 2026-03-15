@@ -114,6 +114,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       await AuthStorage.saveToken(token);
+      final refreshToken = (data['refresh_token'] ?? '').toString();
+      if (refreshToken.isNotEmpty) {
+        await AuthStorage.saveRefreshToken(refreshToken);
+        debugPrint('[LOGIN] refresh_token salvo');
+      }
       debugPrint('[LOGIN] token salvo, sincronizando FCM...');
       await NotificationService().syncTokenWithBackend(reason: 'login');
 

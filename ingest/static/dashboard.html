@@ -3608,9 +3608,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     var actionsHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       + (!d.is_alvo
         ? '<button class="btn btn-sm" style="background:rgba(139,92,246,.7);color:#fff" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\'") + '\')">\uD83C\uDFAF Cadastrar como Alvo</button>'
-        : '<button class="btn btn-sm btn-danger" onclick="_navigateToAlvos()">&#128065; Ver nos Alvos</button>')
+        : '')
       + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Detalhes do Score</button>'
-      + '<button class="btn btn-outline btn-sm" onclick="closeModal(\'detail-modal\');var inp=document.getElementById(\'cen-filter-plate\');if(inp){inp.value=\'' + plate.replace(/'/g,"\'") + '\';cenApplyFilter();}">&#128269; Ver na Central</button>'
       + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="promptTrajetoria()">&#128663; Trajetória no Mapa</button>'
       + '</div>';
 
@@ -3781,13 +3780,6 @@ function _addPlateAsAlvo(plate) {
   var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
   if (alvosBtn) switchBatTab('alvos', alvosBtn);
   setTimeout(function(){ var inp2=document.getElementById('alvo-plate-input'); if(inp2) inp2.focus(); }, 200);
-}
-function _navigateToAlvos() {
-  closeModal('detail-modal');
-  var batTab = document.querySelector('.nav-item[onclick*="batedor"]');
-  if (batTab) switchTab('batedor', batTab);
-  var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
-  if (alvosBtn) switchBatTab('alvos', alvosBtn);
 }
 function _dirCell(dir) {
   if (dir === 'CRESCENTE')   return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>';
@@ -5737,8 +5729,10 @@ function _plotarTrajetoria() {
   var colorMap = {};
   (_mapaTrajetoria.plates || []).forEach(function(p, i) { colorMap[p] = COLORS[i % COLORS.length]; });
 
-  // Pontos já vêm com lat/lng do backend, ordenados por timestamp
-  var points = _mapaTrajetoria.points.slice();
+  // Ordena cronologicamente antes de desenhar (garante sequência correta mesmo se o backend divergir)
+  var points = _mapaTrajetoria.points.slice().sort(function(a, b) {
+    return new Date(a.ts) - new Date(b.ts);
+  });
 
   // Calcula bearing entre dois pontos
   function bearing(p1, p2) {
@@ -5778,9 +5772,7 @@ function _plotarTrajetoria() {
     totalTrechos += segments.length;
 
     segments.forEach(function(seg, segIdx) {
-      var segColor = segments.length > 1
-        ? _SEGMENT_COLORS[segIdx % _SEGMENT_COLORS.length]
-        : baseColor;
+      var segColor = '#ef4444'; // rota sempre vermelha
 
       // ── Polyline por trecho (segmento-a-segmento) ───────────────
       if (seg.length >= 2) {
@@ -6322,6 +6314,8 @@ function renderVehicleTrajectory(data) {
   var plate = data.plate;
   // Normaliza lon → lng (backend usa 'lon', Google Maps espera 'lng')
   var points = data.points.map(function(p) { return Object.assign({}, p, { lng: p.lon }); });
+  // Ordena cronologicamente antes de indexar e desenhar
+  points.sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
 
   // Guarda dados para limpeza posterior
   if (!_googleMap) return;

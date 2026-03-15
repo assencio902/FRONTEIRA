@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../services/api.dart';
+import '../services/auth_service.dart';
 import '../services/auth_storage.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
@@ -40,8 +41,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Future<void> _loadEventDetail() async {
     final tokenExpired = await AuthStorage.isTokenExpired();
     if (tokenExpired) {
-      await _handleSessionExpired();
-      return;
+      final restored = await AuthService.instance.refreshToken();
+      if (!restored) {
+        await _handleSessionExpiredForced();
+        return;
+      }
     }
 
     setState(() {
@@ -57,7 +61,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         _loading = false;
       });
     } on ApiUnauthorizedException {
-      await _handleSessionExpired();
+      final restored = await AuthService.instance.refreshToken();
+      if (restored) {
+        _loadEventDetail();
+      } else {
+        await _handleSessionExpiredForced();
+      }
     } on TimeoutException {
       if (!mounted) return;
       setState(() {
@@ -80,7 +89,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
   }
 
-  Future<void> _handleSessionExpired() async {
+  Future<void> _handleSessionExpiredForced() async {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

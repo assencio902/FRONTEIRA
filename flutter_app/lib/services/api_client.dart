@@ -68,10 +68,13 @@ class ApiClient {
     _checkResponse(res);
     final token = AuthToken.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
     await AuthStorage.saveToken(token.accessToken);
+    if (token.refreshToken != null && token.refreshToken!.isNotEmpty) {
+      await AuthStorage.saveRefreshToken(token.refreshToken!);
+    }
     return token;
   }
 
-  /// Remove o token localmente (logout).
+  /// Remove os tokens localmente (logout).
   Future<void> logout() async {
     await AuthStorage.clear();
   }
