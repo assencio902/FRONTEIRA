@@ -1,0 +1,102 @@
+{
+  "image_path": "/app/uploads/2026-03-14/0c467a002aa440d78096a7498b539f25.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "car": 1,
+    "motorcycle": 1
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.8941,
+      "xyxy": [
+        616.6,
+        338.7,
+        1263.0,
+        907.5
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.6126,
+      "xyxy": [
+        1033.3,
+        0.0,
+        1139.5,
+        177.3
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.4927,
+      "xyxy": [
+        1043.2,
+        88.2,
+        1139.1,
+        229.0
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.8941,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 3090.83,
+        "brightness": 83.16,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        616.6,
+        338.7,
+        1263.0,
+        907.5
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.4927,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1043.2,
+        88.2,
+        1139.1,
+        229.0
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.8941,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 3090.83,
+      "brightness": 83.16,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      616.6,
+      338.7,
+      1263.0,
+      907.5
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1884.82,
+    "brightness": 87.02,
+    "contrast": 38.37,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

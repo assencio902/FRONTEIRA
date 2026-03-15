@@ -1,0 +1,115 @@
+{
+  "image_path": "/app/uploads/2026-03-14/6d20dfc8e7a1417d96fee95176791769.jpg",
+  "vehicle_count": 3,
+  "vehicle_types": {
+    "pickup": 2,
+    "car": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.7334,
+      "xyxy": [
+        1766.6,
+        398.5,
+        2535.9,
+        915.5
+      ]
+    },
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.6801,
+      "xyxy": [
+        2296.7,
+        632.1,
+        2685.4,
+        1106.7
+      ]
+    },
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.547,
+      "xyxy": [
+        1768.2,
+        399.2,
+        2535.0,
+        909.5
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "pickup",
+      "class_pt": "Caminhonete",
+      "conf": 0.7334,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1766.6,
+        398.5,
+        2535.9,
+        915.5
+      ]
+    },
+    {
+      "class": "pickup",
+      "class_pt": "Caminhonete",
+      "conf": 0.6801,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        2296.7,
+        632.1,
+        2685.4,
+        1106.7
+      ]
+    },
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.547,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 983.63,
+        "brightness": 103.15,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1768.2,
+        399.2,
+        2535.0,
+        909.5
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.547,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 983.63,
+      "brightness": 103.15,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1768.2,
+      399.2,
+      2535.0,
+      909.5
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1861.79,
+    "brightness": 99.23,
+    "contrast": 36.43,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

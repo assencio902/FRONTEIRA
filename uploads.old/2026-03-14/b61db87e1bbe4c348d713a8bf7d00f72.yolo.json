@@ -1,0 +1,91 @@
+{
+  "image_path": "/app/uploads/2026-03-14/b61db87e1bbe4c348d713a8bf7d00f72.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "car": 1,
+    "truck": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.6659,
+      "xyxy": [
+        1481.9,
+        128.3,
+        2686.1,
+        1113.0
+      ]
+    },
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.4764,
+      "xyxy": [
+        1482.9,
+        127.8,
+        2686.3,
+        1109.3
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.6659,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1481.9,
+        128.3,
+        2686.1,
+        1113.0
+      ]
+    },
+    {
+      "class": "truck",
+      "class_pt": "Caminhão",
+      "conf": 0.4764,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 600.94,
+        "brightness": 61.08,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1482.9,
+        127.8,
+        2686.3,
+        1109.3
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "truck",
+    "class_pt": "Caminhão",
+    "conf": 0.4764,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 600.94,
+      "brightness": 61.08,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1482.9,
+      127.8,
+      2686.3,
+      1109.3
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2454.74,
+    "brightness": 102.03,
+    "contrast": 46.77,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

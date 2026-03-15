@@ -1,0 +1,138 @@
+{
+  "image_path": "/app/uploads/2026-03-14/735e42ece4364299acf1d26a7362fcd4.jpg",
+  "vehicle_count": 3,
+  "vehicle_types": {
+    "car": 1,
+    "pickup": 1,
+    "motorcycle": 1
+  },
+  "person_count": 2,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8991,
+      "xyxy": [
+        1898.3,
+        0.0,
+        2194.7,
+        668.6
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.7655,
+      "xyxy": [
+        2145.1,
+        2.6,
+        2493.1,
+        413.3
+      ]
+    },
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.4361,
+      "xyxy": [
+        1574.7,
+        0.0,
+        2548.0,
+        554.6
+      ]
+    },
+    {
+      "class": "truck",
+      "class_id": 7,
+      "conf": 0.3867,
+      "xyxy": [
+        1572.7,
+        0.7,
+        2560.0,
+        556.2
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.3741,
+      "xyxy": [
+        2025.6,
+        386.0,
+        2687.1,
+        913.4
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.4361,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 1311.37,
+        "brightness": 71.38,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1574.7,
+        0.0,
+        2548.0,
+        554.6
+      ]
+    },
+    {
+      "class": "pickup",
+      "class_pt": "Caminhonete",
+      "conf": 0.3867,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1572.7,
+        0.7,
+        2560.0,
+        556.2
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.3741,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        2025.6,
+        386.0,
+        2687.1,
+        913.4
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.4361,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 1311.37,
+      "brightness": 71.38,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1574.7,
+      0.0,
+      2548.0,
+      554.6
+    ]
+  },
+  "image_quality": {
+    "blur_score": 3686.79,
+    "brightness": 112.36,
+    "contrast": 50.28,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Múltiplos veículos na cena (Carro, Caminhonete, Moto)",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

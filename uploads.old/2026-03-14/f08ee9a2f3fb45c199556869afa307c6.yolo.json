@@ -1,0 +1,137 @@
+{
+  "image_path": "/app/uploads/2026-03-14/f08ee9a2f3fb45c199556869afa307c6.jpg",
+  "vehicle_count": 3,
+  "vehicle_types": {
+    "motorcycle": 2,
+    "car": 1
+  },
+  "person_count": 2,
+  "detections": [
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.7579,
+      "xyxy": [
+        1257.9,
+        483.9,
+        1484.1,
+        851.1
+      ]
+    },
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.6024,
+      "xyxy": [
+        911.7,
+        25.9,
+        1249.7,
+        245.7
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.4912,
+      "xyxy": [
+        916.7,
+        57.3,
+        1051.8,
+        215.4
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.3844,
+      "xyxy": [
+        1238.9,
+        350.7,
+        1484.8,
+        724.8
+      ]
+    },
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.3682,
+      "xyxy": [
+        1239.2,
+        358.8,
+        1399.6,
+        712.8
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.7579,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1257.9,
+        483.9,
+        1484.1,
+        851.1
+      ]
+    },
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.6024,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        911.7,
+        25.9,
+        1249.7,
+        245.7
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.4912,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 2646.35,
+        "brightness": 81.13,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        916.7,
+        57.3,
+        1051.8,
+        215.4
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.4912,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 2646.35,
+      "brightness": 81.13,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      916.7,
+      57.3,
+      1051.8,
+      215.4
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2332.84,
+    "brightness": 89.89,
+    "contrast": 39.66,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": "Múltiplos veículos na cena (Moto, Carro)",
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

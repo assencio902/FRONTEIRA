@@ -1,0 +1,112 @@
+{
+  "image_path": "/app/uploads/2026-03-14/570b30ae04e0490692b75c88f8ab0b65.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "motorcycle": 2
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8748,
+      "xyxy": [
+        1301.6,
+        167.1,
+        1634.0,
+        784.3
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.53,
+      "xyxy": [
+        1402.2,
+        534.3,
+        1661.3,
+        945.4
+      ]
+    },
+    {
+      "class": "frisbee",
+      "class_id": 29,
+      "conf": 0.3711,
+      "xyxy": [
+        503.7,
+        902.2,
+        623.4,
+        939.4
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.3578,
+      "xyxy": [
+        1316.7,
+        432.2,
+        1661.2,
+        946.2
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.53,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1402.2,
+        534.3,
+        1661.3,
+        945.4
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.3578,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 2251.51,
+        "brightness": 82.45,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        1316.7,
+        432.2,
+        1661.2,
+        946.2
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.3578,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 2251.51,
+      "brightness": 82.45,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      1316.7,
+      432.2,
+      1661.2,
+      946.2
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2581.32,
+    "brightness": 107.92,
+    "contrast": 37.49,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

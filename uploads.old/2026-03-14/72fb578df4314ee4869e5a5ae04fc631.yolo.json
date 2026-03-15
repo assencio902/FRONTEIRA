@@ -1,0 +1,90 @@
+{
+  "image_path": "/app/uploads/2026-03-14/72fb578df4314ee4869e5a5ae04fc631.jpg",
+  "vehicle_count": 2,
+  "vehicle_types": {
+    "car": 2
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.646,
+      "xyxy": [
+        1307.5,
+        288.2,
+        2387.4,
+        1020.4
+      ]
+    },
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.4604,
+      "xyxy": [
+        22.8,
+        0.0,
+        2661.0,
+        1481.4
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.646,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1307.5,
+        288.2,
+        2387.4,
+        1020.4
+      ]
+    },
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.4604,
+      "cor": "Roxo",
+      "plate_analysis": {
+        "blur_score": 19.44,
+        "brightness": 46.62,
+        "qualidade": "Ilegível (região desfocada)"
+      },
+      "xyxy": [
+        22.8,
+        0.0,
+        2661.0,
+        1481.4
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "car",
+    "class_pt": "Carro",
+    "conf": 0.4604,
+    "cor": "Roxo",
+    "plate_analysis": {
+      "blur_score": 19.44,
+      "brightness": 46.62,
+      "qualidade": "Ilegível (região desfocada)"
+    },
+    "xyxy": [
+      22.8,
+      0.0,
+      2661.0,
+      1481.4
+    ]
+  },
+  "image_quality": {
+    "blur_score": 370.67,
+    "brightness": 53.48,
+    "contrast": 27.27,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

@@ -1,0 +1,66 @@
+{
+  "image_path": "/app/uploads/2026-03-14/c5e6013a31454f44aa2ca836b69a97c8.jpg",
+  "vehicle_count": 1,
+  "vehicle_types": {
+    "bus": 1
+  },
+  "person_count": 0,
+  "detections": [
+    {
+      "class": "bus",
+      "class_id": 5,
+      "conf": 0.8011,
+      "xyxy": [
+        574.7,
+        0.0,
+        2411.4,
+        993.3
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "bus",
+      "class_pt": "Ônibus",
+      "conf": 0.8011,
+      "cor": "Prata/Cinza",
+      "plate_analysis": {
+        "blur_score": 2484.63,
+        "brightness": 89.58,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        574.7,
+        0.0,
+        2411.4,
+        993.3
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "bus",
+    "class_pt": "Ônibus",
+    "conf": 0.8011,
+    "cor": "Prata/Cinza",
+    "plate_analysis": {
+      "blur_score": 2484.63,
+      "brightness": 89.58,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      574.7,
+      0.0,
+      2411.4,
+      993.3
+    ]
+  },
+  "image_quality": {
+    "blur_score": 2425.48,
+    "brightness": 91.21,
+    "contrast": 56.21,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}

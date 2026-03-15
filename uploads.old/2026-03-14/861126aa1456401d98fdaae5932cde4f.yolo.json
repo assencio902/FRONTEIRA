@@ -1,0 +1,126 @@
+{
+  "image_path": "/app/uploads/2026-03-14/861126aa1456401d98fdaae5932cde4f.jpg",
+  "vehicle_count": 3,
+  "vehicle_types": {
+    "car": 1,
+    "motorcycle": 2
+  },
+  "person_count": 1,
+  "detections": [
+    {
+      "class": "person",
+      "class_id": 0,
+      "conf": 0.8395,
+      "xyxy": [
+        570.6,
+        523.0,
+        1001.6,
+        1316.6
+      ]
+    },
+    {
+      "class": "car",
+      "class_id": 2,
+      "conf": 0.7644,
+      "xyxy": [
+        1725.8,
+        203.1,
+        2687.3,
+        915.9
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.453,
+      "xyxy": [
+        553.7,
+        773.6,
+        1041.5,
+        1491.6
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_id": 3,
+      "conf": 0.3603,
+      "xyxy": [
+        721.2,
+        1032.1,
+        1035.5,
+        1487.3
+      ]
+    }
+  ],
+  "vehicle_details": [
+    {
+      "class": "car",
+      "class_pt": "Carro",
+      "conf": 0.7644,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        1725.8,
+        203.1,
+        2687.3,
+        915.9
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.453,
+      "cor": "Azul",
+      "plate_analysis": {
+        "blur_score": 1550.19,
+        "brightness": 63.19,
+        "qualidade": "Legível"
+      },
+      "xyxy": [
+        553.7,
+        773.6,
+        1041.5,
+        1491.6
+      ]
+    },
+    {
+      "class": "motorcycle",
+      "class_pt": "Moto",
+      "conf": 0.3603,
+      "cor": null,
+      "plate_analysis": null,
+      "xyxy": [
+        721.2,
+        1032.1,
+        1035.5,
+        1487.3
+      ]
+    }
+  ],
+  "target_vehicle": {
+    "class": "motorcycle",
+    "class_pt": "Moto",
+    "conf": 0.453,
+    "cor": "Azul",
+    "plate_analysis": {
+      "blur_score": 1550.19,
+      "brightness": 63.19,
+      "qualidade": "Legível"
+    },
+    "xyxy": [
+      553.7,
+      773.6,
+      1041.5,
+      1491.6
+    ]
+  },
+  "image_quality": {
+    "blur_score": 1245.3,
+    "brightness": 80.86,
+    "contrast": 35.37,
+    "qualidade": "Boa"
+  },
+  "sem_placa_motivo": null,
+  "model": "yolov8n.pt",
+  "conf_threshold": 0.35
+}
