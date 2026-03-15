@@ -1512,6 +1512,96 @@ def stats_events_per_camera():
 # ===========================
 
 
+def _parse_multipart_body(content_type: str, body: bytes) -> tuple["bytes | None", "list[tuple[str,bytes]]"]:
+    """
+    Analisa corpos multipart/form-data *e* multipart/mixed manualmente.
+    Suporta:
+      - XML com Content-Type: application/xml ou text/xml
+      - XML sem content-type quando body começa com '<'
+      - Partes de imagem (image/*)
+    Retorna (xml_bytes, images).
+    """
+    xml_bytes: bytes | None = None
+    images: list[tuple[str, bytes]] = []
+
+    boundary: str | None = None
+    for seg in content_type.split(";"):
+        seg = seg.strip()
+        if seg.lower().startswith("boundary="):
+            boundary = seg[9:].strip().strip('"').strip("'")
+            break
+    if not boundary:
+        logger.warning("[WEBHOOK-PARSE] multipart sem boundary em content_type=%s", content_type)
+        return None, []
+
+    delimiter = b"--" + boundary.encode("ascii", errors="replace")
+
+    parts = body.split(delimiter)
+    for raw_part in parts[1:]:
+        # Delimitador final ("--") → stop
+        stripped_head = raw_part[:8].strip()
+        if stripped_head.startswith(b"--"):
+            break
+
+        # Separa headers do corpo da parte
+        sep = b"\r\n\r\n" if b"\r\n\r\n" in raw_part else b"\n\n"
+        if sep not in raw_part:
+            continue
+        headers_raw, part_body = raw_part.split(sep, 1)
+
+        # Remove CRLF introduzido pelo boundary seguinte
+        if part_body.endswith(b"\r\n"):
+            part_body = part_body[:-2]
+        elif part_body.endswith(b"\n"):
+            part_body = part_body[:-1]
+
+        # Faz parse mínimo dos headers da parte
+        headers_text = headers_raw.decode("utf-8", errors="ignore")
+        part_ct = ""
+        part_filename = ""
+        part_name = ""
+        for line in headers_text.splitlines():
+            lower_line = line.lower().strip()
+            if lower_line.startswith("content-type:"):
+                part_ct = line.split(":", 1)[1].strip().lower().split(";")[0].strip()
+            elif lower_line.startswith("content-disposition:"):
+                for piece in line.split(";"):
+                    piece = piece.strip()
+                    if piece.lower().startswith("filename="):
+                        part_filename = piece[9:].strip('"').strip("'")
+                    elif piece.lower().startswith("name="):
+                        part_name = piece[5:].strip('"').strip("'")
+
+        is_xml = (
+            "xml" in part_ct
+            or part_filename.lower().endswith(".xml")
+            or (not part_body[:1].isdigit() and part_body.lstrip()[:1] == b"<")
+        )
+        is_image = part_ct.startswith("image/")
+
+        if is_xml and xml_bytes is None:
+            xml_bytes = part_body
+            logger.info(
+                "[WEBHOOK-PARSE] parte XML encontrada name=%s filename=%s ct=%s len=%d",
+                part_name, part_filename, part_ct, len(part_body),
+            )
+        elif is_image and len(part_body) >= 10_000:
+            images.append((part_filename or part_name or "image.jpg", part_body))
+            logger.info(
+                "[WEBHOOK-PARSE] parte imagem encontrada name=%s filename=%s ct=%s len=%d",
+                part_name, part_filename, part_ct, len(part_body),
+            )
+        elif not is_xml and not is_image and xml_bytes is None and part_body.lstrip()[:1] == b"<":
+            # Fallback: parte sem content-type, body parece XML
+            xml_bytes = part_body
+            logger.warning(
+                "[WEBHOOK-PARSE] parte sem ct usada como XML (fallback) name=%s len=%d",
+                part_name, len(part_body),
+            )
+
+    return xml_bytes, images
+
+
 def _fetch_snapshot_and_enqueue(
     event_id: int,
     cam_ip: str,
@@ -1586,6 +1676,7 @@ def _fetch_snapshot_and_enqueue(
 async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     client_ip = _get_client_ip(request)
     content_type = request.headers.get("content-type", "")
+    ct_lower = content_type.lower()
 
     xml_bytes: bytes | None = None
     images: list[tuple[str, bytes]] = []
@@ -1598,25 +1689,90 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     occurred_at = None
     xml_direction = None   # direção do veículo reportada pela câmera (forward/reverse)
 
-    if "multipart/form-data" in content_type:
-        # ── Formato padrão Hikvision ISAPI / camera-poller ──────────────
-        try:
-            form = await request.form()
-        except ClientDisconnect:
-            return JSONResponse({"ok": True})
+    # ── Variáveis XML inicializadas aqui para evitar NameError após o bloco ──
+    plate_rect: "dict | None" = None
+    vehicle_rect: "dict | None" = None
+    pic_width: "str | None" = None
+    pic_height: "str | None" = None
+    coord_type: str = "normalized"
+    xml_vehicle_color: "str | None" = None
+    xml_vehicle_type: "str | None" = None
+    xml_plate_color: "str | None" = None
+    xml_speed: "str | None" = None
+    xml_speed_limit: "str | None" = None
+    xml_illegal_code: "str | None" = None
+    xml_illegal_name: "str | None" = None
+    xml_plate_chars: "str | None" = None
+    xml_license_bright: "str | None" = None
 
-        for _, v in form.multi_items():
-            if isinstance(v, UploadFile):
-                data = await v.read()
-                if v.filename and v.filename.lower().endswith(".xml"):
-                    xml_bytes = data
-                elif len(data) >= 10_000:
-                    images.append((v.filename or "image.jpg", data))
+    _parser_used = "unknown"  # para logging de diagnóstico
+
+    # ── Log de diagnóstico imediato ──────────────────────────────────────────
+    logger.info(
+        "[WEBHOOK-DIAG] POST /webhook ip=%s content_type=%r",
+        client_ip, content_type,
+    )
+
+    if "multipart/" in ct_lower:
+        # ── Formato Hikvision ISAPI: multipart/form-data OU multipart/mixed ──
+        if "multipart/form-data" in ct_lower:
+            # Starlette/python-multipart só processa multipart/form-data nativamente
+            _parser_used = "multipart/form-data (form())"
+            try:
+                form = await request.form()
+            except ClientDisconnect:
+                return JSONResponse({"ok": True})
+
+            for field_name, v in form.multi_items():
+                if isinstance(v, str):
+                    # XML enviado como campo de texto simples (sem filename)
+                    if xml_bytes is None and v.strip().startswith("<"):
+                        xml_bytes = v.encode("utf-8", errors="replace")
+                        logger.info(
+                            "[WEBHOOK-DIAG] XML recebido como campo texto name=%s len=%d",
+                            field_name, len(xml_bytes),
+                        )
+                elif isinstance(v, UploadFile):
+                    data = await v.read()
+                    ct_part = (v.content_type or "").lower()
+                    fname_lower = (v.filename or "").lower()
+                    is_xml_part = (
+                        fname_lower.endswith(".xml")
+                        or "xml" in ct_part
+                        or (xml_bytes is None and data.lstrip()[:1] == b"<")
+                    )
+                    if is_xml_part and xml_bytes is None:
+                        xml_bytes = data
+                        logger.info(
+                            "[WEBHOOK-DIAG] XML recebido como UploadFile name=%s filename=%s ct=%s len=%d",
+                            field_name, v.filename, v.content_type, len(data),
+                        )
+                    elif ct_part.startswith("image/") and len(data) >= 10_000:
+                        images.append((v.filename or "image.jpg", data))
+                    elif not is_xml_part and len(data) >= 10_000 and xml_bytes is not None:
+                        images.append((v.filename or "image.jpg", data))
+        else:
+            # multipart/mixed ou outro subtipo — Starlette não processa; parse manual
+            _parser_used = f"multipart/manual ({ct_lower.split(';')[0].strip()})"
+            body_raw = await request.body()
+            logger.info(
+                "[WEBHOOK-DIAG] multipart/mixed ip=%s len=%d primeiros_500=%r",
+                client_ip, len(body_raw), body_raw[:500].decode("utf-8", errors="replace"),
+            )
+            xml_bytes, images = _parse_multipart_body(content_type, body_raw)
 
     else:
         body = await request.body()
 
-        if "application/json" in content_type:
+        # ── Log de corpo não-multipart ────────────────────────────────────────
+        _body_preview = body[:500].decode("utf-8", errors="replace") if body else ""
+        logger.info(
+            "[WEBHOOK-DIAG] body não-multipart ip=%s len=%d ct=%r primeiros_500=%r",
+            client_ip, len(body), content_type, _body_preview,
+        )
+
+        if "application/json" in ct_lower:
+            _parser_used = "json"
             try:
                 _json_input = await request.json()
             except Exception as e:
@@ -1624,6 +1780,10 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 return JSONResponse({"ok": False, "detail": "JSON inválido"}, status_code=400)
 
             plate = normalize_plate((_json_input.get("plate") or "").strip())
+            logger.info(
+                "[WEBHOOK-DIAG] JSON campo plate=%r (normalizado=%r)",
+                _json_input.get("plate"), plate,
+            )
 
             try:
                 confidence = float(_json_input.get("confidence") or 0)
@@ -1651,14 +1811,29 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 channel_name,
             )
 
-        elif body.lstrip().startswith(b"<"):
+        elif "xml" in ct_lower or body.lstrip()[:1] == b"<":
+            # application/xml, text/xml OU body começa com '<' (XML sem content-type correto)
+            _parser_used = "xml-direct"
             xml_bytes = body
-            print(f"[WEBHOOK] evento XML direto de {client_ip} ({len(body)} bytes, ct={content_type or 'none'})")
-            print(body[:3000].decode('utf-8', errors='ignore'))
+            logger.info(
+                "[WEBHOOK-DIAG] XML direto ip=%s len=%d ct=%r",
+                client_ip, len(body), content_type,
+            )
 
         else:
-            print(f"[WEBHOOK] body não-XML ignorado de {client_ip} ({len(body)} bytes, ct={content_type})")
+            # Body desconhecido — não processa como evento mas loga em detalhe
+            logger.warning(
+                "[WEBHOOK-DIAG] body ignorado ip=%s len=%d ct=%r — "
+                "não é JSON, XML nem multipart. Verifique se a câmera usa HTTPS na porta HTTP "
+                "(\"Invalid HTTP request received\" → TLS na porta 8000).",
+                client_ip, len(body), content_type,
+            )
             return JSONResponse({"ok": True, "bytes": len(body)})
+
+    logger.info(
+        "[WEBHOOK-DIAG] parser_usado=%s xml_bytes_len=%s images=%d",
+        _parser_used, len(xml_bytes) if xml_bytes else 0, len(images),
+    )
 
     if xml_bytes:
         try:
@@ -1673,7 +1848,20 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
 
             plate_raw        = x("licensePlate") or ""
             plate            = _normalize_plate(plate_raw)
-            logger.info("[WEBHOOK] Placa XML bruta=%s normalizada=%s", plate_raw, plate)
+
+            # ── Log diagnóstico da extração da placa ───────────────────────────
+            logger.info(
+                "[WEBHOOK-DIAG] campo_xml=licensePlate bruta=%r normalizada=%r",
+                plate_raw, plate,
+            )
+            if not plate:
+                logger.warning(
+                    "[WEBHOOK-DIAG] placa vazia após XML ip=%s — tag licensePlate=%r — "
+                    "XML preview: %s",
+                    client_ip, plate_raw,
+                    xml_bytes[:300].decode("utf-8", errors="replace") if xml_bytes else "(none)",
+                )
+
             xml_ip           = x("ipAddress")           # IP real: "172.21.151.16"
             channel_name_xml = x("channelName")         # nome do canal: "11_PRAINHA_1_CHACARAS"
             channel_id_xml   = x("channelID")           # fallback: "1"
@@ -1759,15 +1947,30 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                 confidence = 0.0
 
         except Exception as e:
-            logger.exception("[WEBHOOK] erro parse XML: %s", e)
+            logger.exception(
+                "[WEBHOOK] erro parse XML ip=%s bytes=%d: %s | xml_inicio=%r",
+                client_ip, len(xml_bytes), e,
+                xml_bytes[:200].decode("utf-8", errors="replace") if xml_bytes else "",
+            )
 
-    # Mantém placa vazia se não houver no XML — será preenchida pelo YOLO ou permanecerá null
+    # Mantém placa vazia se não houver no XML — será preenchida pelo YOLO ou permanecerã null
     # NÃO usa "UNKNOWN" para evitar poluir alertas_criticos com placas falsas
 
-    logger.info("[WEBHOOK] Evento recebido ip=%s content_type=%s images=%d", client_ip, content_type, len(images))
-    logger.info("[WEBHOOK] Placa extraida=%s", plate or "(vazia)")
+    logger.info(
+        "[WEBHOOK] Evento recebido ip=%s content_type=%r parser=%s images=%d xml_len=%s plate=%r",
+        client_ip, content_type, _parser_used, len(images),
+        len(xml_bytes) if xml_bytes else 0, plate or "(vazia)",
+    )
+    if not plate:
+        logger.warning(
+            "[WEBHOOK] PLACA NÃO EXTRAÍDA ip=%s content_type=%r parser=%s — "
+            "possíveis causas: campo licensePlate ausente, XML malformado, "
+            "multipart/mixed não tratado (atualizar câmera para /form-data), "
+            "câmera enviando HTTPS em porta HTTP (\"Invalid HTTP request received\").",
+            client_ip, content_type, _parser_used,
+        )
 
-        # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
+    # Fallback: usa header X-Camera-IP enviado pelo camera-poller (modo listen)
     if not camera_id:
         header_ip = request.headers.get("X-Camera-IP", "").strip()
         if header_ip:
@@ -1805,61 +2008,53 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
     image_path = None
     # Monta lpr_meta para o worker YOLO (antes do bloco de imagem, pois pode ser usado no snapshot)
     lpr_meta: dict = {"plate": plate or ""}
-    try:
-        if plate_rect:
-            lpr_meta["plate_rect"]   = plate_rect
-        if vehicle_rect:
-            lpr_meta["vehicle_rect"] = vehicle_rect
-        if pic_width and pic_height:
-            lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
-        # Sistema de coordenadas detectado
-        lpr_meta["coord_type"] = coord_type
-        # Cor e tipo já detectados pela câmera — usados como fallback no YOLO
-        if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
-            lpr_meta["xml_vehicle_color"] = xml_vehicle_color.lower()
-        if xml_vehicle_type and xml_vehicle_type.lower() not in ("unknown", ""):
-            lpr_meta["xml_vehicle_type"] = xml_vehicle_type.lower()
-    except (NameError, Exception):
-        pass  # variáveis não definidas (sem XML)
+    if plate_rect:
+        lpr_meta["plate_rect"]   = plate_rect
+    if vehicle_rect:
+        lpr_meta["vehicle_rect"] = vehicle_rect
+    if pic_width and pic_height:
+        lpr_meta["pic_size"] = {"w": int(pic_width), "h": int(pic_height)}
+    lpr_meta["coord_type"] = coord_type
+    if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
+        lpr_meta["xml_vehicle_color"] = xml_vehicle_color.lower()
+    if xml_vehicle_type and xml_vehicle_type.lower() not in ("unknown", ""):
+        lpr_meta["xml_vehicle_type"] = xml_vehicle_type.lower()
 
     # Monta cam_meta com dados extras do XML para exibição no modal
     cam_meta: dict | None = None
-    try:
-        _cm: dict = {}
-        if xml_plate_color   and xml_plate_color.lower()   not in ("unknown", ""):
-            _cm["plate_color"]    = xml_plate_color
-        if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
-            _cm["vehicle_color"]  = xml_vehicle_color
-        if xml_vehicle_type  and xml_vehicle_type.lower()  not in ("unknown", ""):
-            _cm["vehicle_type"]   = xml_vehicle_type
-        if xml_speed is not None:
-            try:
-                _cm["speed"] = int(xml_speed)
-            except Exception:
-                pass
-        if xml_speed_limit is not None:
-            try:
-                _cm["speed_limit"] = int(xml_speed_limit)
-            except Exception:
-                pass
-        if xml_illegal_code is not None:
-            try:
-                _cm["illegal_code"] = int(xml_illegal_code)
-            except Exception:
-                pass
-        if xml_illegal_name  and xml_illegal_name.lower()  not in ("unknown", ""):
-            _cm["illegal_name"]   = xml_illegal_name
-        if xml_plate_chars   and xml_plate_chars.strip():
-            _cm["plate_char_confidence"] = xml_plate_chars.strip()
-        if xml_license_bright is not None:
-            try:
-                _cm["license_bright"] = int(xml_license_bright)
-            except Exception:
-                pass
-        if _cm:
-            cam_meta = _cm
-    except NameError:
-        pass  # sem XML
+    _cm: dict = {}
+    if xml_plate_color   and xml_plate_color.lower()   not in ("unknown", ""):
+        _cm["plate_color"]    = xml_plate_color
+    if xml_vehicle_color and xml_vehicle_color.lower() not in ("unknown", ""):
+        _cm["vehicle_color"]  = xml_vehicle_color
+    if xml_vehicle_type  and xml_vehicle_type.lower()  not in ("unknown", ""):
+        _cm["vehicle_type"]   = xml_vehicle_type
+    if xml_speed is not None:
+        try:
+            _cm["speed"] = int(xml_speed)
+        except Exception:
+            pass
+    if xml_speed_limit is not None:
+        try:
+            _cm["speed_limit"] = int(xml_speed_limit)
+        except Exception:
+            pass
+    if xml_illegal_code is not None:
+        try:
+            _cm["illegal_code"] = int(xml_illegal_code)
+        except Exception:
+            pass
+    if xml_illegal_name  and xml_illegal_name.lower()  not in ("unknown", ""):
+        _cm["illegal_name"]   = xml_illegal_name
+    if xml_plate_chars   and xml_plate_chars.strip():
+        _cm["plate_char_confidence"] = xml_plate_chars.strip()
+    if xml_license_bright is not None:
+        try:
+            _cm["license_bright"] = int(xml_license_bright)
+        except Exception:
+            pass
+    if _cm:
+        cam_meta = _cm
 
     # ── Salva imagem enviada no POST (se houver) ──────────────────────────
     for _img_name, data in images:
