@@ -443,8 +443,10 @@ def _compute_sem_placa_motivo(output: dict, plate_raw: str) -> "str | None":
 # Banco de dados
 # ---------------------------------------------------------------------------
 
-def _update_db_plate(image_path: str, plate: str) -> bool:
-    """Atualiza a coluna plate do evento no banco — apenas se ainda estiver vazia."""
+def _update_db_plate(image_path: str, plate: str, event_id: "int | None" = None) -> bool:
+    """Atualiza a coluna plate do evento no banco — apenas se ainda estiver vazia.
+    Usa event_id como chave quando disponível (mais robusto que image_path).
+    """
     try:
         p = Path(image_path)
         parts = p.parts
@@ -463,11 +465,20 @@ def _update_db_plate(image_path: str, plate: str) -> bool:
         )
         with conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE lpr_events SET plate = %s "
-                    "WHERE image_path = %s AND (plate IS NULL OR plate = '')",
-                    (plate, rel_path),
-                )
+                if event_id is not None:
+                    # Preferencial: atualiza pelo id do evento (sem ambiguidade)
+                    cur.execute(
+                        "UPDATE lpr_events SET plate = %s "
+                        "WHERE id = %s AND (plate IS NULL OR plate = '')",
+                        (plate, event_id),
+                    )
+                else:
+                    # Fallback para backfill (sem event_id)
+                    cur.execute(
+                        "UPDATE lpr_events SET plate = %s "
+                        "WHERE image_path = %s AND (plate IS NULL OR plate = '')",
+                        (plate, rel_path),
+                    )
                 updated = cur.rowcount
         conn.close()
         return updated > 0
@@ -523,8 +534,11 @@ def _attempt_plate_ocr(img_bgr, xyxy: list) -> str:
         return ""
 
 
-def _update_db(image_path: str, result: dict) -> bool:
-    """Salva yolo_result no banco buscando pelo image_path relativo."""
+def _update_db(image_path: str, result: dict, event_id: "int | None" = None) -> bool:
+    """Salva yolo_result no banco.
+    Usa event_id como chave quando disponível (evita ambiguidade por image_path).
+    Fallback: image_path relativo (compatível com backfill_yolo.py).
+    """
     try:
         # Converte caminho absoluto de volta para relativo (uploads/YYYY-MM-DD/file.jpg)
         p = Path(image_path)
@@ -545,16 +559,25 @@ def _update_db(image_path: str, result: dict) -> bool:
         )
         with conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE lpr_events SET yolo_result = %s WHERE image_path = %s",
-                    (json.dumps(result), rel_path)
-                )
+                if event_id is not None:
+                    # Preferencial: chave única (event_id) — sem risco de afetar evento errado
+                    cur.execute(
+                        "UPDATE lpr_events SET yolo_result = %s WHERE id = %s",
+                        (json.dumps(result), event_id),
+                    )
+                else:
+                    # Fallback para backfill (sem event_id)
+                    cur.execute(
+                        "UPDATE lpr_events SET yolo_result = %s WHERE image_path = %s",
+                        (json.dumps(result), rel_path),
+                    )
                 updated = cur.rowcount
         conn.close()
+        key_used = f"id={event_id}" if event_id is not None else f"image_path={rel_path}"
         if updated:
-            print(f"[YOLO] DB atualizado: {rel_path}", flush=True)
+            print(f"[YOLO] DB atualizado: {key_used}", flush=True)
         else:
-            print(f"[YOLO] DB: nenhuma linha com image_path={rel_path}", flush=True)
+            print(f"[YOLO] DB: nenhuma linha com {key_used}", flush=True)
         return updated > 0
     except Exception as e:
         print(f"[YOLO][DB_ERRO] {e}", flush=True)
@@ -562,7 +585,8 @@ def _update_db(image_path: str, result: dict) -> bool:
 
 
 def job_analyze_event(image_path: str, plate_raw: str = "",
-                      lpr_meta: "dict | None" = None) -> dict:
+                      lpr_meta: "dict | None" = None,
+                      event_id: "int | None" = None) -> dict:
     """
     Recebe o caminho da imagem, a placa bruta e metadados LPR (plate_rect, vehicle_rect).
     Foca a análise YOLO no veículo que corresponde à placa detectada.
@@ -676,7 +700,7 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
         if not plate_raw and lpr_meta.get("needs_ocr") and target_vehicle is not None:
             ocr_plate = _attempt_plate_ocr(img_bgr, target_vehicle["xyxy"])
             if ocr_plate:
-                updated = _update_db_plate(image_path, ocr_plate)
+                updated = _update_db_plate(image_path, ocr_plate, event_id=event_id)
                 if updated:
                     print(
                         f"[WEBHOOK-OCR-FALLBACK] placa encontrada via OCR: {ocr_plate} "
@@ -737,7 +761,7 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
             flush=True,
         )
 
-        _update_db(image_path, output)
+        _update_db(image_path, output, event_id=event_id)
         return output
 
     except Exception as exc:

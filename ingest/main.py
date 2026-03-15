@@ -507,9 +507,19 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
             # Busca por camera_id (nome descritivo) OU por ip — necessário porque
             # as câmeras Hikvision enviam o próprio IP no XML <ipAddress> e esse
             # valor é usado como chave de lookup no webhook.
+            # ORDER BY garante resultado determinístico: câmera cujo camera_id bate exatamente
+            # tem prioridade sobre câmera cujo ip bate — evita retornar câmera errada quando
+            # dois registros colidem (ex: CABIXIM com ip=.102 retornado para lookup de PRAINHA 1).
             cur.execute(
-                "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude, usuario, senha, modo_integracao FROM cameras WHERE camera_id=%s OR ip=%s LIMIT 1",
-                (camera_id, camera_id),
+                """
+                SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao,
+                       latitude, longitude, usuario, senha, modo_integracao
+                FROM cameras
+                WHERE camera_id=%s OR ip=%s
+                ORDER BY (camera_id = %s) DESC, id DESC
+                LIMIT 1
+                """,
+                (camera_id, camera_id, camera_id),
             )
             row = cur.fetchone()
             if not row:
@@ -529,6 +539,7 @@ def get_camera_row(camera_id: str) -> dict[str, Any] | None:
                 "latitude":  float(row[9])  if row[9]  is not None else None,
                 "longitude": float(row[10]) if row[10] is not None else None,
                 "usuario": row[11] or None,
+                "senha": row[12] or None,   # necessário para _fetch_snapshot_and_enqueue
                 "modo_integracao": row[13] or "push",
             }
 
@@ -2325,6 +2336,9 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         lpr_meta["needs_ocr"] = True
 
     # ── Salva imagem enviada no POST (se houver) ──────────────────────────
+    # Apenas salva o arquivo em disco aqui; o job YOLO é enfileirado DEPOIS
+    # do INSERT para que event_id já exista no banco quando o worker rodar.
+    _yolo_jobs_pending: list[tuple[str, str]] = []   # (abs_path, image_path)
     for _img_name, data in images:
         day   = (occurred_at or _utcnow()).strftime("%Y-%m-%d")
         d     = UPLOAD_DIR / day
@@ -2333,18 +2347,8 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
         try:
             (d / fname).write_bytes(data)
             image_path = f"/uploads/{day}/{fname}"
-            # Enfileira análise YOLO para esta imagem
-            try:
-                abs_path = f"/app/uploads/{day}/{fname}"
-                _get_rq_queue().enqueue(
-                    "worker.job_analyze_event",
-                    abs_path,
-                    plate or "",
-                    lpr_meta,
-                    job_timeout=120,
-                )
-            except Exception as _rq_err:
-                print(f"[RQ] Falha ao enfileirar job YOLO: {_rq_err}")
+            abs_path   = f"/app/uploads/{day}/{fname}"
+            _yolo_jobs_pending.append((abs_path, image_path))
         except Exception as _img_err:
             print(f"[INGEST] Erro ao salvar imagem: {_img_err}")
 
@@ -2388,6 +2392,26 @@ async def simple_webhook(request: Request, background_tasks: BackgroundTasks):
                     "[WEBHOOK-OCR-FALLBACK] evento id=%s enfileirado sem placa — worker tentará OCR na imagem",
                     event_id,
                 )
+
+            # ── Enfileira YOLO agora que event_id é conhecido ──────────────
+            # Enfileira APÓS o INSERT para que o worker encontre o evento no banco
+            # ao executar UPDATE ... WHERE id = %s. Passa event_id junto com a imagem.
+            for _yolo_abs_path, _yolo_img_path in _yolo_jobs_pending:
+                try:
+                    _get_rq_queue().enqueue(
+                        "worker.job_analyze_event",
+                        _yolo_abs_path,
+                        plate or "",
+                        lpr_meta,
+                        event_id,          # ← event_id passado para o worker usar como chave de UPDATE
+                        job_timeout=120,
+                    )
+                    logger.info(
+                        "[WEBHOOK-YOLO] job enfileirado event_id=%s path=%s",
+                        event_id, _yolo_img_path,
+                    )
+                except Exception as _rq_err:
+                    print(f"[RQ] Falha ao enfileirar job YOLO event_id={event_id}: {_rq_err}")
 
             # -- Classificação de placa pós-persistência --
             _diag_plate_up = (plate or "").strip().upper()
