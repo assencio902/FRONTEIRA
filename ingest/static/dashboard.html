@@ -742,6 +742,10 @@
     Rotas
   </div>
   <div class="sidebar-section">Cadastro</div>
+  <div class="nav-item" onclick="switchTab('cadastro',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Pessoas
+  </div>
   <div class="nav-item" onclick="switchTab('veiculos',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     Veiculos
@@ -910,7 +914,8 @@
         <button class="btn btn-primary btn-sm" onclick="filterEvents()">&#128269; Filtrar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
         <select id="ev-limit-select" onchange="setEvLimit(this.value)">
-            <option value="10" selected>10 por pág.</option>
+            <option value="5" selected>5 por pág.</option>
+            <option value="10">10 por pág.</option>
             <option value="50">50 por pág.</option>
             <option value="100">100 por pág.</option>
             <option value="200">200 por pág.</option>
@@ -1455,6 +1460,153 @@
       <!-- Câmeras sem GPS (mapa geral) -->
       <div id="map-no-gps" style="margin-top:16px"></div>
     </div><!-- /tab-mapa -->
+
+    <!-- ===== ABA CADASTRO POLICIAL ===== -->
+    <div id="tab-cadastro" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128100; Cadastro Policial &mdash; Pessoas</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Cadastre pessoas para vinculação com abordagens e monitoramento.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="cadastroNovaPessoa()" title="Novo cadastro">+ Nova Pessoa</button>
+          <button class="btn btn-outline btn-sm" onclick="cadastroCarregar()" title="Atualizar">&#8635; Atualizar</button>
+        </div>
+      </div>
+
+      <!-- BARRA DE BUSCA -->
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+        <input type="text" id="cad-busca" placeholder="Buscar por nome, apelido ou CPF..." style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+          onkeydown="if(event.key==='Enter')cadastroBuscar()">
+        <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()">&#128269; Buscar</button>
+        <button class="btn btn-outline btn-sm" onclick="cadastroLimparBusca()">Limpar</button>
+      </div>
+
+      <!-- RESULTADO DA BUSCA -->
+      <div id="cad-resultado" style="display:none;margin-bottom:18px">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Nome</th><th>Apelido</th><th>CPF</th><th>RG</th>
+              <th>Nasc.</th><th>Contato</th><th>Cadastrado em</th><th style="text-align:center">A&#231;&otilde;es</th>
+            </tr></thead>
+            <tbody id="cad-tbody">
+              <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="cad-status" class="status-line" style="padding:6px 0"></div>
+      </div>
+
+      <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO -->
+      <div id="cad-form-wrap">
+        <div style="font-weight:600;font-size:.92rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+          <span id="cad-form-titulo">&#128221; Nova Pessoa</span>
+        </div>
+        <input type="hidden" id="cad-id" value="">
+
+        <!-- Bloco: Identificação -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Identificação</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Nome <span style="color:#f87171;font-size:.72rem">*obrigatório</span>
+              <input type="text" id="cad-nome" maxlength="120" placeholder="Nome completo"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Apelido / Vulgo
+              <input type="text" id="cad-apelido" maxlength="80" placeholder="Ex: Zé da Silva"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Contato (telefone)
+              <input type="text" id="cad-contato" maxlength="20" placeholder="(69) 9 9999-9999"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Profiss&atilde;o
+              <input type="text" id="cad-profissao" maxlength="80" placeholder="Ex: Autônomo"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+          </div>
+        </div>
+
+        <!-- Bloco: Documentos -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Documentos</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              CPF <span style="font-size:.72rem;color:var(--muted)">(somente números)</span>
+              <input type="text" id="cad-cpf" maxlength="11" placeholder="00000000000"
+                inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              RG
+              <input type="text" id="cad-rg" maxlength="20" placeholder="0000000"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Data de Nascimento
+              <input type="date" id="cad-dn"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+          </div>
+        </div>
+
+        <!-- Bloco: Naturalidade -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Naturalidade</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Munic&iacute;pio de Naturalidade
+              <input type="text" id="cad-naturalidade" maxlength="80" placeholder="Ex: Porto Velho"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Estado (UF)
+              <select id="cad-uf"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+                <option value="">-- selecione --</option>
+                <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+                <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+                <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+                <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+                <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+                <option selected>RO</option><option>RR</option><option>RS</option>
+                <option>SC</option><option>SP</option><option>SE</option><option>TO</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <!-- Bloco: Filiação -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Filia&#231;&atilde;o</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Nome da M&atilde;e
+              <input type="text" id="cad-mae" maxlength="120" placeholder="Nome completo da mãe"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+              Nome do Pai
+              <input type="text" id="cad-pai" maxlength="120" placeholder="Nome completo do pai"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            </label>
+          </div>
+        </div>
+
+        <!-- Ações do formulário -->
+        <div id="cad-form-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="cadastroSalvar()">&#128190; Salvar</button>
+          <button class="btn btn-outline btn-sm" onclick="cadastroLimparForm()">&#10007; Cancelar</button>
+        </div>
+        <div id="cad-form-ok" style="color:#4ade80;font-size:.82rem;margin-top:8px;display:none"></div>
+      </div>
+    </div><!-- /tab-cadastro -->
 
     <!-- ===== ABA USUÁRIOS ===== -->
     <!-- ===== ABA ALARMES ===== -->
@@ -2575,9 +2727,10 @@ var curCamera   = '';
 var curDateFrom = '';
 var curDateTo   = '';
 var evOffset    = 0;
-var EV_LIMIT    = 10;
+var EV_LIMIT    = 5;
 var evTotal     = 0;
 var lastMaxId   = 0;
+var _evTableReady = false;  // true após primeiro render completo em offset=0; habilita modo incremental
 var monPlates   = {};
 var cameraSet   = new Set();
 var chartHour   = null;
@@ -2857,7 +3010,7 @@ function listBadgesHtml(plate) {
 
 // ===== EVENTOS =====
 async function loadEvents(newOffset) {
-  if (newOffset !== undefined) evOffset = newOffset;
+  if (newOffset !== undefined) { evOffset = newOffset; _evTableReady = false; }
   document.getElementById('events-status').innerHTML = '<span class="spinner"></span>';
   var p = new URLSearchParams({ limit: EV_LIMIT, offset: evOffset });
   if (curFilter)   p.set('plate', curFilter);
@@ -2932,54 +3085,78 @@ function _yoloBadge(ev) {
   return '<span style="font-size:.69rem;color:var(--success);line-height:1.7">' + parts.join('<br>') + '</span>';
 }
 
+function _buildEvRowHtml(ev, isNew) {
+  _imgMeta[ev.id] = {
+    camName:          ev.cam_nome || ev.channel_name || ev.camera_id || '',
+    ts:               ev.ts || ev.occurred_at || '',
+    confidence:       ev.confidence != null ? ev.confidence : null,
+    direcao:          ev.direcao || null,
+    sem_placa_motivo: ev.sem_placa_motivo || null,
+    target_vehicle:   ev.target_vehicle   || (ev.yolo_result && ev.yolo_result.target_vehicle) || null,
+    vehicle_details:  ev.vehicle_details  || null,
+    image_quality:    ev.image_quality    || null,
+    cam_meta:         ev.cam_meta         || null,
+  };
+  var imgUrl = ev.image || ev.image_path || ev.thumb || null;
+  var thumb = imgUrl
+    ? '<img class="thumb" src="' + imgUrl + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=\\\'thumb-none\\\'>sem foto</div>\'" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">'
+    : '<div class="thumb-none">sem foto</div>';
+  var badges = listBadgesHtml(ev.plate);
+  var ts = fmtTs(ev.ts || ev.occurred_at);
+  var cam = ev.cam_nome || ev.channel_name || ev.camera_id || 'desconhecida';
+  if (cam.length > 28) cam = cam.substring(0,28) + '...';
+  var dir = ev.direcao;
+  var dirCell = dir === 'CRESCENTE'
+    ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>'
+    : dir === 'DECRESCENTE'
+      ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
+      : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+  return '<tr class="' + (isNew ? 'row-new' : '') + '" data-ev-id="' + ev.id + '">'
+    + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
+    + '<td>' + thumb + '</td>'
+    + '<td>' + plateHtml(ev.plate) + (badges ? '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">' + badges + '</div>' : '') + '</td>'
+    + '<td style="font-size:.79rem;white-space:nowrap">' + ts + '</td>'
+    + '<td style="color:var(--muted);font-size:.77rem">' + cam + '</td>'
+    + '<td style="white-space:nowrap">' + dirCell + '</td>'
+    + '<td>' + fmtConf(ev.confidence) + '</td>'
+    + '<td style="min-width:90px">' + _yoloBadge(ev) + '</td>'
+    + '<td><button class="btn btn-outline btn-xs" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">🔍</button></td>'
+    + '</tr>';
+}
+
 function renderEvents(items, newIds) {
   newIds = newIds || new Set();
   var tb = document.getElementById('events-tbody');
+
   if (!items.length) {
+    _evTableReady = false;
     tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">Nenhum evento encontrado.</td></tr>';
     return;
   }
-  items.forEach(function(ev) {
-    _imgMeta[ev.id] = {
-      camName:          ev.cam_nome || ev.channel_name || ev.camera_id || '',
-      ts:               ev.ts || ev.occurred_at || '',
-      confidence:       ev.confidence != null ? ev.confidence : null,
-      direcao:          ev.direcao || null,
-      sem_placa_motivo: ev.sem_placa_motivo || null,
-      target_vehicle:   ev.target_vehicle   || (ev.yolo_result && ev.yolo_result.target_vehicle) || null,
-      vehicle_details:  ev.vehicle_details  || null,
-      image_quality:    ev.image_quality    || null,
-      cam_meta:         ev.cam_meta         || null,
-    };
-  });
+
+  // ── Modo incremental: offset=0, tabela populada, chegaram eventos novos ──
+  if (_evTableReady && evOffset === 0 && newIds.size > 0) {
+    var newItems = items.filter(function(ev){ return newIds.has(ev.id); });
+    newItems.sort(function(a, b){ return b.id - a.id; }); // mais recente primeiro
+    newItems.forEach(function(ev) {
+      if (tb.querySelector('[data-ev-id="' + ev.id + '"]')) return; // já exibido
+      var tmp = document.createElement('tbody');
+      tmp.innerHTML = _buildEvRowHtml(ev, true);
+      tb.insertBefore(tmp.firstElementChild, tb.firstChild);
+    });
+    // Mantém exatamente EV_LIMIT linhas
+    while (tb.rows.length > EV_LIMIT) tb.deleteRow(tb.rows.length - 1);
+    return;
+  }
+
+  // ── Sem novidades e tabela já populada: não re-renderiza ──
+  if (_evTableReady && evOffset === 0 && newIds.size === 0) return;
+
+  // ── Render completo ──
   tb.innerHTML = items.map(function(ev) {
-    var isNew = newIds.has(ev.id);
-    var imgUrl = ev.image || ev.image_path || ev.thumb || null;
-    var thumb = imgUrl
-      ? '<img class="thumb" src="' + imgUrl + '" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=\\\'thumb-none\\\'>sem foto</div>\'" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">'
-      : '<div class="thumb-none">sem foto</div>';
-    var badges = listBadgesHtml(ev.plate);
-    var ts = fmtTs(ev.ts || ev.occurred_at);
-    var cam = ev.cam_nome || ev.channel_name || ev.camera_id || 'desconhecida';
-    if (cam.length > 28) cam = cam.substring(0,28) + '...';
-    var dir = ev.direcao;
-    var dirCell = dir === 'CRESCENTE'
-      ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>'
-      : dir === 'DECRESCENTE'
-        ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
-        : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
-    return '<tr class="' + (isNew ? 'row-new' : '') + '">'
-      + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
-      + '<td>' + thumb + '</td>'
-      + '<td>' + plateHtml(ev.plate) + (badges ? '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">' + badges + '</div>' : '') + '</td>'
-      + '<td style="font-size:.79rem;white-space:nowrap">' + ts + '</td>'
-      + '<td style="color:var(--muted);font-size:.77rem">' + cam + '</td>'
-      + '<td style="white-space:nowrap">' + dirCell + '</td>'
-      + '<td>' + fmtConf(ev.confidence) + '</td>'
-      + '<td style="min-width:90px">' + _yoloBadge(ev) + '</td>'
-      + '<td><button class="btn btn-outline btn-xs" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">🔍</button></td>'
-      + '</tr>';
+    return _buildEvRowHtml(ev, newIds.has(ev.id));
   }).join('');
+  _evTableReady = (evOffset === 0);
 }
 
 function updateEvCards(total, items) {
@@ -4523,7 +4700,7 @@ function _startAutoRefresh() {
   var ms = parseInt(localStorage.getItem('bpfron_refresh_interval') || '15000');
   if (ms > 0) {
     _refreshIntervalId = setInterval(function() {
-      if (currentTab === 'eventos') loadEvents(evOffset);
+      if (currentTab === 'eventos') loadEvents(); // sem argumento: preserva modo incremental
     }, ms);
   }
 }
@@ -7539,6 +7716,214 @@ function _renderHistTable(items) {
     checkBatedorRealtime();
     _realtimeInterval = setInterval(checkBatedorRealtime, 60000);
   }
+})();
+</script>
+
+<!-- ===== CADASTRO POLICIAL — PESSOAS (JS) ===== -->
+<script>
+// ── Estado interno ────────────────────────────────────────────────────────────
+var _cadOffset = 0;
+var _cadTotal  = 0;
+var _cadLimit  = 50;
+
+// Carregado ao entrar na aba
+function cadastroCarregar() {
+  _cadOffset = 0;
+  cadastroBuscar();
+}
+
+function cadastroLimparBusca() {
+  document.getElementById('cad-busca').value = '';
+  document.getElementById('cad-resultado').style.display = 'none';
+  document.getElementById('cad-status').textContent = '';
+  _cadOffset = 0;
+}
+
+async function cadastroBuscar() {
+  var q = (document.getElementById('cad-busca').value || '').trim();
+  var url = '/api/pessoas?limit=' + _cadLimit + '&offset=' + _cadOffset;
+  if (q) url += '&q=' + encodeURIComponent(q);
+  try {
+    var resp = await fetch(url);
+    var data = await resp.json();
+    _cadTotal = data.total || 0;
+    renderCadResultado(data.pessoas || []);
+    document.getElementById('cad-resultado').style.display = 'block';
+    document.getElementById('cad-status').textContent =
+      _cadTotal + ' pessoa(s) encontrada(s).' +
+      (_cadTotal > _cadLimit ? ' Mostrando primeiras ' + _cadLimit + '.' : '');
+  } catch(e) {
+    document.getElementById('cad-status').textContent = 'Erro ao buscar: ' + e;
+  }
+}
+
+function renderCadResultado(pessoas) {
+  var tb = document.getElementById('cad-tbody');
+  if (!pessoas.length) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+    return;
+  }
+  tb.innerHTML = pessoas.map(function(p) {
+    var dn = p.data_nascimento ? p.data_nascimento : '—';
+    var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '—';
+    return '<tr>' +
+      '<td>' + p.id + '</td>' +
+      '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
+      '<td>' + _esc(p.apelido || '—') + '</td>' +
+      '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '—') + '</td>' +
+      '<td>' + _esc(p.rg || '—') + '</td>' +
+      '<td>' + dn + '</td>' +
+      '<td>' + _esc(p.contato || '—') + '</td>' +
+      '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
+      '<td style="text-align:center;white-space:nowrap">' +
+        '<button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button> ' +
+        '<button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',\'' + _esc(p.nome).replace(/'/g, "\\'") + '\')" title="Excluir">&#128465;</button>' +
+      '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function _esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _fmtCpf(cpf) {
+  var c = String(cpf).replace(/\D/g,'');
+  if (c.length === 11) return c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  return c;
+}
+
+// ── Formulário ────────────────────────────────────────────────────────────────
+function cadastroNovaPessoa() {
+  cadastroLimparForm();
+  document.getElementById('cad-form-titulo').textContent = '📝 Nova Pessoa';
+  document.getElementById('cad-form-wrap').style.display = '';
+  document.getElementById('cad-nome').focus();
+}
+
+function cadastroLimparForm() {
+  document.getElementById('cad-id').value = '';
+  document.getElementById('cad-nome').value = '';
+  document.getElementById('cad-apelido').value = '';
+  document.getElementById('cad-contato').value = '';
+  document.getElementById('cad-profissao').value = '';
+  document.getElementById('cad-cpf').value = '';
+  document.getElementById('cad-rg').value = '';
+  document.getElementById('cad-dn').value = '';
+  document.getElementById('cad-naturalidade').value = '';
+  document.getElementById('cad-uf').value = 'RO';
+  document.getElementById('cad-mae').value = '';
+  document.getElementById('cad-pai').value = '';
+  document.getElementById('cad-form-erro').textContent = '';
+  document.getElementById('cad-form-ok').style.display = 'none';
+  document.getElementById('cad-form-titulo').textContent = '📝 Nova Pessoa';
+}
+
+function cadastroPopularForm(p) {
+  document.getElementById('cad-id').value = p.id;
+  document.getElementById('cad-nome').value = p.nome || '';
+  document.getElementById('cad-apelido').value = p.apelido || '';
+  document.getElementById('cad-contato').value = p.contato || '';
+  document.getElementById('cad-profissao').value = p.profissao || '';
+  document.getElementById('cad-cpf').value = p.cpf || '';
+  document.getElementById('cad-rg').value = p.rg || '';
+  document.getElementById('cad-dn').value = p.data_nascimento || '';
+  document.getElementById('cad-naturalidade').value = p.naturalidade || '';
+  document.getElementById('cad-uf').value = p.estado_naturalidade || 'RO';
+  document.getElementById('cad-mae').value = p.nome_mae || '';
+  document.getElementById('cad-pai').value = p.nome_pai || '';
+  document.getElementById('cad-form-erro').textContent = '';
+  document.getElementById('cad-form-ok').style.display = 'none';
+}
+
+async function cadastroEditar(id) {
+  try {
+    var resp = await fetch('/api/pessoas/' + id);
+    if (!resp.ok) { alert('Erro ao carregar pessoa.'); return; }
+    var p = await resp.json();
+    cadastroPopularForm(p);
+    document.getElementById('cad-form-titulo').textContent = '✏️ Editando: ' + p.nome;
+    document.getElementById('cad-form-wrap').style.display = '';
+    document.getElementById('cad-nome').scrollIntoView({behavior:'smooth', block:'center'});
+  } catch(e) {
+    alert('Erro: ' + e);
+  }
+}
+
+async function cadastroSalvar() {
+  var erro = document.getElementById('cad-form-erro');
+  var ok   = document.getElementById('cad-form-ok');
+  erro.textContent = '';
+  ok.style.display = 'none';
+
+  var nome = document.getElementById('cad-nome').value.trim();
+  if (!nome) { erro.textContent = 'Nome é obrigatório.'; return; }
+
+  var cpf = document.getElementById('cad-cpf').value.replace(/\D/g,'');
+  if (cpf && cpf.length > 11) { erro.textContent = 'CPF deve ter no máximo 11 dígitos.'; return; }
+
+  var payload = {
+    nome:                nome,
+    apelido:             document.getElementById('cad-apelido').value.trim(),
+    contato:             document.getElementById('cad-contato').value.trim(),
+    profissao:           document.getElementById('cad-profissao').value.trim(),
+    cpf:                 cpf,
+    rg:                  document.getElementById('cad-rg').value.trim(),
+    data_nascimento:     document.getElementById('cad-dn').value || null,
+    naturalidade:        document.getElementById('cad-naturalidade').value.trim(),
+    estado_naturalidade: document.getElementById('cad-uf').value,
+    nome_mae:            document.getElementById('cad-mae').value.trim(),
+    nome_pai:            document.getElementById('cad-pai').value.trim(),
+  };
+
+  var id  = document.getElementById('cad-id').value;
+  var url    = id ? '/api/pessoas/' + id : '/api/pessoas';
+  var method = id ? 'PUT' : 'POST';
+
+  try {
+    var resp = await fetch(url, {
+      method: method,
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    var data = await resp.json();
+    if (!resp.ok) { erro.textContent = data.detail || ('Erro ' + resp.status); return; }
+    ok.textContent = id ? '✅ Pessoa atualizada com sucesso!' : '✅ Pessoa cadastrada com sucesso!';
+    ok.style.display = 'block';
+    if (!id && data.id) document.getElementById('cad-id').value = data.id;
+    document.getElementById('cad-form-titulo').textContent = '✏️ Editando: ' + nome;
+    cadastroBuscar(); // atualiza a lista
+  } catch(e) {
+    erro.textContent = 'Erro: ' + e;
+  }
+}
+
+async function cadastroExcluir(id, nome) {
+  if (!confirm('Excluir a pessoa "' + nome + '"?\nEsta ação não pode ser desfeita.')) return;
+  try {
+    var resp = await fetch('/api/pessoas/' + id, {method:'DELETE'});
+    if (resp.status === 204 || resp.ok) {
+      cadastroBuscar();
+      if (document.getElementById('cad-id').value == id) cadastroLimparForm();
+    } else {
+      var data = await resp.json().catch(function(){return {};});
+      alert('Erro ao excluir: ' + (data.detail || resp.status));
+    }
+  } catch(e) {
+    alert('Erro: ' + e);
+  }
+}
+
+// Carrega automaticamente ao entrar na aba
+(function() {
+  var _origSwitchTab = window.switchTab;
+  window.switchTab = function(name, el) {
+    _origSwitchTab(name, el);
+    if (name === 'cadastro') cadastroCarregar();
+  };
 })();
 </script>
 </body>
