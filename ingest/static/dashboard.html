@@ -134,6 +134,12 @@
     #content { padding:28px 32px; flex:1; }
     .tab-pane { display:none; }
     .tab-pane.active { display:block; }
+    /* ── Sub-abas Pessoas ── */
+    .pessoas-sub-nav { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:18px; border-bottom:2px solid var(--border); padding-bottom:0; }
+    .pessoas-sub-btn { background:transparent; border:none; border-bottom:3px solid transparent; color:var(--muted); cursor:pointer; font-size:.85rem; font-weight:500; padding:8px 16px; margin-bottom:-2px; border-radius:var(--radius) var(--radius) 0 0; transition:all .15s; }
+    .pessoas-sub-btn:hover { color:var(--text); background:rgba(255,255,255,.04); }
+    .pessoas-sub-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:700; background:rgba(250,204,21,.06); }
+    .pessoas-sub-pane { animation:fadeIn .15s ease; }
     .sub-tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:24px; }
     .sub-tab { padding:12px 24px; cursor:pointer; font-size:14px; font-weight:600; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-1px; transition:all .15s; user-select:none; line-height:var(--lh-tight); }
     .sub-tab:hover { color:var(--text); }
@@ -714,6 +720,70 @@
       .card-label {
         font-size:15px;
       }
+    }
+    /* ============================================================
+       RELATÓRIO DE PESSOA
+    ============================================================ */
+    .rel-section-title {
+      font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+      color:var(--accent); margin:22px 0 10px; padding-bottom:6px;
+      border-bottom:1px solid rgba(250,204,21,.2);
+    }
+    .rel-header-card {
+      background:var(--card2); border:1px solid rgba(250,204,21,.25);
+      border-radius:var(--radius); padding:18px; margin-bottom:20px;
+    }
+    .rel-dados-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+      gap:8px 20px; font-size:.83rem;
+    }
+    .rel-dado-item { display:flex; flex-direction:column; gap:2px; }
+    .rel-dado-label { font-size:.72rem; color:var(--muted); font-weight:500; }
+    .rel-dado-value { font-weight:600; word-break:break-word; }
+    .rel-ab-card {
+      background:var(--card2); border:1px solid var(--border); border-radius:var(--radius);
+      margin-bottom:14px; overflow:hidden;
+    }
+    .rel-ab-header {
+      display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
+      gap:6px; padding:12px 16px; background:rgba(0,0,0,.08);
+      border-bottom:1px solid var(--border);
+    }
+    .rel-ab-body { padding:14px 16px; }
+    .rel-badge {
+      display:inline-block; padding:2px 8px; border-radius:99px;
+      font-size:.7rem; font-weight:700; letter-spacing:.03em;
+    }
+    .rel-badge-red    { background:rgba(239,68,68,.18);   color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+    .rel-badge-yellow { background:rgba(245,158,11,.18);  color:#fcd34d; border:1px solid rgba(245,158,11,.3); }
+    .rel-badge-blue   { background:rgba(59,130,246,.18);  color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+    .rel-badge-green  { background:rgba(16,185,129,.18);  color:#6ee7b7; border:1px solid rgba(16,185,129,.3); }
+    .rel-badge-purple { background:rgba(167,139,250,.18); color:#c4b5fd; border:1px solid rgba(167,139,250,.3); }
+    .rel-badge-orange { background:rgba(249,115,22,.18);  color:#fdba74; border:1px solid rgba(249,115,22,.3); }
+    .rel-sub-row {
+      display:flex; gap:6px; padding:5px 0;
+      border-bottom:1px solid rgba(255,255,255,.06); font-size:.82rem;
+    }
+    .rel-sub-label { min-width:140px; color:var(--muted); font-size:.77rem; flex-shrink:0; }
+    .rel-sub-value { flex:1; word-break:break-word; }
+    .rel-resumo-box {
+      background:rgba(250,204,21,.05); border:1px solid rgba(250,204,21,.18);
+      border-radius:var(--radius); padding:16px; margin-bottom:14px;
+    }
+    .rel-reincidente-pill {
+      display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
+      background:rgba(239,68,68,.15); color:#fca5a5; border:1px solid rgba(239,68,68,.3);
+      border-radius:99px; font-size:.72rem; font-weight:700; margin:3px 3px 3px 0;
+    }
+    .rel-veiculo-pill {
+      display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
+      background:rgba(59,130,246,.12); color:#93c5fd; border:1px solid rgba(59,130,246,.25);
+      border-radius:99px; font-size:.72rem; font-weight:600; margin:3px 3px 3px 0;
+    }
+    .rel-pessoa-pill {
+      display:inline-flex; align-items:center; gap:4px; padding:3px 9px;
+      background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25);
+      border-radius:99px; font-size:.72rem; font-weight:600; margin:3px 3px 3px 0;
     }
   </style>
 </head>
@@ -1469,192 +1539,429 @@
 
     <!-- ===== ABA CADASTRO POLICIAL ===== -->
     <div id="tab-cadastro" class="tab-pane">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-weight:700;font-size:.97rem">&#128100; Cadastro Policial &mdash; Pessoas</div>
-          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Cadastre pessoas para vinculação com abordagens e monitoramento.</div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="cadastroNovaPessoa()" title="Novo cadastro">+ Nova Pessoa</button>
-          <button class="btn btn-outline btn-sm" onclick="cadastroCarregar()" title="Atualizar">&#8635; Atualizar</button>
-        </div>
+
+      <!-- Cabeçalho fixo -->
+      <div style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:.97rem">&#128100; Cadastro Policial &mdash; Pessoas</div>
+        <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Cadastre pessoas, registre abordagens e consulte histórico.</div>
       </div>
 
-      <!-- BARRA DE BUSCA -->
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-        <input type="text" id="cad-busca" placeholder="Buscar por nome, apelido ou CPF..." style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
-          onkeydown="if(event.key==='Enter')cadastroBuscar()">
-        <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()">&#128269; Buscar</button>
-        <button class="btn btn-outline btn-sm" onclick="cadastroLimparBusca()">Limpar</button>
-      </div>
+      <!-- Sub-abas -->
+      <nav class="pessoas-sub-nav" role="tablist">
+        <button class="pessoas-sub-btn active" id="psub-btn-pesquisar"
+          onclick="switchPessoasSubTab('pesquisar',this)">&#128269; Pesquisar</button>
+        <button class="pessoas-sub-btn" id="psub-btn-abordagem"
+          onclick="switchPessoasSubTab('abordagem',this)">&#43; Adicionar Abordagem</button>
+        <button class="pessoas-sub-btn" id="psub-btn-lista-abordagens"
+          onclick="switchPessoasSubTab('lista-abordagens',this)">&#128203; Lista de Abordagens</button>
+      </nav>
 
-      <!-- RESULTADO DA BUSCA -->
-      <div id="cad-resultado" style="display:none;margin-bottom:18px">
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>Nome</th><th>Apelido</th><th>CPF</th><th>RG</th>
-              <th>Nasc.</th><th>Contato</th><th>Cadastrado em</th><th style="text-align:center">A&#231;&otilde;es</th>
-            </tr></thead>
-            <tbody id="cad-tbody">
-              <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>
-            </tbody>
-          </table>
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SUB-ABA: PESQUISAR                                             -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div id="pessoas-sub-pesquisar" class="pessoas-sub-pane">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <span style="font-size:.82rem;color:var(--muted)">Pesquise por nome, apelido, CPF ou RG &mdash; ou deixe em branco para ver todos.</span>
+          <button class="btn btn-outline btn-sm" onclick="cadastroNovaPessoa()">&#43; Nova Pessoa</button>
         </div>
-        <div id="cad-status" class="status-line" style="padding:6px 0"></div>
-      </div>
 
-      <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO -->
-      <div id="cad-form-wrap" style="display:none">
-        <div style="font-weight:600;font-size:.92rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-          <span id="cad-form-titulo">&#128221; Nova Pessoa</span>
+        <!-- Barra de busca -->
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <input type="text" id="cad-busca" placeholder="Filtrar por nome, apelido ou CPF..."
+            style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+            onkeydown="if(event.key==='Enter')cadastroBuscar()">
+          <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()">&#128269; Buscar</button>
+          <button class="btn btn-outline btn-sm" onclick="cadastroLimparBusca()">Limpar</button>
         </div>
-        <input type="hidden" id="cad-id" value="">
 
-        <!-- Bloco: Identificação -->
+        <!-- Lista de cadastrados (sempre visível) -->
+        <div id="cad-resultado" style="margin-bottom:18px">
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>Nome</th><th>Apelido</th><th>CPF</th><th>RG</th>
+                <th>Nasc.</th><th>Contato</th><th>Cadastrado em</th>
+                <th style="text-align:center">A&#231;&otilde;es</th>
+              </tr></thead>
+              <tbody id="cad-tbody">
+                <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="cad-status" class="status-line" style="padding:6px 0"></div>
+        </div>
+
+        <!-- Formulário de cadastro / edição individual de pessoa -->
+        <div id="cad-form-wrap" style="display:none">
+          <div style="font-weight:600;font-size:.92rem;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+            <span id="cad-form-titulo">&#128221; Nova Pessoa</span>
+          </div>
+          <input type="hidden" id="cad-id" value="">
+
+          <!-- Identificação -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Identificação</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Nome <span style="color:#f87171;font-size:.72rem">*obrigatório</span>
+                <input type="text" id="cad-nome" maxlength="120" placeholder="Nome completo"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Apelido / Vulgo
+                <input type="text" id="cad-apelido" maxlength="80" placeholder="Ex: Zé da Silva"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Contato (telefone)
+                <input type="text" id="cad-contato" maxlength="20" placeholder="(69) 9 9999-9999"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Profiss&atilde;o
+                <input type="text" id="cad-profissao" maxlength="80" placeholder="Ex: Autônomo"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+            </div>
+          </div>
+
+          <!-- Documentos -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Documentos</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                CPF <span style="font-size:.72rem;color:var(--muted)">(somente números)</span>
+                <input type="text" id="cad-cpf" maxlength="11" placeholder="00000000000"
+                  inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                RG
+                <input type="text" id="cad-rg" maxlength="20" placeholder="0000000"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Data de Nascimento
+                <input type="date" id="cad-dn"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+            </div>
+          </div>
+
+          <!-- Naturalidade -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Naturalidade</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Munic&iacute;pio de Naturalidade
+                <input type="text" id="cad-naturalidade" maxlength="80" placeholder="Ex: Porto Velho"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Estado (UF)
+                <select id="cad-uf"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+                  <option value="">-- selecione --</option>
+                  <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+                  <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+                  <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+                  <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+                  <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+                  <option selected>RO</option><option>RR</option><option>RS</option>
+                  <option>SC</option><option>SP</option><option>SE</option><option>TO</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <!-- Filiação -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Filia&#231;&atilde;o</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Nome da M&atilde;e
+                <input type="text" id="cad-mae" maxlength="120" placeholder="Nome completo da mãe"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+                Nome do Pai
+                <input type="text" id="cad-pai" maxlength="120" placeholder="Nome completo do pai"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+            </div>
+          </div>
+
+          <!-- Endereço (campo novo) -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Endere&#231;o</div>
+            <input type="text" id="cad-endereco" maxlength="200" placeholder="Rua, número, bairro, cidade..."
+              style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </div>
+
+          <!-- Ações -->
+          <div id="cad-form-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="cadastroSalvar()">&#128190; Salvar Pessoa</button>
+            <button class="btn btn-outline btn-sm" onclick="cadastroLimparForm(true)">&#10007; Cancelar</button>
+          </div>
+          <div id="cad-form-ok" style="color:#4ade80;font-size:.82rem;margin-top:8px;display:none"></div>
+        </div>
+      </div><!-- /pessoas-sub-pesquisar -->
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SUB-ABA: ADICIONAR ABORDAGEM                                   -->
+      <!-- Endpoint: POST /api/abordagens                                 -->
+      <!-- Busca veículo: GET /api/veiculos-abordagem/busca?placa=        -->
+      <!-- Busca pessoa: GET /api/pessoas?q=                              -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div id="pessoas-sub-abordagem" class="pessoas-sub-pane" style="display:none">
+
+        <div style="font-weight:600;font-size:.92rem;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+          &#128221; Nova Abordagem
+        </div>
+
+        <!-- Abordado principal -->
         <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Identificação</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Nome <span style="color:#f87171;font-size:.72rem">*obrigatório</span>
-              <input type="text" id="cad-nome" maxlength="120" placeholder="Nome completo"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128100; Abordado Principal</div>
+          <!-- Linha 0: Data e Hora / Local -->
+          <div style="display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:8px;align-items:flex-end">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;flex:0 0 auto">
+              Data e Hora <span style="color:#f87171;font-size:.72rem">*obrigat&oacute;rio</span>
+              <input type="datetime-local" id="ab-data-hora"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;width:220px;box-sizing:border-box">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Apelido / Vulgo
-              <input type="text" id="cad-apelido" maxlength="80" placeholder="Ex: Zé da Silva"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;flex:1 1 auto">Local / Logradouro
+              <input type="text" id="ab-local" maxlength="200" placeholder="Ex: BR-364 KM 12"
+                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;width:100%;box-sizing:border-box">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Contato (telefone)
-              <input type="text" id="cad-contato" maxlength="20" placeholder="(69) 9 9999-9999"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </div>
+          <input type="hidden" id="ab-pessoa-id">
+          <!-- Linha 1a: Nome (full width) -->
+          <div style="margin-bottom:8px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome
+              <div style="display:flex;gap:4px">
+                <input type="text" id="ab-nome" maxlength="120" placeholder="Nome completo"
+                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorNome()}">
+                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorNome()" title="Pesquisar por nome">&#128269;</button>
+              </div>
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Profiss&atilde;o
-              <input type="text" id="cad-profissao" maxlength="80" placeholder="Ex: Autônomo"
+          </div>
+          <!-- Linha 1b: CPF / RG / Contato -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">CPF
+              <div style="display:flex;gap:4px">
+                <input type="text" id="ab-cpf" maxlength="11" placeholder="00000000000" inputmode="numeric"
+                  oninput="this.value=this.value.replace(/\D/g,'');abVerificarCpfDuplicado()"
+                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorCpf()}">
+                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorCpf()" title="Pesquisar por CPF">&#128269;</button>
+              </div>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">RG
+              <div style="display:flex;gap:4px">
+                <input type="text" id="ab-rg" maxlength="20" placeholder="0000000"
+                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorRg()}">
+                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorRg()" title="Pesquisar por RG">&#128269;</button>
+              </div>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Contato
+              <input type="text" id="ab-contato" maxlength="20" placeholder="(69) 99999-9999"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
           </div>
-        </div>
-
-        <!-- Bloco: Documentos -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Documentos</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              CPF <span style="font-size:.72rem;color:var(--muted)">(somente números)</span>
-              <input type="text" id="cad-cpf" maxlength="11" placeholder="00000000000"
-                inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"
+          <!-- Resultado de pesquisa / aviso cadastro existente -->
+          <div id="ab-pessoa-resultado" style="margin-bottom:6px"></div>
+          <div id="ab-cadastro-existente-wrap" style="display:none;margin-bottom:10px;padding:12px 14px;border:1px solid var(--accent);border-radius:var(--radius);background:rgba(16,185,129,.07)">
+            <div style="font-size:.82rem;font-weight:600;color:var(--accent);margin-bottom:4px">&#128100; Cadastro j&aacute; existente no sistema</div>
+            <div id="ab-cadastro-existente-info" style="font-size:.81rem;color:var(--text);margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px">
+              <button type="button" class="btn btn-sm" style="background:var(--accent);color:#000;font-weight:600" onclick="abUsarCadastroExistente()">&#43; Adicionar nova abordagem para este cadastro</button>
+              <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relatório completo</button>
+            </div>
+          </div>
+          <!-- Alerta CPF duplicado (auto-detecção via oninput) -->
+          <div id="ab-cpf-alerta-wrap" style="display:none;margin-top:2px;margin-bottom:4px;padding:10px 14px;border:1px solid #f59e0b;border-radius:var(--radius);background:rgba(245,158,11,.08)">
+            <div style="font-size:.82rem;font-weight:600;color:#f59e0b;margin-bottom:4px">&#9888; CPF j&aacute; cadastrado no banco de dados</div>
+            <div style="font-size:.81rem;color:var(--text);margin-bottom:8px">Deseja adicionar nova abordagem para este cadastro?</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <button type="button" class="btn btn-outline btn-sm" onclick="abUsarCadastroExistente()">&#43; Nova abordagem para este cadastro</button>
+              <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relat&oacute;rio completo</button>
+            </div>
+          </div>
+          <!-- Linha 2: Profissão / Pai / Mãe -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Profiss&atilde;o
+              <input type="text" id="ab-profissao" maxlength="80" placeholder="Ex: Aut&ocirc;nomo"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              RG
-              <input type="text" id="cad-rg" maxlength="20" placeholder="0000000"
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome do Pai
+              <input type="text" id="ab-pai" maxlength="120" placeholder="Nome completo do pai"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Data de Nascimento
-              <input type="date" id="cad-dn"
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome da M&atilde;e
+              <input type="text" id="ab-mae" maxlength="120" placeholder="Nome completo da m&atilde;e"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
           </div>
-        </div>
-
-        <!-- Bloco: Naturalidade -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Naturalidade</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Munic&iacute;pio de Naturalidade
-              <input type="text" id="cad-naturalidade" maxlength="80" placeholder="Ex: Porto Velho"
+          <!-- Linha 3: Endereço dividido -->
+          <div style="display:grid;grid-template-columns:3fr 80px 1fr 60px;gap:10px;margin-bottom:8px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Rua / Avenida
+              <input type="text" id="ab-rua" maxlength="150" placeholder="Ex: Rua das Flores"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Estado (UF)
-              <select id="cad-uf"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-                <option value="">-- selecione --</option>
-                <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
-                <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
-                <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
-                <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
-                <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
-                <option selected>RO</option><option>RR</option><option>RS</option>
-                <option>SC</option><option>SP</option><option>SE</option><option>TO</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <!-- Bloco: Filiação -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Filia&#231;&atilde;o</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Nome da M&atilde;e
-              <input type="text" id="cad-mae" maxlength="120" placeholder="Nome completo da mãe"
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">N&uacute;mero
+              <input type="text" id="ab-numero" maxlength="10" placeholder="123"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Nome do Pai
-              <input type="text" id="cad-pai" maxlength="120" placeholder="Nome completo do pai"
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Bairro
+              <input type="text" id="ab-bairro" maxlength="80" placeholder="Ex: Centro"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
             </label>
-          </div>
-        </div>
-
-        <!-- Bloco: Veículo -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128665; Ve&iacute;culo Abordado</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Placa
-              <input type="text" id="cad-veiculo-placa" maxlength="10" placeholder="ABC-1234"
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">UF
+              <input type="text" id="ab-uf" maxlength="2" placeholder="RO"
                 oninput="this.value=this.value.toUpperCase()"
                 style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase">
             </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Modelo
-              <input type="text" id="cad-veiculo-modelo" maxlength="80" placeholder="Ex: Honda Civic"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-              Cor
-              <input type="text" id="cad-veiculo-cor" maxlength="40" placeholder="Ex: Prata"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
           </div>
-        </div>
-
-        <!-- Bloco: Ocupantes -->
-        <div style="margin-bottom:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">&#128101; Ocupantes do Ve&iacute;culo</div>
-            <button type="button" class="btn btn-outline btn-sm" onclick="cadAdicionarOcupante()" style="font-size:.78rem">&#43; Adicionar Ocupante</button>
-          </div>
-          <div id="cad-ocupantes-list"></div>
-        </div>
-
-        <!-- Bloco: Relatório da Abordagem -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128221; Relat&oacute;rio da Abordagem</div>
+          <!-- Linha 4: Histórico da Abordagem -->
           <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-            Hist&oacute;rico / Ocorr&ecirc;ncias <span style="font-size:.72rem;color:var(--muted)">(opcional)</span>
-            <textarea id="cad-relatorio" rows="5" maxlength="4000"
-              placeholder="Descreva o contexto, local, motivo da abordagem, atitudes observadas, ve&iacute;culos, armas, drogas, antecedentes verificados..."
+            Hist&oacute;rico da Abordagem
+            <textarea id="ab-observacoes" rows="3" maxlength="2000"
+              placeholder="Contexto, ocorr&ecirc;ncias, materiais apreendidos..."
               style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;resize:vertical;width:100%;box-sizing:border-box"></textarea>
           </label>
         </div>
 
-        <!-- Ações do formulário -->
-        <div id="cad-form-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px"></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="cadastroSalvar()">&#128190; Salvar</button>
-          <button class="btn btn-outline btn-sm" onclick="cadastroLimparForm(true)">&#10007; Cancelar</button>
+        <!-- Veículo -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128665; Ve&iacute;culo</div>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;margin-bottom:10px">Estava com ve&iacute;culo?
+            <select id="ab-tem-veiculo" onchange="abToggleVeiculo()"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:200px">
+              <option value="nao">N&atilde;o</option>
+              <option value="sim">Sim</option>
+            </select>
+          </label>
+          <div id="ab-veiculo-wrap" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Placa
+                <div style="display:flex;gap:4px">
+                  <input type="text" id="ab-placa" maxlength="10" placeholder="ABC1234"
+                    oninput="this.value=this.value.toUpperCase()"
+                    style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();abBuscarVeiculo()}">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="abBuscarVeiculo()" title="Buscar cadastro">&#128269;</button>
+                </div>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Modelo
+                <input type="text" id="ab-modelo" maxlength="80" placeholder="Ex: Civic"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Cor
+                <input type="text" id="ab-cor" maxlength="40" placeholder="Ex: Prata"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              </label>
+            </div>
+            <div id="ab-veiculo-info" style="font-size:.78rem;margin-top:6px;display:none"></div>
+            <div style="margin-top:10px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Vincular como alvo rastreado?
+                <select id="ab-vincular-alvo" onchange="abToggleVincularAlvo()"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:200px">
+                  <option value="nao">N&atilde;o</option>
+                  <option value="sim">Sim &mdash; adicionar aos alvos</option>
+                </select>
+              </label>
+            </div>
+            <div id="ab-alvo-lista-wrap" style="display:none;margin-top:8px">
+              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Escolha a lista de ve&iacute;culos rastreados
+                <select id="ab-alvo-lista-id"
+                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:320px">
+                  <option value="">Carregando listas...</option>
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
-        <div id="cad-form-ok" style="color:#4ade80;font-size:.82rem;margin-top:8px;display:none"></div>
-      </div>
+
+        <!-- Acompanhantes -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128101; Acompanhantes</div>
+          <button type="button" class="btn btn-outline btn-sm" style="margin-bottom:12px" onclick="abAdicionarPessoa()">&#43; Adicionar acompanhante</button>
+          <div id="ab-pessoas-list">
+            <div data-placeholder="1" style="color:var(--muted);font-size:.82rem;font-style:italic;padding:8px 0">Nenhum acompanhante adicionado.</div>
+          </div>
+        </div>
+
+        <!-- Ações -->
+        <div id="ab-form-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="abSalvar()">&#128190; Salvar Abordagem</button>
+          <button class="btn btn-outline btn-sm" onclick="abLimpar()">&#10007; Limpar</button>
+        </div>
+        <div id="ab-form-ok" style="color:#4ade80;font-size:.82rem;margin-top:8px;display:none"></div>
+
+      </div><!-- /pessoas-sub-abordagem -->
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SUB-ABA: LISTA DE ABORDAGENS                                   -->
+      <!-- Endpoint: GET /api/abordagens?q=&dt_from=&dt_to=&limit=&offset= -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div id="pessoas-sub-lista-abordagens" class="pessoas-sub-pane" style="display:none">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <span style="font-size:.82rem;color:var(--muted)">Filtre por local, equipe, tipo ou período.</span>
+          <button class="btn btn-outline btn-sm" onclick="abListaCarregar()">&#8635; Atualizar</button>
+        </div>
+
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <input type="text" id="abl-busca" placeholder="Local, equipe ou tipo..."
+            style="flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+            onkeydown="if(event.key==='Enter')abListaBuscar()">
+          <input type="date" id="abl-dt-from"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" title="De">
+          <input type="date" id="abl-dt-to"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" title="At&#233;">
+          <button class="btn btn-primary btn-sm" onclick="abListaBuscar()">&#128269; Filtrar</button>
+          <button class="btn btn-outline btn-sm" onclick="abListaLimpar()">Limpar</button>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Data/Hora</th><th>Local</th><th>Equipe</th>
+              <th>Tipo/Motivo</th><th>Ve&iacute;culo</th><th>Pessoas</th>
+              <th style="text-align:center">A&#231;&otilde;es</th>
+            </tr></thead>
+            <tbody id="abl-tbody">
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Clique em &quot;Atualizar&quot; para carregar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="abl-status" class="status-line" style="padding:6px 0"></div>
+        <div id="abl-paginacao" style="display:flex;gap:8px;margin-top:8px;align-items:center"></div>
+
+      </div><!-- /pessoas-sub-lista-abordagens -->
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SUB-ABA: RELATÓRIO COMPLETO DA PESSOA                               -->
+      <!-- Endpoint: GET /api/pessoas/{id}/relatorio                          -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <div id="pessoas-sub-relatorio" class="pessoas-sub-pane" style="display:none">
+        <div id="relatorio-content">
+          <div style="text-align:center;padding:48px 20px;color:var(--muted)">
+            <div style="font-size:2.2rem;margin-bottom:10px">&#128202;</div>
+            <div style="font-size:.9rem;font-style:italic">Selecione uma pessoa na aba
+              <strong style="color:var(--accent)">Pesquisar</strong> e clique em
+              <strong style="color:var(--accent)">Ver abordagens</strong> para carregar o relatório completo.</div>
+          </div>
+        </div>
+      </div><!-- /pessoas-sub-relatorio -->
+
     </div><!-- /tab-cadastro -->
 
 <!-- Modal de Visualização de Pessoa (somente leitura) -->
@@ -1668,9 +1975,346 @@
       <!-- preenchido por cadastroVisualizar() -->
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" onclick="">&#9998; Editar</button>
+      <button class="btn btn-primary btn-sm" id="cad-view-nova-ab-btn" onclick="">&#10133; Nova abordagem</button>
+      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" onclick="">&#9998; Editar cadastro</button>
       <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar Exclusão de Pessoa (requer senha) -->
+<div class="modal-overlay" id="cad-excluir-modal" onclick="if(event.target===this)_cadExcluirFechar()">
+  <div class="modal" style="max-width:440px;width:97%">
+    <div class="modal-header">
+      <h2 style="color:#f87171">&#128465; Excluir Pessoa</h2>
+      <button class="modal-close" onclick="_cadExcluirFechar()">&times;</button>
+    </div>
+    <div style="font-size:.87rem;line-height:1.65">
+      <p style="margin:0 0 10px">
+        Deseja excluir <strong id="cad-excluir-nome" style="color:var(--accent)"></strong>?
+      </p>
+      <p style="margin:0 0 16px;color:#fbbf24;font-size:.82rem">
+        &#9888; Todas as abordagens e v&iacute;nculos relacionados tamb&eacute;m ser&atilde;o apagados.
+        Esta a&ccedil;&atilde;o &eacute; irrevers&iacute;vel.
+      </p>
+      <label style="display:flex;flex-direction:column;gap:5px;font-size:.82rem;margin-bottom:16px">
+        <span>Digite sua senha para autorizar:</span>
+        <input type="password" id="cad-excluir-senha" autocomplete="current-password"
+          placeholder="Sua senha de acesso"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.9rem;width:100%;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')_cadExcluirConfirmar()">
+      </label>
+      <div id="cad-excluir-erro" style="color:#f87171;font-size:.82rem;min-height:18px;margin-bottom:12px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="_cadExcluirFechar()">Cancelar</button>
+        <button class="btn btn-danger btn-sm" id="cad-excluir-ok-btn" onclick="_cadExcluirConfirmar()">
+          &#128465; Confirmar Exclus&atilde;o
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe de Abordagem (Lista de Abordagens) -->
+<div class="modal-overlay" id="ab-det-modal" onclick="if(event.target===this)closeModal('ab-det-modal')">
+  <div class="modal" style="max-width:580px;width:97%;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2 id="ab-det-titulo">&#128203; Detalhes da Abordagem</h2>
+      <button class="modal-close" onclick="closeModal('ab-det-modal')">&times;</button>
+    </div>
+    <div id="ab-det-body" style="overflow-y:auto;flex:1;font-size:.87rem;line-height:1.7">
+      <!-- preenchido por abVerDetalhes() -->
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0">
+      <button class="btn btn-outline btn-sm" id="ab-det-rel-btn" style="display:none">&#128202; Ver relat&oacute;rio completo</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('ab-det-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar cadastro de pessoa -->
+<div class="modal-overlay" id="cad-edit-modal" onclick="if(event.target===this)_cadEditFechar()">
+  <div class="modal" style="max-width:640px;width:97%;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2 id="cad-edit-titulo">&#9998; Editar cadastro</h2>
+      <button class="modal-close" onclick="_cadEditFechar()">&times;</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;font-size:.87rem;padding-bottom:4px">
+      <input type="hidden" id="cedit-id">
+
+      <!-- Identificação -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Identificação</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Nome <span style="color:#f87171;font-size:.72rem">*obrigatório</span>
+            <input type="text" id="cedit-nome" maxlength="120" placeholder="Nome completo"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Apelido / Vulgo
+            <input type="text" id="cedit-apelido" maxlength="80" placeholder="Ex: Zé da Silva"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Contato (telefone)
+            <input type="text" id="cedit-contato" maxlength="20" placeholder="(69) 9 9999-9999"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Profiss&atilde;o
+            <input type="text" id="cedit-profissao" maxlength="80" placeholder="Ex: Autônomo"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+        </div>
+      </div>
+
+      <!-- Documentos -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Documentos</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            CPF <span style="font-size:.72rem;color:var(--muted)">(somente números)</span>
+            <input type="text" id="cedit-cpf" maxlength="11" placeholder="00000000000"
+              inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            RG
+            <input type="text" id="cedit-rg" maxlength="20" placeholder="0000000"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Data de Nascimento
+            <input type="date" id="cedit-dn"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+        </div>
+      </div>
+
+      <!-- Naturalidade -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Naturalidade</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Munic&iacute;pio de Naturalidade
+            <input type="text" id="cedit-naturalidade" maxlength="80" placeholder="Ex: Porto Velho"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Estado (UF)
+            <select id="cedit-uf"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              <option value="">-- selecione --</option>
+              <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+              <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+              <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+              <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+              <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+              <option>RO</option><option>RR</option><option>RS</option>
+              <option>SC</option><option>SP</option><option>SE</option><option>TO</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Filiação -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Filia&#231;&atilde;o</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Nome da M&atilde;e
+            <input type="text" id="cedit-mae" maxlength="120" placeholder="Nome completo da mãe"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Nome do Pai
+            <input type="text" id="cedit-pai" maxlength="120" placeholder="Nome completo do pai"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+        </div>
+      </div>
+
+      <!-- Endereço -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Endere&#231;o</div>
+        <input type="text" id="cedit-endereco" maxlength="200" placeholder="Rua, número, bairro, cidade..."
+          style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+      </div>
+
+      <!-- Rodapé -->
+      <div id="cad-edit-erro" style="color:#f87171;font-size:.82rem;min-height:18px;margin-bottom:8px"></div>
+      <div id="cad-edit-ok" style="color:#4ade80;font-size:.82rem;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px;border-top:1px solid var(--border)">
+        <button class="btn btn-outline btn-sm" onclick="_cadEditFechar()">&#10007; Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="cad-edit-salvar-btn" onclick="_cadEditSalvar()">&#128190; Salvar altera&#231;&otilde;es</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova Abordagem Rápida (a partir da ficha da pessoa) -->
+<div class="modal-overlay" id="cad-nova-ab-modal" onclick="if(event.target===this)closeModal('cad-nova-ab-modal')">
+  <div class="modal" style="max-width:720px;width:97%">
+    <div class="modal-header">
+      <h2>&#10133; Nova Abordagem</h2>
+      <button class="modal-close" onclick="closeModal('cad-nova-ab-modal')">&times;</button>
+    </div>
+
+    <input type="hidden" id="cad-ab-pessoa-id">
+
+    <!-- Pessoa vinculada -->
+    <div style="background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.22);border-radius:6px;padding:9px 14px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:1.1rem">&#128100;</span>
+      <div>
+        <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Pessoa vinculada</div>
+        <div id="cad-ab-pessoa-nome" style="font-weight:700;font-size:.92rem"></div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 1: Dados Pessoais -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128100; Dados Pessoais</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:10px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          CPF
+          <input type="text" id="cad-ab-cpf" maxlength="14" placeholder="000.000.000-00"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          RG
+          <input type="text" id="cad-ab-rg" maxlength="20" placeholder="RG"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Contato
+          <input type="text" id="cad-ab-contato" maxlength="40" placeholder="(69) 9 9999-9999"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Profiss&atilde;o
+          <input type="text" id="cad-ab-profissao" maxlength="80" placeholder="Ex: Aut&ocirc;nomo"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Nome do Pai
+          <input type="text" id="cad-ab-pai" maxlength="120" placeholder="Nome do pai"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Nome da M&atilde;e
+          <input type="text" id="cad-ab-mae" maxlength="120" placeholder="Nome da m&atilde;e"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+      </div>
+      <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;margin-top:10px">
+        Endere&ccedil;o
+        <input type="text" id="cad-ab-endereco" maxlength="200" placeholder="Endere&ccedil;o completo"
+          style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+      </label>
+    </div>
+
+    <!-- SEÇÃO 2: Dados da Abordagem -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128203; Dados da Abordagem</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Local / Logradouro <span style="color:#f87171;font-size:.72rem">*obrigat&oacute;rio</span>
+          <input type="text" id="cad-ab-local" maxlength="200" placeholder="Ex: BR-364 KM 12, Zona Rural..."
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Data da abordagem <span style="color:#f87171;font-size:.72rem">*obrigat&oacute;rio</span>
+          <input type="date" id="cad-ab-data"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Hor&aacute;rio
+          <input type="time" id="cad-ab-hora"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 3: Veículo -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128665; Ve&iacute;culo (opcional)</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <span style="font-size:.82rem">Estava usando ve&iacute;culo?</span>
+        <select id="cad-ab-usa-veiculo" onchange="cadAbordagemToggleVeiculo()"
+          style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          <option value="nao">N&atilde;o</option>
+          <option value="sim">Sim</option>
+        </select>
+      </div>
+      <div id="cad-ab-veiculo-campos" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Placa
+            <input type="text" id="cad-ab-placa" maxlength="10" placeholder="ABC1D23"
+              oninput="this.value=this.value.toUpperCase()"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Modelo
+            <input type="text" id="cad-ab-modelo" maxlength="80" placeholder="Ex: Hilux"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Cor
+            <input type="text" id="cad-ab-cor" maxlength="40" placeholder="Ex: Branca"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          </label>
+        </div>
+        <div style="margin-top:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;max-width:260px">
+            Vincular como alvo rastreado?
+            <select id="cad-ab-vincular-alvo" onchange="cadAbordagemToggleVincularAlvo()"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              <option value="nao">N&atilde;o</option>
+              <option value="sim">Sim</option>
+            </select>
+          </label>
+        </div>
+        <div id="cad-ab-alvo-lista-wrap" style="display:none;margin-top:8px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+            Lista de ve&iacute;culos rastreados
+            <select id="cad-ab-alvo-lista-id"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+              <option value="">-- Escolha uma lista --</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: Histórico -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128203; Hist&oacute;rico da Abordagem <span style="color:#f87171;font-size:.72rem">*obrigat&oacute;rio</span></div>
+      <textarea id="cad-ab-historico" rows="5" maxlength="4000" placeholder="Descreva o hist&oacute;rico da abordagem..."
+        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+
+    <!-- SEÇÃO 5: Acompanhantes -->
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">&#128101; Acompanhantes Adicionais</div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="cadAbordagemAdicionarOcupante()">&#43; Adicionar acompanhante</button>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Outras pessoas presentes na abordagem (al&eacute;m da pessoa vinculada).</div>
+      <div id="cad-ab-ocupantes-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Feedback -->
+    <div id="cad-ab-erro" style="color:#f87171;font-size:.82rem;margin-bottom:8px;display:none"></div>
+    <div id="cad-ab-ok"   style="color:#4ade80;font-size:.82rem;margin-bottom:8px;display:none"></div>
+
+    <!-- SEÇÃO 6: Ações -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" id="cad-ab-salvar-btn" onclick="cadAbordagemSalvar()">&#128190; Salvar Abordagem</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('cad-nova-ab-modal')">&#10007; Cancelar</button>
+    </div>
+
   </div>
 </div>
 
@@ -1699,13 +2343,12 @@
             <th>Apelido</th>
             <th>CPF</th>
             <th>Contato</th>
-            <th>Ve&iacute;culo</th>
-            <th>Ocup.</th>
+            <th>Endere&ccedil;o</th>
             <th style="text-align:center">A&ccedil;&otilde;es</th>
           </tr>
         </thead>
         <tbody id="pm-tbody">
-          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Carregando...</td></tr>
         </tbody>
       </table>
     </div>
@@ -7849,42 +8492,78 @@ function _renderHistTable(items) {
 
 <!-- ===== CADASTRO POLICIAL — PESSOAS (JS) ===== -->
 <script>
-// ── Estado interno ────────────────────────────────────────────────────────────
+// =============================================================================
+// SUB-ABAS DA SEÇÃO PESSOAS
+// =============================================================================
+function switchPessoasSubTab(nome, el) {
+  document.querySelectorAll('.pessoas-sub-pane').forEach(function(p) { p.style.display = 'none'; });
+  document.querySelectorAll('.pessoas-sub-btn').forEach(function(b) { b.classList.remove('active'); });
+  var pane = document.getElementById('pessoas-sub-' + nome);
+  if (pane) pane.style.display = '';
+  if (el) el.classList.add('active');
+  if (nome === 'pesquisar')         _cadMostrarHint();
+  if (nome === 'lista-abordagens')  abListaCarregar();
+  if (nome === 'abordagem')         abIniciarForm();
+}
+
+// =============================================================================
+// SUB-ABA: PESQUISAR — estado interno
+// =============================================================================
 var _cadOffset = 0;
 var _cadTotal  = 0;
 var _cadLimit  = 50;
 
-// Carregado ao entrar na aba
+async function _cadMostrarHint() {
+  var tb  = document.getElementById('cad-tbody');
+  var res = document.getElementById('cad-resultado');
+  if (res) res.style.display = '';
+  if (tb)  tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Carregando...</td></tr>';
+  var st = document.getElementById('cad-status'); if(st) st.textContent = '';
+  try {
+    var resp = await fetch('/api/pessoas?limit=' + _cadLimit + '&offset=0');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    _cadTotal = data.total || 0;
+    renderCadResultado(data.pessoas || []);
+    if (st) st.textContent = _cadTotal + ' pessoa(s) cadastrada(s).' +
+      (_cadTotal > _cadLimit ? ' Mostrando primeiras ' + _cadLimit + '.' : '');
+  } catch(e) {
+    if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:20px">Erro ao carregar lista.</td></tr>';
+  }
+}
+
 function cadastroCarregar() {
   _cadOffset = 0;
-  cadastroBuscar();
+  _cadMostrarHint();
 }
 
 function cadastroLimparBusca() {
-  document.getElementById('cad-busca').value = '';
-  document.getElementById('cad-status').textContent = '';
+  var el = document.getElementById('cad-busca'); if(el) el.value = '';
   _cadOffset = 0;
-  cadastroBuscar();
+  _cadMostrarHint();
 }
 
 async function cadastroBuscar() {
   var q = (document.getElementById('cad-busca').value || '').trim();
+  if (!q) { _cadMostrarHint(); return; } // sem filtro → carrega todos
   var url = '/api/pessoas?limit=' + _cadLimit + '&offset=' + _cadOffset;
-  if (q) url += '&q=' + encodeURIComponent(q);
-  var tb = document.getElementById('cad-tbody');
-  if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Buscando...</td></tr>';
+  url += '&q=' + encodeURIComponent(q);
+  var tb  = document.getElementById('cad-tbody');
+  var res = document.getElementById('cad-resultado');
+  if (tb)  tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Buscando...</td></tr>';
+  if (res) res.style.display = '';
   try {
     var resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     _cadTotal = data.total || 0;
     renderCadResultado(data.pessoas || []);
-    document.getElementById('cad-status').textContent =
-      _cadTotal + ' pessoa(s) encontrada(s).' +
+    var st = document.getElementById('cad-status');
+    if (st) st.textContent = _cadTotal + ' pessoa(s) encontrada(s).' +
       (_cadTotal > _cadLimit ? ' Mostrando primeiras ' + _cadLimit + '.' : '');
   } catch(e) {
-    if (tb) tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px">Erro ao buscar.</td></tr>';
-    document.getElementById('cad-status').textContent = '';
+    if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);padding:20px">Erro ao buscar.</td></tr>';
+    var st = document.getElementById('cad-status'); if(st) st.textContent = '';
   }
 }
 
@@ -7892,23 +8571,23 @@ function renderCadResultado(pessoas) {
   var tb = document.getElementById('cad-tbody');
   if (!tb) return;
   if (!pessoas.length) {
-    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
     return;
   }
   tb.innerHTML = pessoas.map(function(p) {
     var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '\u2014';
-    var temRelatorio = !!(p.relatorio_abordagem && p.relatorio_abordagem.trim());
+    var dn = p.data_nascimento ? p.data_nascimento.substring(0,10) : '\u2014';
     return '<tr>' +
       '<td style="color:var(--muted);font-size:.8rem">' + p.id + '</td>' +
-      '<td style="font-weight:600">' + _esc(p.nome) +
-        (temRelatorio ? ' <span title="Possui relat\u00f3rio de abordagem" style="color:var(--accent);font-size:.72rem">\ud83d\udcc4</span>' : '') +
-      '</td>' +
+      '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
       '<td>' + _esc(p.apelido || '\u2014') + '</td>' +
       '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '\u2014') + '</td>' +
+      '<td>' + _esc(p.rg || '\u2014') + '</td>' +
+      '<td style="font-size:.78rem">' + dn + '</td>' +
       '<td>' + _esc(p.contato || '\u2014') + '</td>' +
       '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
       '<td style="text-align:center;white-space:nowrap">' +
-        '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar dados">&#128269;</button> ' +
+        '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button> ' +
         '<button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button> ' +
         '<button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>' +
       '</td>' +
@@ -7918,9 +8597,7 @@ function renderCadResultado(pessoas) {
 
 function _esc(s) {
   if (s == null) return '';
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function _fmtCpf(cpf) {
@@ -7929,153 +8606,276 @@ function _fmtCpf(cpf) {
   return c;
 }
 
-// ── Formulário ────────────────────────────────────────────────────────────────
+// =============================================================================
+// FORMULÁRIO DE PESSOA (edição individual)
+// =============================================================================
 function cadastroNovaPessoa() {
   cadastroLimparForm();
-  document.getElementById('cad-form-titulo').textContent = '📝 Nova Abordagem';
-  document.getElementById('cad-form-wrap').style.display = '';
-  document.getElementById('cad-nome').focus();
+  var tit = document.getElementById('cad-form-titulo'); if(tit) tit.textContent = '\uD83D\uDCDD Nova Pessoa';
+  var fw  = document.getElementById('cad-form-wrap');  if(fw)  fw.style.display = '';
+  var nm  = document.getElementById('cad-nome');        if(nm)  nm.focus();
 }
 
 function cadastroLimparForm(fechar) {
-  document.getElementById('cad-id').value = '';
-  document.getElementById('cad-nome').value = '';
-  document.getElementById('cad-apelido').value = '';
-  document.getElementById('cad-contato').value = '';
-  document.getElementById('cad-profissao').value = '';
-  document.getElementById('cad-cpf').value = '';
-  document.getElementById('cad-rg').value = '';
-  document.getElementById('cad-dn').value = '';
-  document.getElementById('cad-naturalidade').value = '';
-  document.getElementById('cad-uf').value = 'RO';
-  document.getElementById('cad-mae').value = '';
-  document.getElementById('cad-pai').value = '';
-  var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = '';
-  document.getElementById('cad-veiculo-placa').value = '';
-  document.getElementById('cad-veiculo-modelo').value = '';
-  document.getElementById('cad-veiculo-cor').value = '';
-  document.getElementById('cad-ocupantes-list').innerHTML = '';
-  _cadOcupanteIdx = 0;
-  document.getElementById('cad-form-erro').textContent = '';
-  document.getElementById('cad-form-ok').style.display = 'none';
-  document.getElementById('cad-form-titulo').textContent = '📝 Nova Abordagem';
-  if (fechar) document.getElementById('cad-form-wrap').style.display = 'none';
+  ['cad-id','cad-nome','cad-apelido','cad-contato','cad-profissao',
+   'cad-cpf','cad-rg','cad-dn','cad-naturalidade','cad-mae','cad-pai','cad-endereco']
+    .forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var uf = document.getElementById('cad-uf'); if(uf) uf.value = 'RO';
+  var er = document.getElementById('cad-form-erro'); if(er) er.textContent = '';
+  var ok = document.getElementById('cad-form-ok');   if(ok) ok.style.display = 'none';
+  var tit = document.getElementById('cad-form-titulo'); if(tit) tit.textContent = '\uD83D\uDCDD Nova Pessoa';
+  if (fechar) { var fw = document.getElementById('cad-form-wrap'); if(fw) fw.style.display = 'none'; }
 }
 
 function cadastroPopularForm(p) {
-  document.getElementById('cad-id').value = p.id;
-  document.getElementById('cad-nome').value = p.nome || '';
-  document.getElementById('cad-apelido').value = p.apelido || '';
-  document.getElementById('cad-contato').value = p.contato || '';
-  document.getElementById('cad-profissao').value = p.profissao || '';
-  document.getElementById('cad-cpf').value = p.cpf || '';
-  document.getElementById('cad-rg').value = p.rg || '';
-  document.getElementById('cad-dn').value = p.data_nascimento || '';
-  document.getElementById('cad-naturalidade').value = p.naturalidade || '';
-  document.getElementById('cad-uf').value = p.estado_naturalidade || 'RO';
-  document.getElementById('cad-mae').value = p.nome_mae || '';
-  document.getElementById('cad-pai').value = p.nome_pai || '';
-  var rel = document.getElementById('cad-relatorio'); if (rel) rel.value = p.relatorio_abordagem || '';
-  document.getElementById('cad-veiculo-placa').value = p.veiculo_placa || '';
-  document.getElementById('cad-veiculo-modelo').value = p.veiculo_modelo || '';
-  document.getElementById('cad-veiculo-cor').value = p.veiculo_cor || '';
-  document.getElementById('cad-ocupantes-list').innerHTML = '';
-  _cadOcupanteIdx = 0;
-  if (Array.isArray(p.ocupantes)) { p.ocupantes.forEach(function(oc) { cadAdicionarOcupante(oc); }); }
-  document.getElementById('cad-form-erro').textContent = '';
-  document.getElementById('cad-form-ok').style.display = 'none';
+  var set = function(id, val){ var el=document.getElementById(id); if(el) el.value=val||''; };
+  set('cad-id', p.id);            set('cad-nome', p.nome);
+  set('cad-apelido', p.apelido);  set('cad-contato', p.contato);
+  set('cad-profissao', p.profissao); set('cad-cpf', p.cpf); set('cad-rg', p.rg);
+  set('cad-dn', p.data_nascimento); set('cad-naturalidade', p.naturalidade);
+  var uf = document.getElementById('cad-uf'); if(uf) uf.value = p.estado_naturalidade || 'RO';
+  set('cad-mae', p.nome_mae); set('cad-pai', p.nome_pai);
+  set('cad-endereco', p.endereco);
+  var er = document.getElementById('cad-form-erro'); if(er) er.textContent = '';
+  var ok = document.getElementById('cad-form-ok');   if(ok) ok.style.display = 'none';
 }
 
 async function cadastroEditar(id) {
+  // Fecha modal de visualização se estiver aberto
+  closeModal('cad-view-modal');
+
+  var tit  = document.getElementById('cad-edit-titulo');
+  var erEl = document.getElementById('cad-edit-erro');
+  var okEl = document.getElementById('cad-edit-ok');
+  var btn  = document.getElementById('cad-edit-salvar-btn');
+  if (erEl) erEl.textContent = '';
+  if (okEl) { okEl.textContent = ''; okEl.style.display = 'none'; }
+  if (tit)  tit.textContent = '\u270F\uFE0F Carregando...';
+  if (btn)  { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Salvar alterações'; }
+
+  openModal('cad-edit-modal');
+
   try {
     var resp = await fetch('/api/pessoas/' + id);
-    if (!resp.ok) { alert('Erro ao carregar pessoa.'); return; }
+    if (!resp.ok) {
+      if (erEl) erEl.textContent = 'Erro ao carregar pessoa.';
+      if (tit)  tit.textContent  = '\u270F\uFE0F Editar cadastro';
+      return;
+    }
     var p = await resp.json();
-    cadastroPopularForm(p);
-    document.getElementById('cad-form-titulo').textContent = '✏️ Editando: ' + p.nome;
-    document.getElementById('cad-form-wrap').style.display = '';
-    document.getElementById('cad-nome').scrollIntoView({behavior:'smooth', block:'center'});
+    if (tit) tit.textContent = '\u270F\uFE0F Editar: ' + p.nome;
+
+    var set = function(id, val) { var el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('cedit-id',          p.id);
+    set('cedit-nome',        p.nome);
+    set('cedit-apelido',     p.apelido);
+    set('cedit-contato',     p.contato);
+    set('cedit-profissao',   p.profissao);
+    set('cedit-cpf',         p.cpf);
+    set('cedit-rg',          p.rg);
+    set('cedit-dn',          p.data_nascimento);
+    set('cedit-naturalidade',p.naturalidade);
+    var uf = document.getElementById('cedit-uf'); if (uf) uf.value = p.estado_naturalidade || 'RO';
+    set('cedit-mae',         p.nome_mae);
+    set('cedit-pai',         p.nome_pai);
+    set('cedit-endereco',    p.endereco);
+
+    // Foca no campo nome
+    var nm = document.getElementById('cedit-nome'); if (nm) setTimeout(function(){ nm.focus(); }, 80);
   } catch(e) {
-    alert('Erro: ' + e);
+    if (erEl) erEl.textContent = 'Erro: ' + e.message;
+    if (tit)  tit.textContent  = '\u270F\uFE0F Editar cadastro';
+  }
+}
+
+function _cadEditFechar() {
+  closeModal('cad-edit-modal');
+}
+
+async function _cadEditSalvar() {
+  var erEl = document.getElementById('cad-edit-erro');
+  var okEl = document.getElementById('cad-edit-ok');
+  var btn  = document.getElementById('cad-edit-salvar-btn');
+  if (erEl) erEl.textContent = '';
+  if (okEl) { okEl.textContent = ''; okEl.style.display = 'none'; }
+
+  var g    = function(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  var nome = g('cedit-nome');
+  if (!nome) {
+    if (erEl) erEl.textContent = 'Nome é obrigatório.';
+    var nm = document.getElementById('cedit-nome'); if (nm) nm.focus();
+    return;
+  }
+  var cpf = g('cedit-cpf').replace(/\D/g, '');
+  if (cpf && cpf.length > 11) {
+    if (erEl) erEl.textContent = 'CPF deve ter no máximo 11 dígitos.';
+    return;
+  }
+
+  var id = g('cedit-id');
+  if (!id) { if (erEl) erEl.textContent = 'ID da pessoa não encontrado.'; return; }
+
+  var payload = {
+    nome:                nome,
+    apelido:             g('cedit-apelido'),
+    contato:             g('cedit-contato'),
+    profissao:           g('cedit-profissao'),
+    cpf:                 cpf,
+    rg:                  g('cedit-rg'),
+    data_nascimento:     g('cedit-dn') || null,
+    naturalidade:        g('cedit-naturalidade'),
+    estado_naturalidade: g('cedit-uf'),
+    nome_mae:            g('cedit-mae'),
+    nome_pai:            g('cedit-pai'),
+    endereco:            g('cedit-endereco') || null,
+  };
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
+
+  try {
+    var resp = await fetch('/api/pessoas/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    var data = await resp.json();
+    if (!resp.ok) {
+      if (erEl) erEl.textContent = data.detail || ('Erro ' + resp.status);
+      if (btn)  { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Salvar alterações'; }
+      return;
+    }
+    if (okEl) { okEl.textContent = '\u2705 Pessoa atualizada com sucesso!'; okEl.style.display = 'block'; }
+    if (btn)  { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Salvar alterações'; }
+    _cadMostrarHint();   // atualiza a lista
+    // Fecha modal após breve exibição do sucesso
+    setTimeout(function() { closeModal('cad-edit-modal'); }, 1000);
+  } catch(e) {
+    if (erEl) erEl.textContent = 'Erro de rede: ' + e.message;
+    if (btn)  { btn.disabled = false; btn.textContent = '\uD83D\uDCBE Salvar alterações'; }
   }
 }
 
 async function cadastroSalvar() {
   var erro = document.getElementById('cad-form-erro');
   var ok   = document.getElementById('cad-form-ok');
-  erro.textContent = '';
-  ok.style.display = 'none';
+  if(erro) erro.textContent = ''; if(ok) ok.style.display = 'none';
 
-  var nome = document.getElementById('cad-nome').value.trim();
-  if (!nome) { erro.textContent = 'Nome é obrigatório.'; return; }
+  var nome = (document.getElementById('cad-nome').value || '').trim();
+  if (!nome) { if(erro) erro.textContent = 'Nome \u00e9 obrigat\u00f3rio.'; return; }
+  var cpf = (document.getElementById('cad-cpf').value || '').replace(/\D/g,'');
+  if (cpf && cpf.length > 11) { if(erro) erro.textContent = 'CPF deve ter no m\u00e1ximo 11 d\u00edgitos.'; return; }
 
-  var cpf = document.getElementById('cad-cpf').value.replace(/\D/g,'');
-  if (cpf && cpf.length > 11) { erro.textContent = 'CPF deve ter no máximo 11 dígitos.'; return; }
-
+  var g = function(id){ var el=document.getElementById(id); return el ? el.value.trim() : ''; };
   var payload = {
     nome:                nome,
-    apelido:             document.getElementById('cad-apelido').value.trim(),
-    contato:             document.getElementById('cad-contato').value.trim(),
-    profissao:           document.getElementById('cad-profissao').value.trim(),
+    apelido:             g('cad-apelido'),
+    contato:             g('cad-contato'),
+    profissao:           g('cad-profissao'),
     cpf:                 cpf,
-    rg:                  document.getElementById('cad-rg').value.trim(),
-    data_nascimento:     document.getElementById('cad-dn').value || null,
-    naturalidade:        document.getElementById('cad-naturalidade').value.trim(),
-    estado_naturalidade: document.getElementById('cad-uf').value,
-    nome_mae:            document.getElementById('cad-mae').value.trim(),
-    nome_pai:            document.getElementById('cad-pai').value.trim(),
-    relatorio_abordagem: (document.getElementById('cad-relatorio') ? document.getElementById('cad-relatorio').value.trim() : '') || null,
-    veiculo_placa:  document.getElementById('cad-veiculo-placa').value.trim().toUpperCase() || null,
-    veiculo_modelo: document.getElementById('cad-veiculo-modelo').value.trim() || null,
-    veiculo_cor:    document.getElementById('cad-veiculo-cor').value.trim() || null,
-    ocupantes:      cadColetarOcupantes(),
+    rg:                  g('cad-rg'),
+    data_nascimento:     g('cad-dn') || null,
+    naturalidade:        g('cad-naturalidade'),
+    estado_naturalidade: g('cad-uf'),
+    nome_mae:            g('cad-mae'),
+    nome_pai:            g('cad-pai'),
+    endereco:            g('cad-endereco') || null,
   };
 
-  var id  = document.getElementById('cad-id').value;
+  var id     = g('cad-id');
   var url    = id ? '/api/pessoas/' + id : '/api/pessoas';
   var method = id ? 'PUT' : 'POST';
 
   try {
-    var resp = await fetch(url, {
-      method: method,
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
-    });
+    var resp = await fetch(url, {method:method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
     var data = await resp.json();
-    if (!resp.ok) { erro.textContent = data.detail || ('Erro ' + resp.status); return; }
-    ok.textContent = id ? '✅ Pessoa atualizada com sucesso!' : '✅ Pessoa cadastrada com sucesso!';
-    ok.style.display = 'block';
-    if (!id && data.id) document.getElementById('cad-id').value = data.id;
-    document.getElementById('cad-form-titulo').textContent = '✏️ Editando: ' + nome;
-    cadastroBuscar(); // atualiza a lista
-  } catch(e) {
-    erro.textContent = 'Erro: ' + e;
-  }
+    if (!resp.ok) { if(erro) erro.textContent = data.detail || ('Erro ' + resp.status); return; }
+    if(ok) { ok.textContent = id ? '\u2705 Pessoa atualizada!' : '\u2705 Pessoa cadastrada!'; ok.style.display = 'block'; }
+    var cidEl = document.getElementById('cad-id'); if(!id && data.id && cidEl) cidEl.value = data.id;
+    var tit = document.getElementById('cad-form-titulo'); if(tit) tit.textContent = '\u270F\uFE0F Editando: ' + nome;
+    cadastroBuscar();
+  } catch(e) { if(erro) erro.textContent = 'Erro: ' + e; }
 }
 
-async function cadastroExcluir(id, elOrNome) {
-  var nome = (typeof elOrNome === 'string') ? elOrNome : (elOrNome && elOrNome.dataset ? elOrNome.dataset.nome : String(id));
-  if (!confirm('Excluir a pessoa "' + nome + '"?\nEsta ação não pode ser desfeita.')) return;
+// Estado interno do modal de exclusão
+var _cadExcluirId   = null;
+var _cadExcluirNome = '';
+
+function cadastroExcluir(id, elOrNome) {
+  _cadExcluirId   = id;
+  _cadExcluirNome = (typeof elOrNome === 'string') ? elOrNome
+    : (elOrNome && elOrNome.dataset ? elOrNome.dataset.nome : 'Pessoa #' + id);
+
+  var nomEl = document.getElementById('cad-excluir-nome');
+  var erEl  = document.getElementById('cad-excluir-erro');
+  var snEl  = document.getElementById('cad-excluir-senha');
+  var okBtn = document.getElementById('cad-excluir-ok-btn');
+
+  if (nomEl) nomEl.textContent = _cadExcluirNome;
+  if (erEl)  erEl.textContent  = '';
+  if (snEl)  { snEl.value = ''; }
+  if (okBtn) { okBtn.disabled = false; okBtn.textContent = '\uD83D\uDDD1\uFE0F Confirmar Exclusão'; }
+
+  openModal('cad-excluir-modal');
+  setTimeout(function() { var s = document.getElementById('cad-excluir-senha'); if (s) s.focus(); }, 80);
+}
+
+function _cadExcluirFechar() {
+  var snEl = document.getElementById('cad-excluir-senha');
+  if (snEl) snEl.value = '';
+  closeModal('cad-excluir-modal');
+  _cadExcluirId = null;
+}
+
+async function _cadExcluirConfirmar() {
+  if (!_cadExcluirId) return;
+  var snEl  = document.getElementById('cad-excluir-senha');
+  var erEl  = document.getElementById('cad-excluir-erro');
+  var okBtn = document.getElementById('cad-excluir-ok-btn');
+
+  var senha = (snEl ? snEl.value : '').trim();
+  if (!senha) {
+    if (erEl) erEl.textContent = 'Digite sua senha para confirmar.';
+    if (snEl) snEl.focus();
+    return;
+  }
+  if (erEl)  erEl.textContent  = '';
+  if (okBtn) { okBtn.disabled = true; okBtn.textContent = 'Excluindo...'; }
+
   try {
-    var resp = await fetch('/api/pessoas/' + id, {method:'DELETE'});
+    var resp = await fetch('/api/pessoas/' + _cadExcluirId, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senha_confirmacao: senha }),
+    });
+
+    // Limpa o campo de senha imediatamente, independente do resultado
+    if (snEl) snEl.value = '';
+
     if (resp.status === 204 || resp.ok) {
-      cadastroBuscar();
-      if (document.getElementById('cad-id').value == id) cadastroLimparForm();
+      _cadExcluirFechar();
+      _cadMostrarHint();                              // atualiza a lista
+      var cidEl = document.getElementById('cad-id');
+      if (cidEl && cidEl.value == _cadExcluirId) cadastroLimparForm(true);
     } else {
-      var data = await resp.json().catch(function(){return {};});
-      alert('Erro ao excluir: ' + (data.detail || resp.status));
+      var data = await resp.json().catch(function() { return {}; });
+      var msg  = data.detail || ('Erro ' + resp.status);
+      if (erEl)  erEl.textContent = msg;
+      if (okBtn) { okBtn.disabled = false; okBtn.textContent = '\uD83D\uDDD1\uFE0F Confirmar Exclusão'; }
+      if (snEl)  snEl.focus();
     }
   } catch(e) {
-    alert('Erro: ' + e);
+    if (snEl) snEl.value = '';
+    if (erEl) erEl.textContent = 'Erro de rede: ' + e.message;
+    if (okBtn) { okBtn.disabled = false; okBtn.textContent = '\uD83D\uDDD1\uFE0F Confirmar Exclusão'; }
   }
 }
 
-// Carrega automaticamente ao entrar na aba
 async function cadastroVisualizar(id) {
-  var modal  = document.getElementById('cad-view-modal');
-  var body   = document.getElementById('cad-view-body');
-  var titulo = document.getElementById('cad-view-titulo');
-  var editBtn = document.getElementById('cad-view-edit-btn');
+  var modal      = document.getElementById('cad-view-modal');
+  var body       = document.getElementById('cad-view-body');
+  var titulo     = document.getElementById('cad-view-titulo');
+  var editBtn    = document.getElementById('cad-view-edit-btn');
+  var novaAbBtn  = document.getElementById('cad-view-nova-ab-btn');
   if (!modal) return;
   body.innerHTML = '<div style="text-align:center;padding:20px"><span class="spinner"></span> Carregando...</div>';
   openModal('cad-view-modal');
@@ -8083,53 +8883,651 @@ async function cadastroVisualizar(id) {
     var resp = await fetch('/api/pessoas/' + id);
     if (!resp.ok) { body.innerHTML = '<p style="color:var(--danger)">Erro ao carregar.</p>'; return; }
     var p = await resp.json();
-    titulo.textContent = '👤 ' + (p.nome || 'Pessoa #' + id);
+    titulo.textContent = '\uD83D\uDC64 ' + (p.nome || 'Pessoa #' + id);
+    editBtn.textContent = '\u270F\uFE0F Editar cadastro';
     editBtn.onclick = function() { closeModal('cad-view-modal'); cadastroEditar(id); };
-    function row(label, val) {
-      if (!val) return '';
-      return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)">' +
-        '<span style="min-width:160px;color:var(--muted);font-size:.8rem">' + label + '</span>' +
-        '<span style="flex:1;word-break:break-word">' + _esc(String(val)) + '</span></div>';
+    if (novaAbBtn) novaAbBtn.onclick = function() { cadastroNovaAbordagem(id, p.nome); };
+
+    var sS = 'font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(250,204,21,.2)';
+    var rS = 'display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)';
+    var lS = 'min-width:155px;color:var(--muted);font-size:.8rem;flex-shrink:0';
+    var vS = 'flex:1;word-break:break-word';
+
+    function sec(ic, lbl) { return '<div style="'+sS+'">'+ic+' '+lbl+'</div>'; }
+    function row(lbl, val) {
+      var v = (val != null && String(val).trim() !== '') ? _esc(String(val)) : '<span style="color:var(--muted)">\u2014</span>';
+      return '<div style="'+rS+'"><span style="'+lS+'">'+lbl+'</span><span style="'+vS+'">'+v+'</span></div>';
     }
-    var cpfFmt = p.cpf ? _fmtCpf(p.cpf) : '';
-    var html = row('Nome', p.nome) + row('Apelido / Vulgo', p.apelido)
-      + row('CPF', cpfFmt) + row('RG', p.rg)
-      + row('Data de Nascimento', p.data_nascimento)
-      + row('Naturalidade', p.naturalidade ? (p.naturalidade + (p.estado_naturalidade ? ' – ' + p.estado_naturalidade : '')) : '')
-      + row('Contato', p.contato) + row('Profissão', p.profissao)
-      + row('Nome da Mãe', p.nome_mae) + row('Nome do Pai', p.nome_pai)
-      + row('Cadastrado em', p.data_cadastro ? p.data_cadastro.substring(0,10) : '');
-    if (p.veiculo_placa || p.veiculo_modelo || p.veiculo_cor) {
-      html += '<div style="margin-top:12px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">&#128665; Ve&iacute;culo</div>';
-      html += row('Placa', p.veiculo_placa) + row('Modelo', p.veiculo_modelo) + row('Cor', p.veiculo_cor);
-    }
-    if (Array.isArray(p.ocupantes) && p.ocupantes.length) {
-      html += '<div style="margin-top:12px;font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">&#128101; Ocupantes</div>';
-      p.ocupantes.forEach(function(oc, i) {
-        html += '<div style="border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px">'
-          + '<div style="font-size:.75rem;font-weight:700;color:var(--accent);margin-bottom:6px">Ocupante ' + (i+1) + '</div>'
-          + row('Nome', oc.nome) + row('Apelido', oc.apelido) + row('CPF', oc.cpf ? _fmtCpf(oc.cpf) : '') + row('RG', oc.rg)
-          + row('Data de Nasc.', oc.data_nascimento)
-          + row('Naturalidade', oc.naturalidade ? (oc.naturalidade + (oc.estado_naturalidade ? ' \u2013 ' + oc.estado_naturalidade : '')) : '')
-          + row('M\u00e3e', oc.nome_mae) + row('Pai', oc.nome_pai) + row('Contato', oc.contato) + row('Profiss\u00e3o', oc.profissao) + row('Endere\u00e7o', oc.endereco)
-          + '</div>';
-      });
-    }
-    if (p.relatorio_abordagem && p.relatorio_abordagem.trim()) {
-      html += '<div style="margin-top:14px">'
-        + '<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">📄 Relatório da Abordagem</div>'
-        + '<div style="background:rgba(255,255,255,.05);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 var(--radius) var(--radius) 0;white-space:pre-wrap;font-size:.85rem;line-height:1.6">'
-        + _esc(p.relatorio_abordagem) + '</div></div>';
-    } else {
-      html += '<div style="margin-top:12px;color:var(--muted);font-size:.8rem;font-style:italic">Nenhum relatório de abordagem registrado.</div>';
-    }
+
+    var html = '';
+
+    // 1. Identificação
+    html += sec('\uD83D\uDC64', 'Identifica\u00e7\u00e3o');
+    html += row('Nome completo', p.nome);
+    html += row('Apelido / Vulgo', p.apelido);
+    html += row('Contato', p.contato);
+    html += row('Profiss\u00e3o', p.profissao);
+
+    // 2. Documentos
+    html += sec('\uD83D\uDCCB', 'Documentos');
+    html += row('CPF', p.cpf ? _fmtCpf(p.cpf) : null);
+    html += row('RG', p.rg);
+    html += row('Data de Nascimento', p.data_nascimento);
+
+    // 3. Naturalidade
+    html += sec('\uD83D\uDCCD', 'Naturalidade');
+    html += row('Munic\u00edpio', p.naturalidade);
+    html += row('Estado (UF)', p.estado_naturalidade);
+
+    // 4. Filiação
+    html += sec('\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67', 'Filia\u00e7\u00e3o');
+    html += row('Nome da M\u00e3e', p.nome_mae);
+    html += row('Nome do Pai', p.nome_pai);
+
+    // 5. Endereço
+    html += sec('\uD83C\uDFE0', 'Endere\u00e7o');
+    html += row('Endere\u00e7o completo', p.endereco);
+
+    // 6. Cadastro
+    html += sec('\uD83D\uDCC5', 'Cadastro');
+    html += row('Cadastrado em', p.data_cadastro ? p.data_cadastro.substring(0,10) : null);
+
+    // 7. Histórico de Abordagens
+    html += sec('\uD83D\uDCCB', 'Hist\u00f3rico de Abordagens');
+    html += '<button class="btn btn-outline btn-sm" id="_cad-hist-btn" style="font-size:.8rem">&#128202; Ver relat\u00f3rio completo de ' + _esc(p.nome) + '</button>';
+
     body.innerHTML = html;
+
+    // Handler do botão histórico fora do innerHTML para evitar injeção
+    var histBtn = body.querySelector('#_cad-hist-btn');
+    if (histBtn) histBtn.onclick = function() {
+      closeModal('cad-view-modal');
+      abrirRelatorio(id, p.nome);
+    };
   } catch(e) {
     body.innerHTML = '<p style="color:var(--danger)">Erro: ' + _esc(e.message) + '</p>';
   }
 }
 
-// ── Modal Pessoas (painel) ────────────────────────────────────────────────────
+// =============================================================================
+// SUB-ABA: ADICIONAR ABORDAGEM
+// Endpoints:
+//   POST /api/abordagens            → salvar abordagem completa
+//   GET  /api/veiculos-abordagem/busca?placa=  → autocompletar veículo
+//   GET  /api/pessoas?q=            → buscar pessoas existentes
+// =============================================================================
+var _abPessoaIdx = 0;
+
+function abIniciarForm() {
+  // preenche data/hora com agora se vazio
+  var dh = document.getElementById('ab-data-hora');
+  if (dh && !dh.value) {
+    var n = new Date(); n.setMinutes(n.getMinutes() - n.getTimezoneOffset());
+    dh.value = n.toISOString().slice(0, 16);
+  }
+}
+
+function abLimpar() {
+  ['ab-pessoa-id','ab-nome','ab-cpf','ab-rg','ab-contato','ab-profissao',
+   'ab-pai','ab-mae','ab-rua','ab-numero','ab-bairro','ab-uf',
+   'ab-data-hora','ab-local','ab-observacoes',
+   'ab-placa','ab-modelo','ab-cor']
+    .forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var pr = document.getElementById('ab-pessoa-resultado'); if(pr) pr.innerHTML = '';
+  var vi = document.getElementById('ab-veiculo-info'); if(vi){ vi.style.display='none'; vi.textContent=''; }
+  var va = document.getElementById('ab-vincular-alvo'); if(va) va.value = 'nao';
+  var tv = document.getElementById('ab-tem-veiculo'); if(tv) tv.value = 'nao';
+  var vw = document.getElementById('ab-veiculo-wrap'); if(vw) vw.style.display = 'none';
+  var pl = document.getElementById('ab-pessoas-list');
+  if(pl) pl.innerHTML = '<div data-placeholder="1" style="color:var(--muted);font-size:.82rem;font-style:italic;padding:8px 0">Nenhum acompanhante adicionado.</div>';
+  _abPessoaIdx = 0;
+  var er = document.getElementById('ab-form-erro'); if(er) er.textContent = '';
+  var ok = document.getElementById('ab-form-ok');   if(ok) ok.style.display = 'none';
+  abIniciarForm();
+}
+
+async function abBuscarVeiculo() {
+  var placa = (document.getElementById('ab-placa').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (!placa) { alert('Digite a placa para buscar.'); return; }
+  var vi = document.getElementById('ab-veiculo-info');
+  try {
+    var resp = await fetch('/api/veiculos-abordagem/busca?placa=' + encodeURIComponent(placa));
+    if (resp.status === 404) {
+      if(vi){ vi.textContent='Placa n\u00e3o encontrada no cadastro. Preencha os dados abaixo.'; vi.style.display=''; vi.style.color='var(--muted)'; }
+      return;
+    }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    if (data.found && data.veiculo) {
+      var v = data.veiculo;
+      var set = function(id,val){ var el=document.getElementById(id); if(el) el.value=val||''; };
+      set('ab-modelo',v.modelo); set('ab-cor',v.cor);
+      if(vi){ vi.textContent='\u2705 Ve\u00edculo encontrado (id #'+v.id+').'; vi.style.display=''; vi.style.color='var(--accent)'; }
+    } else {
+      if(vi){ vi.textContent='Placa n\u00e3o encontrada. Preencha os dados para cadastrar.'; vi.style.display=''; vi.style.color='var(--muted)'; }
+    }
+  } catch(e) {
+    if(vi){ vi.textContent='Erro ao buscar: '+e.message; vi.style.display=''; vi.style.color='var(--danger)'; }
+  }
+}
+
+function abToggleVeiculo() {
+  var sel = document.getElementById('ab-tem-veiculo');
+  var wrap = document.getElementById('ab-veiculo-wrap');
+  if (!sel || !wrap) return;
+  if (sel.value === 'sim') {
+    wrap.style.display = '';
+  } else {
+    wrap.style.display = 'none';
+    ['ab-placa','ab-modelo','ab-cor'].forEach(function(id){
+      var el = document.getElementById(id); if(el) el.value = '';
+    });
+    var va = document.getElementById('ab-vincular-alvo'); if(va) va.value = 'nao';
+    var vi = document.getElementById('ab-veiculo-info'); if(vi){ vi.style.display='none'; vi.textContent=''; }
+  }
+}
+
+var _abCpfDuplicadoPessoa = null;
+var _abCpfTimer = null;
+
+function abVerificarCpfDuplicado() {
+  clearTimeout(_abCpfTimer);
+  var cpf = (document.getElementById('ab-cpf').value||'').replace(/\D/g,'');
+  var wrap = document.getElementById('ab-cpf-alerta-wrap');
+  if (cpf.length !== 11) {
+    _abCpfDuplicadoPessoa = null;
+    if(wrap) wrap.style.display = 'none';
+    return;
+  }
+  // se já temos pessoa vinculada pelo id, não revalidar
+  var pidEl = document.getElementById('ab-pessoa-id');
+  if(pidEl && pidEl.value) return;
+  _abCpfTimer = setTimeout(async function() {
+    try {
+      var resp = await fetch('/api/pessoas/existe-cpf?cpf=' + encodeURIComponent(cpf));
+      if (!resp.ok) { if(wrap) wrap.style.display='none'; return; }
+      var data = await resp.json();
+      if (data.existe) {
+        _abCpfDuplicadoPessoa = data.pessoa;
+        if(wrap) wrap.style.display = '';
+      } else {
+        _abCpfDuplicadoPessoa = null;
+        if(wrap) wrap.style.display = 'none';
+      }
+    } catch(e) { if(wrap) wrap.style.display='none'; }
+  }, 500);
+}
+
+var _abPessoaEncontrada = null; // pessoa pendente de uso (por pesquisa de campo)
+
+function _abMostrarCadastroExistente(p) {
+  _abPessoaEncontrada = p;
+  var wrap = document.getElementById('ab-cadastro-existente-wrap');
+  var info = document.getElementById('ab-cadastro-existente-info');
+  if (info) info.innerHTML = '<strong>'+_esc(p.nome)+'</strong>'
+    +(p.cpf?' &middot; CPF: '+_fmtCpf(p.cpf):'')
+    +(p.rg?' &middot; RG: '+_esc(p.rg):'')
+    +' <span style="font-size:.75rem;color:var(--muted)">(#'+p.id+')</span>';
+  if (wrap) wrap.style.display = '';
+}
+
+function abUsarCadastroExistente() {
+  var p = _abPessoaEncontrada || _abCpfDuplicadoPessoa;
+  if (!p) return;
+  // Esconder alertas e resultado da pesquisa
+  var w1 = document.getElementById('ab-cpf-alerta-wrap'); if(w1) w1.style.display='none';
+  var w2 = document.getElementById('ab-cadastro-existente-wrap'); if(w2) w2.style.display='none';
+  var res = document.getElementById('ab-pessoa-resultado'); if(res) res.innerHTML='';
+  _abCpfDuplicadoPessoa = null;
+  _abPessoaEncontrada = null;
+  // Abrir modal dedicado de nova abordagem para cadastro existente
+  cadastroNovaAbordagem(p.id, p.nome);
+}
+
+async function _abPesquisarCampo(q) {
+  if (!q) return;
+  var res = document.getElementById('ab-pessoa-resultado');
+  var wrap = document.getElementById('ab-cadastro-existente-wrap');
+  if(wrap) wrap.style.display='none';
+  if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><span class="spinner" style="width:12px;height:12px;margin-right:4px"></span>Buscando...</span>';
+  try {
+    var resp = await fetch('/api/pessoas?q='+encodeURIComponent(q)+'&limit=6');
+    var data = await resp.json();
+    var pessoas = data.pessoas || [];
+    if (!pessoas.length) {
+      if(res) res.innerHTML='<span style="font-size:.78rem;color:var(--muted)">Nenhum cadastro encontrado para &ldquo;'+_esc(q)+'&rdquo;.</span>';
+      return;
+    }
+    // Se exatamente 1 resultado, vai direto para aviso de cadastro existente
+    if (pessoas.length === 1) {
+      if(res) res.innerHTML='';
+      _abMostrarCadastroExistente(pessoas[0]);
+      return;
+    }
+    // Múltiplos — mostrar lista para o operador escolher
+    var html = '<div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Selecione o cadastro encontrado:</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0">';
+    pessoas.forEach(function(p){
+      html += '<button type="button" class="btn btn-outline btn-sm" style="font-size:.76rem;padding:3px 8px"'
+        +' onclick="abSelecionarPrincipal('+JSON.stringify(p).replace(/\\/g,'\\\\').replace(/"/g,'&quot;')+')">'
+        +_esc(p.nome)+(p.cpf?' \u00b7 '+_fmtCpf(p.cpf):'')+'</button>';
+    });
+    html += '</div>';
+    if(res) res.innerHTML = html;
+  } catch(e) {
+    if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--danger)">Erro: '+_esc(e.message)+'</span>';
+  }
+}
+async function abPesquisarPorNome() {
+  var q = (document.getElementById('ab-nome').value||'').trim();
+  if (!q) { alert('Preencha o campo Nome antes de pesquisar.'); return; }
+  await _abPesquisarCampo(q);
+}
+async function abPesquisarPorCpf() {
+  var q = (document.getElementById('ab-cpf').value||'').replace(/\D/g,'');
+  if (!q) { alert('Preencha o campo CPF antes de pesquisar.'); return; }
+  await _abPesquisarCampo(q);
+}
+async function abPesquisarPorRg() {
+  var q = (document.getElementById('ab-rg').value||'').trim();
+  if (!q) { alert('Preencha o campo RG antes de pesquisar.'); return; }
+  await _abPesquisarCampo(q);
+}
+
+function abSelecionarPrincipal(p) {
+  var res = document.getElementById('ab-pessoa-resultado');
+  if(res) res.innerHTML = '';
+  _abMostrarCadastroExistente(p);
+}
+
+async function abBuscarPrincipal() {
+  // mantido para compatibilidade — delega para _abPesquisarCampo
+  var q = (document.getElementById('ab-pessoa-busca')||{value:''}).value.trim();
+  if (!q) return;
+  await _abPesquisarCampo(q);
+}
+
+async function abCarregarListasVeiculos() {
+  var sel = document.getElementById('ab-alvo-lista-id');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    var resp = await fetch('/api/vehicles/lists');
+    var data = await resp.json();
+    var listas = data.items || [];
+    if (!listas.length) { sel.innerHTML='<option value="">Nenhuma lista disponível</option>'; return; }
+    sel.innerHTML = '<option value="">-- Escolha uma lista --</option>';
+    listas.forEach(function(l){
+      var opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = l.name + ' (' + l.vehicle_count + ' veículos)';
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    sel.innerHTML = '<option value="">Erro ao carregar listas</option>';
+  }
+}
+
+function abToggleVincularAlvo() {
+  var sel = document.getElementById('ab-vincular-alvo');
+  var wrap = document.getElementById('ab-alvo-lista-wrap');
+  if (!sel || !wrap) return;
+  if (sel.value === 'sim') {
+    wrap.style.display = '';
+    abCarregarListasVeiculos();
+  } else {
+    wrap.style.display = 'none';
+    var li = document.getElementById('ab-alvo-lista-id'); if(li) li.value = '';
+  }
+}
+
+var _papeis = [
+  {v:'motorista',l:'Motorista'},{v:'proprietario',l:'Propriet\u00e1rio'},
+  {v:'passageiro',l:'Passageiro'},{v:'garupa',l:'Garupa'},{v:'outro',l:'Outro'}
+];
+
+function abAdicionarPessoa(dados) {
+  var pl = document.getElementById('ab-pessoas-list');
+  if (!pl) return;
+  var ph = pl.querySelector('[data-placeholder]'); if(ph) ph.remove();
+  var idx = _abPessoaIdx++;
+  var d   = dados || {};
+  var s   = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.83rem;width:100%;box-sizing:border-box';
+  var opts = _papeis.map(function(p){ return '<option value="'+p.v+'"'+(p.v===(d.papel||'outro')?' selected':'')+'>'+p.l+'</option>'; }).join('');
+
+  function fi(f,lbl,ph2,val,extra) {
+    return '<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">'+lbl
+      +'<input type="text" id="ab-pb-'+idx+'-'+f+'" maxlength="120" placeholder="'+(ph2||'')+'"'+(extra||'')
+      +' value="'+_esc(String(val||''))+'" style="'+s+'"></label>';
+  }
+
+  var html = '<div class="ab-pessoa-bloco" id="ab-pb-'+idx+'" style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;background:var(--bg2)">'
+    // cabeçalho: label + remover
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">'
+    +'<span style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Acompanhante '+(idx+1)+'</span>'
+    +'<button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.78rem" onclick="document.getElementById(\'ab-pb-'+idx+'\').remove()">&#10005; Remover</button>'
+    +'</div>'
+    // busca rápida
+    +'<div style="display:flex;gap:6px;margin-bottom:10px">'
+    +'<input type="text" id="ab-pb-'+idx+'-busca" placeholder="Buscar cadastro existente (nome, CPF, RG)..."'
+    +' style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.82rem"'
+    +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaBuscar('+idx+')}">'
+    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaBuscar('+idx+')">&#128269;</button>'
+    +'</div>'
+    +'<div id="ab-pb-'+idx+'-resultado" style="margin-bottom:10px"></div>'
+    +'<input type="hidden" id="ab-pb-'+idx+'-id" value="'+(d.id||'')+'">'
+    // Linha 1: Nome / CPF / RG
+    +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">'
+    +fi('nome','Nome *','Nome completo',d.nome)
+    +fi('cpf','CPF','000.000.000-00',d.cpf,' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"')
+    +fi('rg','RG','0000000',d.rg)
+    +'</div>'
+    // Linha 2: Contato / Profissão
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +fi('contato','Contato','(69) 9 9999-9999',d.contato)
+    +fi('profissao','Profiss\u00e3o','Ex: Aut\u00f4nomo',d.profissao)
+    +'</div>'
+    // Linha 3: Pai / Mãe
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +fi('pai','Nome do Pai','Nome completo do pai',d.nome_pai)
+    +fi('mae','Nome da M\u00e3e','Nome completo da m\u00e3e',d.nome_mae)
+    +'</div>'
+    // Linha 4: Endereço
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem;margin-bottom:8px">Endere\u00e7o'
+    +'<input type="text" id="ab-pb-'+idx+'-endereco" maxlength="200" placeholder="Endere\u00e7o completo"'
+    +' value="'+_esc(String(d.endereco||''))+'" style="'+s+'"></label>'
+    // Linha 5: Papel na abordagem
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem;margin-bottom:8px">Papel na abordagem'
+    +'<select id="ab-pb-'+idx+'-papel" style="'+s+'">'+opts+'</select></label>'
+    // Linha 6: Histórico
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">Hist\u00f3rico'
+    +'<textarea id="ab-pb-'+idx+'-obs" rows="3" maxlength="2000" placeholder="Observa\u00e7\u00f5es sobre esta pessoa..." style="'+s+';resize:vertical;min-height:60px">'+_esc(String(d.observacao_pessoal||''))+'</textarea>'
+    +'</label>'
+    +'</div>';
+
+  var tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  pl.appendChild(tmp.firstChild);
+}
+
+async function abPessoaBuscar(idx) {
+  var q = (document.getElementById('ab-pb-'+idx+'-busca').value||'').trim();
+  if (!q) return;
+  var res = document.getElementById('ab-pb-'+idx+'-resultado');
+  if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><span class="spinner" style="width:12px;height:12px;margin-right:4px"></span>Buscando...</span>';
+  try {
+    var resp = await fetch('/api/pessoas?q='+encodeURIComponent(q)+'&limit=5');
+    var data = await resp.json();
+    var pessoas = data.pessoas || [];
+    if (!pessoas.length) { if(res) res.innerHTML='<span style="font-size:.78rem;color:var(--muted)">Nenhuma pessoa encontrada.</span>'; return; }
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    pessoas.forEach(function(p){
+      html += '<button type="button" class="btn btn-outline btn-sm" style="font-size:.76rem;padding:3px 8px"'
+        +' onclick="abPessoaSelecionar('+idx+','+JSON.stringify(p).replace(/\\/g,'\\\\').replace(/"/g,'&quot;')+')">'
+        +_esc(p.nome)+(p.apelido?' ('+_esc(p.apelido)+')':'')+(p.cpf?' \u00b7 '+_fmtCpf(p.cpf):'')+'</button>';
+    });
+    html += '</div>';
+    if(res) res.innerHTML = html;
+  } catch(e) {
+    if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--danger)">Erro: '+_esc(e.message)+'</span>';
+  }
+}
+
+function abPessoaSelecionar(idx, p) {
+  var set = function(f,v){ var el=document.getElementById('ab-pb-'+idx+'-'+f); if(el) el.value=v||''; };
+  set('id',p.id); set('nome',p.nome); set('cpf',p.cpf||''); set('rg',p.rg||'');
+  set('contato',p.contato||''); set('profissao',p.profissao||'');
+  set('pai',p.nome_pai||''); set('mae',p.nome_mae||''); set('endereco',p.endereco||'');
+  var res=document.getElementById('ab-pb-'+idx+'-resultado');
+  if(res) res.innerHTML='<span style="font-size:.78rem;color:var(--accent)">\u2705 #'+p.id+' — '+_esc(p.nome)+' selecionado(a)</span>';
+  var bc=document.getElementById('ab-pb-'+idx+'-busca'); if(bc) bc.value='';
+}
+
+async function abSalvar() {
+  var erro = document.getElementById('ab-form-erro');
+  var ok   = document.getElementById('ab-form-ok');
+  if(erro) erro.textContent=''; if(ok) ok.style.display='none';
+
+  var g = function(id){ var el=document.getElementById(id); return el?(el.value||'').trim():''; };
+  var dataHora = g('ab-data-hora');
+  if (!dataHora) { if(erro) erro.textContent='Data e hora s\u00e3o obrigat\u00f3rios.'; return; }
+
+  var temVeiculo = (document.getElementById('ab-tem-veiculo')||{}).value === 'sim';
+  var placa = temVeiculo ? g('ab-placa').toUpperCase().replace(/[^A-Z0-9]/g,'') : '';
+  var payload = {
+    data_hora:   dataHora + ':00',
+    local:       g('ab-local') || null,
+    observacoes: g('ab-observacoes') || null,
+    veiculo: (temVeiculo && placa) ? {
+      placa:  placa,
+      modelo: g('ab-modelo') || null,
+      cor:    g('ab-cor')    || null,
+      vincular_como_alvo: (document.getElementById('ab-vincular-alvo')||{}).value === 'sim',
+      list_id: (function(){ var el=document.getElementById('ab-alvo-lista-id'); return el&&el.value ? parseInt(el.value,10) : null; })(),
+    } : null,
+    pessoas: [],
+  };
+
+  // abordado principal
+  var mainId = g('ab-pessoa-id');
+  var mainNome = g('ab-nome');
+  if (mainId || mainNome) {
+    var mainEntry = { papel: 'abordado', observacao_pessoal: null };
+    if (mainId) {
+      mainEntry.pessoa_id = parseInt(mainId, 10);
+    } else {
+      // Verificação de duplicidade antes de criar novo cadastro
+      var cpfCheck = g('ab-cpf').replace(/\D/g,'');
+      var rgCheck  = g('ab-rg');
+      if (cpfCheck && cpfCheck.length === 11) {
+        try {
+          var chkResp = await fetch('/api/pessoas/existe-cpf?cpf='+encodeURIComponent(cpfCheck));
+          if (chkResp.ok) {
+            var chkData = await chkResp.json();
+            if (chkData.existe) {
+              _abMostrarCadastroExistente(chkData.pessoa);
+              if(erro) erro.textContent = 'Este CPF j\u00e1 est\u00e1 cadastrado. Use o cadastro existente acima.';
+              return;
+            }
+          }
+        } catch(e2) { /* ignora erro de rede nessa checagem */ }
+      }
+      var rua = g('ab-rua'); var num = g('ab-numero'); var bairro = g('ab-bairro'); var uf = g('ab-uf');
+      var endParts = [rua, num ? 'nº '+num : '', bairro, uf].filter(Boolean);
+      mainEntry.nome = mainNome;
+      mainEntry.cpf = cpfCheck || null;
+      mainEntry.rg = rgCheck || null;
+      mainEntry.contato = g('ab-contato') || null;
+      mainEntry.profissao = g('ab-profissao') || null;
+      mainEntry.endereco = endParts.join(', ') || null;
+      mainEntry.nome_pai = g('ab-pai') || null;
+      mainEntry.nome_mae = g('ab-mae') || null;
+    }
+    payload.pessoas.push(mainEntry);
+  }
+
+  document.querySelectorAll('#ab-pessoas-list .ab-pessoa-bloco').forEach(function(bloco){
+    var bid = bloco.id.replace('ab-pb-','');
+    var gf  = function(f){ var el=bloco.querySelector('#ab-pb-'+bid+'-'+f); return el?(el.value||'').trim():''; };
+    var pId   = gf('id');
+    var pNome = gf('nome');
+    if (!pId && !pNome) return;
+    var entry = { papel: gf('papel')||'outro', observacao_pessoal: gf('obs')||null };
+    if (pId) {
+      entry.pessoa_id = parseInt(pId,10);
+    } else {
+      entry.nome=pNome; entry.cpf=gf('cpf').replace(/\D/g,'')||null;
+      entry.rg=gf('rg')||null;
+      entry.contato=gf('contato')||null; entry.profissao=gf('profissao')||null;
+      entry.endereco=gf('endereco')||null;
+      entry.nome_pai=gf('pai')||null;
+      entry.nome_mae=gf('mae')||null;
+    }
+    payload.pessoas.push(entry);
+  });
+
+  try {
+    var resp = await fetch('/api/abordagens', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    var data = await resp.json();
+    if (!resp.ok) { if(erro) erro.textContent = data.detail||('Erro '+resp.status); return; }
+    if(ok){ ok.textContent='\u2705 Abordagem #'+data.id+' registrada com sucesso!'; ok.style.display='block'; }
+    abLimpar();
+    _ablLoaded = false; // força recarregar a lista na próxima visita
+  } catch(e) { if(erro) erro.textContent='Erro: '+e.message; }
+}
+
+// =============================================================================
+// SUB-ABA: LISTA DE ABORDAGENS
+// Endpoints:
+//   GET /api/abordagens?q=&dt_from=&dt_to=&limit=&offset=
+//   GET /api/abordagens/{id}
+// =============================================================================
+var _ablOffset = 0, _ablLimit = 30, _ablTotal = 0, _ablLoaded = false;
+
+function abListaCarregar() { _ablOffset = 0; _abListaFetch(); }
+function abListaBuscar()   { _ablOffset = 0; _abListaFetch(); }
+function abListaLimpar()   {
+  ['abl-busca','abl-dt-from','abl-dt-to'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  _ablOffset=0; _abListaFetch();
+}
+
+async function _abListaFetch() {
+  var tb  = document.getElementById('abl-tbody');
+  var st  = document.getElementById('abl-status');
+  var pag = document.getElementById('abl-paginacao');
+  if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Carregando...</td></tr>';
+  var g = function(id){ var el=document.getElementById(id); return el?(el.value||'').trim():''; };
+  var url = '/api/abordagens?limit='+_ablLimit+'&offset='+_ablOffset;
+  var q=g('abl-busca');     if(q)  url+='&q='+encodeURIComponent(q);
+  var df=g('abl-dt-from');  if(df) url+='&dt_from='+encodeURIComponent(df);
+  var dt=g('abl-dt-to');    if(dt) url+='&dt_to='+encodeURIComponent(dt);
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    var data = await resp.json();
+    _ablTotal = data.total || 0;
+    _ablLoaded = true;
+    var rows = data.abordagens || [];
+    if (!rows.length) {
+      if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Nenhuma abordagem encontrada.</td></tr>';
+    } else {
+      if(tb) tb.innerHTML = rows.map(function(ab){
+        var dh  = ab.data_hora ? ab.data_hora.replace('T',' ').substring(0,16) : '\u2014';
+        var vei = ab.veiculo   ? _esc(ab.veiculo.placa||'')+(ab.veiculo.modelo?' \u00b7 '+_esc(ab.veiculo.modelo):'') : '\u2014';
+        var nomes = Array.isArray(ab.pessoas) && ab.pessoas.length
+          ? ab.pessoas.slice(0,2).map(function(p){return _esc(p.nome||'');}).join(', ')+(ab.pessoas.length>2?' +\u2026':'')
+          : '\u2014';
+        return '<tr>'
+          +'<td style="color:var(--muted);font-size:.8rem">'+ab.id+'</td>'
+          +'<td style="font-size:.8rem;white-space:nowrap">'+dh+'</td>'
+          +'<td>'+_esc(ab.local||'\u2014')+'</td>'
+          +'<td>'+_esc(ab.equipe||'\u2014')+'</td>'
+          +'<td>'+_esc(ab.tipo_motivo||'\u2014')+'</td>'
+          +'<td style="font-family:monospace;font-size:.8rem">'+vei+'</td>'
+          +'<td style="font-size:.8rem">'+nomes+'</td>'
+          +'<td style="text-align:center">'
+          +'<button class="btn btn-outline btn-xs" onclick="abVerDetalhes('+ab.id+')" title="Ver detalhes">&#128269; Detalhes</button>'
+          +'</td></tr>';
+      }).join('');
+    }
+    if(st) st.textContent = _ablTotal + ' abordagem(ns) encontrada(s).';
+    if(pag){
+      var pA=Math.floor(_ablOffset/_ablLimit)+1, pT=Math.ceil(_ablTotal/_ablLimit)||1;
+      pag.innerHTML = (_ablOffset>0
+        ? '<button class="btn btn-outline btn-sm" onclick="_ablOffset=Math.max(0,_ablOffset-_ablLimit);_abListaFetch()">\u2190 Anterior</button>' : '')
+        +'<span style="font-size:.82rem;color:var(--muted);padding:0 8px">P\u00e1g. '+pA+' / '+pT+'</span>'
+        +((_ablOffset+_ablLimit)<_ablTotal
+        ? '<button class="btn btn-outline btn-sm" onclick="_ablOffset+=_ablLimit;_abListaFetch()">Pr\u00f3xima \u2192</button>' : '');
+    }
+  } catch(e) {
+    if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:20px">Erro ao carregar. Verifique o endpoint /api/abordagens.</td></tr>';
+    if(st) st.textContent='';
+  }
+}
+
+async function abVerDetalhes(id) {
+  var modal = document.getElementById('ab-det-modal');
+  var body  = document.getElementById('ab-det-body');
+  var tit   = document.getElementById('ab-det-titulo');
+  if (!modal) return;
+  if (tit)  tit.textContent = '\uD83D\uDCCB Abordagem #' + id;
+  if (body) body.innerHTML = '<div style="text-align:center;padding:30px"><span class="spinner"></span></div>';
+  openModal('ab-det-modal');
+  try {
+    var resp = await fetch('/api/abordagens/' + id);
+    if (!resp.ok) { if (body) body.innerHTML = '<p style="color:var(--danger)">Erro ao carregar abordagem #' + id + '</p>'; return; }
+    var ab = await resp.json();
+    var dh = ab.data_hora ? ab.data_hora.replace('T',' ').substring(0,16) : '\u2014';
+
+    var sS = 'font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(250,204,21,.2)';
+    var rS = 'display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)';
+    var lS = 'min-width:130px;color:var(--muted);font-size:.8rem;flex-shrink:0';
+    var vS = 'flex:1;word-break:break-word';
+    function sec(ic, lbl) { return '<div style="'+sS+'">'+ic+' '+lbl+'</div>'; }
+    function row(lbl, val) {
+      var v = (val != null && String(val).trim()) ? _esc(String(val)) : '<span style="color:var(--muted)">\u2014</span>';
+      return '<div style="'+rS+'"><span style="'+lS+'">'+lbl+'</span><span style="'+vS+'">'+v+'</span></div>';
+    }
+
+    var html = '';
+    html += sec('\uD83D\uDCC5', 'Dados da Abordagem');
+    html += row('Data/Hora',   dh);
+    html += row('Local',       ab.local);
+    html += row('Equipe',      ab.equipe);
+    html += row('Tipo/Motivo', ab.tipo_motivo);
+    if (ab.observacoes) html += row('Observa\u00e7\u00f5es', ab.observacoes);
+
+    if (ab.veiculo) {
+      var v = ab.veiculo;
+      html += sec('\uD83D\uDE97', 'Ve\u00edculo');
+      html += row('Placa',  v.placa);
+      html += row('Marca',  v.marca);
+      html += row('Modelo', v.modelo);
+      html += row('Cor',    v.cor);
+      html += row('Ano',    v.ano);
+      if (v.observacoes) html += row('Obs.', v.observacoes);
+    }
+
+    var pessoasPrincipal = null;
+    if (Array.isArray(ab.pessoas) && ab.pessoas.length) {
+      html += sec('\uD83D\uDC65', 'Pessoas (' + ab.pessoas.length + ')');
+      ab.pessoas.forEach(function(p) {
+        html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px">';
+        html += '<div style="font-weight:600;font-size:.87rem">' + _esc(p.nome || '\u2014') + '</div>';
+        if (p.apelido)  html += '<div style="font-size:.78rem;color:var(--muted)">Vulgo: ' + _esc(p.apelido) + '</div>';
+        if (p.papel)    html += '<div style="font-size:.78rem;color:var(--muted)">Papel: ' + _esc(p.papel) + '</div>';
+        if (p.cpf)      html += '<div style="font-size:.78rem;color:var(--muted)">CPF: ' + _fmtCpf(p.cpf) + '</div>';
+        if (p.observacao_pessoal) html += '<div style="font-size:.78rem;color:var(--muted)">Obs: ' + _esc(p.observacao_pessoal) + '</div>';
+        if (p.id) {
+          html += '<button class="btn btn-outline btn-sm" style="margin-top:8px;font-size:.76rem" '
+            + 'onclick="closeModal(\'ab-det-modal\');abrirRelatorio(' + p.id + ',\'' + _esc(p.nome||'').replace(/'/g,"\\'")
+            + '\')">' + '&#128202; Ver relat\u00f3rio completo</button>';
+        }
+        html += '</div>';
+        if (!pessoasPrincipal && p.id) pessoasPrincipal = p;
+      });
+    }
+
+    if (body) body.innerHTML = html;
+
+    // Atualiza botão do footer
+    var footBtn = document.getElementById('ab-det-rel-btn');
+    if (footBtn) {
+      if (pessoasPrincipal) {
+        footBtn.style.display = '';
+        footBtn.onclick = function() { closeModal('ab-det-modal'); abrirRelatorio(pessoasPrincipal.id, pessoasPrincipal.nome); };
+      } else {
+        footBtn.style.display = 'none';
+      }
+    }
+  } catch(e) {
+    if (body) body.innerHTML = '<p style="color:var(--danger)">Erro: ' + _esc(e.message) + '</p>';
+  }
+}
+
+// =============================================================================
+// MODAL PESSOAS (card do painel) — preservado intacto
+// =============================================================================
 var _pmOffset = 0, _pmLimit = 20, _pmTotal = 0, _pmQ = '';
 
 async function openPessoasModal() {
@@ -8152,44 +9550,38 @@ function pmPagina(dir) {
 
 async function pmCarregar() {
   var tbody = document.getElementById('pm-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px"><span class="spinner"></span> Carregando...</td></tr>';
   try {
     var url = '/api/pessoas?limit=' + _pmLimit + '&offset=' + _pmOffset + (_pmQ ? '&q=' + encodeURIComponent(_pmQ) : '');
     var resp = await fetch(url);
-    if (!resp.ok) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger);text-align:center">Erro ' + resp.status + '</td></tr>'; return; }
+    if (!resp.ok) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--danger);text-align:center">Erro ' + resp.status + '</td></tr>'; return; }
     var data = await resp.json();
     _pmTotal = data.total || 0;
     var pessoas = data.pessoas || [];
     if (!pessoas.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Nenhum resultado.</td></tr>';
     } else {
       tbody.innerHTML = pessoas.map(function(p) {
-        var cpfFmt = p.cpf ? _fmtCpf(p.cpf) : '—';
-        var veiculo = [p.veiculo_placa, p.veiculo_modelo, p.veiculo_cor].filter(Boolean).join(' · ') || '—';
-        var nOcup = Array.isArray(p.ocupantes) ? p.ocupantes.length : 0;
         return '<tr>'
           + '<td style="color:var(--muted)">' + p.id + '</td>'
           + '<td style="font-weight:600">' + _esc(p.nome || '') + '</td>'
-          + '<td>' + _esc(p.apelido || '—') + '</td>'
-          + '<td style="font-family:monospace">' + _esc(cpfFmt) + '</td>'
-          + '<td>' + _esc(p.contato || '—') + '</td>'
-          + '<td style="font-size:.78rem">' + _esc(veiculo) + '</td>'
-          + '<td style="text-align:center">' + (nOcup || '—') + '</td>'
+          + '<td>' + _esc(p.apelido || '\u2014') + '</td>'
+          + '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '\u2014') + '</td>'
+          + '<td>' + _esc(p.contato || '\u2014') + '</td>'
+          + '<td style="font-size:.78rem">' + _esc(p.endereco || '\u2014') + '</td>'
           + '<td style="text-align:center;white-space:nowrap">'
           + '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.76rem" onclick="pmVerDetalhes(' + p.id + ')">&#128269; Ver</button>'
-          + '</td>'
-          + '</tr>';
+          + '</td></tr>';
       }).join('');
     }
-    // rodapé paginação
     var pagAtual = Math.floor(_pmOffset / _pmLimit) + 1;
     var pagTotal = Math.ceil(_pmTotal / _pmLimit) || 1;
     document.getElementById('pm-total-txt').textContent = _pmTotal.toLocaleString('pt-BR') + ' pessoa(s)';
-    document.getElementById('pm-pagina-txt').textContent = 'Pág. ' + pagAtual + ' / ' + pagTotal;
+    document.getElementById('pm-pagina-txt').textContent = 'P\u00e1g. ' + pagAtual + ' / ' + pagTotal;
     document.getElementById('pm-prev-btn').style.display = _pmOffset > 0 ? '' : 'none';
     document.getElementById('pm-next-btn').style.display = (_pmOffset + _pmLimit) < _pmTotal ? '' : 'none';
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--danger);text-align:center">Erro: ' + _esc(e.message) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--danger);text-align:center">Erro: ' + _esc(e.message) + '</td></tr>';
   }
 }
 
@@ -8213,71 +9605,6 @@ async function pmVerDetalhes(id) {
   };
 }
 
-// ── Ocupantes ─────────────────────────────────────────────────────────────────
-var _cadOcupanteIdx = 0;
-
-function _ufOptions(sel) {
-  var ufs = ['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RO','RR','RS','SC','SP','SE','TO'];
-  return ufs.map(function(u) {
-    return '<option value="'+u+'"'+(u===(sel||'RO')?' selected':'')+'>'+( u||'-- selecione --')+'</option>';
-  }).join('');
-}
-
-function cadAdicionarOcupante(dados) {
-  var idx = _cadOcupanteIdx++;
-  var d = dados || {};
-  var s = 'padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem';
-  function inp(field, lbl, ph, maxlen, extra) {
-    return '<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">'+lbl
-      +'<input type="text" id="ocp-'+idx+'-'+field+'" maxlength="'+(maxlen||120)+'" placeholder="'+(ph||'')+'"'+(extra||'')
-      +' style="'+s+'" value="'+_esc(String(d[field]||''))+'"></label>';
-  }
-  var html = '<div class="ocp-bloco" id="ocp-bloco-'+idx+'" style="border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px;background:rgba(255,255,255,.03)">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
-    +'<span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)">Ocupante</span>'
-    +'<button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.78rem" onclick="this.closest(\'.ocp-bloco\').remove()">&#10005; Remover</button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">'
-    +inp('nome','Nome','Nome completo')
-    +inp('apelido','Apelido / Vulgo','Ex: Zé da Silva',80)
-    +inp('contato','Contato','(69) 9 9999-9999',20)
-    +inp('profissao','Profissão','Ex: Autônomo',80)
-    +inp('cpf','CPF','00000000000',11,' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"')
-    +inp('rg','RG','0000000',20)
-    +'<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Data de Nasc.'
-    +'<input type="date" id="ocp-'+idx+'-dn" style="'+s+'" value="'+(d.data_nascimento||'')+'"></label>'
-    +inp('naturalidade','Município de Nasc.','Ex: Porto Velho',80)
-    +'<label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">UF de Nasc.'
-    +'<select id="ocp-'+idx+'-uf" style="'+s+'">'+_ufOptions(d.estado_naturalidade)+'</select></label>'
-    +inp('nome_mae','Nome da Mãe','Nome completo da mãe')
-    +inp('nome_pai','Nome do Pai','Nome completo do pai')
-    +inp('endereco','Endereço','Rua, número, bairro...',200)
-    +'</div>'
-    +'</div>';
-  var container = document.getElementById('cad-ocupantes-list');
-  var tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  container.appendChild(tmp.firstChild);
-}
-
-function cadColetarOcupantes() {
-  var blocos = document.querySelectorAll('#cad-ocupantes-list .ocp-bloco');
-  if (!blocos.length) return null;
-  var result = [];
-  blocos.forEach(function(bloco) {
-    var id = bloco.id.replace('ocp-bloco-','');
-    function g(field) { var el = bloco.querySelector('#ocp-'+id+'-'+field); return el ? el.value.trim() : ''; }
-    result.push({
-      nome: g('nome'), apelido: g('apelido'), contato: g('contato'),
-      profissao: g('profissao'), cpf: g('cpf').replace(/\D/g,''), rg: g('rg'),
-      data_nascimento: g('dn') || null, naturalidade: g('naturalidade'),
-      estado_naturalidade: g('uf'), nome_mae: g('nome_mae'), nome_pai: g('nome_pai'),
-      endereco: g('endereco'),
-    });
-  });
-  return result.length ? result : null;
-}
-
 (function() {
   var _origSwitchTab = window.switchTab;
   window.switchTab = function(name, el) {
@@ -8285,6 +9612,690 @@ function cadColetarOcupantes() {
     if (name === 'cadastro') cadastroCarregar();
   };
 })();
+
+// =============================================================================
+// NOVA ABORDAGEM RÁPIDA (a partir da ficha da pessoa)
+// Endpoint: POST /api/abordagens (reutiliza o endpoint existente)
+// =============================================================================
+var _cadAbOcupanteIdx = 0;
+
+async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
+  var pid = parseInt(pessoaId, 10);
+  if (!pid) { alert('Pessoa não identificada.'); return; }
+  document.getElementById('cad-ab-pessoa-id').value = pid;
+  document.getElementById('cad-ab-pessoa-nome').textContent = nomePessoa || ('Pessoa #' + pid);
+
+  // Defaults: hoje + hora atual
+  var agora = new Date();
+  var dataStr = agora.toISOString().substring(0, 10);
+  var horaStr = agora.toTimeString().substring(0, 5);
+  document.getElementById('cad-ab-data').value = dataStr;
+  document.getElementById('cad-ab-hora').value = horaStr;
+
+  // Limpa campos de abordagem
+  document.getElementById('cad-ab-local').value = '';
+  document.getElementById('cad-ab-historico').value = '';
+  document.getElementById('cad-ab-usa-veiculo').value = 'nao';
+  document.getElementById('cad-ab-placa').value = '';
+  document.getElementById('cad-ab-modelo').value = '';
+  document.getElementById('cad-ab-cor').value = '';
+  document.getElementById('cad-ab-veiculo-campos').style.display = 'none';
+  document.getElementById('cad-ab-ocupantes-list').innerHTML = '';
+  _cadAbOcupanteIdx = 0;
+  _cadAbOcResultados = {};
+  var _vaEl = document.getElementById('cad-ab-vincular-alvo'); if(_vaEl) _vaEl.value='nao';
+  var _vlW  = document.getElementById('cad-ab-alvo-lista-wrap'); if(_vlW) _vlW.style.display='none';
+  var _vlS  = document.getElementById('cad-ab-alvo-lista-id'); if(_vlS) _vlS.value='';
+
+  // Limpa campos pessoais
+  ['cad-ab-cpf','cad-ab-rg','cad-ab-contato','cad-ab-profissao',
+   'cad-ab-endereco','cad-ab-pai','cad-ab-mae'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  var erroEl = document.getElementById('cad-ab-erro');
+  var okEl   = document.getElementById('cad-ab-ok');
+  if (erroEl) { erroEl.style.display = 'none'; erroEl.textContent = ''; }
+  if (okEl)   { okEl.style.display   = 'none'; okEl.textContent   = ''; }
+
+  var salvarBtn = document.getElementById('cad-ab-salvar-btn');
+  if (salvarBtn) salvarBtn.disabled = false;
+
+  openModal('cad-nova-ab-modal');
+
+  // Pré-preenche campos pessoais com dados já cadastrados
+  try {
+    var resp = await fetch('/api/pessoas/' + pid);
+    if (resp.ok) {
+      var p = await resp.json();
+      var _set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el && val) el.value = val;
+      };
+      _set('cad-ab-cpf',      p.cpf ? _fmtCpf(p.cpf) : null);
+      _set('cad-ab-rg',       p.rg);
+      _set('cad-ab-contato',  p.contato);
+      _set('cad-ab-profissao',p.profissao);
+      _set('cad-ab-endereco', p.endereco);
+      _set('cad-ab-pai',      p.nome_pai);
+      _set('cad-ab-mae',      p.nome_mae);
+    }
+  } catch(e) { /* silencioso — campos ficam em branco */ }
+}
+
+function cadAbordagemToggleVeiculo() {
+  var usaSim = document.getElementById('cad-ab-usa-veiculo').value === 'sim';
+  var campos = document.getElementById('cad-ab-veiculo-campos');
+  campos.style.display = usaSim ? '' : 'none';
+  if (!usaSim) {
+    document.getElementById('cad-ab-placa').value  = '';
+    document.getElementById('cad-ab-modelo').value = '';
+    document.getElementById('cad-ab-cor').value    = '';
+    var va = document.getElementById('cad-ab-vincular-alvo'); if(va) va.value='nao';
+    var lw = document.getElementById('cad-ab-alvo-lista-wrap'); if(lw) lw.style.display='none';
+    var li = document.getElementById('cad-ab-alvo-lista-id'); if(li) li.value='';
+  }
+}
+
+function cadAbordagemAdicionarOcupante() {
+  _cadAbOcupanteIdx++;
+  var idx  = _cadAbOcupanteIdx;
+  var list = document.getElementById('cad-ab-ocupantes-list');
+  var div  = document.createElement('div');
+  div.id = 'cad-ab-oc-' + idx;
+  div.style.cssText = 'border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,.03)';
+  var iS = 'width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.84rem;box-sizing:border-box';
+  var lS = 'display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:var(--muted)';
+  var tS = 'width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.84rem;resize:vertical;min-height:60px;box-sizing:border-box';
+  var fR = 'display:flex;gap:4px;align-items:stretch';
+  var bS = 'padding:5px 9px;white-space:nowrap;flex-shrink:0';
+  div.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-size:.8rem;font-weight:700;color:var(--accent)">Acompanhante ' + idx + '</span>'+
+      '<button type="button" class="btn btn-outline btn-sm" style="color:#f87171;font-size:.79rem;padding:3px 10px" onclick="cadAbordagemRemoverOcupante(' + idx + ')">Remover</button>'+
+    '</div>'+
+    '<input type="hidden" id="cad-ab-oc-id-' + idx + '">'+
+    '<div id="cad-ab-oc-resultado-' + idx + '" style="margin-bottom:8px"></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      '<label style="'+lS+';grid-column:1/-1">Nome'+
+        '<div style="'+fR+'">'+
+          '<input type="text" id="cad-ab-oc-nome-'+idx+'" placeholder="Nome completo" maxlength="120" style="'+iS+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarNome('+idx+')}">'+
+          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarNome('+idx+')" title="Buscar por nome">&#128269;</button>'+
+        '</div>'+
+      '</label>'+
+      '<label style="'+lS+'">CPF'+
+        '<div style="'+fR+'">'+
+          '<input type="text" id="cad-ab-oc-cpf-'+idx+'" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarCpf('+idx+')}" style="'+iS+'">'+
+          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarCpf('+idx+')" title="Buscar por CPF">&#128269;</button>'+
+        '</div>'+
+      '</label>'+
+      '<label style="'+lS+'">RG'+
+        '<div style="'+fR+'">'+
+          '<input type="text" id="cad-ab-oc-rg-'+idx+'" placeholder="RG" maxlength="20" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarRg('+idx+')}" style="'+iS+'">'+
+          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarRg('+idx+')" title="Buscar por RG">&#128269;</button>'+
+        '</div>'+
+      '</label>'+
+      '<label style="'+lS+'">Contato'+
+        '<input type="text" id="cad-ab-oc-contato-'+idx+'" placeholder="Telefone ou WhatsApp" maxlength="40" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+'">Profiss\u00e3o'+
+        '<input type="text" id="cad-ab-oc-profissao-'+idx+'" placeholder="Profiss\u00e3o" maxlength="80" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+'">Nome do Pai'+
+        '<input type="text" id="cad-ab-oc-pai-'+idx+'" placeholder="Nome do pai" maxlength="120" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+'">Nome da M\u00e3e'+
+        '<input type="text" id="cad-ab-oc-mae-'+idx+'" placeholder="Nome da m\u00e3e" maxlength="120" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+';grid-column:1/-1">Endere\u00e7o'+
+        '<input type="text" id="cad-ab-oc-endereco-'+idx+'" placeholder="Endere\u00e7o completo" maxlength="200" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+';grid-column:1/-1">Hist\u00f3rico'+
+        '<textarea id="cad-ab-oc-historico-'+idx+'" rows="3" maxlength="2000" placeholder="Observa\u00e7\u00f5es sobre este acompanhante..." style="'+tS+'"></textarea>'+
+      '</label>'+
+    '</div>';
+  list.appendChild(div);
+  var inp = document.getElementById('cad-ab-oc-nome-' + idx);
+  if (inp) inp.focus();
+}
+
+function cadAbordagemRemoverOcupante(idx) {
+  var el = document.getElementById('cad-ab-oc-' + idx);
+  if (el) el.parentNode.removeChild(el);
+}
+
+// ---- Busca de cadastro existente para acompanhantes (modal cad-nova-ab) ----
+var _cadAbOcResultados = {};
+
+async function _cadAbOcPesquisar(idx, q) {
+  if (!q) return;
+  var res = document.getElementById('cad-ab-oc-resultado-' + idx);
+  if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><span class="spinner" style="width:12px;height:12px;margin-right:4px"></span>Buscando...</span>';
+  try {
+    var resp = await fetch('/api/pessoas?q=' + encodeURIComponent(q) + '&limit=6');
+    var data = await resp.json();
+    var pessoas = data.pessoas || [];
+    if (!pessoas.length) {
+      if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">Nenhum cadastro encontrado.</span>';
+      return;
+    }
+    _cadAbOcResultados[idx] = pessoas;
+    if (pessoas.length === 1) {
+      _cadAbOcPreencher(idx, pessoas[0]);
+      if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--accent)">&#10003; Cadastro vinculado: <strong>' + _esc(pessoas[0].nome) + '</strong> <span style="font-size:.75rem;color:var(--muted)">(#' + pessoas[0].id + ')</span></span>';
+      return;
+    }
+    var html = '<div style="font-size:.78rem;color:var(--muted);margin-bottom:4px">Selecione o cadastro:</div><div style="display:flex;flex-wrap:wrap;gap:5px">';
+    pessoas.forEach(function(p, i) {
+      html += '<button type="button" class="btn btn-outline btn-sm" style="font-size:.76rem;padding:3px 8px" onclick="cadAbOcSelecionarIdx(' + idx + ',' + i + ')">' + _esc(p.nome) + (p.cpf ? ' \u00b7 ' + _fmtCpf(p.cpf) : '') + '</button>';
+    });
+    html += '</div>';
+    if(res) res.innerHTML = html;
+  } catch(e) {
+    if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--danger)">Erro: ' + _esc(e.message) + '</span>';
+  }
+}
+
+async function cadAbOcPesquisarNome(idx) {
+  var q = ((document.getElementById('cad-ab-oc-nome-' + idx) || {}).value || '').trim();
+  if(!q) { alert('Preencha o Nome antes de pesquisar.'); return; }
+  await _cadAbOcPesquisar(idx, q);
+}
+async function cadAbOcPesquisarCpf(idx) {
+  var q = ((document.getElementById('cad-ab-oc-cpf-' + idx) || {}).value || '').replace(/\D/g,'');
+  if(!q) { alert('Preencha o CPF antes de pesquisar.'); return; }
+  await _cadAbOcPesquisar(idx, q);
+}
+async function cadAbOcPesquisarRg(idx) {
+  var q = ((document.getElementById('cad-ab-oc-rg-' + idx) || {}).value || '').trim();
+  if(!q) { alert('Preencha o RG antes de pesquisar.'); return; }
+  await _cadAbOcPesquisar(idx, q);
+}
+
+function cadAbOcSelecionarIdx(idx, i) {
+  var p = (_cadAbOcResultados[idx] || [])[i];
+  if(!p) return;
+  _cadAbOcPreencher(idx, p);
+  var res = document.getElementById('cad-ab-oc-resultado-' + idx);
+  if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--accent)">&#10003; Cadastro vinculado: <strong>' + _esc(p.nome) + '</strong> <span style="font-size:.75rem;color:var(--muted)">(#' + p.id + ')</span></span>';
+}
+
+function _cadAbOcPreencher(idx, p) {
+  var _s = function(id, val){ var el=document.getElementById(id); if(el) el.value=val||''; };
+  _s('cad-ab-oc-id-'        + idx, p.id);
+  _s('cad-ab-oc-nome-'      + idx, p.nome);
+  _s('cad-ab-oc-cpf-'       + idx, p.cpf ? _fmtCpf(p.cpf) : '');
+  _s('cad-ab-oc-rg-'        + idx, p.rg);
+  _s('cad-ab-oc-contato-'   + idx, p.contato);
+  _s('cad-ab-oc-profissao-' + idx, p.profissao);
+  _s('cad-ab-oc-pai-'       + idx, p.nome_pai);
+  _s('cad-ab-oc-mae-'       + idx, p.nome_mae);
+  _s('cad-ab-oc-endereco-'  + idx, p.endereco);
+}
+
+// ---- Veículo: vincular como alvo rastreado (modal cad-nova-ab) ----
+function cadAbordagemToggleVincularAlvo() {
+  var sel  = document.getElementById('cad-ab-vincular-alvo');
+  var wrap = document.getElementById('cad-ab-alvo-lista-wrap');
+  if(!sel || !wrap) return;
+  if(sel.value === 'sim') {
+    wrap.style.display = '';
+    cadAbordagemCarregarListasVeiculosRastreados();
+  } else {
+    wrap.style.display = 'none';
+    var li = document.getElementById('cad-ab-alvo-lista-id'); if(li) li.value='';
+  }
+}
+
+async function cadAbordagemCarregarListasVeiculosRastreados() {
+  var sel = document.getElementById('cad-ab-alvo-lista-id');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  try {
+    var resp = await fetch('/api/vehicles/lists');
+    var data = await resp.json();
+    var listas = data.items || [];
+    if(!listas.length) { sel.innerHTML='<option value="">Nenhuma lista dispon\u00edvel</option>'; return; }
+    sel.innerHTML = '<option value="">-- Escolha uma lista --</option>';
+    listas.forEach(function(l){
+      var opt=document.createElement('option');
+      opt.value=l.id;
+      opt.textContent=l.name+(l.vehicle_count!=null?' ('+l.vehicle_count+' ve\u00edculos)':'');
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    sel.innerHTML='<option value="">Erro ao carregar listas</option>';
+  }
+}
+
+async function cadAbordagemSalvar() {
+  var pessoaId = parseInt(document.getElementById('cad-ab-pessoa-id').value, 10);
+  var local    = document.getElementById('cad-ab-local').value.trim();
+  var data     = document.getElementById('cad-ab-data').value;
+  var hora     = (document.getElementById('cad-ab-hora').value || '00:00');
+  var historico = document.getElementById('cad-ab-historico').value.trim();
+  var usaVeiculo = document.getElementById('cad-ab-usa-veiculo').value === 'sim';
+
+  var erroEl  = document.getElementById('cad-ab-erro');
+  var okEl    = document.getElementById('cad-ab-ok');
+  erroEl.style.display = 'none'; erroEl.textContent = '';
+  okEl.style.display   = 'none'; okEl.textContent   = '';
+
+  // Validações obrigatórias
+  var erros = [];
+  if (!pessoaId)  erros.push('Pessoa vinculada não identificada.');
+  if (!local)     erros.push('Local é obrigatório.');
+  if (!data)      erros.push('Data é obrigatória.');
+  if (!historico) erros.push('Histórico é obrigatório.');
+  if (erros.length) {
+    erroEl.textContent = erros.join(' ');
+    erroEl.style.display = '';
+    return;
+  }
+
+  // Monta payload — inclui campos pessoais da pessoa vinculada
+  var _pEntry = { pessoa_id: pessoaId, papel: 'abordado' };
+  var _cpfRaw = (document.getElementById('cad-ab-cpf').value     || '').trim().replace(/\D/g, '');
+  var _rg     = (document.getElementById('cad-ab-rg').value      || '').trim();
+  var _ct     = (document.getElementById('cad-ab-contato').value || '').trim();
+  var _prof   = (document.getElementById('cad-ab-profissao').value || '').trim();
+  var _end    = (document.getElementById('cad-ab-endereco').value || '').trim();
+  var _pai    = (document.getElementById('cad-ab-pai').value     || '').trim();
+  var _mae    = (document.getElementById('cad-ab-mae').value     || '').trim();
+  if (_cpfRaw) _pEntry.cpf      = _cpfRaw;
+  if (_rg)     _pEntry.rg       = _rg;
+  if (_ct)     _pEntry.contato  = _ct;
+  if (_prof)   _pEntry.profissao = _prof;
+  if (_end)    _pEntry.endereco = _end;
+  if (_pai)    _pEntry.nome_pai = _pai;
+  if (_mae)    _pEntry.nome_mae = _mae;
+  var payload = {
+    data_hora: data + 'T' + hora + ':00',
+    local:     local,
+    observacoes: historico,
+    pessoas: [_pEntry]
+  };
+
+  // Veículo (opcional)
+  if (usaVeiculo) {
+    var placa  = document.getElementById('cad-ab-placa').value.trim();
+    var modelo = document.getElementById('cad-ab-modelo').value.trim();
+    var cor    = document.getElementById('cad-ab-cor').value.trim();
+    if (placa || modelo || cor) {
+      var vincAlvo = (document.getElementById('cad-ab-vincular-alvo')||{value:'nao'}).value === 'sim';
+      var listaId  = (function(){ var el=document.getElementById('cad-ab-alvo-lista-id'); return el&&el.value ? parseInt(el.value,10) : null; })();
+      payload.veiculo = { placa: placa, modelo: modelo, cor: cor,
+                          vincular_como_alvo: vincAlvo, list_id: listaId };
+    }
+  }
+
+  // Ocupantes adicionais — coleta todos os campos de cada bloco
+  var listEl = document.getElementById('cad-ab-ocupantes-list');
+  listEl.querySelectorAll('div[id^="cad-ab-oc-"]').forEach(function(bloco) {
+    var i    = bloco.id.replace('cad-ab-oc-', '');
+    var nome = ((document.getElementById('cad-ab-oc-nome-' + i) || {}).value || '').trim();
+    if (!nome) return;
+    var pessoaIdOc = ((document.getElementById('cad-ab-oc-id-' + i) || {}).value || '').trim();
+    var ocupante = pessoaIdOc
+      ? { pessoa_id: parseInt(pessoaIdOc, 10), papel: 'outro' }
+      : { nome: nome, papel: 'outro' };
+    if (!pessoaIdOc) {
+      var cpf     = ((document.getElementById('cad-ab-oc-cpf-'      + i) || {}).value || '').replace(/\D/g,'');
+      var rg      = ((document.getElementById('cad-ab-oc-rg-'       + i) || {}).value || '').trim();
+      var contato = ((document.getElementById('cad-ab-oc-contato-'  + i) || {}).value || '').trim();
+      var prof    = ((document.getElementById('cad-ab-oc-profissao-' + i) || {}).value || '').trim();
+      var pai     = ((document.getElementById('cad-ab-oc-pai-'      + i) || {}).value || '').trim();
+      var mae     = ((document.getElementById('cad-ab-oc-mae-'      + i) || {}).value || '').trim();
+      var end     = ((document.getElementById('cad-ab-oc-endereco-' + i) || {}).value || '').trim();
+      if (cpf)     ocupante.cpf      = cpf;
+      if (rg)      ocupante.rg       = rg;
+      if (contato) ocupante.contato  = contato;
+      if (prof)    ocupante.profissao = prof;
+      if (pai)     ocupante.nome_pai = pai;
+      if (mae)     ocupante.nome_mae = mae;
+      if (end)     ocupante.endereco = end;
+    }
+    var hist = ((document.getElementById('cad-ab-oc-historico-' + i) || {}).value || '').trim();
+    if (hist) ocupante.observacao_pessoal = hist;
+    payload.pessoas.push(ocupante);
+  });
+
+  var salvarBtn = document.getElementById('cad-ab-salvar-btn');
+  salvarBtn.disabled = true;
+
+  try {
+    var resp = await fetch('/api/abordagens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    var resData = await resp.json();
+    if (resp.ok && resData.ok) {
+      okEl.textContent   = '\u2705 Abordagem #' + resData.id + ' salva com sucesso!';
+      okEl.style.display = '';
+      setTimeout(function() { closeModal('cad-nova-ab-modal'); }, 1600);
+    } else {
+      erroEl.textContent   = 'Erro ao salvar: ' + (resData.detail || resp.status);
+      erroEl.style.display = '';
+      salvarBtn.disabled   = false;
+    }
+  } catch(e) {
+    erroEl.textContent   = 'Erro: ' + _esc(e.message);
+    erroEl.style.display = '';
+    salvarBtn.disabled   = false;
+  }
+}
+</script>
+
+<!-- ===== RELATÓRIO COMPLETO DA PESSOA (JS) ===== -->
+<script>
+// =============================================================================
+// RELATÓRIO COMPLETO DA PESSOA
+// Endpoint: GET /api/pessoas/{id}/relatorio
+// =============================================================================
+
+// Abre a tela de detalhe da pessoa — acionado via botão, sem guia fixa no nav
+async function abrirRelatorio(pessoaId, nomePessoa) {
+  // 1) Garante que a aba Cadastro está visível
+  var tabCadNav = document.querySelector('.nav-item[onclick*="cadastro"]');
+  if (document.getElementById('tab-cadastro') &&
+      !document.getElementById('tab-cadastro').classList.contains('active')) {
+    if (tabCadNav) switchTab('cadastro', tabCadNav);
+  }
+
+  // 2) Mostra o pane de detalhe sem ativar nenhum botão de sub-nav
+  document.querySelectorAll('.pessoas-sub-pane').forEach(function(p) { p.style.display = 'none'; });
+  document.querySelectorAll('.pessoas-sub-btn').forEach(function(b) { b.classList.remove('active'); });
+  var pane = document.getElementById('pessoas-sub-relatorio');
+  if (pane) pane.style.display = '';
+
+  var container = document.getElementById('relatorio-content');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:40px">'
+    + '<span class="spinner"></span>'
+    + '<div style="color:var(--muted);margin-top:10px;font-size:.85rem">Carregando relat\u00f3rio de <strong>'
+    + _esc(nomePessoa || 'Pessoa #' + pessoaId) + '</strong>...</div>'
+    + '</div>';
+
+  try {
+    var resp = await fetch('/api/pessoas/' + pessoaId + '/relatorio');
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){return {};});
+      container.innerHTML = '<div style="color:var(--danger);padding:30px;text-align:center">'
+        + '&#9888; ' + _esc(err.detail || 'Erro ao carregar relat\u00f3rio.') + '</div>';
+      return;
+    }
+    var data = await resp.json();
+    container.innerHTML = _renderRelatorio(data);
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--danger);padding:30px;text-align:center">'
+      + '&#9888; Erro de rede: ' + _esc(e.message) + '</div>';
+  }
+}
+
+// Chamado a partir do bloco "Cadastro existente" na aba Nova Abordagem
+function abAbrirRelatorioExistente() {
+  var p = _abPessoaEncontrada || _abCpfDuplicadoPessoa;
+  if (!p) return;
+  abrirRelatorio(p.id, p.nome);
+}
+
+// =============================================================================
+// RENDERIZAÇÃO DO RELATÓRIO
+// =============================================================================
+function _renderRelatorio(data) {
+  var p  = data.pessoa    || {};
+  var abs = data.abordagens || [];
+  var r  = data.resumo    || {};
+  var html = '';
+
+  // ─── BOTÃO VOLTAR ───
+  html += '<div style="margin-bottom:16px">';
+  html += '<button class="btn btn-outline btn-sm" style="font-size:.82rem" '
+    + 'onclick="switchPessoasSubTab(\'pesquisar\',document.getElementById(\'psub-btn-pesquisar\'))">';
+  html += '&#8592; Voltar à pesquisa';
+  html += '</button>';
+  html += '</div>';
+
+  // ─── CABEÇALHO DA PESSOA ───
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px">';
+  html += '<div>';
+  html += '<div style="font-size:1.05rem;font-weight:800;color:var(--accent);margin-bottom:2px">'
+    + '&#128100; ' + _esc(p.nome || '—') + '</div>';
+  if (p.apelido) html += '<div style="font-size:.8rem;color:var(--muted)">Vulgo: <strong>' + _esc(p.apelido) + '</strong></div>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html += '<button class="btn btn-outline btn-sm" '
+    + 'onclick="cadastroEditar(' + p.id + ')" style="font-size:.78rem">&#9998; Editar cadastro</button>';
+  html += '<button class="btn btn-sm" style="background:var(--accent);color:#000;font-weight:600;font-size:.78rem" '
+    + 'onclick="cadastroNovaAbordagem(' + p.id + ',\'' + _esc(p.nome || '').replace(/'/g, "\\'") + '\')">'
+    + '&#43; Nova abordagem</button>';
+  html += '</div></div>';
+
+  // ─── DADOS DA PESSOA ───
+  html += '<div class="rel-header-card">';
+  html += '<div class="rel-section-title" style="margin-top:0">&#128203; Dados Cadastrais</div>';
+  html += '<div class="rel-dados-grid">';
+  function relDado(lbl, val) {
+    var v = (val != null && String(val).trim()) ? _esc(String(val)) : '<span style="color:var(--muted)">—</span>';
+    return '<div class="rel-dado-item"><div class="rel-dado-label">' + lbl + '</div>'
+      + '<div class="rel-dado-value">' + v + '</div></div>';
+  }
+  html += relDado('CPF', p.cpf ? _fmtCpf(p.cpf) : null);
+  html += relDado('RG', p.rg);
+  html += relDado('Data de Nascimento', p.data_nascimento);
+  html += relDado('Naturalidade', p.naturalidade ? p.naturalidade + (p.estado_naturalidade ? ' / ' + p.estado_naturalidade : '') : null);
+  html += relDado('Filiação (Mãe)', p.nome_mae);
+  html += relDado('Filiação (Pai)', p.nome_pai);
+  html += relDado('Endereço', p.endereco);
+  html += relDado('Contato', p.contato);
+  html += relDado('Profissão', p.profissao);
+  html += relDado('Cadastrado em', p.data_cadastro ? p.data_cadastro.substring(0, 10) : null);
+  html += '</div></div>';
+
+  // ─── ABORDAGENS ───
+  html += '<div class="rel-section-title">&#128203; Histórico de Abordagens';
+  html += ' <span style="font-size:.75rem;font-weight:500;color:var(--muted);margin-left:6px">('
+    + (r.total_abordagens || 0) + ' total)</span></div>';
+
+  if (!abs.length) {
+    html += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);'
+      + 'padding:24px;text-align:center;color:var(--muted);font-style:italic">'
+      + '&#128203; Nenhuma abordagem registrada para esta pessoa.</div>';
+  } else {
+    abs.forEach(function(ab, idx) {
+      var dh = ab.data_hora ? ab.data_hora.replace('T', ' ').substring(0, 16) : '—';
+      html += '<div class="rel-ab-card">';
+      // Header do card de abordagem
+      html += '<div class="rel-ab-header">';
+      html += '<div>';
+      html += '<span style="font-size:.75rem;color:var(--muted);margin-right:8px">#' + (ab.id || '') + '</span>';
+      html += '<strong style="font-size:.88rem;color:var(--text)">' + _esc(dh) + '</strong>';
+      if (ab.local) html += ' <span style="color:var(--muted);font-size:.82rem">&mdash; ' + _esc(ab.local) + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">';
+      if (ab.equipe) html += '<span class="rel-badge rel-badge-blue">' + _esc(ab.equipe) + '</span>';
+      if (ab.tipo_motivo) html += '<span class="rel-badge rel-badge-yellow">' + _esc(ab.tipo_motivo) + '</span>';
+      html += '</div>';
+      html += '</div>';
+
+      // Corpo do card
+      html += '<div class="rel-ab-body">';
+
+      // Observações / histórico
+      if (ab.observacoes) {
+        html += '<div style="font-size:.82rem;margin-bottom:12px;padding:10px 12px;'
+          + 'background:rgba(0,0,0,.1);border-left:3px solid rgba(250,204,21,.4);border-radius:0 6px 6px 0">'
+          + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
+          + 'color:var(--muted);margin-bottom:4px">Histórico / Observações</div>'
+          + '<div style="white-space:pre-wrap;line-height:1.6;color:var(--text)">' + _esc(ab.observacoes) + '</div>'
+          + '</div>';
+      }
+
+      // Veículo
+      var v = ab.veiculo;
+      if (v) {
+        var placaLabel = v.placa || '—';
+        var emLista = Array.isArray(v.listas) && v.listas.length > 0;
+        html += '<div style="margin-bottom:12px">';
+        html += '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
+          + 'color:var(--muted);margin-bottom:6px">&#128665; Veículo</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start">';
+        // placa + badges de lista
+        html += '<div style="display:flex;flex-direction:column;gap:4px">';
+        html += '<span class="plate-tag' + (emLista ? ' plate-alert' : '') + '" style="font-size:.88rem">'
+          + _esc(placaLabel) + '</span>';
+        if (emLista) {
+          v.listas.forEach(function(la) {
+            html += '<span class="rel-badge rel-badge-red" style="width:fit-content">'
+              + '&#9888; ' + _esc(la.nome || 'Lista') + '</span>';
+          });
+        }
+        html += '</div>';
+        // demais dados
+        html += '<div style="font-size:.8rem;color:var(--muted)">';
+        if (v.marca)   html += '<div>Marca: <strong style="color:var(--text)">' + _esc(v.marca)   + '</strong></div>';
+        if (v.modelo)  html += '<div>Modelo: <strong style="color:var(--text)">' + _esc(v.modelo) + '</strong></div>';
+        if (v.cor)     html += '<div>Cor: <strong style="color:var(--text)">'    + _esc(v.cor)    + '</strong></div>';
+        if (v.ano)     html += '<div>Ano: <strong style="color:var(--text)">'    + v.ano          + '</strong></div>';
+        if (v.tipo)    html += '<div>Tipo: <strong style="color:var(--text)">'   + _esc(v.tipo)   + '</strong></div>';
+        if (v.observacoes) html += '<div style="margin-top:3px;font-style:italic">'
+          + _esc(v.observacoes) + '</div>';
+        html += '</div>';
+        html += '</div></div>';
+      }
+
+      // Pessoas relacionadas na abordagem
+      var pr = ab.pessoas_relacionadas || [];
+      if (pr.length) {
+        html += '<div>';
+        html += '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
+          + 'color:var(--muted);margin-bottom:6px">&#128101; Pessoas nesta abordagem</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:6px">';
+        pr.forEach(function(pes) {
+          html += '<div style="padding:8px 10px;background:rgba(0,0,0,.08);border-radius:6px;font-size:.82rem;'
+            + 'display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center">';
+          html += '<span style="font-weight:600">' + _esc(pes.nome || '—') + '</span>';
+          if (pes.apelido) html += '<span style="color:var(--muted)">(' + _esc(pes.apelido) + ')</span>';
+          if (pes.cpf)     html += '<span style="color:var(--muted);font-size:.78rem">CPF: ' + _fmtCpf(pes.cpf) + '</span>';
+          if (pes.rg)      html += '<span style="color:var(--muted);font-size:.78rem">RG: '  + _esc(pes.rg) + '</span>';
+          if (pes.papel) {
+            var papelColors = { motorista:'rel-badge-blue', proprietario:'rel-badge-purple',
+              passageiro:'rel-badge-green', garupa:'rel-badge-orange', abordado:'rel-badge-red', outro:'rel-badge-yellow' };
+            html += '<span class="rel-badge ' + (papelColors[pes.papel] || 'rel-badge-yellow') + '">'
+              + _esc(pes.papel) + '</span>';
+          }
+          if (pes.observacao_pessoal) html += '<div style="width:100%;color:var(--muted);font-size:.78rem;font-style:italic">'
+            + _esc(pes.observacao_pessoal) + '</div>';
+          html += '<button class="btn btn-outline btn-sm" style="font-size:.72rem;padding:2px 7px;margin-left:auto" '
+            + 'onclick="abrirRelatorio(' + pes.id + ',\'' + _esc(pes.nome || '').replace(/'/g, "\\'") + '\')">'
+            + '&#128202; Ver relat\u00f3rio</button>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      } else {
+        html += '<div style="font-size:.78rem;color:var(--muted);font-style:italic">Nenhuma outra pessoa registrada nesta abordagem.</div>';
+      }
+
+      html += '</div></div>'; // /rel-ab-body /rel-ab-card
+    });
+  }
+
+  // ─── RESUMO GERAL ───
+  html += '<div class="rel-section-title">&#128202; Resumo Geral</div>';
+  html += '<div class="rel-resumo-box">';
+
+  // Estatísticas básicas
+  var veicsU = r.veiculos_unicos  || [];
+  var pessU  = r.pessoas_unicas   || [];
+  var reinc  = r.reincidencias    || {};
+  var vReinc = reinc.veiculos_reincidentes || [];
+  var pReinc = reinc.pessoas_reincidentes  || [];
+
+  html += '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">';
+  function statBox(num, lbl, color) {
+    return '<div style="text-align:center;min-width:90px">'
+      + '<div style="font-size:1.9rem;font-weight:800;color:' + color + '">' + num + '</div>'
+      + '<div style="font-size:.77rem;color:var(--muted);margin-top:2px">' + lbl + '</div>'
+      + '</div>';
+  }
+  html += statBox(r.total_abordagens || 0, 'Abordagens', 'var(--accent)');
+  html += statBox(veicsU.length, 'Veículos únicos', '#93c5fd');
+  html += statBox(pessU.length,  'Pessoas únicas', '#6ee7b7');
+  html += statBox(vReinc.length + pReinc.length, 'Reincidências', '#fca5a5');
+  html += '</div>';
+
+  // Veículos únicos
+  if (veicsU.length) {
+    html += '<div style="font-size:.77rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
+      + 'color:var(--muted);margin-bottom:6px">Todos os veículos envolvidos</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">';
+    veicsU.forEach(function(v) {
+      var reinc = v.total_abordagens > 1;
+      var emLista = Array.isArray(v.listas) && v.listas.length > 0;
+      html += '<span class="rel-veiculo-pill' + (emLista ? '" style="border-color:rgba(239,68,68,.5);color:#fca5a5' : '') + '">';
+      html += _esc(v.placa || '—');
+      if (v.modelo) html += ' · ' + _esc(v.modelo);
+      if (v.cor)    html += ' · ' + _esc(v.cor);
+      if (reinc)    html += ' <span style="font-size:.66rem;background:rgba(239,68,68,.3);padding:1px 5px;border-radius:99px;margin-left:3px">' + v.total_abordagens + 'x</span>';
+      if (emLista)  html += ' &#9888;';
+      html += '</span>';
+    });
+    html += '</div>';
+  }
+
+  // Pessoas únicas
+  if (pessU.length) {
+    html += '<div style="font-size:.77rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
+      + 'color:var(--muted);margin-bottom:6px">Todas as pessoas envolvidas</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">';
+    pessU.forEach(function(p2) {
+      var reinc = p2.total_abordagens > 1;
+      html += '<span class="rel-pessoa-pill">';
+      html += _esc(p2.nome || '—');
+      if (p2.cpf) html += ' · ' + _fmtCpf(p2.cpf);
+      if (reinc)  html += ' <span style="font-size:.66rem;background:rgba(239,68,68,.3);padding:1px 5px;border-radius:99px;margin-left:3px">' + p2.total_abordagens + 'x</span>';
+      html += '</span>';
+    });
+    html += '</div>';
+  }
+
+  // Reincidências em destaque
+  if (vReinc.length || pReinc.length) {
+    html += '<div style="padding:12px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);'
+      + 'border-radius:8px;margin-bottom:8px">';
+    html += '<div style="font-size:.77rem;font-weight:700;color:#fca5a5;margin-bottom:8px">&#9888;&#65039; REINCIDÊNCIAS</div>';
+    if (vReinc.length) {
+      html += '<div style="font-size:.77rem;color:var(--muted);margin-bottom:4px">Veículos reincidentes:</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">';
+      vReinc.forEach(function(v) {
+        html += '<span class="rel-reincidente-pill">'
+          + _esc(v.placa || '—') + ' (' + v.total_abordagens + ' abordagens)'
+          + '</span>';
+      });
+      html += '</div>';
+    }
+    if (pReinc.length) {
+      html += '<div style="font-size:.77rem;color:var(--muted);margin-bottom:4px">Pessoas reincidentes:</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+      pReinc.forEach(function(p2) {
+        html += '<span class="rel-reincidente-pill">'
+          + _esc(p2.nome || '—') + ' (' + p2.total_abordagens + ' abordagens)'
+          + '</span>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  } else if (!abs.length) {
+    html += '<div style="color:var(--muted);font-size:.83rem;font-style:italic">Sem dados suficientes para análise de reincidências.</div>';
+  } else {
+    html += '<div style="color:var(--success);font-size:.83rem">&#10003; Nenhuma reincidência de veículo ou pessoa detectada.</div>';
+  }
+
+  html += '</div>'; // /rel-resumo-box
+  return html;
+}
 </script>
 </body>
 </html>

@@ -6326,6 +6326,22 @@ def listar_pessoas(q: Optional[str] = None, limit: int = 50, offset: int = 0):
     return {"total": total, "pessoas": [_pessoa_row_to_dict(r) for r in rows]}
 
 
+@app.get("/api/pessoas/existe-cpf")
+def verificar_cpf_existente(cpf: str):
+    """Verifica se um CPF já está cadastrado. Retorna {existe, id, nome, pessoa}."""
+    cpf_clean = re.sub(r"\D", "", cpf or "")
+    if len(cpf_clean) != 11:
+        raise HTTPException(status_code=400, detail="CPF deve ter 11 dígitos")
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(_PESSOA_SELECT + "WHERE cpf = %s LIMIT 1", (cpf_clean,))
+            row = cur.fetchone()
+    if not row:
+        return {"existe": False}
+    p = _pessoa_row_to_dict(row)
+    return {"existe": True, "id": p["id"], "nome": p["nome"], "pessoa": p}
+
+
 @app.get("/api/pessoas/{pessoa_id}")
 def buscar_pessoa_por_id(pessoa_id: int):
     """Retorna dados de uma pessoa pelo id."""
@@ -6336,6 +6352,151 @@ def buscar_pessoa_por_id(pessoa_id: int):
     if not row:
         raise HTTPException(status_code=404, detail="Pessoa não encontrada")
     return _pessoa_row_to_dict(row)
+
+
+@app.get("/api/pessoas/{pessoa_id}/relatorio")
+def relatorio_pessoa(pessoa_id: int):
+    """
+    Relatório completo de uma pessoa:
+      - dados cadastrais da pessoa
+      - todas as abordagens vinculadas (com veículo e pessoas relacionadas)
+      - resumo agregado com reincidências
+    """
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # 1. Dados da pessoa
+            cur.execute(_PESSOA_SELECT + "WHERE id = %s LIMIT 1", (pessoa_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+            pessoa = _pessoa_row_to_dict(row)
+
+            # 2. Abordagens vinculadas a esta pessoa
+            cur.execute(
+                """
+                SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
+                       a.observacoes, a.data_cadastro,
+                       v.id, v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.observacoes
+                FROM abordagem_pessoas ap
+                JOIN abordagens a ON a.id = ap.abordagem_id
+                LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
+                WHERE ap.pessoa_id = %s
+                ORDER BY a.data_hora DESC
+                """,
+                (pessoa_id,),
+            )
+            ab_rows = cur.fetchall()
+            abordagens = []
+            ab_ids = []
+            for r in ab_rows:
+                ab = {
+                    "id":            r[0],
+                    "data_hora":     r[1].isoformat() if r[1] else None,
+                    "local":         r[2],
+                    "equipe":        r[3],
+                    "tipo_motivo":   r[4],
+                    "observacoes":   r[5],
+                    "data_cadastro": r[6].isoformat() if r[6] else None,
+                    "veiculo": {
+                        "id": r[7], "placa": r[8], "marca": r[9],
+                        "modelo": r[10], "cor": r[11], "ano": r[12],
+                        "tipo": r[13], "observacoes": r[14], "listas": [],
+                    } if r[7] else None,
+                    "pessoas_relacionadas": [],
+                }
+                abordagens.append(ab)
+                ab_ids.append(r[0])
+
+            # 3. Pessoas relacionadas em cada abordagem (exceto a própria)
+            if ab_ids:
+                cur.execute(
+                    """
+                    SELECT ap.abordagem_id, ap.papel, ap.observacao_pessoal,
+                           p.id, p.nome, p.apelido, p.cpf, p.rg
+                    FROM abordagem_pessoas ap
+                    JOIN pessoas p ON p.id = ap.pessoa_id
+                    WHERE ap.abordagem_id = ANY(%s)
+                      AND ap.pessoa_id != %s
+                    ORDER BY ap.abordagem_id, p.nome
+                    """,
+                    (ab_ids, pessoa_id),
+                )
+                for pr in cur.fetchall():
+                    for ab in abordagens:
+                        if ab["id"] == pr[0]:
+                            ab["pessoas_relacionadas"].append({
+                                "papel":              pr[1],
+                                "observacao_pessoal": pr[2],
+                                "id": pr[3], "nome": pr[4], "apelido": pr[5],
+                                "cpf": pr[6], "rg": pr[7],
+                            })
+                            break
+
+            # 4. Verificar quais veículos estão em listas (alvos, furtados etc.)
+            placas = list({
+                ab["veiculo"]["placa"]
+                for ab in abordagens
+                if ab["veiculo"] and ab["veiculo"]["placa"]
+            })
+            listas_por_placa: dict = {}
+            if placas:
+                cur.execute(
+                    """
+                    SELECT vli.plate, vl.name, vl.color
+                    FROM vehicle_list_items vli
+                    JOIN vehicle_lists vl ON vl.id = vli.list_id
+                    WHERE vli.plate = ANY(%s)
+                    """,
+                    (placas,),
+                )
+                for lr in cur.fetchall():
+                    listas_por_placa.setdefault(lr[0], []).append(
+                        {"nome": lr[1], "cor": lr[2]}
+                    )
+
+            for ab in abordagens:
+                if ab["veiculo"] and ab["veiculo"]["placa"]:
+                    ab["veiculo"]["listas"] = listas_por_placa.get(
+                        ab["veiculo"]["placa"], []
+                    )
+
+    # 5. Resumo agregado
+    veic_map: dict = {}
+    pess_map: dict = {}
+    for ab in abordagens:
+        if ab["veiculo"] and ab["veiculo"]["placa"]:
+            pla = ab["veiculo"]["placa"]
+            if pla not in veic_map:
+                veic_map[pla] = dict(ab["veiculo"])
+                veic_map[pla]["total_abordagens"] = 0
+            veic_map[pla]["total_abordagens"] += 1
+        for pr in ab["pessoas_relacionadas"]:
+            pid2 = pr["id"]
+            if pid2 not in pess_map:
+                pess_map[pid2] = dict(pr)
+                pess_map[pid2]["total_abordagens"] = 0
+            pess_map[pid2]["total_abordagens"] += 1
+
+    veiculos_unicos = sorted(veic_map.values(), key=lambda x: -x["total_abordagens"])
+    pessoas_unicas  = sorted(pess_map.values(), key=lambda x: -x["total_abordagens"])
+
+    return {
+        "pessoa": pessoa,
+        "abordagens": abordagens,
+        "resumo": {
+            "total_abordagens": len(abordagens),
+            "veiculos_unicos":  veiculos_unicos,
+            "pessoas_unicas":   pessoas_unicas,
+            "reincidencias": {
+                "veiculos_reincidentes": [
+                    v for v in veiculos_unicos if v["total_abordagens"] > 1
+                ],
+                "pessoas_reincidentes": [
+                    p for p in pessoas_unicas if p["total_abordagens"] > 1
+                ],
+            },
+        },
+    }
 
 
 @app.post("/api/pessoas", status_code=201)
@@ -6429,21 +6590,70 @@ async def atualizar_pessoa(pessoa_id: int, request: Request):
 
 
 @app.delete("/api/pessoas/{pessoa_id}", status_code=204)
-def excluir_pessoa(pessoa_id: int):
-    """Remove uma pessoa do cadastro (só se não tiver abordagens vinculadas)."""
+async def excluir_pessoa(pessoa_id: int, request: Request):
+    """
+    Remove uma pessoa e todos os seus vínculos em cascata.
+    Exige campo 'senha_confirmacao' no corpo JSON para autorizar a operação.
+    """
+    # 1. Lê a senha de confirmação do corpo
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    senha_conf = str(body.get("senha_confirmacao") or "").strip()
+    if not senha_conf:
+        raise HTTPException(status_code=422, detail="Campo 'senha_confirmacao' é obrigatório.")
+
+    # 2. Obtém o usuário autenticado a partir do token JWT
+    user_payload = getattr(request.state, "user", None)
+    if not user_payload:
+        raise HTTPException(status_code=401, detail="Não autenticado.")
+    username = user_payload.get("sub")
+    if not username:
+        raise HTTPException(status_code=401, detail="Não autenticado.")
+
+    # 3. Valida a senha no banco — nunca no front-end
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) FROM abordagem_pessoas WHERE pessoa_id=%s", (pessoa_id,)
+                "SELECT password_hash FROM users WHERE username=%s AND ativa=TRUE LIMIT 1",
+                (username,),
             )
-            if cur.fetchone()[0] > 0:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Pessoa possui abordagens vinculadas. Desvincule antes de excluir.",
+            row = cur.fetchone()
+    if not row or not _verify_pw(senha_conf, row[0]):
+        raise HTTPException(status_code=403, detail="Senha incorreta. Exclusão não autorizada.")
+
+    # 4. Executa exclusão em cascata dentro de uma transação
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # Verifica existência
+            cur.execute("SELECT nome FROM pessoas WHERE id=%s LIMIT 1", (pessoa_id,))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Pessoa não encontrada.")
+
+            # a) Abordagens vinculadas exclusivamente a esta pessoa
+            #    (abordagem_pessoas ON DELETE CASCADE já cuida dos vínculos,
+            #     mas precisamos apagar abordagens onde só existe esta pessoa)
+            cur.execute(
+                """
+                DELETE FROM abordagens
+                WHERE id IN (
+                    SELECT ap.abordagem_id
+                    FROM abordagem_pessoas ap
+                    WHERE ap.pessoa_id = %s
+                    GROUP BY ap.abordagem_id
+                    HAVING COUNT(ap.pessoa_id) = 1
                 )
+                """,
+                (pessoa_id,),
+            )
+            # b) Vínculos remanescentes em abordagens compartilhadas
+            cur.execute(
+                "DELETE FROM abordagem_pessoas WHERE pessoa_id=%s", (pessoa_id,)
+            )
+            # c) A própria pessoa
             cur.execute("DELETE FROM pessoas WHERE id=%s", (pessoa_id,))
-            if cur.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+
     return None
 
 
@@ -6874,6 +7084,24 @@ async def criar_abordagem(request: Request):
                     )
                     veiculo_id = cur.fetchone()[0]
 
+    # ── Vincular veículo como alvo rastreado (se solicitado) ─────────────────
+    if v_data and v_data.get("vincular_como_alvo") and veiculo_id:
+        placa_norm = _normalize_plate(_s(v_data.get("placa")) or "")
+        if placa_norm:
+            obs_local = _s(data.get("local")) or ""
+            descricao = "Vinculado via abordagem" + (f" — {obs_local}" if obs_local else "")
+            with _conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO alvos (plate, descricao)
+                        VALUES (%s, %s)
+                        ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
+                        """,
+                        (placa_norm, descricao),
+                    )
+                    _sync_alvo_to_lista(cur, placa_norm, descricao)
+
     # ── Abordagem ─────────────────────────────────────────────────────────────
     dh_raw = _s(data.get("data_hora"))
     dh = None
@@ -6913,6 +7141,23 @@ async def criar_abordagem(request: Request):
         pessoa_id = p_data.get("pessoa_id")
         if pessoa_id:
             pessoa_id = int(pessoa_id)
+            # Atualiza dados da pessoa se campos complementares foram fornecidos
+            _upd: dict = {}
+            _cpf_upd = _clean_cpf(p_data.get("cpf"))
+            if _cpf_upd:
+                _upd["cpf"] = _cpf_upd
+            for _f in ("rg", "contato", "profissao", "endereco", "nome_pai", "nome_mae"):
+                _v = _s(p_data.get(_f))
+                if _v:
+                    _upd[_f] = _v
+            if _upd:
+                _cols = ", ".join(f"{k}=%s" for k in _upd)
+                with _conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            f"UPDATE pessoas SET {_cols} WHERE id=%s",
+                            list(_upd.values()) + [pessoa_id],
+                        )
         else:
             cpf_raw = _clean_cpf(p_data.get("cpf"))
             found_id = None
