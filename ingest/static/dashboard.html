@@ -2293,11 +2293,45 @@
             style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
         </label>
       </div>
-      <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;margin-top:10px">
-        Endere&ccedil;o
-        <input type="text" id="cad-ab-endereco" maxlength="200" placeholder="Endere&ccedil;o completo"
-          style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-      </label>
+      <!-- Endereço separado -->
+      <div style="display:grid;grid-template-columns:3fr 1fr;gap:10px;margin-top:10px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Rua / Avenida
+          <input type="text" id="cad-ab-rua" maxlength="150" placeholder="Ex: Rua das Flores"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          N&uacute;mero
+          <input type="text" id="cad-ab-numero" maxlength="10" placeholder="123"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:10px;margin-top:10px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Bairro
+          <input type="text" id="cad-ab-bairro" maxlength="80" placeholder="Ex: Centro"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Cidade
+          <input type="text" id="cad-ab-cidade" maxlength="80" placeholder="Ex: Colorado do Oeste"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Estado
+          <select id="cad-ab-estado"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+            <option value="">UF</option>
+            <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+            <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+            <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+            <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+            <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+            <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+            <option>SP</option><option>SE</option><option>TO</option>
+          </select>
+        </label>
+      </div>
     </div>
 
     <!-- SEÇÃO 2: Dados da Abordagem -->
@@ -9758,11 +9792,13 @@ async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
 
   // Limpa campos pessoais
   ['cad-ab-cpf','cad-ab-rg','cad-ab-contato','cad-ab-profissao',
-   'cad-ab-endereco','cad-ab-pai','cad-ab-mae',
+   'cad-ab-rua','cad-ab-numero','cad-ab-bairro','cad-ab-cidade',
+   'cad-ab-pai','cad-ab-mae',
    'cad-ab-naturalidade','cad-ab-uf-naturalidade','cad-ab-data-nascimento'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
+  var _estEl = document.getElementById('cad-ab-estado'); if(_estEl) _estEl.value = '';
 
   var erroEl = document.getElementById('cad-ab-erro');
   var okEl   = document.getElementById('cad-ab-ok');
@@ -9790,6 +9826,13 @@ async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
       _set('cad-ab-endereco', p.endereco);
       _set('cad-ab-pai',               p.nome_pai);
       _set('cad-ab-mae',               p.nome_mae);
+      // Endereço separado — fallback: endereco único em rua
+      _set('cad-ab-rua',    p.rua    || p.endereco || null);
+      _set('cad-ab-numero', p.numero || null);
+      _set('cad-ab-bairro', p.bairro || null);
+      _set('cad-ab-cidade', p.cidade || null);
+      var _estEl2 = document.getElementById('cad-ab-estado');
+      if (_estEl2 && p.estado) _estEl2.value = p.estado;
       _set('cad-ab-naturalidade',      p.naturalidade);
       _set('cad-ab-uf-naturalidade',   p.estado_naturalidade);
       _set('cad-ab-data-nascimento',   p.data_nascimento);
@@ -10013,7 +10056,14 @@ async function cadAbordagemSalvar() {
   var _rg     = (document.getElementById('cad-ab-rg').value      || '').trim();
   var _ct     = (document.getElementById('cad-ab-contato').value || '').trim();
   var _prof   = (document.getElementById('cad-ab-profissao').value || '').trim();
-  var _end    = (document.getElementById('cad-ab-endereco').value || '').trim();
+  var _end    = (function(){
+    var _r=(document.getElementById('cad-ab-rua')||{value:''}).value.trim();
+    var _n=(document.getElementById('cad-ab-numero')||{value:''}).value.trim();
+    var _b=(document.getElementById('cad-ab-bairro')||{value:''}).value.trim();
+    var _c=(document.getElementById('cad-ab-cidade')||{value:''}).value.trim();
+    var _e=(document.getElementById('cad-ab-estado')||{value:''}).value.trim();
+    return [_r, _n?'n\u00ba '+_n:'', _b, _c, _e].filter(Boolean).join(', ');
+  })();
   var _pai    = (document.getElementById('cad-ab-pai').value     || '').trim();
   var _mae    = (document.getElementById('cad-ab-mae').value     || '').trim();
   if (_cpfRaw) _pEntry.cpf      = _cpfRaw;
