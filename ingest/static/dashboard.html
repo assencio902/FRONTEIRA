@@ -9353,14 +9353,11 @@ function abAdicionarPessoa(dados) {
     +fi('pai','Nome do Pai','Nome completo do pai',d.nome_pai)
     +fi('mae','Nome da M\u00e3e','Nome completo da m\u00e3e',d.nome_mae)
     +'</div>'
-    // Linha 4a: Bairro (largura total)
-    +'<div style="margin-bottom:8px">'
-    +fi('bairro','Bairro','Ex: Centro',d.bairro)
-    +'</div>'
-    // Linha 4b: Rua / Número / Cidade / Estado
-    +'<div style="display:grid;grid-template-columns:2.4fr 0.6fr 1.2fr 0.5fr;gap:8px;margin-bottom:8px">'
+    // Linha 4: Rua / Número / Bairro / Cidade / Estado
+    +'<div style="display:grid;grid-template-columns:2.2fr 0.6fr 1.1fr 1.1fr 0.5fr;gap:8px;margin-bottom:8px">'
     +fi('rua','Rua / Avenida','Ex: Rua das Flores',d.rua||(d.endereco||''))
     +fi('numero','N\u00famero','123',d.numero)
+    +fi('bairro','Bairro','Ex: Centro',d.bairro)
     +fi('cidade','Cidade','Ex: Colorado do Oeste',d.cidade)
     +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">Estado'
     +'<input type="text" id="ab-pb-'+idx+'-estado" maxlength="2" placeholder="RO"'
