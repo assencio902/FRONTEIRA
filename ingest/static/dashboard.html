@@ -1275,119 +1275,87 @@
           <div class="card"><div class="card-icon">&#128197;</div><div class="card-label">Mais recente</div><div class="card-value" style="font-size:.85rem" id="alvo-recente">&#8212;</div></div>
           <div class="card"><div class="card-icon">&#127358;</div><div class="card-label">Mais antigo</div><div class="card-value" style="font-size:.85rem" id="alvo-antigo">&#8212;</div></div>
         </div>
-        <div class="toolbar">
-          <label style="display:flex;align-items:center;gap:6px">&#128269; Placa:
-            <input type="text" id="alvo-filter-plate" placeholder="ex: ABC1234"
-              style="width:110px;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text);font-size:.82rem">
-            <button class="btn btn-outline btn-xs" title="Relatório completo da placa" onclick="var p=document.getElementById('alvo-filter-plate').value.trim().toUpperCase();if(p)openBatedorReport(p);else alert('Digite uma placa primeiro.');">&#128196; Relat&oacute;rio</button>
-          </label>
-          <label>Janela de tempo:
-            <select id="alvo-window" style="margin-left:6px">
-              <option value="1m">1 minuto</option>
-              <option value="5m">5 minutos</option>
-              <option value="10m">10 minutos</option>
-              <option value="15m">15 minutos</option>
-              <option value="30m">30 minutos</option>
-              <option value="1h">1 hora</option>
-              <option value="2h" selected>2 horas</option>
-              <option value="3h">3 horas</option>
-              <option value="6h">6 horas</option>
-              <option value="12h">12 horas</option>
-              <option value="24h">24 horas</option>
-              <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-            </select>
-          </label>
-          <span id="alvo-filter-cameras"><label>M&iacute;n. c&acirc;meras:
-            <select id="alvo-min-cameras" style="margin-left:6px">
-              <option value="0">Todas</option>
-              <option value="1">&#8805; 1 c&acirc;mera</option>
-              <option value="2" selected>&#8805; 2 c&acirc;meras</option>
-              <option value="3">&#8805; 3 c&acirc;meras</option>
-              <option value="4">&#8805; 4 c&acirc;meras</option>
-              <option value="5">&#8805; 5 c&acirc;meras</option>
-            </select>
-          </label></span>
-          <label>&#8597; Dire&ccedil;&atilde;o:
-            <select id="alvo-direcao" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="CRESCENTE">&#8593; Crescente</option>
-              <option value="DECRESCENTE">&#8595; Decrescente</option>
-              <option value="ENTRADA">&#128673; Entrada</option>
-              <option value="SA&Iacute;DA">&#128674; Sa&iacute;da</option>
-            </select>
-          </label>
-          <label>&#128663; Tipo ve&iacute;culo:
-            <select id="alvo-vtype" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="car">Carro</option>
-              <option value="motorcycle">Moto</option>
-              <option value="pickup">Caminhonete</option>
-              <option value="truck">Caminh&atilde;o</option>
-              <option value="bus">&Ocirc;nibus</option>
-              <option value="van">Van/Kombi</option>
-            </select>
-          </label>
-          <label>&#127912; Cor:
-            <select id="alvo-vcolor" style="margin-left:6px">
-              <option value="">Qualquer</option>
-              <option value="Preto">Preto</option>
-              <option value="Branco">Branco</option>
-              <option value="Prata">Prata</option>
-              <option value="Cinza">Cinza</option>
-              <option value="Vermelho">Vermelho</option>
-              <option value="Azul">Azul</option>
-              <option value="Amarelo">Amarelo</option>
-              <option value="Verde">Verde</option>
-              <option value="Marrom">Marrom</option>
-              <option value="Laranja">Laranja</option>
-            </select>
-          </label>
-          <label style="font-weight:700;color:var(--accent)">&#128101; M&iacute;n. ve&iacute;culos no grupo:
-            <select id="alvo-minv" style="margin-left:4px;border-color:var(--accent)">
-              <option value="2" selected>2 (par)</option>
-              <option value="3">3 ve&iacute;culos</option>
-              <option value="4">4 ve&iacute;culos</option>
-              <option value="5">5+ ve&iacute;culos</option>
-            </select>
-          </label>
-          <label>&#9201; Janela p/ c&acirc;m.:
-            <select id="alvo-cowin" style="margin-left:4px">
-              <option value="60">1 min</option>
-              <option value="120">2 min</option>
-              <option value="300" selected>5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-            </select>
-          </label>
-          <button class="btn btn-primary btn-sm" onclick="loadAlvos(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
-          <button class="btn btn-outline btn-sm" onclick="_resetAlvos()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
-            <select id="alvo-interval" style="margin-left:4px">
-              <option value="30">30s</option>
-              <option value="60" selected>1 min</option>
-              <option value="120">2 min</option>
-              <option value="300">5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-              <option value="1800">30 min</option>
-              <option value="3600">1 hora</option>
-            </select>
-          </label>
-          <button id="btn-alvo-live" class="btn btn-outline btn-sm" onclick="toggleAlvoLive()" style="display:flex;align-items:center;gap:6px">
-            &#9654; <span id="alvo-live-label">Monitorar</span>
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="loadAlvos(true)">&#8635; Agora</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <button class="btn btn-outline btn-sm" onclick="loadAlvos()">&#8635; Atualizar</button>
           <span class="status-line" id="alvos-status"></span>
         </div>
 
         <div class="table-wrap">
           <table><thead><tr>
-            <th>Placa</th><th>Descri&ccedil;&atilde;o / Motivo</th><th>Cadastrado em</th><th>Relat&oacute;rio de Ve&iacute;culos</th><th>A&ccedil;&otilde;es</th>
+            <th>Placa</th><th>Descri&ccedil;&atilde;o / Motivo</th><th>Cadastrado em</th><th>A&ccedil;&otilde;es</th>
           </tr></thead>
-          <tbody id="alvos-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
+          <tbody id="alvos-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
           </table>
         </div>
       </div><!-- /bat-sub-alvos -->
+
+      <!-- DETALHE DE ALVO RASTREADO (sub-pane interno) -->
+      <div id="alvo-detalhe-view" class="sub-pane">
+        <!-- Cabeçalho com botão voltar -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
+          <div id="alvo-dv-titulo" style="font-size:1.05rem;font-weight:700;flex:1"></div>
+        </div>
+        <!-- Cards de resumo -->
+        <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
+        <!-- Barra de filtros -->
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+            <div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Per&iacute;odo</div>
+              <select id="alvo-dv-range" onchange="_alvoDvPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
+                <option value="24h">24 horas</option>
+                <option value="7d">7 dias</option>
+                <option value="15d">15 dias</option>
+                <option value="30d">30 dias</option>
+                <option value="custom">Per&iacute;odo personalizado</option>
+              </select>
+            </div>
+            <div id="alvo-dv-custom-dates" style="display:none;gap:10px;align-items:flex-end">
+              <div>
+                <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">De</div>
+                <input type="date" id="alvo-dv-start" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 11px;font-size:.85rem;height:34px;color-scheme:dark;outline:none">
+              </div>
+              <div>
+                <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">At&eacute;</div>
+                <input type="date" id="alvo-dv-end" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 11px;font-size:.85rem;height:34px;color-scheme:dark;outline:none">
+              </div>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Janela de tempo</div>
+              <select id="alvo-dv-janela" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
+                <option value="">Qualquer</option>
+                <option value="1">1 min</option>
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="60">1 hora</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">N&ordm; de c&acirc;meras</div>
+              <select id="alvo-dv-mincam" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
+                <option value="">Qualquer</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5 ou mais</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm" onclick="_alvoDvAplicar()" style="background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700">Aplicar filtros</button>
+              <button class="btn btn-outline btn-sm" onclick="_alvoDvLimpar()">Limpar</button>
+            </div>
+          </div>
+        </div>
+        <!-- Resultados -->
+        <div id="alvo-dv-resultados">
+          <p style="color:var(--muted);padding:12px 0">Selecione os filtros acima e clique em <strong>Aplicar filtros</strong>.</p>
+        </div>
+      </div><!-- /alvo-detalhe-view -->
 
     </div><!-- /tab-batedor -->
 
@@ -1569,7 +1537,8 @@
       <nav class="pessoas-sub-nav" role="tablist">
         <button class="pessoas-sub-btn active" id="psub-btn-pesquisar"
           onclick="switchPessoasSubTab('pesquisar',this)">&#128269; Pesquisar</button>
-        <button class="pessoas-sub-btn" id="psub-btn-abordagem"
+        <!-- Sub-aba "Adicionar Abordagem": apenas admin e operador -->
+        <button class="pessoas-sub-btn" id="psub-btn-abordagem" data-perm="operador-plus"
           onclick="switchPessoasSubTab('abordagem',this)">&#43; Adicionar Abordagem</button>
         <button class="pessoas-sub-btn" id="psub-btn-lista-abordagens"
           onclick="switchPessoasSubTab('lista-abordagens',this)">&#128203; Lista de Abordagens</button>
@@ -1582,7 +1551,8 @@
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <span style="font-size:.82rem;color:var(--muted)">Pesquise por nome, apelido, CPF ou RG &mdash; ou deixe em branco para ver todos.</span>
-          <button class="btn btn-outline btn-sm" onclick="cadastroNovaPessoa()">&#43; Nova Pessoa</button>
+          <!-- Botão "+ Nova Pessoa": apenas admin e operador -->
+          <button class="btn btn-outline btn-sm" data-perm="operador-plus" onclick="cadastroNovaPessoa()">&#43; Nova Pessoa</button>
         </div>
 
         <!-- Barra de busca -->
@@ -2045,8 +2015,9 @@
       <!-- preenchido por cadastroVisualizar() -->
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-      <button class="btn btn-primary btn-sm" id="cad-view-nova-ab-btn" onclick="">&#10133; Nova abordagem</button>
-      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" onclick="">&#9998; Editar cadastro</button>
+      <!-- Nova abordagem e Editar: apenas admin e operador -->
+      <button class="btn btn-primary btn-sm" id="cad-view-nova-ab-btn" data-perm="operador-plus" onclick="">&#10133; Nova abordagem</button>
+      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" data-perm="operador-plus" onclick="">&#9998; Editar cadastro</button>
       <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
     </div>
   </div>
@@ -2840,6 +2811,10 @@
     <div id="detail-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
   </div>
 </div>
+
+<!-- MODAL VER ALVO (somente leitura) -->
+<!-- ═══ TELA COMPLETA: DETALHE DE ALVO RASTREADO ═══════════════════════════ -->
+
 
 <!-- MODAL RELATÓRIO DE COMBOIO -->
 <div class="modal-overlay" id="comboio-modal" onclick="if(event.target===this)closeModal('comboio-modal')">
@@ -3696,6 +3671,9 @@ function switchBatTab(name, el) {
     var el2 = document.getElementById('bat-sub-'+n);
     if (el2) el2.classList.remove('active');
   });
+  // garante que o detalhe do alvo seja ocultado ao trocar de sub-aba
+  var dvEl = document.getElementById('alvo-detalhe-view');
+  if (dvEl) dvEl.classList.remove('active');
   el.classList.add('active');
   el.setAttribute('data-bat', name);
   document.getElementById('bat-sub-' + name).classList.add('active');
@@ -5708,32 +5686,6 @@ function _resetCenFilters() {
   if (pm) pm.value = '0';
 }
 
-function _getAlvoFilters() {
-  return {
-    plate: (document.getElementById('alvo-filter-plate') ? document.getElementById('alvo-filter-plate').value : '').trim().toUpperCase(),
-    window: document.getElementById('alvo-window') ? document.getElementById('alvo-window').value : '',
-    min_cameras: document.getElementById('alvo-min-cameras') ? document.getElementById('alvo-min-cameras').value : '',
-    direcao: document.getElementById('alvo-direcao') ? document.getElementById('alvo-direcao').value : '',
-    vtype: document.getElementById('alvo-vtype') ? document.getElementById('alvo-vtype').value : '',
-    vcolor: document.getElementById('alvo-vcolor') ? document.getElementById('alvo-vcolor').value : '',
-    minv: document.getElementById('alvo-minv') ? document.getElementById('alvo-minv').value : '',
-    cowin: document.getElementById('alvo-cowin') ? document.getElementById('alvo-cowin').value : '',
-    interval: document.getElementById('alvo-interval') ? document.getElementById('alvo-interval').value : ''
-  };
-}
-
-function _resetAlvos() {
-  var ids = [
-    'alvo-filter-plate','alvo-window','alvo-min-cameras','alvo-direcao','alvo-vtype','alvo-vcolor','alvo-minv','alvo-cowin','alvo-interval'
-  ];
-  ids.forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) {
-      if (el.tagName === 'SELECT') el.selectedIndex = 0;
-      else el.value = '';
-    }
-  });
-}
 var _alvoRepSavedCamera = null;
 
 function _getAlvoRepFilters() {
@@ -5807,30 +5759,39 @@ async function loadAlvos() {
     document.getElementById('alvo-com-comp').textContent = '—';
     if (st) st.textContent = alvos.length + ' alvo(s)';
     if (alvos.length === 0) {
-      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
       return;
     }
+    var _role = window._authRole || 'visualizador';
     tb.innerHTML = alvos.map(function(a) {
       var desde   = new Date(a.created_at).toLocaleDateString('pt-BR');
       var descEsc = (a.descricao || '').replace(/'/g, "&#39;");
+      // Botões de ação por perfil
+      var btnVer    = '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;,&#39;' + desde + '&#39;)" title="Ver detalhes do alvo" style="margin-right:4px">&#128269; Ver</button>';
+      var btnEditar = (_role === 'admin' || _role === 'operador')
+        ? '<button class="btn btn-outline btn-xs" onclick="alvoEditar(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" title="Editar alvo" style="margin-right:4px">&#9998; Editar</button>'
+        : '';
+      var btnApagar = (_role === 'admin')
+        ? '<button class="btn btn-outline btn-xs" onclick="alvoApagar(' + a.id + ',&#39;' + a.plate + '&#39;)" title="Apagar alvo" style="color:var(--danger)">&#128465; Apagar</button>'
+        : '';
       return '<tr id="alvo-card-' + a.id + '">'
         + '<td>' + plateHtml(a.plate) + '</td>'
         + '<td style="color:var(--muted)">' + (a.descricao || '<em style="color:var(--muted)">sem descri&ccedil;&atilde;o</em>') + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
-        + '<td style="white-space:nowrap">'
-          + '<button class="btn btn-sm" style="background:rgba(59,130,246,.75);color:#fff;margin-right:4px" onclick="openBatedorReport(&#39;' + a.plate + '&#39;,false,_getAlvoRepFilters())">&#128202; Rel. Ve&iacute;culo</button>'
-          + '<button class="btn btn-outline btn-xs" onclick="openAlvoDetail(&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)">&#128269; Companheiros</button>'
-        + '</td>'
-        + '<td style="white-space:nowrap">'
-          + '<button class="btn btn-outline btn-xs" onclick="editAlvo(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" style="margin-right:6px">&#9998; Editar</button>'
-          + '<button class="btn btn-outline btn-xs" onclick="removeAlvo(' + a.id + ',&#39;' + a.plate + '&#39;)" style="color:var(--danger)">&#128465;</button>'
-        + '</td>'
+        + '<td style="white-space:nowrap">' + btnVer + btnEditar + btnApagar + '</td>'
         + '</tr>';
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
     if (st) st.textContent = 'Erro';
   }
+}
+
+function _fmtDelta(s) {
+  s = Math.round(s);
+  if (s < 60) return s + ' s';
+  var m = Math.floor(s / 60), r = s % 60;
+  return r > 0 ? m + ' min ' + r + ' s' : m + ' min';
 }
 
 async function openAlvoDetail(plate, descricao) {
@@ -5874,13 +5835,13 @@ async function openAlvoDetail(plate, descricao) {
         bannerHtml = '<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:.82rem">'
           + '<strong style="color:#f87171">&#128680; Poss&iacute;vel BATEDOR de ' + plate + '</strong><br>'
           + '<span style="color:var(--muted)">Chega antes em <strong>' + compLeadPct + '%</strong> das passagens ('
-          + c.companion_leads + ' de ' + tot + '). M&eacute;dia de <strong>' + c.avg_co_delta_sec + 's</strong> de antecedência. '
+          + c.companion_leads + ' de ' + tot + '). M&eacute;dia de <strong>' + _fmtDelta(c.avg_co_delta_sec) + '</strong> de antecedência. '
           + 'Padr&atilde;o consistente com abertura de caminho.</span></div>';
       } else if (tgtLeadPct >= 70) {
         bannerHtml = '<div style="background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.3);border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:.82rem">'
           + '<strong style="color:#fbbf24">&#9888;&#65039; ' + plate + ' chega na frente &mdash; ' + c.companion + ' pode ser PROTEÇÃO</strong><br>'
           + '<span style="color:var(--muted)">O alvo lidera em <strong>' + tgtLeadPct + '%</strong> das passagens. '
-          + c.companion + ' segue a <strong>' + c.avg_co_delta_sec + 's</strong> de dist&acirc;ncia m&eacute;dia.</span></div>';
+          + c.companion + ' segue a <strong>' + _fmtDelta(c.avg_co_delta_sec) + '</strong> de dist&acirc;ncia m&eacute;dia.</span></div>';
       } else {
         bannerHtml = '<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:9px 14px;margin-bottom:10px;font-size:.82rem">'
           + '<strong style="color:#4ade80">&#128664;&#128664; Comboio lado a lado</strong><br>'
@@ -5890,17 +5851,11 @@ async function openAlvoDetail(plate, descricao) {
 
       // Tabela de evidências (câmera a câmera)
       var evRows = evidences.map(function(ev, i) {
-        var tsTarget    = new Date(ev.ts_target);
-        var tsCompanion = new Date(ev.ts_companion);
-        var first, second, tsFirst, tsSecond;
-        if (tsTarget <= tsCompanion) {
-          first = plate;    second = c.companion; tsFirst = ev.ts_target;    tsSecond = ev.ts_companion;
-        } else {
-          first = c.companion; second = plate;    tsFirst = ev.ts_companion; tsSecond = ev.ts_target;
-        }
         var delta = ev.co_delta_sec != null ? ev.co_delta_sec : Math.round(Math.abs(new Date(ev.ts_companion) - new Date(ev.ts_target)) / 1000);
         var badgeCls = delta <= 60 ? 'red' : delta <= 300 ? 'yellow' : 'green';
-        var isCompFirst = (first === c.companion);
+        var order = ev.plate_order || [];
+        var idxT = order.indexOf(plate), idxC = order.indexOf(c.companion);
+        var targetFirst = (idxT >= 0 && idxC >= 0) ? idxT <= idxC : (new Date(ev.ts_target) <= new Date(ev.ts_companion));
         var yoloVcT = ev.yolo_vc_target;
         var yoloVcC = ev.yolo_vc_companion;
         var yoloBadgeT = (yoloVcT >= 0)
@@ -5914,21 +5869,14 @@ async function openAlvoDetail(plate, descricao) {
           : ev.direcao === 'DECRESCENTE'
             ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESC.</span>'
             : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+        var primeroBadge = '<span style="color:#4ade80;font-size:.65rem;font-weight:700;margin-left:3px" title="passou primeiro">&#9650;1&ordm;</span>';
         return '<tr>'
           + '<td style="text-align:center;font-weight:700;color:var(--muted)">' + (i+1) + '</td>'
           + '<td style="font-size:.78rem">' + (ev.camera || ev.camera_id || '?') + '</td>'
           + '<td>' + dirCell + '</td>'
-          + '<td>'
-            + '<span style="color:#4ade80;font-weight:700;margin-right:4px">&#9650; 1&ordm;</span>'
-            + '<span class="plate-tag' + (isCompFirst ? ' plate-alert" style="color:#f87171;border-color:#f87171' : '') + '">' + first + '</span>'
-            + '<span style="color:var(--muted);font-size:.75rem;margin-left:6px">' + fmtTs(tsFirst) + '</span>'
-          + '</td>'
-          + '<td>'
-            + '<span style="color:#f87171;font-weight:700;margin-right:4px">&#9660; 2&ordm;</span>'
-            + '<span class="plate-tag">' + second + '</span>'
-            + '<span style="color:var(--muted);font-size:.75rem;margin-left:6px">' + fmtTs(tsSecond) + '</span>'
-          + '</td>'
-          + '<td style="text-align:center"><span class="badge badge-' + badgeCls + '">' + delta + 's</span></td>'
+          + '<td><span style="color:var(--muted);font-size:.75rem">' + fmtTs(ev.ts_target) + '</span>' + (targetFirst ? primeroBadge : '') + '</td>'
+          + '<td><span style="color:var(--muted);font-size:.75rem">' + fmtTs(ev.ts_companion) + '</span>' + (!targetFirst ? primeroBadge : '') + '</td>'
+          + '<td style="text-align:center"><span class="badge badge-' + badgeCls + '">' + _fmtDelta(delta) + '</span></td>'
           + '<td style="text-align:center">' + yoloBadgeT + '</td>'
           + '<td style="text-align:center">' + yoloBadgeC + '</td>'
           + '</tr>';
@@ -5942,13 +5890,13 @@ async function openAlvoDetail(plate, descricao) {
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
           + '<span class="plate-tag" style="font-size:1rem">' + c.companion + '</span>'
           + (listBadgesHtml(c.companion) ? listBadgesHtml(c.companion) : '')
-          + '<span style="font-size:.78rem;color:var(--muted)">' + c.cameras_together + ' c&acirc;mera(s) &bull; trip ' + (c.trip_span_sec != null ? Math.round(c.trip_span_sec/60) + 'min' : '-') + ' &bull; delta m&eacute;d. ' + c.avg_co_delta_sec + 's &bull; &uacute;ltimo: ' + lastTog + '</span>'
+          + '<span style="font-size:.78rem;color:var(--muted)">' + c.cameras_together + ' c&acirc;mera(s) &bull; trip ' + (c.trip_span_sec != null ? Math.round(c.trip_span_sec/60) + 'min' : '-') + ' &bull; min: ' + _fmtDelta(c.min_delta_sec) + ' &bull; m&aacute;x: ' + _fmtDelta(c.max_delta_sec) + ' &bull; m&eacute;d: ' + _fmtDelta(c.avg_co_delta_sec) + ' &bull; &uacute;ltimo: ' + lastTog + '</span>'
           + yoloMultiBadge
         + '</div>'
         + bannerHtml
-        + '<p style="color:var(--muted);font-size:.79rem;margin-bottom:6px">&#9650; = passou na frente &nbsp;|&nbsp; &#9660; = passou atr&aacute;s &nbsp;|&nbsp; placa em vermelho = poss&iacute;vel batedor &nbsp;|&nbsp; &#128293; = YOLO: 2+ ve&iacute;culos no frame</p>'
+        + '<p style="color:var(--muted);font-size:.79rem;margin-bottom:6px">&#9650;1&ordm; = passou primeiro &nbsp;|&nbsp; &#128293; = YOLO: 2+ ve&iacute;culos no frame</p>'
         + '<div class="table-wrap"><table><thead><tr>'
-        + '<th>#</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Passou Primeiro</th><th>Passou Depois</th><th>Intervalo</th><th>YOLO Alvo</th><th>YOLO Comp.</th>'
+        + '<th>#</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Hor&aacute;rio Alvo</th><th>Hor&aacute;rio Comp.</th><th>Dif. Tempo</th><th>YOLO Alvo</th><th>YOLO Comp.</th>'
         + '</tr></thead><tbody>' + evRows + '</tbody></table></div>'
         + '</div>';
     }).join('<hr style="border-color:var(--border);margin:20px 0">');
@@ -5979,6 +5927,201 @@ async function openAlvoDetail(plate, descricao) {
 }
 
 var _editAlvoId = null;
+var _alvoDvId    = null;
+var _alvoDvPlate = null;
+
+// ── Alvo: Fechar tela de detalhes ────────────────────────────────────────────
+function alvoVerFechar() {
+  var dvEl = document.getElementById('alvo-detalhe-view');
+  if (dvEl) dvEl.classList.remove('active');
+  var alvosTab = document.querySelector('#bat-sub-tabs [data-bat="alvos"]');
+  if (alvosTab) switchBatTab('alvos', alvosTab);
+}
+
+// ── Alvo: Controla exibição dos campos de datas personalizadas ───────────────
+function _alvoDvPeriodChange() {
+  var sel = document.getElementById('alvo-dv-range');
+  var cd  = document.getElementById('alvo-dv-custom-dates');
+  if (!sel || !cd) return;
+  cd.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
+// ── Alvo: Renderiza um card de resumo ────────────────────────────────────────
+function _alvoDvMkCard(label, value) {
+  return '<div class="card">'
+    + '<div class="card-label">' + label + '</div>'
+    + '<div style="font-size:.95rem;font-weight:600;color:var(--text);word-break:break-word">' + value + '</div>'
+    + '</div>';
+}
+
+// ── Alvo: Carrega dados resumidos do alvo via API ────────────────────────────
+async function _alvoDvLoadDetalhes(id, descricaoLocal, desdeLocal) {
+  var cards = document.getElementById('alvo-dv-cards');
+  if (!cards) return;
+  var pl = _alvoDvPlate || '';
+  var spin = '<span class="spinner" style="font-size:.7rem"></span>';
+  cards.innerHTML =
+    _alvoDvMkCard('&#128663; Placa', '<span style="font-size:1.3rem;font-family:monospace;letter-spacing:.1em;color:#f87171;font-weight:800">' + pl + '</span>') +
+    _alvoDvMkCard('&#128203; Descri&ccedil;&atilde;o', descricaoLocal || '<em style="color:var(--muted);font-size:.85em">sem descri&ccedil;&atilde;o</em>') +
+    _alvoDvMkCard('&#128197; Cadastrado em', desdeLocal || '&mdash;') +
+    _alvoDvMkCard('&#128336; &Uacute;ltima passagem', spin) +
+    _alvoDvMkCard('&#127919; Total de eventos', spin) +
+    _alvoDvMkCard('&#128247; C&acirc;meras distintas', spin);
+  try {
+    var resp = await fetch('/api/alvos/' + id);
+    if (!resp.ok) return;
+    var d = await resp.json();
+    var fmtDate = function(iso) { return iso ? new Date(iso).toLocaleDateString('pt-BR') : '&mdash;'; };
+    var fmtTs   = function(iso) { return iso ? new Date(iso).toLocaleString('pt-BR')     : '&mdash;'; };
+    cards.innerHTML =
+      _alvoDvMkCard('&#128663; Placa', '<span style="font-size:1.3rem;font-family:monospace;letter-spacing:.1em;color:#f87171;font-weight:800">' + d.plate + '</span>') +
+      _alvoDvMkCard('&#128203; Descri&ccedil;&atilde;o', d.descricao || '<em style="color:var(--muted);font-size:.85em">sem descri&ccedil;&atilde;o</em>') +
+      _alvoDvMkCard('&#128197; Cadastrado em', fmtDate(d.created_at)) +
+      _alvoDvMkCard('&#128336; &Uacute;ltima passagem', fmtTs(d.ultima_passagem)) +
+      _alvoDvMkCard('&#127919; Total de eventos', d.total_eventos !== null ? String(d.total_eventos) : '&mdash;') +
+      _alvoDvMkCard('&#128247; C&acirc;meras distintas', d.total_cameras !== null ? String(d.total_cameras) : '&mdash;');
+  } catch(e) {}
+}
+
+// ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
+async function _alvoDvAplicar() {
+  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
+  var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value    || '';
+  var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value    || '';
+  var res = document.getElementById('alvo-dv-resultados');
+  if (!res) return;
+  res.innerHTML = '<p style="color:var(--muted);padding:8px 0"><span class="spinner"></span> Carregando hist&oacute;rico de passagens&hellip;</p>';
+  var params = [];
+  if (rangeVal !== 'custom') {
+    params.push('periodo=' + encodeURIComponent(rangeVal));
+  } else {
+    var start = (document.getElementById('alvo-dv-start') || {value:''}).value || '';
+    var end   = (document.getElementById('alvo-dv-end')   || {value:''}).value || '';
+    if (start) params.push('start=' + encodeURIComponent(start));
+    if (end)   params.push('end='   + encodeURIComponent(end));
+  }
+  if (janela) params.push('janela_min=' + encodeURIComponent(janela));
+  if (mincam) params.push('min_cameras=' + encodeURIComponent(mincam));
+  var url = '/api/alvos/' + _alvoDvId + '/historico?' + params.join('&');
+  try {
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var d = await resp.json();
+    _alvoDvRenderHistorico(d, rangeVal, janela, mincam);
+  } catch(e) {
+    res.innerHTML = '<p style="color:var(--danger);padding:8px 0">Erro ao carregar hist&oacute;rico: ' + e + '</p>';
+  }
+}
+
+// ── Alvo: Limpa filtros e re-executa ─────────────────────────────────────────
+function _alvoDvLimpar() {
+  [['alvo-dv-range','24h'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
+   ['alvo-dv-start',''],['alvo-dv-end','']].forEach(function(f) {
+    var el = document.getElementById(f[0]); if (el) el.value = f[1];
+  });
+  _alvoDvPeriodChange();
+  _alvoDvAplicar();
+}
+
+// ── Alvo: Renderiza tabela de histórico ──────────────────────────────────────
+function _alvoDvRenderHistorico(d, rangeVal, janela, mincam) {
+  var res = document.getElementById('alvo-dv-resultados');
+  if (!res) return;
+  var jLabel = {'1':'1 min','5':'5 min','10':'10 min','15':'15 min','30':'30 min','60':'1 hora'};
+  var rLabel = {'24h':'24 horas','7d':'7 dias','15d':'15 dias','30d':'30 dias','custom':'per&iacute;odo personalizado'};
+  var chips = [];
+  chips.push('<span style="background:rgba(250,204,21,.15);color:var(--accent);border:1px solid rgba(250,204,21,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#128197; ' + (rLabel[rangeVal] || rangeVal) + '</span>');
+  if (janela) chips.push('<span style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#9201; janela: ' + (jLabel[janela] || janela + ' min') + '</span>');
+  if (mincam) chips.push('<span style="background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#128247; &ge;' + mincam + ' c&acirc;m.</span>');
+  if (!d.events || d.events.length === 0) {
+    res.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:32px 24px">'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">' + chips.join('') + '</div>'
+      + '<div style="color:var(--muted);font-size:.95rem;text-align:center">Nenhuma passagem encontrada com os filtros selecionados.</div>'
+      + '<div style="color:var(--muted);font-size:.8rem;text-align:center;margin-top:6px">Tente ampliar o per&iacute;odo ou modificar os filtros.</div>'
+      + '</div>';
+    return;
+  }
+  var html = '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
+    + '<span style="font-size:.95rem;font-weight:700">&#128336; ' + d.total + ' passagem(ns)</span>'
+    + '<span style="font-size:.82rem;color:var(--muted)">&middot; ' + d.cameras_count + ' c&acirc;mera(s) no per&iacute;odo</span>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:4px">' + chips.join('') + '</div>'
+    + '</div>'
+    + '<div class="table-wrap"><table><thead><tr>'
+    + '<th style="white-space:nowrap">Data / Hora</th>'
+    + '<th>C&acirc;mera</th>'
+    + '<th>Dire&ccedil;&atilde;o</th>'
+    + '<th style="text-align:center">Confian&ccedil;a</th>'
+    + '<th style="text-align:center">Imagem</th>'
+    + '</tr></thead><tbody>';
+  d.events.forEach(function(ev) {
+    var ts   = ev.occurred_at ? new Date(ev.occurred_at).toLocaleString('pt-BR') : '&mdash;';
+    var cam  = ev.camera || ev.channel_name || ev.camera_id || '&mdash;';
+    var dir  = ev.direcao ? ev.direcao : '<span style="color:var(--muted)">&mdash;</span>';
+    var pct  = ev.confidence ? Math.round(ev.confidence * 100) : 0;
+    var cc   = pct >= 80 ? '#4ade80' : pct >= 60 ? '#facc15' : 'var(--muted)';
+    var conf = ev.confidence
+      ? '<span style="color:' + cc + ';font-weight:700">' + pct + '%</span>'
+      : '<span style="color:var(--muted)">&mdash;</span>';
+    var img  = ev.image_path
+      ? '<img src="/uploads/' + ev.image_path + '" style="height:44px;border-radius:5px;cursor:pointer;border:1px solid var(--border)" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
+      : '<span style="color:var(--muted);font-size:.75rem">sem imagem</span>';
+    html += '<tr>'
+      + '<td style="white-space:nowrap;font-size:.82rem">' + ts + '</td>'
+      + '<td style="font-size:.82rem">' + cam + '</td>'
+      + '<td style="font-size:.82rem">' + dir + '</td>'
+      + '<td style="text-align:center">' + conf + '</td>'
+      + '<td style="text-align:center">' + img + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  res.innerHTML = html;
+}
+
+// ── Alvo: Ver (abre tela full-screen) ────────────────────────────────────────
+async function alvoVer(id, plate, descricao, desde) {
+  _alvoDvId    = id;
+  _alvoDvPlate = (plate || '').replace(/&#39;/g, "'");
+  var descReal = (descricao || '').replace(/&#39;/g, "'");
+  // esconde todos os sub-panes do batedor e desmarca abas
+  ['central', 'grupos', 'alvos'].forEach(function(n){
+    var el2 = document.getElementById('bat-sub-'+n);
+    if (el2) el2.classList.remove('active');
+  });
+  document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
+  var view = document.getElementById('alvo-detalhe-view');
+  if (!view) return;
+  view.classList.add('active');
+  document.getElementById('alvo-dv-titulo').innerHTML =
+    '&#127919; Alvo: <span style="color:#f87171;font-weight:800;font-family:monospace;letter-spacing:.1em">' + _alvoDvPlate + '</span>';
+  // reseta filtros
+  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '24h';
+  var jEl = document.getElementById('alvo-dv-janela'); if (jEl) jEl.value = '';
+  var mEl = document.getElementById('alvo-dv-mincam'); if (mEl) mEl.value = '';
+  var ds  = document.getElementById('alvo-dv-start');  if (ds)  ds.value  = '';
+  var de  = document.getElementById('alvo-dv-end');    if (de)  de.value  = '';
+  _alvoDvPeriodChange();
+  _alvoDvLoadDetalhes(id, descReal, desde);
+  _alvoDvAplicar();
+}
+
+// ── Alvo: Editar (admin + operador) ──────────────────────────────────────────
+function alvoEditar(id, plate, descricao) {
+  editAlvo(id, plate, descricao); // delega à função existente
+}
+
+// ── Alvo: Apagar (somente admin) ─────────────────────────────────────────────
+async function alvoApagar(id, plate) {
+  if (window._authRole !== 'admin') {
+    alert('Apenas administradores podem apagar alvos rastreados.');
+    return;
+  }
+  if (!confirm('Apagar alvo ' + plate + '? Esta ação é irreversível.')) return;
+  await fetch('/api/alvos/' + id, {method: 'DELETE'});
+  var card = document.getElementById('alvo-card-' + id);
+  if (card) card.remove();
+  var st = document.getElementById('alvos-status');
+  if (st) { var t = parseInt(st.textContent); if (!isNaN(t)) st.textContent = (t - 1) + ' alvo(s)'; }
+}
 
 function editAlvo(id, plate, descricao) {
   _editAlvoId = id;
@@ -7859,6 +8002,17 @@ function _applyRoleBasedUI(root) {
   var isOperador = role === 'operador';
   var isVisualizador = role === 'visualizador';
 
+  // ── Processar atributo data-perm ──────────────────────────────────────────
+  // data-perm="operador-plus" → visível para admin e operador
+  // data-perm="admin-only"    → visível apenas para admin
+  // data-perm="auth"          → visível para qualquer autenticado
+  scope.querySelectorAll('[data-perm="operador-plus"]').forEach(function(el) {
+    el.style.display = (isAdmin || isOperador) ? '' : 'none';
+  });
+  scope.querySelectorAll('[data-perm="admin-only"]').forEach(function(el) {
+    el.style.display = isAdmin ? '' : 'none';
+  });
+
   // Ocultar menus que o usuário não tem acesso
   if (!isAdmin) {
     scope.querySelectorAll('.nav-admin-only').forEach(function(el){
@@ -7881,10 +8035,10 @@ function _applyRoleBasedUI(root) {
     });
   }
 
-  // Visualizador: somente leitura em eventos, batedor, painel e mapa de câmeras
+  // Visualizador: somente leitura — pode ver Pessoas/Abordagens mas não alterar
   if (isVisualizador) {
-    // Ocultar abas que visualizador não pode acessar
-    var allowedTabs = ['painel', 'eventos', 'batedor', 'mapa', 'config'];
+    // Abas permitidas: visualizador acessa Pessoas (consulta) além das demais leitura
+    var allowedTabs = ['painel', 'eventos', 'batedor', 'mapa', 'config', 'cadastro'];
     scope.querySelectorAll('.nav-item').forEach(function(el){
       var onclick = (el.getAttribute('onclick') || '').toLowerCase();
       var tabMatch = onclick.match(/switchtab\('([^']+)'/i);
@@ -7896,7 +8050,7 @@ function _applyRoleBasedUI(root) {
       }
     });
 
-    // Ocultar abas de conteúdo que não são permitidas
+    // Ocultar conteúdo de abas não permitidas (mas manter tab-cadastro visível)
     scope.querySelectorAll('[id^="tab-"]').forEach(function(el){
       var tabId = el.id.replace('tab-', '').toLowerCase();
       if (!allowedTabs.includes(tabId)) {
@@ -7909,26 +8063,38 @@ function _applyRoleBasedUI(root) {
       el.style.display = 'none';
     });
 
-    // Bloqueiar TODOS os botões de ação de escrita
-    scope.querySelectorAll('button, a.btn, [onclick]').forEach(function(el){
-      var txt = (el.textContent || '').toLowerCase();
+    // Bloquear botões de escrita — lista explícita de funções JS de modificação
+    // (evitar match genérico em texto que quebraria o menu de "Pessoas")
+    scope.querySelectorAll('button, a.btn').forEach(function(el){
       var onclick = (el.getAttribute('onclick') || '').toLowerCase();
-      var classes = (el.getAttribute('class') || '').toLowerCase();
-      
-      // Bloquear tudo que seja ação de escrita/modificação
+
       var isWriteAction =
-        txt.includes('novo') || txt.includes('salvar') || txt.includes('cadastrar') ||
-        txt.includes('editar') || txt.includes('excluir') || txt.includes('deletar') ||
-        txt.includes('importar') || txt.includes('adicionar') || txt.includes('remover') ||
-        txt.includes('confirmar') || txt.includes('falso positivo') ||
-        onclick.includes('save') || onclick.includes('create') || onclick.includes('update') ||
-        onclick.includes('delete') || onclick.includes('import') || onclick.includes('openusermodal') ||
-        onclick.includes('openalarmemodal') || onclick.includes('testalarme') ||
+        // Alarmes
+        onclick.includes('openalarmemodal') || onclick.includes('savealarme') ||
+        onclick.includes('deletealarme')    || onclick.includes('testalarme') ||
+        // Usuários
+        onclick.includes('openusermodal')   || onclick.includes('deleteuser') ||
+        // Veículos e listas
+        onclick.includes('savevehicle')     || onclick.includes('deletevehicle') ||
+        onclick.includes('openlistmodal')   || onclick.includes('deletelist') ||
+        onclick.includes('savecamera')      || onclick.includes('deletecamera') ||
+        onclick.includes('opencameramodal') ||
+        // Comboio / batedor
         onclick.includes('comboio_confirm') || onclick.includes('false_positive') ||
-        onclick.includes('openvehiculomodal') || onclick.includes('opencameramodal') ||
-        onclick.includes('openbatedormodal') || onclick.includes('savevehicle') ||
-        onclick.includes('savecamera') || onclick.includes('savebatedor');
-      
+        onclick.includes('savebatedor')     || onclick.includes('openbatedormodal') ||
+        // Pessoas / abordagens (ações de escrita — consulta é permitida)
+        onclick.includes('cadastronovapessoa')  ||
+        onclick.includes('cadastroeditar')      ||
+        onclick.includes('cadastroexcluir')     ||
+        onclick.includes('absalvar')            ||
+        onclick.includes('abexcluir')           ||
+        onclick.includes('abusar')              ||
+        onclick.includes('cadabordar')          ||
+        onclick.includes('cadabordagemsalvar')  ||
+        // Importações / decisões
+        onclick.includes('import')          || onclick.includes('openvehiculomodal') ||
+        onclick.includes('report/decision') || onclick.includes('savealvo');
+
       if (isWriteAction) {
         el.style.display = 'none';
       }
@@ -8697,6 +8863,16 @@ function renderCadResultado(pessoas) {
   tb.innerHTML = pessoas.map(function(p) {
     var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '\u2014';
     var dn = p.data_nascimento ? p.data_nascimento.substring(0,10) : '\u2014';
+    // Botões de ação baseados no perfil do usuário logado
+    var role = window._authRole || 'visualizador';
+    var botoesAcao = '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button>';
+    if (role === 'admin' || role === 'operador') {
+      botoesAcao += ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button>';
+    }
+    if (role === 'admin') {
+      // Botão excluir cadastro: somente admin
+      botoesAcao += ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>';
+    }
     return '<tr>' +
       '<td style="color:var(--muted);font-size:.8rem">' + p.id + '</td>' +
       '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
@@ -8706,11 +8882,7 @@ function renderCadResultado(pessoas) {
       '<td style="font-size:.78rem">' + dn + '</td>' +
       '<td>' + _esc(p.contato || '\u2014') + '</td>' +
       '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
-      '<td style="text-align:center;white-space:nowrap">' +
-        '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button> ' +
-        '<button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button> ' +
-        '<button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>' +
-      '</td>' +
+      '<td style="text-align:center;white-space:nowrap">' + botoesAcao + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -9581,6 +9753,10 @@ async function _abListaFetch() {
         var nomes = Array.isArray(ab.pessoas) && ab.pessoas.length
           ? ab.pessoas.slice(0,2).map(function(p){return _esc(p.nome||'');}).join(', ')+(ab.pessoas.length>2?' +\u2026':'')
           : '\u2014';
+        // Botão excluir abordagem: somente admin
+        var btnExcluirAb = (window._authRole === 'admin')
+          ? ' <button class="btn btn-danger btn-xs" onclick="abExcluir('+ab.id+')" title="Excluir abordagem">&#128465;</button>'
+          : '';
         return '<tr>'
           +'<td style="color:var(--muted);font-size:.8rem">'+ab.id+'</td>'
           +'<td style="font-size:.8rem;white-space:nowrap">'+dh+'</td>'
@@ -9589,8 +9765,9 @@ async function _abListaFetch() {
           +'<td>'+_esc(ab.tipo_motivo||'\u2014')+'</td>'
           +'<td style="font-family:monospace;font-size:.8rem">'+vei+'</td>'
           +'<td style="font-size:.8rem">'+nomes+'</td>'
-          +'<td style="text-align:center">'
+          +'<td style="text-align:center;white-space:nowrap">'
           +'<button class="btn btn-outline btn-xs" onclick="abVerDetalhes('+ab.id+')" title="Ver detalhes">&#128269; Detalhes</button>'
+          +btnExcluirAb
           +'</td></tr>';
       }).join('');
     }
@@ -9606,6 +9783,26 @@ async function _abListaFetch() {
   } catch(e) {
     if(tb) tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:20px">Erro ao carregar. Verifique o endpoint /api/abordagens.</td></tr>';
     if(st) st.textContent='';
+  }
+}
+
+// Exclui abordagem — apenas admin (proteção duplicada no backend)
+async function abExcluir(id) {
+  if (window._authRole !== 'admin') {
+    alert('Apenas administradores podem excluir abordagens.');
+    return;
+  }
+  if (!confirm('Excluir abordagem #' + id + '? Esta ação é irreversível.')) return;
+  try {
+    var resp = await fetch('/api/abordagens/' + id, { method: 'DELETE' });
+    if (resp.ok || resp.status === 204) {
+      abListaCarregar();
+    } else {
+      var data = await resp.json().catch(function(){ return {}; });
+      alert('Erro ao excluir: ' + (data.detail || resp.status));
+    }
+  } catch(e) {
+    alert('Erro ao excluir abordagem: ' + e.message);
   }
 }
 
