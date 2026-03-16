@@ -52,9 +52,15 @@ from rbac import (
     VALID_ROLES,
     normalize_role,
     normalize_role_input,
+    require_auth,
     require_role,
     assert_admin,
     assert_admin_or_operator,
+    assert_authenticated,
+    usuario_eh_admin,
+    usuario_pode_editar,
+    usuario_pode_cadastrar,
+    usuario_somente_visualiza,
 )
 
 logger = logging.getLogger(__name__)
@@ -3091,14 +3097,18 @@ def alvos_list():
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, plate, descricao, created_at
-                FROM alvos
-                ORDER BY created_at DESC
+                SELECT a.id, a.plate, a.descricao, a.created_at,
+                       MAX(COALESCE(e.occurred_at, e.ts)) AS last_seen
+                FROM alvos a
+                LEFT JOIN lpr_events e ON e.plate = a.plate
+                GROUP BY a.id, a.plate, a.descricao, a.created_at
+                ORDER BY a.created_at DESC
             """)
             rows = cur.fetchall()
     alvos = [
         {"id": r[0], "plate": r[1], "descricao": r[2],
-         "created_at": r[3].isoformat() if r[3] else None}
+         "created_at": r[3].isoformat() if r[3] else None,
+         "last_seen": r[4].isoformat() if r[4] else None}
         for r in rows
     ]
     return {"alvos": alvos, "total": len(alvos)}
@@ -3289,6 +3299,168 @@ def alvos_recent(window: str = "30m"):
     ]}
 
 
+@app.get("/api/alvos/{aid}")
+def alvo_detalhe(aid: int, request: Request):
+    """Retorna dados do alvo e estatísticas globais de passagens."""
+    require_auth(request)
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, plate, descricao, created_at FROM alvos WHERE id = %s", (aid,)
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Alvo não encontrado")
+            alvo_id, plate, descricao, created_at = row
+            cur.execute(
+                """
+                SELECT COUNT(*), MAX(COALESCE(occurred_at, ts))
+                FROM lpr_events
+                WHERE plate = %s
+                """,
+                (plate,),
+            )
+            cnt = cur.fetchone()
+            total_eventos = int(cnt[0]) if cnt else 0
+            ultima_passagem = cnt[1].isoformat() if cnt and cnt[1] else None
+            cur.execute(
+                "SELECT COUNT(DISTINCT camera_id) FROM lpr_events WHERE plate = %s", (plate,)
+            )
+            cam_cnt = cur.fetchone()
+            total_cameras = int(cam_cnt[0]) if cam_cnt else 0
+    return {
+        "id":              alvo_id,
+        "plate":           plate,
+        "descricao":       descricao,
+        "created_at":      created_at.isoformat() if created_at else None,
+        "total_eventos":   total_eventos,
+        "ultima_passagem": ultima_passagem,
+        "total_cameras":   total_cameras,
+    }
+
+
+@app.get("/api/alvos/{aid}/historico")
+def alvo_historico(
+    aid: int,
+    request: Request,
+    range: Optional[str] = None,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    janela_min: Optional[int] = None,
+    min_cameras: Optional[int] = None,
+):
+    """
+    Histórico filtrado de passagens de um alvo.
+      range       → '24h' | '7d' | '15d' | '30d'
+      start/end   → YYYY-MM-DD (período personalizado)
+      janela_min  → janela deslizante em minutos para análise comportamental
+      min_cameras → mínimo de câmeras distintas na janela para incluir o evento
+    """
+    require_auth(request)
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT plate FROM alvos WHERE id = %s", (aid,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Alvo não encontrado")
+            plate = row[0]
+
+    where: list[str] = ["e.plate = %s"]
+    vals: list[Any]  = [plate]
+
+    range_map = {"24h": 24 * 60, "7d": 7 * 1440, "15d": 15 * 1440, "30d": 30 * 1440}
+    if range and range in range_map:
+        mins = range_map[range]
+        where.append(f"COALESCE(e.occurred_at, e.ts) >= NOW() - ({mins} * INTERVAL '1 minute')")
+    else:
+        f = _parse_dt(start)
+        if f:
+            where.append("COALESCE(e.occurred_at, e.ts) >= %s")
+            vals.append(f)
+        t_raw = (end + "T23:59:59") if end and "T" not in end else end
+        t = _parse_dt(t_raw)
+        if t:
+            where.append("COALESCE(e.occurred_at, e.ts) <= %s")
+            vals.append(t)
+
+    wsql = "WHERE " + " AND ".join(where)
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT e.id, e.plate, e.camera_id, e.channel_name, e.camera_ip, e.confidence,
+                       e.image_path, COALESCE(e.occurred_at, e.ts) AS when_ts,
+                       c.nome AS cam_nome,
+                       COALESCE(NULLIF(e.direcao,''), c.direcao) AS direcao
+                FROM lpr_events e
+                LEFT JOIN cameras c ON c.id = (
+                    SELECT id FROM cameras
+                    WHERE camera_id = e.camera_id
+                       OR ip        = e.camera_id
+                       OR ip        = e.camera_ip
+                    ORDER BY (camera_id = e.camera_id) DESC
+                    LIMIT 1
+                )
+                {wsql}
+                ORDER BY COALESCE(e.occurred_at, e.ts) DESC
+                LIMIT 500
+                """,
+                tuple(vals),
+            )
+            rows = cur.fetchall()
+
+    events: list[dict] = []
+    cameras_vistas: set = set()
+    for r in rows:
+        ts     = r[7].isoformat() if r[7] else None
+        cam_id = r[2] or ""
+        cameras_vistas.add(cam_id)
+        events.append({
+            "id":           r[0],
+            "plate":        r[1],
+            "camera_id":    cam_id,
+            "channel_name": r[3],
+            "camera_ip":    r[4],
+            "confidence":   float(r[5] or 0.0),
+            "image_path":   r[6],
+            "occurred_at":  ts,
+            "camera":       r[8] or r[3] or cam_id,
+            "direcao":      r[9] or "",
+        })
+
+    # ── Filtro por janela de tempo + nº de câmeras ─────────────────────────
+    if janela_min and janela_min > 0 and min_cameras and min_cameras > 1:
+        from datetime import timedelta as _td
+        janela = _td(minutes=janela_min)
+        filtered: list[dict] = []
+        for ev in events:
+            if not ev["occurred_at"]:
+                continue
+            t0 = datetime.fromisoformat(ev["occurred_at"])
+            cams_in_window: set = set()
+            for ev2 in events:
+                if not ev2["occurred_at"]:
+                    continue
+                t2 = datetime.fromisoformat(ev2["occurred_at"])
+                if abs((t2 - t0).total_seconds()) <= janela.total_seconds():
+                    cams_in_window.add(ev2["camera_id"])
+            if len(cams_in_window) >= min_cameras:
+                filtered.append(ev)
+        events = filtered
+    elif min_cameras and min_cameras > 1:
+        all_cams = {ev["camera_id"] for ev in events}
+        if len(all_cams) < min_cameras:
+            events = []
+
+    return {
+        "plate":         plate,
+        "total":         len(events),
+        "cameras_count": len(cameras_vistas),
+        "events":        events,
+    }
+
+
 @app.get("/api/batedor/plate/{plate}")
 def batedor_plate(plate: str, window_minutes: str = "180", limit: int = 200):
     """Retorna todos os eventos de uma placa dentro da janela de tempo."""
@@ -3401,20 +3573,31 @@ def batedor_companions(
                         companion_leads += 1
                     elif idx_t < idx_c:
                         target_leads += 1
+                # Assign timestamps to correct plate: plate_order[0] arrived first (ts_min)
+                if order and plate in order and comp in order:
+                    idx_t = order.index(plate)
+                    idx_c = order.index(comp)
+                    ts_t = cam.get("ts_min") if idx_t <= idx_c else cam.get("ts_max")
+                    ts_c = cam.get("ts_max") if idx_t <= idx_c else cam.get("ts_min")
+                else:
+                    ts_t, ts_c = cam.get("ts_min"), cam.get("ts_max")
                 evidence.append({
                     "camera":       cam.get("cam_nome", cam.get("camera_id", "")),
                     "camera_id":    cam.get("camera_id", ""),
-                    "ts_target":    cam.get("ts_min"),
-                    "ts_companion": cam.get("ts_max"),
+                    "ts_target":    ts_t,
+                    "ts_companion": ts_c,
                     "co_delta_sec": cam.get("span_sec", 0),
                     "plate_order":  order,
                 })
 
+            deltas = [e["co_delta_sec"] for e in evidence if e.get("co_delta_sec") is not None]
             result.append({
                 "companion":        comp,
                 "cameras_together": g["cameras_count"],
                 "trip_span_sec":    g["trip_span_sec"],
-                "avg_co_delta_sec": int(sum(e["co_delta_sec"] for e in evidence) / len(evidence)) if evidence else 0,
+                "min_delta_sec":    min(deltas) if deltas else 0,
+                "max_delta_sec":    max(deltas) if deltas else 0,
+                "avg_co_delta_sec": int(sum(deltas) / len(deltas)) if deltas else 0,
                 "last_seen":        g["last_seen"],
                 "companion_leads":  companion_leads,
                 "target_leads":     target_leads,
@@ -6303,8 +6486,9 @@ def _pessoa_row_to_dict(r) -> dict:
 
 
 @app.get("/api/pessoas")
-def listar_pessoas(q: Optional[str] = None, limit: int = 50, offset: int = 0):
+def listar_pessoas(request: Request, q: Optional[str] = None, limit: int = 50, offset: int = 0):
     """Lista pessoas. Busca por nome, apelido, CPF ou RG."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     limit  = max(1, min(200, int(limit)))
     offset = max(0, int(offset))
     with _conn() as conn:
@@ -6327,8 +6511,9 @@ def listar_pessoas(q: Optional[str] = None, limit: int = 50, offset: int = 0):
 
 
 @app.get("/api/pessoas/existe-cpf")
-def verificar_cpf_existente(cpf: str):
+def verificar_cpf_existente(request: Request, cpf: str):
     """Verifica se um CPF já está cadastrado. Retorna {existe, id, nome, pessoa}."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     cpf_clean = re.sub(r"\D", "", cpf or "")
     if len(cpf_clean) != 11:
         raise HTTPException(status_code=400, detail="CPF deve ter 11 dígitos")
@@ -6343,8 +6528,9 @@ def verificar_cpf_existente(cpf: str):
 
 
 @app.get("/api/pessoas/{pessoa_id}")
-def buscar_pessoa_por_id(pessoa_id: int):
+def buscar_pessoa_por_id(pessoa_id: int, request: Request):
     """Retorna dados de uma pessoa pelo id."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(_PESSOA_SELECT + "WHERE id = %s LIMIT 1", (pessoa_id,))
@@ -6355,13 +6541,14 @@ def buscar_pessoa_por_id(pessoa_id: int):
 
 
 @app.get("/api/pessoas/{pessoa_id}/relatorio")
-def relatorio_pessoa(pessoa_id: int):
+def relatorio_pessoa(pessoa_id: int, request: Request):
     """
     Relatório completo de uma pessoa:
       - dados cadastrais da pessoa
       - todas as abordagens vinculadas (com veículo e pessoas relacionadas)
       - resumo agregado com reincidências
     """
+    require_auth(request)  # Todos os perfis autenticados podem visualizar o relatório
     with _conn() as conn:
         with conn.cursor() as cur:
             # 1. Dados da pessoa
@@ -6508,6 +6695,7 @@ async def criar_pessoa(request: Request):
       data_nascimento (AAAA-MM-DD), naturalidade, estado_naturalidade,
       nome_mae, nome_pai, endereco
     """
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem cadastrar pessoas")  # PERMISSÃO: cadastro
     data = await request.json()
     nome = _s(data.get("nome"))
     if not nome:
@@ -6549,6 +6737,7 @@ async def criar_pessoa(request: Request):
 @app.put("/api/pessoas/{pessoa_id}")
 async def atualizar_pessoa(pessoa_id: int, request: Request):
     """Atualiza cadastro individual de pessoa."""
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar pessoas")  # PERMISSÃO: edição
     data = await request.json()
     nome = _s(data.get("nome"))
     if not nome:
@@ -6595,6 +6784,7 @@ async def excluir_pessoa(pessoa_id: int, request: Request):
     Remove uma pessoa e todos os seus vínculos em cascata.
     Exige campo 'senha_confirmacao' no corpo JSON para autorizar a operação.
     """
+    assert_admin(request, "Apenas administradores podem excluir cadastros de pessoas")  # PERMISSÃO: exclusão de cadastro
     # 1. Lê a senha de confirmação do corpo
     try:
         body = await request.json()
@@ -6679,8 +6869,9 @@ _VEICULO_SELECT = """
 
 
 @app.get("/api/veiculos-abordagem")
-def listar_veiculos_abordagem(q: Optional[str] = None, limit: int = 50, offset: int = 0):
+def listar_veiculos_abordagem(request: Request, q: Optional[str] = None, limit: int = 50, offset: int = 0):
     """Lista veículos de abordagem. Busca por placa, marca ou modelo."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     limit  = max(1, min(200, int(limit)))
     offset = max(0, int(offset))
     with _conn() as conn:
@@ -6705,8 +6896,9 @@ def listar_veiculos_abordagem(q: Optional[str] = None, limit: int = 50, offset: 
 
 
 @app.get("/api/veiculos-abordagem/busca")
-def buscar_veiculo_por_placa(placa: str):
+def buscar_veiculo_por_placa(request: Request, placa: str):
     """Busca um veículo pela placa exata (case-insensitive)."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     placa = (placa or "").strip().upper()
     if not placa:
         raise HTTPException(status_code=400, detail="placa é obrigatória")
@@ -6720,8 +6912,9 @@ def buscar_veiculo_por_placa(placa: str):
 
 
 @app.get("/api/veiculos-abordagem/{veiculo_id}")
-def buscar_veiculo_abordagem_por_id(veiculo_id: int):
+def buscar_veiculo_abordagem_por_id(veiculo_id: int, request: Request):
     """Retorna um veículo de abordagem pelo id."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(_VEICULO_SELECT + "WHERE id=%s LIMIT 1", (veiculo_id,))
@@ -6739,6 +6932,7 @@ async def criar_veiculo_abordagem(request: Request):
       placa*, marca, modelo, cor, ano (int), tipo, observacoes
     Se a placa já existir, retorna o existente sem duplicar (upsert por placa).
     """
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem cadastrar veículos de abordagem")  # PERMISSÃO: cadastro
     data = await request.json()
     placa = (_s(data.get("placa")) or "").upper()
     if not placa:
@@ -6776,6 +6970,7 @@ async def criar_veiculo_abordagem(request: Request):
 @app.put("/api/veiculos-abordagem/{veiculo_id}")
 async def atualizar_veiculo_abordagem(veiculo_id: int, request: Request):
     """Atualiza dados de um veículo de abordagem."""
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar veículos de abordagem")  # PERMISSÃO: edição
     data = await request.json()
     with _conn() as conn:
         with conn.cursor() as cur:
@@ -6825,6 +7020,7 @@ def _abordagem_row_to_dict(r) -> dict:
 
 @app.get("/api/abordagens")
 def listar_abordagens(
+    request: Request,
     q: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
@@ -6837,6 +7033,7 @@ def listar_abordagens(
     dt_from / dt_to → filtro de período (AAAA-MM-DD)
     Retorna abordagem + veículo + lista de pessoas vinculadas.
     """
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     limit  = max(1, min(200, int(limit)))
     offset = max(0, int(offset))
     clauses, params = [], []
@@ -6924,8 +7121,9 @@ def listar_abordagens(
 
 
 @app.get("/api/abordagens/{abordagem_id}")
-def buscar_abordagem_por_id(abordagem_id: int):
+def buscar_abordagem_por_id(abordagem_id: int, request: Request):
     """Retorna uma abordagem completa: dados + veículo + todas as pessoas vinculadas."""
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -7038,6 +7236,7 @@ async def criar_abordagem(request: Request):
 
     Retorno: { "ok": true, "id": <abordagem_id> }
     """
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem registrar abordagens")  # PERMISSÃO: cadastro
     data = await request.json()
 
     # ── Veículo ──────────────────────────────────────────────────────────────
@@ -7245,6 +7444,7 @@ async def atualizar_abordagem(abordagem_id: int, request: Request):
     Atualiza dados gerais de uma abordagem (não altera pessoas/veículo aqui).
     Payload: data_hora, local, equipe, tipo_motivo, observacoes, veiculo_id
     """
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem editar abordagens")  # PERMISSÃO: edição
     data = await request.json()
     dh_raw = _s(data.get("data_hora"))
     dh = None
@@ -7284,6 +7484,7 @@ async def vincular_pessoa_abordagem(abordagem_id: int, request: Request):
     Vincula ou atualiza uma pessoa em uma abordagem existente.
     Payload: { "pessoa_id": 5, "papel": "passageiro", "observacao_pessoal": "" }
     """
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem vincular pessoas a abordagens")  # PERMISSÃO: edição de abordagem
     data = await request.json()
     pessoa_id = data.get("pessoa_id")
     if not pessoa_id:
@@ -7318,8 +7519,9 @@ async def vincular_pessoa_abordagem(abordagem_id: int, request: Request):
 
 
 @app.delete("/api/abordagens/{abordagem_id}/pessoas/{pessoa_id}", status_code=204)
-def desvincular_pessoa_abordagem(abordagem_id: int, pessoa_id: int):
+def desvincular_pessoa_abordagem(abordagem_id: int, pessoa_id: int, request: Request):
     """Remove o vínculo de uma pessoa em uma abordagem."""
+    assert_admin_or_operator(request, "Apenas administradores e operadores podem remover pessoas de abordagens")  # PERMISSÃO: edição de abordagem
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -7332,8 +7534,9 @@ def desvincular_pessoa_abordagem(abordagem_id: int, pessoa_id: int):
 
 
 @app.delete("/api/abordagens/{abordagem_id}", status_code=204)
-def excluir_abordagem(abordagem_id: int):
+def excluir_abordagem(abordagem_id: int, request: Request):
     """Remove uma abordagem e todos os seus vínculos (CASCADE)."""
+    assert_admin(request, "Apenas administradores podem excluir abordagens")  # PERMISSÃO: exclusão de abordagem
     with _conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM abordagens WHERE id=%s", (abordagem_id,))
@@ -7345,7 +7548,7 @@ def excluir_abordagem(abordagem_id: int):
 # ──────────────── CONSULTA / RELATÓRIO ───────────────────────────────────────
 
 @app.get("/api/consulta-relatorio")
-def consulta_relatorio(q: Optional[str] = None):
+def consulta_relatorio(request: Request, q: Optional[str] = None):
     """
     Pesquisa unificada por nome, CPF ou placa.
     Retorna ficha + histórico completo de abordagens.
@@ -7372,6 +7575,7 @@ def consulta_relatorio(q: Optional[str] = None):
       ]
     }
     """
+    require_auth(request)  # Todos os perfis autenticados podem consultar
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Parâmetro q é obrigatório")
 

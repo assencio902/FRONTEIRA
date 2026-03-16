@@ -1282,9 +1282,9 @@
 
         <div class="table-wrap">
           <table><thead><tr>
-            <th>Placa</th><th>Descri&ccedil;&atilde;o / Motivo</th><th>Cadastrado em</th><th>A&ccedil;&otilde;es</th>
+            <th>Placa</th><th>Descri&ccedil;&atilde;o</th><th>Cadastrado em</th><th>&#218;ltima Passagem</th><th>A&ccedil;&otilde;es</th>
           </tr></thead>
-          <tbody id="alvos-tbody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
+          <tbody id="alvos-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Carregando&hellip;</td></tr></tbody>
           </table>
         </div>
       </div><!-- /bat-sub-alvos -->
@@ -5759,13 +5759,16 @@ async function loadAlvos() {
     document.getElementById('alvo-com-comp').textContent = '—';
     if (st) st.textContent = alvos.length + ' alvo(s)';
     if (alvos.length === 0) {
-      tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
+      tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px">Nenhum alvo cadastrado. Adicione uma placa acima para come&ccedil;ar o rastreamento.</td></tr>';
       return;
     }
     var _role = window._authRole || 'visualizador';
     tb.innerHTML = alvos.map(function(a) {
       var desde   = new Date(a.created_at).toLocaleDateString('pt-BR');
       var descEsc = (a.descricao || '').replace(/'/g, "&#39;");
+      var lastSeen = a.last_seen
+        ? new Date(a.last_seen).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+        : '<span style="color:var(--muted)">-</span>';
       // Botões de ação por perfil
       var btnVer    = '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;,&#39;' + desde + '&#39;)" title="Ver detalhes do alvo" style="margin-right:4px">&#128269; Ver</button>';
       var btnEditar = (_role === 'admin' || _role === 'operador')
@@ -5778,11 +5781,12 @@ async function loadAlvos() {
         + '<td>' + plateHtml(a.plate) + '</td>'
         + '<td style="color:var(--muted)">' + (a.descricao || '<em style="color:var(--muted)">sem descri&ccedil;&atilde;o</em>') + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
+        + '<td style="white-space:nowrap;font-size:.78rem">' + lastSeen + '</td>'
         + '<td style="white-space:nowrap">' + btnVer + btnEditar + btnApagar + '</td>'
         + '</tr>';
     }).join('');
   } catch(e) {
-    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
     if (st) st.textContent = 'Erro';
   }
 }
