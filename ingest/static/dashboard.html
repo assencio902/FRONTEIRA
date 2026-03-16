@@ -785,6 +785,25 @@
       background:rgba(16,185,129,.12); color:#6ee7b7; border:1px solid rgba(16,185,129,.25);
       border-radius:99px; font-size:.72rem; font-weight:600; margin:3px 3px 3px 0;
     }
+
+    /* ── Nova Abordagem: grid de campos ── */
+    .ab-row-1  { margin-bottom:10px; }
+    .ab-row-2  { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+    .ab-row-3  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px; }
+    .ab-row-4  { display:grid; grid-template-columns:3fr 80px 1fr 60px; gap:10px; margin-bottom:10px; }
+    .ab-row-dh { display:grid; grid-template-columns:220px 1fr; gap:10px; margin-bottom:10px; }
+    @media(max-width:600px) {
+      .ab-row-2,.ab-row-3,.ab-row-4,.ab-row-dh { grid-template-columns:1fr; }
+    }
+    .ab-field  { display:flex; flex-direction:column; font-size:.82rem; }
+    .ab-req    { color:#f87171; font-size:.72rem; font-weight:600; min-height:16px; margin-bottom:2px; }
+    .ab-lbl    { margin-bottom:4px; }
+    .ab-ctrl   { padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius);
+                 background:var(--bg2); color:var(--text); font-size:.85rem;
+                 width:100%; box-sizing:border-box; }
+    .ab-ctrl:focus { outline:none; border-color:var(--accent); }
+    .ab-ig     { display:flex; gap:4px; }
+    .ab-ig .ab-ctrl { flex:1; }
   </style>
 </head>
 <body>
@@ -1723,55 +1742,65 @@
 
         <!-- Abordado principal -->
         <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128100; Abordado Principal</div>
-          <!-- Linha 0: Data e Hora / Local -->
-          <div style="display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:8px;align-items:flex-end">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;flex:0 0 auto">
-              Data e Hora <span style="color:#f87171;font-size:.72rem">*obrigat&oacute;rio</span>
-              <input type="datetime-local" id="ab-data-hora"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;width:220px;box-sizing:border-box">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;flex:1 1 auto">Local / Logradouro
-              <input type="text" id="ab-local" maxlength="200" placeholder="Ex: BR-364 KM 12"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;width:100%;box-sizing:border-box">
-            </label>
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">&#128100; Abordado Principal</div>
+
+          <!-- Linha 0: Data/Hora + Local -->
+          <div class="ab-row-dh">
+            <div class="ab-field">
+              <span class="ab-req">* Obrigat&oacute;rio</span>
+              <span class="ab-lbl">Data e Hora</span>
+              <input type="datetime-local" id="ab-data-hora" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Local / Logradouro</span>
+              <input type="text" id="ab-local" maxlength="200" placeholder="Ex: BR-364 KM 12" class="ab-ctrl">
+            </div>
           </div>
+
           <input type="hidden" id="ab-pessoa-id">
-          <!-- Linha 1a: Nome (full width) -->
-          <div style="margin-bottom:8px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome
-              <div style="display:flex;gap:4px">
-                <input type="text" id="ab-nome" maxlength="120" placeholder="Nome completo"
-                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+
+          <!-- Linha 1: Nome (largura total) -->
+          <div class="ab-row-1">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Nome</span>
+              <div class="ab-ig">
+                <input type="text" id="ab-nome" maxlength="120" placeholder="Nome completo" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorNome()}">
                 <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorNome()" title="Pesquisar por nome">&#128269;</button>
               </div>
-            </label>
+            </div>
           </div>
-          <!-- Linha 1b: CPF / RG / Contato -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">CPF
-              <div style="display:flex;gap:4px">
+
+          <!-- Linha 2: CPF / RG / Contato -->
+          <div class="ab-row-3">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">CPF</span>
+              <div class="ab-ig">
                 <input type="text" id="ab-cpf" maxlength="11" placeholder="00000000000" inputmode="numeric"
-                  oninput="this.value=this.value.replace(/\D/g,'');abVerificarCpfDuplicado()"
-                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+                  oninput="this.value=this.value.replace(/\D/g,'');abVerificarCpfDuplicado()" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorCpf()}">
                 <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorCpf()" title="Pesquisar por CPF">&#128269;</button>
               </div>
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">RG
-              <div style="display:flex;gap:4px">
-                <input type="text" id="ab-rg" maxlength="20" placeholder="0000000"
-                  style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">RG</span>
+              <div class="ab-ig">
+                <input type="text" id="ab-rg" maxlength="20" placeholder="0000000" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorRg()}">
                 <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorRg()" title="Pesquisar por RG">&#128269;</button>
               </div>
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Contato
-              <input type="text" id="ab-contato" maxlength="20" placeholder="(69) 99999-9999"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Contato</span>
+              <input type="text" id="ab-contato" maxlength="20" placeholder="(69) 99999-9999" class="ab-ctrl">
+            </div>
           </div>
+
           <!-- Resultado de pesquisa / aviso cadastro existente -->
           <div id="ab-pessoa-resultado" style="margin-bottom:6px"></div>
           <div id="ab-cadastro-existente-wrap" style="display:none;margin-bottom:10px;padding:12px 14px;border:1px solid var(--accent);border-radius:var(--radius);background:rgba(16,185,129,.07)">
@@ -1779,10 +1808,10 @@
             <div id="ab-cadastro-existente-info" style="font-size:.81rem;color:var(--text);margin-bottom:8px"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px">
               <button type="button" class="btn btn-sm" style="background:var(--accent);color:#000;font-weight:600" onclick="abUsarCadastroExistente()">&#43; Adicionar nova abordagem para este cadastro</button>
-              <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relatório completo</button>
+              <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relat&oacute;rio completo</button>
             </div>
           </div>
-          <!-- Alerta CPF duplicado (auto-detecção via oninput) -->
+          <!-- Alerta CPF duplicado -->
           <div id="ab-cpf-alerta-wrap" style="display:none;margin-top:2px;margin-bottom:4px;padding:10px 14px;border:1px solid #f59e0b;border-radius:var(--radius);background:rgba(245,158,11,.08)">
             <div style="font-size:.82rem;font-weight:600;color:#f59e0b;margin-bottom:4px">&#9888; CPF j&aacute; cadastrado no banco de dados</div>
             <div style="font-size:.81rem;color:var(--text);margin-bottom:8px">Deseja adicionar nova abordagem para este cadastro?</div>
@@ -1791,97 +1820,118 @@
               <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relat&oacute;rio completo</button>
             </div>
           </div>
-          <!-- Linha 2: Profissão / Pai / Mãe -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:8px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Profiss&atilde;o
-              <input type="text" id="ab-profissao" maxlength="80" placeholder="Ex: Aut&ocirc;nomo"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome do Pai
-              <input type="text" id="ab-pai" maxlength="120" placeholder="Nome completo do pai"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Nome da M&atilde;e
-              <input type="text" id="ab-mae" maxlength="120" placeholder="Nome completo da m&atilde;e"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
+
+          <!-- Linha 3: Profissão / Pai / Mãe -->
+          <div class="ab-row-3">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Profiss&atilde;o</span>
+              <input type="text" id="ab-profissao" maxlength="80" placeholder="Ex: Aut&ocirc;nomo" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Nome do Pai</span>
+              <input type="text" id="ab-pai" maxlength="120" placeholder="Nome completo do pai" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Nome da M&atilde;e</span>
+              <input type="text" id="ab-mae" maxlength="120" placeholder="Nome completo da m&atilde;e" class="ab-ctrl">
+            </div>
           </div>
-          <!-- Linha 3: Endereço dividido -->
-          <div style="display:grid;grid-template-columns:3fr 80px 1fr 60px;gap:10px;margin-bottom:8px">
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Rua / Avenida
-              <input type="text" id="ab-rua" maxlength="150" placeholder="Ex: Rua das Flores"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">N&uacute;mero
-              <input type="text" id="ab-numero" maxlength="10" placeholder="123"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Bairro
-              <input type="text" id="ab-bairro" maxlength="80" placeholder="Ex: Centro"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-            </label>
-            <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">UF
+
+          <!-- Linha 4: Endereço -->
+          <div class="ab-row-4">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Rua / Avenida</span>
+              <input type="text" id="ab-rua" maxlength="150" placeholder="Ex: Rua das Flores" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">N&uacute;mero</span>
+              <input type="text" id="ab-numero" maxlength="10" placeholder="123" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Bairro</span>
+              <input type="text" id="ab-bairro" maxlength="80" placeholder="Ex: Centro" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">UF</span>
               <input type="text" id="ab-uf" maxlength="2" placeholder="RO"
-                oninput="this.value=this.value.toUpperCase()"
-                style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase">
-            </label>
+                oninput="this.value=this.value.toUpperCase()" class="ab-ctrl" style="text-transform:uppercase">
+            </div>
           </div>
-          <!-- Linha 4: Histórico da Abordagem -->
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
-            Hist&oacute;rico da Abordagem
-            <textarea id="ab-observacoes" rows="3" maxlength="2000"
-              placeholder="Contexto, ocorr&ecirc;ncias, materiais apreendidos..."
-              style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;resize:vertical;width:100%;box-sizing:border-box"></textarea>
-          </label>
+
+          <!-- Linha 5: Histórico (largura total) -->
+          <div class="ab-row-1">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Hist&oacute;rico da Abordagem</span>
+              <textarea id="ab-observacoes" rows="3" maxlength="2000" class="ab-ctrl"
+                placeholder="Contexto, ocorr&ecirc;ncias, materiais apreendidos..."
+                style="resize:vertical"></textarea>
+            </div>
+          </div>
         </div>
 
         <!-- Veículo -->
         <div style="margin-bottom:16px">
-          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128665; Ve&iacute;culo</div>
-          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;margin-bottom:10px">Estava com ve&iacute;culo?
-            <select id="ab-tem-veiculo" onchange="abToggleVeiculo()"
-              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:200px">
-              <option value="nao">N&atilde;o</option>
-              <option value="sim">Sim</option>
-            </select>
-          </label>
+          <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">&#128665; Ve&iacute;culo</div>
+          <div class="ab-row-1">
+            <div class="ab-field" style="max-width:200px">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Estava com ve&iacute;culo?</span>
+              <select id="ab-tem-veiculo" onchange="abToggleVeiculo()" class="ab-ctrl">
+                <option value="nao">N&atilde;o</option>
+                <option value="sim">Sim</option>
+              </select>
+            </div>
+          </div>
           <div id="ab-veiculo-wrap" style="display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Placa
-                <div style="display:flex;gap:4px">
+            <div class="ab-row-3">
+              <div class="ab-field">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Placa</span>
+                <div class="ab-ig">
                   <input type="text" id="ab-placa" maxlength="10" placeholder="ABC1234"
-                    oninput="this.value=this.value.toUpperCase()"
-                    style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase"
+                    oninput="this.value=this.value.toUpperCase()" class="ab-ctrl" style="text-transform:uppercase"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();abBuscarVeiculo()}">
                   <button type="button" class="btn btn-outline btn-sm" onclick="abBuscarVeiculo()" title="Buscar cadastro">&#128269;</button>
                 </div>
-              </label>
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Modelo
-                <input type="text" id="ab-modelo" maxlength="80" placeholder="Ex: Civic"
-                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-              </label>
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Cor
-                <input type="text" id="ab-cor" maxlength="40" placeholder="Ex: Prata"
-                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
-              </label>
+              </div>
+              <div class="ab-field">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Modelo</span>
+                <input type="text" id="ab-modelo" maxlength="80" placeholder="Ex: Civic" class="ab-ctrl">
+              </div>
+              <div class="ab-field">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Cor</span>
+                <input type="text" id="ab-cor" maxlength="40" placeholder="Ex: Prata" class="ab-ctrl">
+              </div>
             </div>
-            <div id="ab-veiculo-info" style="font-size:.78rem;margin-top:6px;display:none"></div>
-            <div style="margin-top:10px">
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Vincular como alvo rastreado?
-                <select id="ab-vincular-alvo" onchange="abToggleVincularAlvo()"
-                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:200px">
+            <div id="ab-veiculo-info" style="font-size:.78rem;margin-top:4px;display:none"></div>
+            <div class="ab-row-1" style="margin-top:8px">
+              <div class="ab-field" style="max-width:280px">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Vincular como alvo rastreado?</span>
+                <select id="ab-vincular-alvo" onchange="abToggleVincularAlvo()" class="ab-ctrl">
                   <option value="nao">N&atilde;o</option>
                   <option value="sim">Sim &mdash; adicionar aos alvos</option>
                 </select>
-              </label>
+              </div>
             </div>
-            <div id="ab-alvo-lista-wrap" style="display:none;margin-top:8px">
-              <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">Escolha a lista de ve&iacute;culos rastreados
-                <select id="ab-alvo-lista-id"
-                  style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;max-width:320px">
+            <div id="ab-alvo-lista-wrap" style="display:none">
+              <div class="ab-field" style="max-width:340px">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Lista de ve&iacute;culos rastreados</span>
+                <select id="ab-alvo-lista-id" class="ab-ctrl">
                   <option value="">Carregando listas...</option>
                 </select>
-              </label>
+              </div>
             </div>
           </div>
         </div>
