@@ -1860,8 +1860,8 @@
             </div>
           </div>
 
-          <!-- Linha 4: Endereço (5 colunas) -->
-          <div style="display:grid;grid-template-columns:2.2fr 0.7fr 1.2fr 1.2fr 0.6fr;gap:10px;margin-bottom:10px">
+          <!-- Linha 4: Endereço (4 colunas) -->
+          <div style="display:grid;grid-template-columns:2.5fr 0.8fr 1.3fr 0.7fr;gap:10px;margin-bottom:10px">
             <div class="ab-field">
               <span class="ab-req"></span>
               <span class="ab-lbl">Rua / Avenida</span>
@@ -1876,11 +1876,6 @@
               <span class="ab-req"></span>
               <span class="ab-lbl">Bairro</span>
               <input type="text" id="ab-bairro" maxlength="80" placeholder="Ex: Centro" class="ab-ctrl">
-            </div>
-            <div class="ab-field">
-              <span class="ab-req"></span>
-              <span class="ab-lbl">Cidade</span>
-              <input type="text" id="ab-cidade" maxlength="80" placeholder="Ex: Colorado do Oeste" class="ab-ctrl">
             </div>
             <div class="ab-field">
               <span class="ab-req"></span>
@@ -9094,7 +9089,7 @@ function abIniciarForm() {
 
 function abLimpar() {
   ['ab-pessoa-id','ab-nome','ab-cpf','ab-rg','ab-contato','ab-profissao',
-   'ab-pai','ab-mae','ab-rua','ab-numero','ab-bairro','ab-cidade','ab-uf',
+   'ab-pai','ab-mae','ab-rua','ab-numero','ab-bairro','ab-uf',
    'ab-naturalidade','ab-uf-naturalidade','ab-data-nascimento',
    'ab-data-hora','ab-local','ab-observacoes',
    'ab-placa','ab-modelo','ab-cor']
@@ -9474,8 +9469,8 @@ async function abSalvar() {
           }
         } catch(e2) { /* ignora erro de rede nessa checagem */ }
       }
-      var rua = g('ab-rua'); var num = g('ab-numero'); var bairro = g('ab-bairro'); var cidade = g('ab-cidade'); var uf = g('ab-uf');
-      var endParts = [rua, num ? 'n\u00ba '+num : '', bairro, cidade, uf].filter(Boolean);
+      var rua = g('ab-rua'); var num = g('ab-numero'); var bairro = g('ab-bairro'); var uf = g('ab-uf');
+      var endParts = [rua, num ? 'n\u00ba '+num : '', bairro, uf].filter(Boolean);
       mainEntry.nome = mainNome;
       mainEntry.cpf = cpfCheck || null;
       mainEntry.rg = rgCheck || null;
