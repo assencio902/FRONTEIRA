@@ -9319,10 +9319,20 @@ function abAdicionarPessoa(dados) {
     +fi('pai','Nome do Pai','Nome completo do pai',d.nome_pai)
     +fi('mae','Nome da M\u00e3e','Nome completo da m\u00e3e',d.nome_mae)
     +'</div>'
-    // Linha 4: Endereço
-    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem;margin-bottom:8px">Endere\u00e7o'
-    +'<input type="text" id="ab-pb-'+idx+'-endereco" maxlength="200" placeholder="Endere\u00e7o completo"'
-    +' value="'+_esc(String(d.endereco||''))+'" style="'+s+'"></label>'
+    // Linha 4a: Rua / Número
+    +'<div style="display:grid;grid-template-columns:3fr 1fr;gap:8px;margin-bottom:8px">'
+    +fi('rua','Rua / Avenida','Ex: Rua das Flores',d.rua||(d.endereco||''))
+    +fi('numero','N\u00famero','123',d.numero)
+    +'</div>'
+    // Linha 4b: Bairro / Cidade / Estado
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 70px;gap:8px;margin-bottom:8px">'
+    +fi('bairro','Bairro','Ex: Centro',d.bairro)
+    +fi('cidade','Cidade','Ex: Colorado do Oeste',d.cidade)
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">Estado'
+    +'<input type="text" id="ab-pb-'+idx+'-estado" maxlength="2" placeholder="RO"'
+    +' oninput="this.value=this.value.toUpperCase()"'
+    +' value="'+_esc(String(d.estado||''))+'" style="'+s+';text-transform:uppercase"></label>'
+    +'</div>'
     // Linha 5: Papel na abordagem
     +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem;margin-bottom:8px">Papel na abordagem'
     +'<select id="ab-pb-'+idx+'-papel" style="'+s+'">'+opts+'</select></label>'
@@ -9364,7 +9374,13 @@ function abPessoaSelecionar(idx, p) {
   var set = function(f,v){ var el=document.getElementById('ab-pb-'+idx+'-'+f); if(el) el.value=v||''; };
   set('id',p.id); set('nome',p.nome); set('cpf',p.cpf||''); set('rg',p.rg||'');
   set('contato',p.contato||''); set('profissao',p.profissao||'');
-  set('pai',p.nome_pai||''); set('mae',p.nome_mae||''); set('endereco',p.endereco||'');
+  set('pai',p.nome_pai||''); set('mae',p.nome_mae||'');
+  // Endereço: usa campos separados se disponíveis; fallback coloca endereco único em Rua
+  set('rua',    p.rua    || p.endereco || '');
+  set('numero', p.numero || '');
+  set('bairro', p.bairro || '');
+  set('cidade', p.cidade || '');
+  set('estado', p.estado || '');
   var res=document.getElementById('ab-pb-'+idx+'-resultado');
   if(res) res.innerHTML='<span style="font-size:.78rem;color:var(--accent)">\u2705 #'+p.id+' — '+_esc(p.nome)+' selecionado(a)</span>';
   var bc=document.getElementById('ab-pb-'+idx+'-busca'); if(bc) bc.value='';
@@ -9449,9 +9465,12 @@ async function abSalvar() {
       entry.nome=pNome; entry.cpf=gf('cpf').replace(/\D/g,'')||null;
       entry.rg=gf('rg')||null;
       entry.contato=gf('contato')||null; entry.profissao=gf('profissao')||null;
-      entry.endereco=gf('endereco')||null;
       entry.nome_pai=gf('pai')||null;
       entry.nome_mae=gf('mae')||null;
+      // Monta endereço a partir dos campos separados
+      var _rua=gf('rua'), _num=gf('numero'), _bairro=gf('bairro'), _cid=gf('cidade'), _est=gf('estado');
+      var _endParts=[_rua, _num?'n\u00ba '+_num:'', _bairro, _cid, _est].filter(Boolean);
+      entry.endereco = _endParts.join(', ') || null;
     }
     payload.pessoas.push(entry);
   });
