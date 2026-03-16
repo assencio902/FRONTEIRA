@@ -9328,20 +9328,32 @@ function abAdicionarPessoa(dados) {
     +'<span style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Acompanhante '+(idx+1)+'</span>'
     +'<button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.78rem" onclick="document.getElementById(\'ab-pb-'+idx+'\').remove()">&#10005; Remover</button>'
     +'</div>'
-    // busca rápida
-    +'<div style="display:flex;gap:6px;margin-bottom:10px">'
-    +'<input type="text" id="ab-pb-'+idx+'-busca" placeholder="Buscar cadastro existente (nome, CPF, RG)..."'
-    +' style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.82rem"'
-    +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaBuscar('+idx+')}">'
-    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaBuscar('+idx+')">&#128269;</button>'
-    +'</div>'
-    +'<div id="ab-pb-'+idx+'-resultado" style="margin-bottom:10px"></div>'
+    +'<div id="ab-pb-'+idx+'-resultado" style="margin-bottom:8px"></div>'
     +'<input type="hidden" id="ab-pb-'+idx+'-id" value="'+(d.id||'')+'">'
-    // Linha 1: Nome / CPF / RG
+    // Linha 1: Nome / CPF / RG (com botões de pesquisa)
     +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">'
-    +fi('nome','Nome *','Nome completo',d.nome)
-    +fi('cpf','CPF','000.000.000-00',d.cpf,' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"')
-    +fi('rg','RG','0000000',d.rg)
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">Nome *'
+    +'<div style="display:flex;gap:4px">'
+    +'<input type="text" id="ab-pb-'+idx+'-nome" maxlength="120" placeholder="Nome completo"'
+    +' value="'+_esc(String(d.nome||''))+'" style="flex:1;'+s+'"'
+    +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarNome('+idx+')}">'
+    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarNome('+idx+')" title="Pesquisar por nome">&#128269;</button>'
+    +'</div></label>'
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">CPF'
+    +'<div style="display:flex;gap:4px">'
+    +'<input type="text" id="ab-pb-'+idx+'-cpf" maxlength="14" placeholder="000.000.000-00"'
+    +' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"'
+    +' value="'+_esc(String(d.cpf||''))+'" style="flex:1;'+s+'"'
+    +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarCpf('+idx+')}">'
+    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarCpf('+idx+')" title="Pesquisar por CPF">&#128269;</button>'
+    +'</div></label>'
+    +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">RG'
+    +'<div style="display:flex;gap:4px">'
+    +'<input type="text" id="ab-pb-'+idx+'-rg" maxlength="20" placeholder="0000000"'
+    +' value="'+_esc(String(d.rg||''))+'" style="flex:1;'+s+'"'
+    +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarRg('+idx+')}">'
+    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarRg('+idx+')" title="Pesquisar por RG">&#128269;</button>'
+    +'</div></label>'
     +'</div>'
     // Linha 2: Contato / Profissão
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
@@ -9378,8 +9390,7 @@ function abAdicionarPessoa(dados) {
   pl.appendChild(tmp.firstChild);
 }
 
-async function abPessoaBuscar(idx) {
-  var q = (document.getElementById('ab-pb-'+idx+'-busca').value||'').trim();
+async function _abPessoaBuscarCampo(idx, q) {
   if (!q) return;
   var res = document.getElementById('ab-pb-'+idx+'-resultado');
   if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--muted)"><span class="spinner" style="width:12px;height:12px;margin-right:4px"></span>Buscando...</span>';
@@ -9400,6 +9411,20 @@ async function abPessoaBuscar(idx) {
     if(res) res.innerHTML = '<span style="font-size:.78rem;color:var(--danger)">Erro: '+_esc(e.message)+'</span>';
   }
 }
+async function abPessoaPesquisarNome(idx) {
+  await _abPessoaBuscarCampo(idx, (document.getElementById('ab-pb-'+idx+'-nome')||{value:''}).value.trim());
+}
+async function abPessoaPesquisarCpf(idx) {
+  await _abPessoaBuscarCampo(idx, (document.getElementById('ab-pb-'+idx+'-cpf')||{value:''}).value.replace(/\D/g,''));
+}
+async function abPessoaPesquisarRg(idx) {
+  await _abPessoaBuscarCampo(idx, (document.getElementById('ab-pb-'+idx+'-rg')||{value:''}).value.trim());
+}
+// mantido para compatibilidade (pode ser chamado de código legado)
+async function abPessoaBuscar(idx) {
+  var q = ((document.getElementById('ab-pb-'+idx+'-nome')||{value:''}).value||'').trim();
+  await _abPessoaBuscarCampo(idx, q);
+}
 
 function abPessoaSelecionar(idx, p) {
   var set = function(f,v){ var el=document.getElementById('ab-pb-'+idx+'-'+f); if(el) el.value=v||''; };
@@ -9414,7 +9439,6 @@ function abPessoaSelecionar(idx, p) {
   set('estado', p.estado || '');
   var res=document.getElementById('ab-pb-'+idx+'-resultado');
   if(res) res.innerHTML='<span style="font-size:.78rem;color:var(--accent)">\u2705 #'+p.id+' — '+_esc(p.nome)+' selecionado(a)</span>';
-  var bc=document.getElementById('ab-pb-'+idx+'-busca'); if(bc) bc.value='';
 }
 
 async function abSalvar() {
