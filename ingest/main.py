@@ -7146,10 +7146,14 @@ async def criar_abordagem(request: Request):
             _cpf_upd = _clean_cpf(p_data.get("cpf"))
             if _cpf_upd:
                 _upd["cpf"] = _cpf_upd
-            for _f in ("rg", "contato", "profissao", "endereco", "nome_pai", "nome_mae"):
+            for _f in ("rg", "contato", "profissao", "endereco", "nome_pai", "nome_mae",
+                        "naturalidade", "estado_naturalidade"):
                 _v = _s(p_data.get(_f))
                 if _v:
                     _upd[_f] = _v
+            _dn_upd = _parse_date(p_data.get("data_nascimento"))
+            if _dn_upd:
+                _upd["data_nascimento"] = _dn_upd
             if _upd:
                 _cols = ", ".join(f"{k}=%s" for k in _upd)
                 with _conn() as conn:

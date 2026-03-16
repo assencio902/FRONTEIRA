@@ -1840,6 +1840,26 @@
             </div>
           </div>
 
+          <!-- Linha 3b: Naturalidade / Estado / Data de Nascimento -->
+          <div class="ab-row-3">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Naturalidade</span>
+              <input type="text" id="ab-naturalidade" maxlength="80" placeholder="Ex: Porto Velho" class="ab-ctrl">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Estado (UF) da Naturalidade</span>
+              <input type="text" id="ab-uf-naturalidade" maxlength="2" placeholder="RO"
+                oninput="this.value=this.value.toUpperCase()" class="ab-ctrl" style="text-transform:uppercase">
+            </div>
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Data de Nascimento</span>
+              <input type="date" id="ab-data-nascimento" class="ab-ctrl">
+            </div>
+          </div>
+
           <!-- Linha 4: Endereço -->
           <div class="ab-row-4">
             <div class="ab-field">
@@ -2254,6 +2274,22 @@
         <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
           Nome da M&atilde;e
           <input type="text" id="cad-ab-mae" maxlength="120" placeholder="Nome da m&atilde;e"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Naturalidade
+          <input type="text" id="cad-ab-naturalidade" maxlength="80" placeholder="Ex: Porto Velho"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Estado (UF) da Naturalidade
+          <input type="text" id="cad-ab-uf-naturalidade" maxlength="2" placeholder="RO"
+            oninput="this.value=this.value.toUpperCase()"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;text-transform:uppercase">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem">
+          Data de Nascimento
+          <input type="date" id="cad-ab-data-nascimento"
             style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
         </label>
       </div>
@@ -9020,6 +9056,7 @@ function abIniciarForm() {
 function abLimpar() {
   ['ab-pessoa-id','ab-nome','ab-cpf','ab-rg','ab-contato','ab-profissao',
    'ab-pai','ab-mae','ab-rua','ab-numero','ab-bairro','ab-uf',
+   'ab-naturalidade','ab-uf-naturalidade','ab-data-nascimento',
    'ab-data-hora','ab-local','ab-observacoes',
    'ab-placa','ab-modelo','ab-cor']
     .forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
@@ -9392,6 +9429,9 @@ async function abSalvar() {
       mainEntry.endereco = endParts.join(', ') || null;
       mainEntry.nome_pai = g('ab-pai') || null;
       mainEntry.nome_mae = g('ab-mae') || null;
+      mainEntry.naturalidade = g('ab-naturalidade') || null;
+      mainEntry.estado_naturalidade = g('ab-uf-naturalidade') || null;
+      var _dn = g('ab-data-nascimento'); if(_dn) mainEntry.data_nascimento = _dn;
     }
     payload.pessoas.push(mainEntry);
   }
@@ -9699,7 +9739,8 @@ async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
 
   // Limpa campos pessoais
   ['cad-ab-cpf','cad-ab-rg','cad-ab-contato','cad-ab-profissao',
-   'cad-ab-endereco','cad-ab-pai','cad-ab-mae'].forEach(function(id) {
+   'cad-ab-endereco','cad-ab-pai','cad-ab-mae',
+   'cad-ab-naturalidade','cad-ab-uf-naturalidade','cad-ab-data-nascimento'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -9728,8 +9769,11 @@ async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
       _set('cad-ab-contato',  p.contato);
       _set('cad-ab-profissao',p.profissao);
       _set('cad-ab-endereco', p.endereco);
-      _set('cad-ab-pai',      p.nome_pai);
-      _set('cad-ab-mae',      p.nome_mae);
+      _set('cad-ab-pai',               p.nome_pai);
+      _set('cad-ab-mae',               p.nome_mae);
+      _set('cad-ab-naturalidade',      p.naturalidade);
+      _set('cad-ab-uf-naturalidade',   p.estado_naturalidade);
+      _set('cad-ab-data-nascimento',   p.data_nascimento);
     }
   } catch(e) { /* silencioso — campos ficam em branco */ }
 }
@@ -9960,6 +10004,12 @@ async function cadAbordagemSalvar() {
   if (_end)    _pEntry.endereco = _end;
   if (_pai)    _pEntry.nome_pai = _pai;
   if (_mae)    _pEntry.nome_mae = _mae;
+  var _nat   = (document.getElementById('cad-ab-naturalidade').value      || '').trim();
+  var _ufnat = (document.getElementById('cad-ab-uf-naturalidade').value   || '').trim().toUpperCase();
+  var _dnab  = (document.getElementById('cad-ab-data-nascimento').value   || '').trim();
+  if (_nat)   _pEntry.naturalidade        = _nat;
+  if (_ufnat) _pEntry.estado_naturalidade = _ufnat;
+  if (_dnab)  _pEntry.data_nascimento     = _dnab;
   var payload = {
     data_hora: data + 'T' + hora + ':00',
     local:     local,
