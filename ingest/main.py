@@ -633,6 +633,66 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# ---------------------------------------------------------------------------
+# Central de Ameaças — Fase 1: vínculo direto com alvos cadastrados
+# ---------------------------------------------------------------------------
+
+def _normalize_plate(plate: str) -> str:
+    """Normaliza placa: uppercase, sem espaços, sem hífen."""
+    return (plate or "").upper().replace(" ", "").replace("-", "")
+
+
+def compute_threat_center_phase1(
+    plates: list,
+    alvo_map: dict,
+    leader: str = None,
+) -> dict:
+    """
+    Fase 1 da Central de Ameaças: detecção de vínculo direto com alvos cadastrados.
+
+    Parâmetros:
+      plates    – lista de placas do grupo/companhia
+      alvo_map  – {plate_raw: descricao} como vem do BD
+      leader    – placa do líder/batedor (opcional)
+
+    Retorna bloco threat_center:
+      matched_target   – bool
+      match_type       – "plate" | "leader" | "both" | null
+      matched_plates   – placas do grupo que são alvos
+      leader_is_target – bool (líder é alvo cadastrado)
+      threat_badges    – ["ALVO_NO_GRUPO", "LÍDER_É_ALVO"]
+      score_delta      – incremento de score sugerido (20 por placa alvo)
+    """
+    norm_map = {_normalize_plate(k): v for k, v in alvo_map.items()}
+
+    matched = [p for p in plates if _normalize_plate(p) in norm_map]
+    leader_is_target = bool(leader and _normalize_plate(leader) in norm_map)
+
+    badges: list = []
+    if matched:
+        badges.append("ALVO_NO_GRUPO")
+    if leader_is_target:
+        badges.append("LÍDER_É_ALVO")
+
+    if matched and leader_is_target:
+        match_type = "both"
+    elif leader_is_target:
+        match_type = "leader"
+    elif matched:
+        match_type = "plate"
+    else:
+        match_type = None
+
+    return {
+        "matched_target":   bool(matched) or leader_is_target,
+        "match_type":       match_type,
+        "matched_plates":   matched,
+        "leader_is_target": leader_is_target,
+        "threat_badges":    badges,
+        "score_delta":      20 * len(matched),
+    }
+
+
 def get_camera_row(camera_id: str) -> dict[str, Any] | None:
     with _conn() as conn:
         with conn.cursor() as cur:
@@ -3556,6 +3616,10 @@ def batedor_companions(
                 target_plate=plate,
             )
 
+            # Fase 1 — alvos cadastrados para enriquecer companions
+            cur.execute("SELECT plate, descricao FROM alvos")
+            alvo_map_raw: dict = {row[0]: row[1] for row in cur.fetchall()}
+
     # Transforma grupos em lista de companions (perspectiva do plate)
     result = []
     for g in groups:
@@ -3592,6 +3656,18 @@ def batedor_companions(
                 })
 
             deltas = [e["co_delta_sec"] for e in evidence if e.get("co_delta_sec") is not None]
+            # Líder deste grupo (perspectiva do acompanhante)
+            from collections import Counter as _Counter_local
+            front = _Counter_local()
+            for cam in g.get("cameras_confirmed", []):
+                order = cam.get("plate_order", [])
+                if order:
+                    front[order[0]] += 1
+            grp_leader = front.most_common(1)[0][0] if front else None
+            grp_plates  = [plate, comp]
+
+            tc = compute_threat_center_phase1(grp_plates, alvo_map_raw, leader=grp_leader)
+
             result.append({
                 "companion":        comp,
                 "cameras_together": g["cameras_count"],
@@ -3604,6 +3680,7 @@ def batedor_companions(
                 "target_leads":     target_leads,
                 "evidence":         evidence[:20],
                 "yolo_multi_events": 0,
+                "threat_center":    tc,
             })
 
     result.sort(key=lambda x: x["cameras_together"], reverse=True)
@@ -3725,6 +3802,8 @@ def batedor_trajeto(
                 LIMIT 10000
             """, [co_win_s, plate, t_from, t_to] + extra_vals)
             rows = cur.fetchall()
+            cur.execute("SELECT plate, descricao FROM alvos")
+            alvo_map_trajeto: dict = {row[0]: row[1] for row in cur.fetchall()}
 
     # ── Agrupamento por companheiro ──────────────────────────────────────────
     comp: dict = defaultdict(lambda: {
@@ -3820,6 +3899,12 @@ def batedor_trajeto(
         # Score de suspeição
         suspicion_score = cameras_together * 100 - avg_delta_sec // 10
 
+        # Fase 1 — vínculo com alvo cadastrado
+        tc_trajeto = compute_threat_center_phase1(
+            [plate, companion], alvo_map_trajeto, leader=None
+        )
+        suspicion_score += tc_trajeto["score_delta"]
+
         result.append({
             "companion":                 companion,
             "cameras_together":          cameras_together,
@@ -3835,6 +3920,7 @@ def batedor_trajeto(
             "last_companion_image":      cd["last_image"],
             "last_confidence":           round(cd["max_conf"], 3),
             "evidence":                  deduped,
+            "threat_center":             tc_trajeto,
         })
 
     result.sort(key=lambda x: x["suspicion_score"], reverse=True)
@@ -3991,7 +4077,16 @@ def central_grupos_suspeitos(
             padrao = f"GRUPO {gs}"
 
         # Alvos no grupo
-        alvos_no_grupo = [{"plate": p, "descricao": alvo_map[p]} for p in plates if p in alvo_map]
+        alvos_no_grupo = [{
+            "plate": p,
+            "descricao": alvo_map[p]
+        } for p in plates if _normalize_plate(p) in {_normalize_plate(k): k for k in alvo_map}]
+        # garante lookup normalizado
+        _alvo_norm = {_normalize_plate(k): v for k, v in alvo_map.items()}
+        alvos_no_grupo = [
+            {"plate": p, "descricao": _alvo_norm[_normalize_plate(p)]}
+            for p in plates if _normalize_plate(p) in _alvo_norm
+        ]
 
         # Score de risco
         score = 0
@@ -4060,6 +4155,9 @@ def central_grupos_suspeitos(
         else:
             risco = "BAIXO"
 
+        # Fase 1 — bloco threat_center
+        tc = compute_threat_center_phase1(plates, alvo_map, leader=leader)
+
         result.append({
             "id":             "_".join(sorted(plates)),
             "plates":         plates,
@@ -4078,6 +4176,7 @@ def central_grupos_suspeitos(
             "score_reason":   score_reason,
             "risco":          risco,
             "cameras_confirmed": g["cameras_confirmed"],
+            "threat_center":  tc,
         })
 
     result.sort(key=lambda x: x["score"], reverse=True)
