@@ -2955,6 +2955,7 @@
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <button id="cgs-det-btn-comboio" onclick="_cgsDetAbrir()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128663;&#128663; Rel. Comboio</button>
         <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
+        <button onclick="_cgsVerRotaNoMapa()" style="background:#15803d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127760; Ver rota no mapa</button>
         <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
       </div>
     </div>
@@ -5071,6 +5072,241 @@ function _cgsExportarPDF() {
     + '</body></html>');
   win.document.close();
   win.focus();
+}
+
+// ── Rota do Grupo Suspeito no Mapa ───────────────────────────────────────
+function _cgsVoltarAoDetalhe() {
+  openModal('cgs-detalhe-modal');
+}
+
+async function _cgsVerRotaNoMapa() {
+  var g = _cgsCurrentGroup;
+  if (!g) return;
+
+  // garante cache de câmeras com coords
+  if (!_mapaCacheItems.length) {
+    try {
+      var r = await fetch('/api/cameras?include_inactive=true');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      _mapaCacheItems = d.items || [];
+    } catch(e) {
+      alert('Erro ao carregar câmeras: ' + e.message);
+      return;
+    }
+  }
+
+  // mapa de coordenadas por camera_id
+  var coordMap = {};
+  _mapaCacheItems.forEach(function(c) {
+    if (c.latitude != null && c.longitude != null)
+      coordMap[c.camera_id] = { lat: c.latitude, lng: c.longitude, direcao: c.direcao || null };
+  });
+
+  var confirmed = (g.cameras_confirmed || []).slice().sort(function(a, b) {
+    return new Date(a.ts_min) - new Date(b.ts_min);
+  });
+
+  var points = [];
+  var noGpsCams = [];
+  confirmed.forEach(function(c) {
+    var coord = coordMap[c.camera_id];
+    if (!coord) { noGpsCams.push(c.cam_nome || c.camera_id); return; }
+    points.push({
+      lat:       coord.lat,
+      lng:       coord.lng,
+      ts:        c.ts_min,
+      tsMax:     c.ts_max,
+      spanSec:   c.span_sec || 0,
+      plate:     g.leader || g.plates[0],   // chave de agrupamento
+      camera_id: c.camera_id,
+      cam_nome:  c.cam_nome || c.camera_id,
+      direcao:   coord.direcao,
+      plateOrder: c.plate_order || g.plates,
+      allPlates:  g.plates,
+      seq:       0
+    });
+  });
+
+  if (!points.length) {
+    alert('Nenhuma câmera do grupo possui coordenadas GPS cadastradas.\n'
+      + (noGpsCams.length ? 'Sem GPS: ' + noGpsCams.join(', ') : ''));
+    return;
+  }
+
+  // navega para a aba do mapa fechando o modal
+  closeModal('cgs-detalhe-modal');
+  var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
+  if (mapaNav) switchTab('mapa', mapaNav);
+
+  var doPlot = function() { _cgsDesenharRotaGrupo(g, points, noGpsCams); };
+
+  if (!_googleMap) {
+    await loadMapa();
+    setTimeout(doPlot, 500);
+  } else {
+    setTimeout(doPlot, 200);
+  }
+}
+
+function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
+  if (!_googleMap || !_checkGoogleMapsLoaded()) {
+    alert('Aguarde o Google Maps carregar.');
+    return;
+  }
+
+  // limpa camadas anteriores (trajetória individual, se houver)
+  _trajetoriaLayers.forEach(function(l) { if (l.setMap) l.setMap(null); });
+  _trajetoriaLayers = [];
+  _mapaInfoWindows.forEach(function(iw) { iw.close(); });
+  _mapaInfoWindows = [];
+
+  var ROTA_COLOR = '#f59e0b'; // âmbar para distinguir de trajetória individual
+  var bounds = new google.maps.LatLngBounds();
+
+  // ordena cronologicamente e numera
+  points.forEach(function(p, i) { p.seq = i + 1; bounds.extend(new google.maps.LatLng(p.lat, p.lng)); });
+
+  // ── Polyline: sombra + linha principal ─────────────────────────────
+  if (points.length >= 2) {
+    var path = points.map(function(p) { return {lat: p.lat, lng: p.lng}; });
+    _trajetoriaLayers.push(new google.maps.Polyline({
+      path: path, strokeColor: '#000', strokeOpacity: 0.22, strokeWeight: 8,
+      map: _googleMap, zIndex: 1
+    }));
+    _trajetoriaLayers.push(new google.maps.Polyline({
+      path: path, strokeColor: ROTA_COLOR, strokeOpacity: 0.93, strokeWeight: 5,
+      map: _googleMap, zIndex: 2
+    }));
+
+    // setas direcionais
+    function bearing(p1, p2) {
+      var dLng = (p2.lng - p1.lng) * Math.PI / 180;
+      var la1  = p1.lat * Math.PI / 180, la2 = p2.lat * Math.PI / 180;
+      var y = Math.sin(dLng) * Math.cos(la2);
+      var x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dLng);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+    for (var i = 0; i < points.length - 1; i++) {
+      var p1 = points[i], p2 = points[i+1];
+      var midLat = (p1.lat + p2.lat) / 2, midLng = (p1.lng + p2.lng) / 2;
+      var ang = bearing(p1, p2);
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">'
+        + '<circle cx="11" cy="11" r="10" fill="' + ROTA_COLOR + '" stroke="#fff" stroke-width="1.5"/>'
+        + '<polygon points="11,3 15.5,16 11,13 6.5,16" fill="#fff" transform="rotate(' + ang + ',11,11)"/>'
+        + '</svg>';
+      _trajetoriaLayers.push(new google.maps.Marker({
+        position: {lat: midLat, lng: midLng}, map: _googleMap, zIndex: 10,
+        icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                scaledSize: new google.maps.Size(22, 22), anchor: new google.maps.Point(11, 11) }
+      }));
+    }
+  }
+
+  // ── Marcadores numerados com popup rico ───────────────────────────────
+  var fmtTs = function(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  var fmtSec = function(s) {
+    if (!s) return '0s';
+    s = Math.round(s);
+    if (s < 60)   return s + 's';
+    if (s < 3600) { var m = Math.floor(s/60); return m + 'min' + (s%60 ? s%60 + 's' : ''); }
+    var h = Math.floor(s/3600), rm = Math.floor((s%3600)/60);
+    return h + 'h' + (rm ? rm + 'min' : '');
+  };
+
+  points.forEach(function(p) {
+    var isFirst = p.seq === 1;
+    var isLast  = p.seq === points.length;
+    var dotBg = isFirst ? '#16a34a' : isLast ? '#dc2626' : ROTA_COLOR;
+    var dotFg = isFirst || isLast ? '#fff' : '#000';
+
+    var circSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">'
+      + '<circle cx="14" cy="14" r="13" fill="' + dotBg + '" stroke="#fff" stroke-width="2.5"/>'
+      + '<text x="14" y="18.5" text-anchor="middle" font-size="11" font-weight="900" font-family="system-ui" fill="' + dotFg + '">' + p.seq + '</text>'
+      + '</svg>';
+
+    var ordemHtml = (p.plateOrder || p.allPlates).map(function(pl, idx) {
+      var isLeader = pl === g.leader;
+      var color = isLeader ? '#dc2626' : '#374151';
+      return '<span style="font-family:monospace;font-weight:700;color:' + color + '">' + (idx+1) + 'º ' + pl + (isLeader ? ' ▶' : '') + '</span>';
+    }).join(' &rarr; ');
+
+    var popup = '<div style="font-family:system-ui;min-width:240px;max-width:300px">'
+      + '<div style="font-weight:800;font-size:.95rem;color:' + ROTA_COLOR + ';margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">'
+        + '&#128247; ' + p.cam_nome + '</div>'
+      + '<div style="font-size:.8rem;line-height:2">'
+        + '<b style="color:#6b7280">Passagem #:</b> ' + p.seq + ' de ' + points.length + '<br>'
+        + '<b style="color:#6b7280">Horário entrada:</b> ' + fmtTs(p.ts) + '<br>'
+        + (p.tsMax ? '<b style="color:#6b7280">Horário saída:</b> ' + fmtTs(p.tsMax) + '<br>' : '')
+        + (p.spanSec ? '<b style="color:#6b7280">Span:</b> ' + fmtSec(p.spanSec) + '<br>' : '')
+        + (p.direcao ? '<b style="color:#6b7280">Direção:</b> <span style="color:#f59e0b;font-weight:700">' + p.direcao + '</span><br>' : '')
+        + '<b style="color:#6b7280">Ordem das placas:</b><br><div style="margin-top:2px">' + ordemHtml + '</div>'
+      + '</div>'
+      + (isFirst ? '<div style="margin-top:6px;font-size:.7rem;background:#dcfce7;color:#15803d;border-radius:4px;padding:2px 8px;font-weight:700">▶ INÍCIO DA ROTA</div>' : '')
+      + (isLast  ? '<div style="margin-top:6px;font-size:.7rem;background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 8px;font-weight:700">■ FIM DA ROTA</div>' : '')
+      + '</div>';
+
+    var iw = new google.maps.InfoWindow({ content: popup });
+    var mk = new google.maps.Marker({
+      position: {lat: p.lat, lng: p.lng},
+      map: _googleMap,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(circSvg),
+        scaledSize: new google.maps.Size(28, 28),
+        anchor: new google.maps.Point(14, 14)
+      },
+      title: p.cam_nome,
+      zIndex: 20
+    });
+    mk.addListener('click', function() {
+      _mapaInfoWindows.forEach(function(w) { w.close(); });
+      iw.open(_googleMap, mk);
+    });
+    _trajetoriaLayers.push(mk);
+    _mapaInfoWindows.push(iw);
+  });
+
+  // ── Labels INÍCIO / FIM ──────────────────────────────────────────────
+  var mkLabel = function(pos, label, bg) {
+    return new google.maps.Marker({
+      position: pos, map: _googleMap, zIndex: 50,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
+        ),
+        scaledSize: new google.maps.Size(1, 1), anchor: new google.maps.Point(0, 0)
+      },
+      label: { text: label, color: '#fff', fontSize: '10px', fontWeight: 'bold' }
+    });
+  };
+  if (points.length >= 1) _trajetoriaLayers.push(mkLabel({lat: points[0].lat, lng: points[0].lng}, '▶ INÍCIO', '#16a34a'));
+  if (points.length >= 2) _trajetoriaLayers.push(mkLabel({lat: points[points.length-1].lat, lng: points[points.length-1].lng}, '■ FIM', '#dc2626'));
+
+  // ── Fit bounds ──────────────────────────────────────────────────────
+  if (!bounds.isEmpty()) {
+    _googleMap.fitBounds(bounds, {top:80, right:60, bottom:60, left:60});
+    if (_googleMap.getZoom() > 14) _googleMap.setZoom(14);
+  }
+
+  // ── Info bar no mapa com botão Voltar ─────────────────────────────
+  var noGps = document.getElementById('map-no-gps');
+  if (noGps) {
+    var riscoBg = g.risco === 'ALTO' ? '#dc2626' : g.risco === 'MÉDIO' ? '#d97706' : '#6b7280';
+    var missStr = noGpsCams.length
+      ? ' <span style="color:var(--muted);font-size:.74rem">(sem GPS: ' + noGpsCams.join(', ') + ')</span>' : '';
+    noGps.innerHTML = '<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '<span style="font-size:1.1rem">&#128101;</span>'
+      + '<span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:800;background:' + riscoBg + ';color:#fff">' + g.risco + '</span>'
+      + '<span style="font-size:.83rem"><strong style="color:#f59e0b">' + g.plates.join(' + ') + '</strong>'
+        + ' &mdash; <strong>' + g.padrao + '</strong>'
+        + ' &mdash; ' + points.length + ' câmera(s) mapeada(s)' + missStr + '</span>'
+      + '<button class="btn btn-outline btn-xs" onclick="_cgsVoltarAoDetalhe()">&#8592; Voltar ao Detalhe</button>'
+      + '<button class="btn btn-outline btn-xs" onclick="_limparTrajetoria()">&#10005; Limpar</button>'
+      + '</div>';
+  }
 }
 
 // ===================================================================
