@@ -6971,6 +6971,72 @@ def rotas_plate(plate: str, limit: int = 1000,
     return {"plate": plate, "total": len(rotas), "rotas": rotas}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# SIMILARIDADE DE ROTA ENTRE DOIS ALVOS
+# ─────────────────────────────────────────────────────────────────────────────
+
+from services.route_similarity_service import calcular_similaridade_rota
+
+@app.post("/api/rotas/similaridade")
+async def rotas_similaridade(request: Request):
+    """
+    Calcula a similaridade de rota entre dois conjuntos de eventos LPR.
+
+    Body JSON:
+    {
+        "eventos_a": [ { "camera_id", "camera_ip", "occurred_at", "direction", "city" }, ... ],
+        "eventos_b": [ { ... }, ... ],
+        "window_minutes": 30          // opcional, padrão 30
+    }
+
+    Resposta:
+    {
+        "score": int,
+        "classificacao": "sem_similaridade" | "baixa" | "media" | "alta",
+        "coincidencias": int,
+        "matches": [ { "camera_id", "camera_ip", "match_tipo", "bonus_tempo",
+                        "pontos", "evento_a", "evento_b" }, ... ],
+        "total_eventos_a": int,
+        "total_eventos_b": int,
+        "window_minutes": int
+    }
+    """
+    require_auth(request)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Body JSON inválido")
+
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Body deve ser um objeto JSON")
+
+    eventos_a = body.get("eventos_a")
+    eventos_b = body.get("eventos_b")
+
+    if not isinstance(eventos_a, list):
+        raise HTTPException(status_code=400, detail="'eventos_a' deve ser uma lista")
+    if not isinstance(eventos_b, list):
+        raise HTTPException(status_code=400, detail="'eventos_b' deve ser uma lista")
+
+    # Limita o tamanho de cada lista para evitar abusos
+    MAX_EVENTOS = 5000
+    if len(eventos_a) > MAX_EVENTOS or len(eventos_b) > MAX_EVENTOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cada lista pode ter no máximo {MAX_EVENTOS} eventos",
+        )
+
+    raw_window = body.get("window_minutes", 30)
+    try:
+        window_minutes = max(0, min(1440, int(raw_window)))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="'window_minutes' deve ser inteiro")
+
+    resultado = calcular_similaridade_rota(eventos_a, eventos_b, window_minutes)
+    return resultado
+
+
 # ===========================
 # MÓDULO ABORDAGENS — HELPERS
 # ===========================
