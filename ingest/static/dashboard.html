@@ -7964,8 +7964,10 @@ async function alvoApagar(id, plate) {
 
 function editAlvo(id, plate, descricao) {
   _editAlvoId = id;
-  document.getElementById('alvo-plate-input').value = plate;
-  document.getElementById('alvo-desc-input').value  = descricao.replace(/&#39;/g, "'");
+  var _pi = document.getElementById('alvo-plate-input');
+  var _di = document.getElementById('alvo-desc-input');
+  if (_pi) _pi.value = plate;
+  if (_di) _di.value = descricao.replace(/&#39;/g, "'");
   var btn = document.querySelector('[onclick="addAlvo()"]');
   if (btn) {
     btn.textContent = '&#9998; Salvar';
@@ -7973,13 +7975,15 @@ function editAlvo(id, plate, descricao) {
     btn.setAttribute('onclick', 'saveEditAlvo()');
     btn.style.background = 'var(--warning)';
   }
-  document.getElementById('alvo-plate-input').focus();
+  if (_pi) _pi.focus();
 }
 
 function _resetAlvoForm() {
   _editAlvoId = null;
-  document.getElementById('alvo-plate-input').value = '';
-  document.getElementById('alvo-desc-input').value  = '';
+  var _pi = document.getElementById('alvo-plate-input');
+  var _di = document.getElementById('alvo-desc-input');
+  if (_pi) _pi.value = '';
+  if (_di) _di.value = '';
   var btn = document.querySelector('[onclick="saveEditAlvo()"]');
   if (btn) {
     btn.innerHTML = '&#43; Adicionar';
