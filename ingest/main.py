@@ -3348,6 +3348,7 @@ def alvo_historico(
     end: Optional[str] = None,
     janela_min: Optional[int] = None,
     min_cameras: Optional[int] = None,
+    limit: Optional[int] = None,
 ):
     """
     Histórico filtrado de passagens de um alvo.
@@ -3404,9 +3405,9 @@ def alvo_historico(
                 )
                 {wsql}
                 ORDER BY COALESCE(e.occurred_at, e.ts) DESC
-                LIMIT 500
+                LIMIT %s
                 """,
-                tuple(vals),
+                tuple(vals) + ((limit if limit and limit > 0 else 500),),
             )
             rows = cur.fetchall()
 

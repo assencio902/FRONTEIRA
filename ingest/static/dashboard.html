@@ -1298,6 +1298,8 @@
         </div>
         <!-- Cards de resumo -->
         <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
+        <!-- Últimas Passagens (automático) -->
+        <div id="alvo-dv-passagens-recentes" style="margin-bottom:20px"></div>
         <!-- Barra de filtros -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
           <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
@@ -6009,6 +6011,58 @@ async function _alvoDvLoadDetalhes(id, descricaoLocal, desdeLocal) {
   } catch(e) {}
 }
 
+// ── Alvo: Carrega as últimas passagens automáticas (sem filtro) ─────────────
+async function _alvoDvLoadPassagens(id) {
+  var el = document.getElementById('alvo-dv-passagens-recentes');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
+  try {
+    var resp = await fetch('/api/alvos/' + id + '/historico?range=7d&limit=20');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var d = await resp.json();
+    var events = d.events || [];
+    var header = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+      + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
+      + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos 7 dias</span>' : '')
+      + '</div>';
+    if (events.length === 0) {
+      el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
+        + header
+        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada nos &uacute;ltimos 7 dias.</div>'
+        + '</div>';
+      return;
+    }
+    var rows = events.map(function(ev) {
+      var ts  = ev.occurred_at ? new Date(ev.occurred_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '&mdash;';
+      var cam = ev.camera || ev.channel_name || ev.camera_id || '&mdash;';
+      var dir = ev.direcao
+        ? '<span style="font-size:.75rem;font-weight:700;color:var(--accent)">' + ev.direcao + '</span>'
+        : '<span style="color:var(--muted)">&mdash;</span>';
+      var img = ev.image_path
+        ? '<img src="/uploads/' + ev.image_path + '" style="height:38px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
+        : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+      var acoes = ev.image_path
+        ? '<button class="btn btn-outline btn-xs" onclick="window.open(\'/uploads/' + ev.image_path + '\',\'_blank\')" title="Ver imagem original">&#128247; Imagem</button>'
+        : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+      return '<tr>'
+        + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + ts + '</td>'
+        + '<td style="font-size:.78rem">' + cam + '</td>'
+        + '<td>' + dir + '</td>'
+        + '<td style="text-align:center">' + img + '</td>'
+        + '<td style="text-align:center">' + acoes + '</td>'
+        + '</tr>';
+    }).join('');
+    el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+      + '<div style="padding:12px 16px 8px 16px">' + header + '</div>'
+      + '<div class="table-wrap" style="margin:0"><table><thead><tr>'
+      + '<th style="white-space:nowrap">Data / Hora</th><th>C&acirc;mera / Local</th><th>Dire&ccedil;&atilde;o</th><th style="text-align:center">Imagem</th><th style="text-align:center">A&ccedil;&otilde;es</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+      + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);font-size:.82rem;padding:6px 0">Erro ao carregar passagens: ' + e + '</div>';
+  }
+}
+
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
 async function _alvoDvAplicar() {
   var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
@@ -6127,6 +6181,7 @@ async function alvoVer(id, plate, descricao, desde) {
   var de  = document.getElementById('alvo-dv-end');    if (de)  de.value  = '';
   _alvoDvPeriodChange();
   _alvoDvLoadDetalhes(id, descReal, desde);
+  _alvoDvLoadPassagens(id);
   _alvoDvAplicar();
 }
 
