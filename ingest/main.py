@@ -693,6 +693,127 @@ def compute_threat_center_phase1(
     }
 
 
+# ---------------------------------------------------------------------------
+# Central de Ameaças — Fase 2: similaridade de rota com alvos cadastrados
+# ---------------------------------------------------------------------------
+
+def compute_threat_center_phase2_route_similarity(
+    group_cameras: list,
+    group_cities:  list,
+    alvo_routes:   dict,
+    threshold:     float = 0.30,
+) -> dict:
+    """
+    Fase 2 da Central de Ameaças: compara a rota do grupo suspeito com as
+    rotas históricas de alvos cadastrados.
+
+    Parâmetros:
+      group_cameras – lista de camera_id que o grupo percorreu (ordenada)
+      group_cities  – lista de cam_nome/localidade (ordenada, pode ter dups)
+      alvo_routes   – {plate_norm: {"cameras": [...], "cities": [...]}}
+                      rotas dos alvos (pre-fetchadas do BD, 30 dias)
+      threshold     – similarity_ratio mínimo para considerar "parecido"
+
+    Retorna dict mesclável com o bloco threat_center:
+      route_similarity – bloco detalhado
+      threat_badges    – ["ROTA_PARECIDA"] se matched, else []
+      score_delta      – incremento proporcional à similaridade
+    """
+    empty_route = {
+        "matched":          False,
+        "best_alvo":        None,
+        "common_cities":    [],
+        "common_cameras":   [],
+        "similarity_ratio": 0.0,
+    }
+
+    if not group_cameras or not alvo_routes:
+        return {"route_similarity": empty_route, "threat_badges": [], "score_delta": 0}
+
+    g_cam_set  = {c for c in group_cameras if c}
+    g_city_set = {c for c in group_cities  if c}
+
+    best_ratio   = 0.0
+    best_alvo    = None
+    best_cams    = []
+    best_cities  = []
+
+    for alvo_plate, route in alvo_routes.items():
+        a_cam_set = {c for c in route.get("cameras", []) if c}
+        if not a_cam_set:
+            continue
+        common_cams = g_cam_set & a_cam_set
+        union_cams  = g_cam_set | a_cam_set
+        ratio = len(common_cams) / len(union_cams) if union_cams else 0.0
+        if ratio > best_ratio:
+            best_ratio  = ratio
+            best_alvo   = alvo_plate
+            best_cams   = sorted(common_cams)
+            best_cities = sorted(g_city_set & {c for c in route.get("cities", []) if c})
+
+    matched     = best_ratio >= threshold
+    badges      = ["ROTA_PARECIDA"] if matched else []
+    score_delta = int(best_ratio * 30) if matched else 0
+
+    return {
+        "route_similarity": {
+            "matched":          matched,
+            "best_alvo":        best_alvo,
+            "common_cities":    best_cities,
+            "common_cameras":   best_cams,
+            "similarity_ratio": round(best_ratio, 3),
+        },
+        "threat_badges": badges,
+        "score_delta":   score_delta,
+    }
+
+
+def _merge_threat_center_phases(tc1: dict, tc2: dict) -> dict:
+    """
+    Mescla o bloco threat_center da Fase 1 com o resultado da Fase 2.
+    Preserva todos os campos existentes e adiciona novos sem sobrescrever.
+    """
+    merged = tc1.copy()
+    merged["threat_badges"] = list(
+        set(tc1.get("threat_badges", [])) | set(tc2.get("threat_badges", []))
+    )
+    merged["score_delta"]      = tc1.get("score_delta", 0) + tc2.get("score_delta", 0)
+    merged["matched_target"]   = tc1.get("matched_target", False) or bool(tc2.get("threat_badges"))
+    merged["route_similarity"] = tc2.get("route_similarity", {
+        "matched": False, "best_alvo": None,
+        "common_cities": [], "common_cameras": [], "similarity_ratio": 0.0,
+    })
+    return merged
+
+
+def _fetch_alvo_routes(cur, alvo_plates: list, t_from, t_to) -> dict:
+    """
+    Busca as rotas históricas (camera_id + cam_nome) de cada alvo no período.
+    Retorna {plate_norm: {"cameras": [...], "cities": [...]}}
+    """
+    routes: dict = {}
+    if not alvo_plates:
+        return routes
+    cur.execute("""
+        SELECT
+            e.plate,
+            e.camera_id,
+            COALESCE(c.nome, e.camera_id) AS cam_nome
+        FROM lpr_events e
+        LEFT JOIN cameras c ON c.camera_id = e.camera_id
+        WHERE e.plate = ANY(%s)
+          AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+        ORDER BY e.plate, COALESCE(e.occurred_at, e.ts)
+    """, [alvo_plates, t_from, t_to])
+    for _plate, _cam_id, _cam_nome in cur.fetchall():
+        _n = _normalize_plate(_plate)
+        if _n not in routes:
+            routes[_n] = {"cameras": [], "cities": []}
+        routes[_n]["cameras"].append(_cam_id)
+        routes[_n]["cities"].append(_cam_nome)
+    return routes
+
+
 def get_camera_row(camera_id: str) -> dict[str, Any] | None:
     with _conn() as conn:
         with conn.cursor() as cur:
@@ -3620,6 +3741,12 @@ def batedor_companions(
             cur.execute("SELECT plate, descricao FROM alvos")
             alvo_map_raw: dict = {row[0]: row[1] for row in cur.fetchall()}
 
+            # Fase 2 — rotas históricas dos alvos (30 dias)
+            _t_from_alvo_comp = t_to - timedelta(days=30)
+            alvo_routes_comp = _fetch_alvo_routes(
+                cur, list(alvo_map_raw.keys()), _t_from_alvo_comp, t_to
+            )
+
     # Transforma grupos em lista de companions (perspectiva do plate)
     result = []
     for g in groups:
@@ -3667,6 +3794,14 @@ def batedor_companions(
             grp_plates  = [plate, comp]
 
             tc = compute_threat_center_phase1(grp_plates, alvo_map_raw, leader=grp_leader)
+
+            # Fase 2 — similaridade de rota
+            _grp_cam_ids = [c.get("camera_id", "") for c in g.get("cameras_confirmed", [])]
+            _grp_cities  = [c.get("cam_nome",   "") for c in g.get("cameras_confirmed", [])]
+            tc2 = compute_threat_center_phase2_route_similarity(
+                _grp_cam_ids, _grp_cities, alvo_routes_comp
+            )
+            tc = _merge_threat_center_phases(tc, tc2)
 
             result.append({
                 "companion":        comp,
@@ -3805,6 +3940,12 @@ def batedor_trajeto(
             cur.execute("SELECT plate, descricao FROM alvos")
             alvo_map_trajeto: dict = {row[0]: row[1] for row in cur.fetchall()}
 
+            # Fase 2 — rotas históricas dos alvos (30 dias)
+            _t_from_alvo_traj = t_to - timedelta(days=30)
+            alvo_routes_traj = _fetch_alvo_routes(
+                cur, list(alvo_map_trajeto.keys()), _t_from_alvo_traj, t_to
+            )
+
     # ── Agrupamento por companheiro ──────────────────────────────────────────
     comp: dict = defaultdict(lambda: {
         "passages":   [],
@@ -3903,6 +4044,14 @@ def batedor_trajeto(
         tc_trajeto = compute_threat_center_phase1(
             [plate, companion], alvo_map_trajeto, leader=None
         )
+
+        # Fase 2 — similaridade de rota
+        _traj_cam_ids = [p["camera_id"] for p in deduped]
+        _traj_cities  = [p["cam_nome"]  for p in deduped]
+        tc2_traj = compute_threat_center_phase2_route_similarity(
+            _traj_cam_ids, _traj_cities, alvo_routes_traj
+        )
+        tc_trajeto = _merge_threat_center_phases(tc_trajeto, tc2_traj)
         suspicion_score += tc_trajeto["score_delta"]
 
         result.append({
@@ -4002,6 +4151,12 @@ def central_grupos_suspeitos(
             # 3. Busca alvos cadastrados
             cur.execute("SELECT plate, descricao FROM alvos")
             alvo_map: dict = {row[0]: row[1] for row in cur.fetchall()}
+
+            # Fase 2 — rotas históricas dos alvos (30 dias)
+            _t_from_alvo_cgs = t_to - timedelta(days=30)
+            alvo_routes_cgs = _fetch_alvo_routes(
+                cur, list(alvo_map.keys()), _t_from_alvo_cgs, t_to
+            )
 
             # 4. Conta dias distintos por par de placas na janela 90d
             t_from_hist = t_to - timedelta(days=90)
@@ -4157,6 +4312,14 @@ def central_grupos_suspeitos(
 
         # Fase 1 — bloco threat_center
         tc = compute_threat_center_phase1(plates, alvo_map, leader=leader)
+
+        # Fase 2 — similaridade de rota
+        _cgs_cam_ids = [c.get("camera_id", "") for c in g.get("cameras_confirmed", [])]
+        _cgs_cities  = [c.get("cam_nome",   "") for c in g.get("cameras_confirmed", [])]
+        tc2_cgs = compute_threat_center_phase2_route_similarity(
+            _cgs_cam_ids, _cgs_cities, alvo_routes_cgs
+        )
+        tc = _merge_threat_center_phases(tc, tc2_cgs)
 
         result.append({
             "id":             "_".join(sorted(plates)),
