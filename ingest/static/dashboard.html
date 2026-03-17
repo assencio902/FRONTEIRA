@@ -1302,6 +1302,8 @@
         <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
         <!-- Linha do tempo de rota (toggle) -->
         <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
+        <!-- Acompanhantes / Comboio -->
+        <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
         <!-- Barra de filtros -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
           <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
@@ -6172,6 +6174,108 @@ function _alvoDvVerRota() {
   rotaEl.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
+// ── Alvo: Acompanhantes / Comboio ───────────────────────────────────────────
+async function _alvoDvLoadCompanions(id, plate) {
+  var el = document.getElementById('alvo-dv-companions');
+  if (!el || !plate) return;
+  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip;</p>';
+  try {
+    var qs = '?window=30d&co_window=300&min_cameras=1&trip_max=7200&limit=20';
+    var [compResp, alvosResp] = await Promise.all([
+      fetch('/api/batedor/companions/' + encodeURIComponent(plate) + qs),
+      fetch('/api/alvos')
+    ]);
+    if (!compResp.ok) throw new Error('HTTP ' + compResp.status);
+    var compData  = await compResp.json();
+    var alvosData = alvosResp.ok ? await alvosResp.json() : {alvos:[]};
+    var companions = compData.companions || [];
+    // mapa placa -> {id, descricao} somente quando tbm é alvo rastreado
+    var alvoMap = {};
+    (alvosData.alvos || []).forEach(function(a) { alvoMap[a.plate] = a; });
+
+    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+      + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
+      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; &uacute;ltimos 30 dias</span>' : '')
+      + '</div>';
+
+    if (companions.length === 0) {
+      el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
+        + header
+        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos 30 dias.</div>'
+        + '</div>';
+      return;
+    }
+
+    var rows = companions.map(function(c) {
+      var alvo    = alvoMap[c.companion];
+      var desc    = alvo && alvo.descricao
+        ? '<span style="font-size:.75rem;color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block" title="' + alvo.descricao.replace(/"/g,'&quot;') + '">' + alvo.descricao + '</span>'
+        : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>';
+      var alvoBadge = alvo
+        ? ' <span style="font-size:.68rem;font-weight:700;background:#7c3aed;color:#fff;padding:1px 7px;border-radius:99px;white-space:nowrap;vertical-align:middle">ALVO</span>'
+        : '';
+      // papel baseado em leads
+      var tot = (c.companion_leads + c.target_leads) || 1;
+      var clPct = Math.round(c.companion_leads / tot * 100);
+      var tgPct = Math.round(c.target_leads   / tot * 100);
+      var roleBadge;
+      if (clPct >= 70) {
+        roleBadge = '<span style="font-size:.68rem;font-weight:700;background:#dc2626;color:#fff;padding:1px 8px;border-radius:99px;white-space:nowrap">BATEDOR</span>';
+      } else if (tgPct >= 70) {
+        roleBadge = '<span style="font-size:.68rem;font-weight:700;background:#d97706;color:#fff;padding:1px 8px;border-radius:99px;white-space:nowrap">SEGUIDOR</span>';
+      } else {
+        roleBadge = '<span style="font-size:.68rem;font-weight:700;background:#6366f1;color:#fff;padding:1px 8px;border-radius:99px;white-space:nowrap">COMBOIO</span>';
+      }
+      // última vez junto
+      var lastTog = c.last_seen
+        ? new Date(c.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : '<span style="color:var(--muted)">&mdash;</span>';
+      // local: primeira câmera da evidência
+      var ev0    = (c.evidence || [])[0];
+      var localStr = ev0 ? (ev0.camera || ev0.camera_id || '&mdash;') : '&mdash;';
+      // ações
+      var btnDetalhe = alvo
+        ? '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + alvo.id + ',\''+alvo.plate+'\',\''+((alvo.descricao||'').replace(/\'/g,"\'\'"))+'\')">&#128269; Ver</button> '
+        : '';
+      var safeComp = c.companion.replace(/'/g,"\\'");
+      var btnBuscar = '<button class="btn btn-outline btn-xs" onclick="_alvoCompSearch(\''+safeComp+'\')" title="Buscar esta placa no Batedor">&#128301; Batedor</button>';
+      return '<tr>'
+        + '<td style="font-weight:700;font-family:monospace;font-size:.88rem;white-space:nowrap;letter-spacing:.06em">' + c.companion + alvoBadge + '</td>'
+        + '<td>' + desc + '</td>'
+        + '<td style="text-align:center">' + roleBadge + '<br><span style="font-size:.72rem;color:var(--muted);white-space:nowrap">' + c.cameras_together + ' c&acirc;m.</span></td>'
+        + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + lastTog + '</td>'
+        + '<td style="font-size:.75rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + localStr + '">' + localStr + '</td>'
+        + '<td style="white-space:nowrap">' + btnDetalhe + btnBuscar + '</td>'
+        + '</tr>';
+    }).join('');
+
+    el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+      + '<div style="padding:12px 16px 8px 16px">' + header + '</div>'
+      + '<div class="table-wrap" style="margin:0"><table><thead><tr>'
+      + '<th>Placa</th>'
+      + '<th>Descri&ccedil;&atilde;o</th>'
+      + '<th style="text-align:center">Papel / Cooc.</th>'
+      + '<th style="white-space:nowrap">&Uacute;ltima vez junto</th>'
+      + '<th>Local / C&acirc;mera</th>'
+      + '<th style="white-space:nowrap">&Iacute;ons</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+      + '</div>';
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);font-size:.82rem;padding:6px 0">Erro ao carregar acompanhantes: ' + e + '</div>';
+  }
+}
+
+function _alvoCompSearch(plate) {
+  // Navega para a aba Batedor e preenche a busca por placa
+  var inp = document.getElementById('batedor-plate');
+  if (inp) inp.value = plate;
+  var batTab = document.querySelector('[onclick*="showBatSub\'central\'"],[onclick*=\'showBatSub(\\"central\\"\'],[data-sub="central"]');
+  // tenta mostrar a sub-aba central do batedor e disparar busca
+  if (typeof showBatSub === 'function') showBatSub('central');
+  if (typeof showBat    === 'function') showBat();
+  if (inp && typeof loadCentral === 'function') { inp.value = plate; loadCentral(); }
+}
+
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
 async function _alvoDvAplicar() {
   var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
@@ -6291,6 +6395,7 @@ async function alvoVer(id, plate, descricao, desde) {
   _alvoDvPeriodChange();
   _alvoDvLoadDetalhes(id, descReal, desde);
   _alvoDvLoadPassagens(id);
+  _alvoDvLoadCompanions(id, _alvoDvPlate);
   _alvoDvAplicar();
 }
 
