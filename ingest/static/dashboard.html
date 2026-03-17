@@ -1522,7 +1522,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>#</th><th>Placa</th><th>Observacoes</th><th>Cadastrado em</th><th style="text-align:center">Acoes</th></tr>
+              <tr><th>#</th><th>Placa</th><th>Observacoes</th><th>Alvo</th><th>Cadastrado em</th><th style="text-align:center">Acoes</th></tr>
             </thead>
             <tbody id="list-detail-tbody">
               <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Carregando...</td></tr>
@@ -3091,10 +3091,16 @@
       <label>Observacoes</label>
       <textarea id="veh-notes" rows="3" placeholder="Tipo, cor, modelo, situacao..."></textarea>
     </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:2px">
+      <input type="checkbox" id="veh-is-alvo" style="width:16px;height:16px;cursor:pointer;accent-color:#dc2626">
+      <label for="veh-is-alvo" style="cursor:pointer;font-size:.87rem;color:var(--text);margin:0">
+        &#127919; Marcar como <strong>Alvo Rastreado</strong>
+      </label>
+    </div>
     <div class="form-error" id="veh-form-error"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('vehicle-modal')">Cancelar</button>
-      <button class="btn btn-success btn-sm" onclick="saveVehicle()">Cadastrar</button>
+      <button id="veh-save-btn" class="btn btn-success btn-sm" onclick="saveVehicle()">Cadastrar</button>
     </div>
   </div>
 </div>
@@ -6668,21 +6674,25 @@ async function loadListVehicles() {
     document.getElementById('list-detail-status').textContent = items.length + ' veiculo(s)';
     document.getElementById('list-detail-count').textContent = items.length + ' veiculo(s) cadastrado(s)';
   } catch(e) {
-    document.getElementById('list-detail-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    document.getElementById('list-detail-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
   }
 }
 
 function renderListVehicles(items) {
   var tb = document.getElementById('list-detail-tbody');
   if (!items.length) {
-    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Nenhum veiculo cadastrado nesta lista.<br><small style="opacity:.7;margin-top:6px;display:block">Clique em "+ Adicionar Placa" para comecar.</small></td></tr>';
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum veiculo cadastrado nesta lista.<br><small style="opacity:.7;margin-top:6px;display:block">Clique em "+ Adicionar Placa" para comecar.</small></td></tr>';
     return;
   }
   tb.innerHTML = items.map(function(v) {
-    return '<tr>' +
+    var alvoCell = v.is_alvo
+      ? '<span class="badge badge-red" style="background:rgba(220,38,38,.15);color:#fca5a5;padding:2px 7px;font-size:.7rem;border-radius:4px">&#127919; ALVO</span>'
+      : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>';
+    return '<tr data-vid="' + v.id + '" data-plate="' + v.plate.replace(/"/g,'&quot;') + '" data-notes="' + (v.notes||'').replace(/"/g,'&quot;') + '" data-is-alvo="' + (v.is_alvo ? '1' : '0') + '">' +
       '<td style="color:var(--muted);font-size:.74rem">' + v.id + '</td>' +
       '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span></td>' +
       '<td style="font-size:.79rem;color:var(--muted)">' + (v.notes||'-') + '</td>' +
+      '<td style="text-align:center">' + alvoCell + '</td>' +
       '<td style="font-size:.76rem;color:var(--muted)">' + fmtTs(v.created_at) + '</td>' +
       '<td style="text-align:center;white-space:nowrap">' +
         '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button> ' +
@@ -6696,24 +6706,25 @@ function openAddVehicleModal() {
   _editVehicleId = null;
   document.getElementById('veh-plate').value = '';
   document.getElementById('veh-notes').value = '';
+  document.getElementById('veh-is-alvo').checked = false;
   document.getElementById('veh-form-error').textContent = '';
   document.getElementById('veh-list-id').value = _currentDetailListId || '';
   document.getElementById('veh-modal-title').textContent = 'Cadastrar Placa';
+  document.getElementById('veh-save-btn').textContent = 'Cadastrar';
   openModal('vehicle-modal');
   setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
 }
 
 async function openEditVehicleModal(vehicleId) {
-  var items = document.querySelectorAll('#list-detail-tbody tr');
+  var rows = document.querySelectorAll('#list-detail-tbody tr[data-vid]');
   var vehicleData = null;
-  // Localizar o veículo na tabela para extrair os dados
-  for (var i = 0; i < items.length; i++) {
-    var cells = items[i].querySelectorAll('td');
-    if (cells.length > 0 && parseInt(cells[0].textContent) === vehicleId) {
+  for (var i = 0; i < rows.length; i++) {
+    if (parseInt(rows[i].getAttribute('data-vid')) === vehicleId) {
       vehicleData = {
         id: vehicleId,
-        plate: cells[1].textContent.trim(),
-        notes: cells[2].textContent.trim() === '-' ? '' : cells[2].textContent.trim()
+        plate: rows[i].getAttribute('data-plate') || '',
+        notes: rows[i].getAttribute('data-notes') || '',
+        is_alvo: rows[i].getAttribute('data-is-alvo') === '1'
       };
       break;
     }
@@ -6723,9 +6734,11 @@ async function openEditVehicleModal(vehicleId) {
   _editVehicleId = vehicleId;
   document.getElementById('veh-plate').value = vehicleData.plate;
   document.getElementById('veh-notes').value = vehicleData.notes;
+  document.getElementById('veh-is-alvo').checked = vehicleData.is_alvo;
   document.getElementById('veh-form-error').textContent = '';
   document.getElementById('veh-list-id').value = _currentDetailListId || '';
   document.getElementById('veh-modal-title').textContent = 'Editar Placa';
+  document.getElementById('veh-save-btn').textContent = 'Salvar';
   openModal('vehicle-modal');
   setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
 }
@@ -6734,32 +6747,55 @@ async function saveVehicle() {
   var plate  = document.getElementById('veh-plate').value.trim().toUpperCase();
   var listId = document.getElementById('veh-list-id').value;
   var notes  = document.getElementById('veh-notes').value.trim();
+  var isAlvo = document.getElementById('veh-is-alvo').checked;
   var errEl  = document.getElementById('veh-form-error');
-  if (!plate)  { errEl.textContent = 'Placa e obrigatoria.'; return; }
-  if (!listId) { errEl.textContent = 'Erro: lista nao identificada.'; return; }
+  if (!plate)  { errEl.textContent = 'Placa é obrigatória.'; return; }
+  if (!listId) { errEl.textContent = 'Erro: lista não identificada.'; return; }
   errEl.textContent = '';
   try {
-    var method, url, body;
+    var method, url, bodyObj;
     if (_editVehicleId) {
-      // Modo edição (PUT)
-      method = 'PUT';
-      url = '/api/vehicles/' + _editVehicleId;
-      body = JSON.stringify({ plate: plate, notes: notes || null });
+      method  = 'PUT';
+      url     = '/api/vehicles/' + _editVehicleId;
+      bodyObj = { plate: plate, notes: notes || null, is_alvo: isAlvo };
     } else {
-      // Modo criação (POST)
-      method = 'POST';
-      url = '/api/vehicles';
-      body = JSON.stringify({ plate: plate, list_id: parseInt(listId), notes: notes || null });
+      method  = 'POST';
+      url     = '/api/vehicles';
+      bodyObj = { plate: plate, list_id: parseInt(listId), notes: notes || null, is_alvo: isAlvo };
     }
-    
+    var bodyStr = JSON.stringify(bodyObj);
+    console.log('[vehicle:save] método=' + method + ' url=' + url + ' payload=', bodyObj);
+
     var r = await fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
-      body: body
+      body: bodyStr
     });
-    if (!r.ok) { var d = await r.json(); throw new Error(d.detail || r.status); }
+    var responseData = await r.json();
+    console.log('[vehicle:save] status=' + r.status + ' resposta=', responseData);
+
+    if (!r.ok) { throw new Error(responseData.detail || r.status); }
+
     closeModal('vehicle-modal');
-    await Promise.all([loadListVehicles(), loadMonPlates(), loadLists()]);
+
+    // Atualiza TODAS as listas relevantes; allSettled garante que falha em
+    // uma não impede as outras de rodarem.
+    var reloads = await Promise.allSettled([
+      loadListVehicles(),
+      loadMonPlates(),
+      loadLists(),
+      typeof loadAlvos === 'function' ? loadAlvos() : Promise.resolve()
+    ]);
+    reloads.forEach(function(res, idx) {
+      if (res.status === 'rejected') {
+        console.warn('[vehicle:save] reload[' + idx + '] falhou:', res.reason);
+      }
+    });
+
+    // Feedback visual quando salvo como alvo
+    if (isAlvo) {
+      _flashMsg('🎯 ' + plate + ' salvo nos Alvos Rastreados!', '#22c55e');
+    }
   } catch(e) {
     errEl.textContent = 'Erro: ' + e.message;
   }
@@ -6768,7 +6804,8 @@ async function saveVehicle() {
 async function deleteVehicle(id, plate) {
   if (!confirm('Remover "' + plate + '" da lista?')) return;
   await fetch('/api/vehicles/' + id, { method: 'DELETE' });
-  await Promise.all([loadListVehicles(), loadMonPlates(), loadLists()]);
+  await Promise.all([loadListVehicles(), loadMonPlates(), loadLists(),
+    typeof loadAlvos === 'function' ? loadAlvos() : Promise.resolve()]);
 }
 
 // ===== RELOGIO =====

@@ -364,6 +364,8 @@ def _init_db():
                 );
             """)
             cur.execute("ALTER TABLE alvos ADD COLUMN IF NOT EXISTS list_id INTEGER REFERENCES vehicle_lists(id) ON DELETE SET NULL;")
+            # Sincronização veículo ↔ alvos rastreados
+            cur.execute("ALTER TABLE vehicle_list_items ADD COLUMN IF NOT EXISTS is_alvo BOOLEAN NOT NULL DEFAULT FALSE;")
 
             # Eventos LPR — campo direcao derivado da câmera
             cur.execute("ALTER TABLE lpr_events ADD COLUMN IF NOT EXISTS direcao TEXT DEFAULT NULL;")
@@ -3084,8 +3086,8 @@ def vehicles_query(list_id: int | None = None, plate: str | None = None):
     """Lista veículos com filtros opcionais."""
     try:
         query = """
-            SELECT vli.id, vli.plate, vli.list_id, vl.name as list_name, 
-                   vli.notes, vli.created_at
+            SELECT vli.id, vli.plate, vli.list_id, vl.name as list_name,
+                   vli.notes, vli.created_at, vli.is_alvo
             FROM vehicle_list_items vli
             JOIN vehicle_lists vl ON vl.id = vli.list_id
             WHERE 1=1
@@ -3115,7 +3117,8 @@ def vehicles_query(list_id: int | None = None, plate: str | None = None):
                 "list_id": r[2],
                 "list_name": r[3],
                 "notes": r[4],
-                "created_at": r[5].isoformat() if r[5] else None
+                "created_at": r[5].isoformat() if r[5] else None,
+                "is_alvo": bool(r[6]) if r[6] is not None else False
             })
         
         return {"items": items, "total": len(items)}
@@ -3158,6 +3161,9 @@ async def vehicles_create(request: Request):
             if not notes:
                 notes = None
         
+        is_alvo = bool(data.get("is_alvo", False))
+        logger.info("[vehicles:create] plate=%s list_id=%s is_alvo=%s", plate, list_id, is_alvo)
+        
         with _conn() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT id FROM vehicle_lists WHERE id = %s", (list_id,))
@@ -3166,21 +3172,34 @@ async def vehicles_create(request: Request):
                 
                 try:
                     cur.execute("""
-                        INSERT INTO vehicle_list_items (list_id, plate, notes)
-                        VALUES (%s, %s, %s)
+                        INSERT INTO vehicle_list_items (list_id, plate, notes, is_alvo)
+                        VALUES (%s, %s, %s, %s)
                         RETURNING id, created_at
-                    """, (list_id, plate, notes))
-                    r = cur.fetchone()
+                    """, (list_id, plate, notes, is_alvo))
+                    row = cur.fetchone()
+                    vli_id = row[0]
+                    created_at = row[1]
                 except psycopg2.IntegrityError:
                     conn.rollback()
                     raise HTTPException(status_code=409, detail="Placa já existe nesta lista")
+                
+                _sync_vehicle_alvo_status(
+                    cur=cur,
+                    plate=plate,
+                    notes=notes,
+                    is_alvo=is_alvo,
+                    old_plate=None,
+                    old_is_alvo=False,
+                    vli_id=vli_id,
+                )
         
         return {
-            "id": r[0],
+            "id": vli_id,
             "plate": plate,
             "list_id": list_id,
             "notes": notes,
-            "created_at": r[1].isoformat() if r[1] else None
+            "is_alvo": is_alvo,
+            "created_at": created_at.isoformat() if created_at else None
         }
     except HTTPException:
         raise
@@ -3192,7 +3211,7 @@ async def vehicles_create(request: Request):
 
 @app.put("/api/vehicles/{vid}")
 async def vehicles_update(vid: int, request: Request):
-    """Atualiza um veículo (placa e/ou notas)."""
+    """Atualiza um veículo (placa, notas e/ou status de alvo)."""
     # Admin e operador podem atualizar veículos
     assert_admin_or_operator(request, "Apenas administradores e operadores podem atualizar veículos")
     try:
@@ -3212,19 +3231,30 @@ async def vehicles_update(vid: int, request: Request):
             if not notes:
                 notes = None
         
+        is_alvo_new = data.get("is_alvo")  # None significa "não enviado" (sem alteração)
+        logger.info("[vehicles:update] vid=%s is_alvo_new=%s plate=%s", vid, is_alvo_new, plate)
+        
         with _conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, list_id, plate FROM vehicle_list_items WHERE id = %s", (vid,))
+                cur.execute(
+                    "SELECT id, list_id, plate, notes, is_alvo FROM vehicle_list_items WHERE id = %s",
+                    (vid,)
+                )
                 row = cur.fetchone()
                 if not row:
                     raise HTTPException(status_code=404, detail="Veículo não encontrado")
                 
-                list_id, old_plate = row[1], row[2]
+                list_id, old_plate, old_notes, old_is_alvo = row[1], row[2], row[3], bool(row[4])
+                effective_plate = plate if plate else old_plate
+                effective_notes = notes if notes_raw is not None else old_notes
+                effective_is_alvo = bool(is_alvo_new) if is_alvo_new is not None else old_is_alvo
                 
                 # Se a placa mudou, verifica duplicação
                 if plate and plate != old_plate:
-                    cur.execute("SELECT id FROM vehicle_list_items WHERE list_id = %s AND plate = %s AND id != %s", 
-                               (list_id, plate, vid))
+                    cur.execute(
+                        "SELECT id FROM vehicle_list_items WHERE list_id = %s AND plate = %s AND id != %s",
+                        (list_id, plate, vid)
+                    )
                     if cur.fetchone():
                         raise HTTPException(status_code=409, detail="Placa já existe nesta lista")
                 
@@ -3236,14 +3266,29 @@ async def vehicles_update(vid: int, request: Request):
                 if notes_raw is not None:
                     updates.append("notes = %s")
                     params.append(notes)
+                if is_alvo_new is not None:
+                    updates.append("is_alvo = %s")
+                    params.append(effective_is_alvo)
                 
                 if not updates:
                     raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
                 
                 params.append(vid)
                 cur.execute(f"UPDATE vehicle_list_items SET {', '.join(updates)} WHERE id = %s", params)
+                
+                # Sincroniza com alvos sempre que há mudança relevante
+                if is_alvo_new is not None or plate:
+                    _sync_vehicle_alvo_status(
+                        cur,
+                        plate=effective_plate,
+                        notes=effective_notes,
+                        is_alvo=effective_is_alvo,
+                        old_plate=old_plate if plate and plate != old_plate else None,
+                        old_is_alvo=old_is_alvo,
+                        vli_id=vid,
+                    )
         
-        return {"ok": True, "id": vid}
+        return {"ok": True, "id": vid, "is_alvo": effective_is_alvo}
     except HTTPException:
         raise
     except Exception as e:
@@ -3260,11 +3305,20 @@ def vehicles_delete(vid: int, request: Request):
     try:
         with _conn() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id FROM vehicle_list_items WHERE id = %s", (vid,))
-                if not cur.fetchone():
+                cur.execute(
+                    "SELECT plate, is_alvo FROM vehicle_list_items WHERE id = %s", (vid,)
+                )
+                row = cur.fetchone()
+                if not row:
                     raise HTTPException(status_code=404, detail="Veículo não encontrado")
                 
+                plate, was_alvo = row[0], bool(row[1])
                 cur.execute("DELETE FROM vehicle_list_items WHERE id = %s", (vid,))
+                
+                # Remove de alvos somente se não há outro item marcando esta placa como alvo
+                if was_alvo and not _vehicle_has_other_alvo(cur, plate):
+                    cur.execute("DELETE FROM alvos WHERE plate = %s", (plate,))
+                    _remove_alvo_from_lista(cur, plate)
         
         return {"ok": True}
     except HTTPException:
@@ -3331,12 +3385,15 @@ def _sync_alvo_to_lista(cur, plate: str, descricao: str, old_plate: str = None):
         )
     cur.execute(
         """
-        INSERT INTO vehicle_list_items (list_id, plate, notes)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (list_id, plate) DO UPDATE SET notes = EXCLUDED.notes
+        INSERT INTO vehicle_list_items (list_id, plate, notes, is_alvo)
+        VALUES (%s, %s, %s, TRUE)
+        ON CONFLICT (list_id, plate) DO UPDATE
+            SET notes = EXCLUDED.notes,
+                is_alvo = TRUE
         """,
         (list_id, plate, notes)
     )
+    logger.info("[alvo-sync] upsert lista '%s' (id=%s) placa=%s", "Alvos Rastreados", list_id, plate)
 
 
 def _remove_alvo_from_lista(cur, plate: str):
@@ -3349,6 +3406,68 @@ def _remove_alvo_from_lista(cur, plate: str):
             "DELETE FROM vehicle_list_items WHERE list_id = %s AND plate = %s",
             (row[0], plate)
         )
+
+
+def _vehicle_has_other_alvo(cur, plate: str, exclude_vli_id: int = None) -> bool:
+    """Verifica se algum outro vehicle_list_item marca esta placa como alvo."""
+    q = "SELECT 1 FROM vehicle_list_items WHERE plate = %s AND is_alvo = TRUE"
+    params: list = [plate]
+    if exclude_vli_id is not None:
+        q += " AND id != %s"
+        params.append(exclude_vli_id)
+    cur.execute(q, params)
+    return cur.fetchone() is not None
+
+
+def _sync_vehicle_alvo_status(
+    cur,
+    plate: str,
+    notes: str,
+    is_alvo: bool,
+    old_plate: str = None,
+    old_is_alvo: bool = None,
+    vli_id: int = None,
+):
+    """
+    Sincroniza is_alvo do vehicle_list_item com a tabela alvos e a lista
+    'Alvos Rastreados'. Chame esta função APÓS gravar is_alvo no DB.
+    """
+    plate = _normalize_plate(plate)
+    old_plate = _normalize_plate(old_plate) if old_plate else None
+    descricao = notes or "Alvo rastreado"
+
+    logger.info(
+        "[alvo-sync] plate=%s is_alvo=%s old_plate=%s old_is_alvo=%s vli_id=%s",
+        plate, is_alvo, old_plate, old_is_alvo, vli_id,
+    )
+
+    if is_alvo:
+        # --- marcar como alvo: inserir/atualizar em alvos + lista ---
+        old_p = old_plate if (old_plate and old_plate != plate) else None
+        cur.execute(
+            """
+            INSERT INTO alvos (plate, descricao)
+            VALUES (%s, %s)
+            ON CONFLICT (plate) DO UPDATE SET descricao = EXCLUDED.descricao
+            """,
+            (plate, descricao),
+        )
+        logger.info("[alvo-sync] upsert tabela alvos: plate=%s descricao=%r", plate, descricao)
+        _sync_alvo_to_lista(cur, plate, descricao, old_plate=old_p)
+        # se a placa mudou, limpar entrada antiga em alvos (somente se não há
+        # outros itens ainda apontando para ela)
+        if old_p and not _vehicle_has_other_alvo(cur, old_p, exclude_vli_id=vli_id):
+            cur.execute("DELETE FROM alvos WHERE plate = %s", (old_p,))
+            logger.info("[alvo-sync] removeu placa antiga de alvos: plate=%s", old_p)
+    else:
+        # --- desmarcar como alvo: remover de alvos somente se não há outros ---
+        target_plate = old_plate if old_plate else plate
+        if old_is_alvo and not _vehicle_has_other_alvo(cur, target_plate, exclude_vli_id=vli_id):
+            cur.execute("DELETE FROM alvos WHERE plate = %s", (target_plate,))
+            _remove_alvo_from_lista(cur, target_plate)
+            logger.info("[alvo-sync] removeu de alvos e lista: plate=%s", target_plate)
+        else:
+            logger.info("[alvo-sync] nenhuma remoção necessária: plate=%s old_is_alvo=%s", target_plate, old_is_alvo)
 
 
 @app.post("/api/alvos")
