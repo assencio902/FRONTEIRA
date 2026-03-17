@@ -5291,20 +5291,78 @@ function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
     if (_googleMap.getZoom() > 14) _googleMap.setZoom(14);
   }
 
-  // ── Info bar no mapa com botão Voltar ─────────────────────────────
+  // ── Painel lateral de análise ──────────────────────────────────────
   var noGps = document.getElementById('map-no-gps');
   if (noGps) {
-    var riscoBg = g.risco === 'ALTO' ? '#dc2626' : g.risco === 'MÉDIO' ? '#d97706' : '#6b7280';
+    var riscoBg    = g.risco === 'ALTO' ? '#dc2626' : g.risco === 'MÉDIO' ? '#d97706' : '#6b7280';
+    var riscoColor = g.risco === 'ALTO' ? '#fca5a5' : g.risco === 'MÉDIO' ? '#fcd34d' : '#86efac';
+    var scoreBg    = g.score >= 80 ? '#dc2626' : g.score >= 40 ? '#d97706' : '#6b7280';
+
+    // horários — points já ordenados cronologicamente
+    var tFirst = points.length ? fmtTs(points[0].ts) : '—';
+    var tLast  = points.length ? fmtTs(points[points.length - 1].tsMax || points[points.length - 1].ts) : '—';
+
+    // placas com badges
+    var placasBadges = g.plates.map(function(p) {
+      var isAlvo   = g.alvos && g.alvos.some(function(a) { return a.plate === p; });
+      var isLeader = p === g.leader && g.leader_ratio >= 0.70;
+      var role     = isAlvo ? 'ALVO' : isLeader ? 'BATEDOR' : 'MEMBRO';
+      var roleBg   = isAlvo ? '#7c3aed' : isLeader ? '#dc2626' : '#374151';
+      var plateFg  = isAlvo ? '#c4b5fd' : isLeader ? '#f87171' : 'var(--text)';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);'
+        + 'border-radius:8px;padding:4px 10px;white-space:nowrap">'
+        + '<span style="font-family:monospace;font-size:.88rem;font-weight:800;color:' + plateFg + '">' + p + '</span>'
+        + '<span style="font-size:.62rem;font-weight:700;background:' + roleBg + ';color:#fff;padding:1px 6px;border-radius:99px">' + role + '</span>'
+        + '</span>';
+    }).join('');
+
     var missStr = noGpsCams.length
-      ? ' <span style="color:var(--muted);font-size:.74rem">(sem GPS: ' + noGpsCams.join(', ') + ')</span>' : '';
-    noGps.innerHTML = '<div style="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-      + '<span style="font-size:1.1rem">&#128101;</span>'
-      + '<span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:800;background:' + riscoBg + ';color:#fff">' + g.risco + '</span>'
-      + '<span style="font-size:.83rem"><strong style="color:#f59e0b">' + g.plates.join(' + ') + '</strong>'
-        + ' &mdash; <strong>' + g.padrao + '</strong>'
-        + ' &mdash; ' + points.length + ' câmera(s) mapeada(s)' + missStr + '</span>'
-      + '<button class="btn btn-outline btn-xs" onclick="_cgsVoltarAoDetalhe()">&#8592; Voltar ao Detalhe</button>'
-      + '<button class="btn btn-outline btn-xs" onclick="_limparTrajetoria()">&#10005; Limpar</button>'
+      ? '<div style="font-size:.72rem;color:var(--muted);margin-top:6px">&#9888; Sem GPS: ' + noGpsCams.join(', ') + '</div>'
+      : '';
+
+    // row helper
+    var row = function(icon, label, value) {
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)">'
+        + '<span style="font-size:.7rem;color:var(--muted);white-space:nowrap;padding-right:8px">' + icon + ' ' + label + '</span>'
+        + '<span style="font-size:.78rem;font-weight:700;color:var(--text);text-align:right">' + value + '</span>'
+        + '</div>';
+    };
+
+    noGps.innerHTML =
+      // ── cabeçalho do painel ──────────────────────────────────────
+      '<div style="background:var(--card2,var(--card));border:1px solid rgba(245,158,11,.35);border-radius:12px;overflow:hidden;margin-top:4px">'
+
+        // barra de ação
+        + '<div style="background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.25);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+          + '<div style="display:flex;align-items:center;gap:8px">'
+            + '<span style="font-size:.9rem">&#128101;</span>'
+            + '<span style="font-size:.8rem;font-weight:800;color:#f59e0b">Grupo Suspeito</span>'
+            + '<span style="font-size:.72rem;background:' + riscoBg + ';color:' + riscoColor + ';padding:2px 9px;border-radius:99px;font-weight:800">' + g.risco + '</span>'
+            + '<span style="font-size:.72rem;background:' + scoreBg + ';color:#fff;padding:2px 9px;border-radius:99px;font-weight:800">' + g.score + ' pts</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:6px">'
+            + '<button class="btn btn-outline btn-xs" onclick="_cgsVoltarAoDetalhe()">&#8592; Detalhe</button>'
+            + '<button class="btn btn-outline btn-xs" onclick="_limparTrajetoria()">&#10005; Limpar</button>'
+          + '</div>'
+        + '</div>'
+
+        // corpo do painel
+        + '<div style="padding:10px 14px">'
+
+          // ── placas ────────────────────────────────────────────────
+          + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;margin-bottom:6px">&#128663; Placas Envolvidas</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">' + placasBadges + '</div>'
+
+          // ── campos ────────────────────────────────────────────────
+          + row('&#127807;', 'Padrão',        g.padrao || '—')
+          + row('&#127942;', 'Líder / Batedor', (g.leader ? g.leader + (g.leader_ratio ? ' (' + Math.round(g.leader_ratio * 100) + '%)' : '') : '—'))
+          + row('&#128247;', 'Câmeras mapeadas', points.length + (noGpsCams.length ? ' / ' + (points.length + noGpsCams.length) + ' total' : ''))
+          + row('&#128197;', 'Primeiro horário', tFirst)
+          + row('&#128336;', 'Último horário',   tLast)
+
+          + missStr
+
+        + '</div>'
       + '</div>';
   }
 }
