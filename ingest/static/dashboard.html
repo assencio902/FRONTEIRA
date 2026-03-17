@@ -2944,6 +2944,23 @@
 
 <!-- MODAL VER ALVO (somente leitura) -->
 
+<!-- MODAL DETALHE DE GRUPO SUSPEITO -->
+<div class="modal-overlay" id="cgs-detalhe-modal" onclick="if(event.target===this)closeModal('cgs-detalhe-modal')">
+  <div class="modal modal-wide" style="max-width:960px;max-height:94vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <button onclick="closeModal('cgs-detalhe-modal')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:4px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap">&#8592; Voltar</button>
+        <h2 id="cgs-det-titulo" style="margin:0;font-size:1rem;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Detalhe do Grupo</h2>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button id="cgs-det-btn-comboio" onclick="_cgsDetAbrir()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128663;&#128663; Rel. Comboio</button>
+        <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
+      </div>
+    </div>
+    <div id="cgs-det-body" style="overflow-y:auto;flex:1;padding:16px 20px"></div>
+  </div>
+</div>
+
 <!-- MODAL RELATÓRIO OPERACIONAL DE ALVO RASTREADO -->
 <div class="modal-overlay" id="alvo-rel-modal" onclick="if(event.target===this)closeModal('alvo-rel-modal')">
   <div class="modal modal-wide" style="max-width:920px;max-height:92vh;display:flex;flex-direction:column">
@@ -3856,7 +3873,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal','cgs-detalhe-modal'].forEach(closeModal);
   }
 });
 
@@ -4618,12 +4635,222 @@ function _cgsRenderTable(items, total) {
   }).join('');
 }
 
+// ── Grupo Suspeito: detalhe completo ────────────────────────────────────────
+var _cgsCurrentGroup = null;
+
 function _cgsOpenDetalhe(groupId) {
   var group = _cgsAllGroups.find(function(g){ return g.id === groupId; });
   if (!group) return;
-  // Por enquanto, abre relatório de comboio com as placas do grupo
+  _cgsCurrentGroup = group;
+  _cgsBuildDetalhe(group);
+  openModal('cgs-detalhe-modal');
+}
+
+function _cgsDetAbrir() {
+  if (!_cgsCurrentGroup) return;
   var w = (document.getElementById('cgs-window') || {}).value || '24h';
-  openComboioReport(group.plates[0], group.plates, { window: w });
+  openComboioReport(_cgsCurrentGroup.plates[0], _cgsCurrentGroup.plates, { window: w });
+}
+
+function _cgsBuildDetalhe(g) {
+  // Título
+  var titulo = document.getElementById('cgs-det-titulo');
+  if (titulo) titulo.textContent = '&#128101; Grupo Suspeito \u2014 ' + g.plates.join(' + ');
+
+  // Score badge
+  var scoreBg    = g.score >= 80 ? '#ef4444' : g.score >= 40 ? '#d97706' : '#6b7280';
+  var riscoBg    = g.risco === 'ALTO' ? 'rgba(239,68,68,.18)' : g.risco === '\u00c9DIO' ? 'rgba(245,158,11,.15)' : 'rgba(107,114,128,.15)';
+  var riscoBorder= g.risco === 'ALTO' ? 'rgba(239,68,68,.5)'  : g.risco === 'M\u00c9DIO' ? 'rgba(245,158,11,.4)'  : 'rgba(107,114,128,.3)';
+  var riscoIcon  = g.risco === 'ALTO' ? '&#128293;' : g.risco === 'M\u00c9DIO' ? '&#9888;' : '&#128994;';
+  var riscoColor = g.risco === 'ALTO' ? '#fca5a5' : g.risco === 'M\u00c9DIO' ? '#fcd34d' : '#86efac';
+
+  // Helpers
+  var dash = '<span style="color:var(--muted)">&mdash;</span>';
+  var fmtTs = function(iso) {
+    if (!iso) return dash;
+    return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  };
+  var fmtSec = function(s) {
+    if (!s) return dash;
+    s = Math.round(s);
+    if (s < 60)   return s + 's';
+    if (s < 3600) { var m = Math.floor(s/60); return m + ' min' + (s%60 ? ' ' + s%60 + 's' : ''); }
+    var h = Math.floor(s/3600); var rm = Math.floor((s%3600)/60);
+    return h + 'h' + (rm ? ' ' + rm + 'min' : '');
+  };
+
+  // ── 1. Header: placas + score + padrão + risco ───────────────────────────
+  var placasHtml = g.plates.map(function(p) {
+    var isAlvo   = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
+    var isLeader = p === g.leader && g.leader_ratio >= 0.70;
+    var roleLabel = isAlvo ? '<span style="font-size:.65rem;font-weight:700;background:#7c3aed;color:#fff;padding:1px 6px;border-radius:99px">ALVO</span>'
+      : isLeader ? '<span style="font-size:.65rem;font-weight:700;background:#dc2626;color:#fff;padding:1px 6px;border-radius:99px">BATEDOR</span>'
+      : '<span style="font-size:.65rem;font-weight:700;background:#374151;color:#d1d5db;padding:1px 6px;border-radius:99px">MEMBRO</span>';
+    var plateColor = isAlvo ? '#c4b5fd' : isLeader ? '#f87171' : 'var(--text)';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:100px">'
+      + '<span style="font-family:monospace;font-size:1.1rem;font-weight:800;letter-spacing:.1em;color:' + plateColor + ';white-space:nowrap">' + p + '</span>'
+      + roleLabel
+      + (isAlvo && g.alvos ? (function(){
+          var a = g.alvos.find(function(x){ return x.plate === p; });
+          return a && a.descricao ? '<span style="font-size:.68rem;color:var(--muted);text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + a.descricao + '">' + a.descricao + '</span>' : '';
+        })() : '')
+      + '</div>';
+  }).join('');
+
+  var headerHtml = '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;margin-bottom:18px">'
+
+    // Placas
+    + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:8px">&#128663; Placas Envolvidas</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">' + placasHtml + '</div>'
+    + '</div>'
+
+    // Cards de métricas
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0">'
+
+      // Risco
+      + '<div style="background:' + riscoBg + ';border:1px solid ' + riscoBorder + ';border-radius:10px;padding:10px 16px;text-align:center;min-width:90px">'
+        + '<div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Risco</div>'
+        + '<div style="font-size:.88rem;font-weight:800;color:' + riscoColor + ';white-space:nowrap">' + riscoIcon + ' ' + g.risco + '</div>'
+        + '<div style="margin-top:4px"><span style="font-size:.82rem;font-weight:700;background:' + scoreBg + ';color:#fff;padding:2px 10px;border-radius:99px">' + g.score + '</span></div>'
+      + '</div>'
+
+      // Padrão
+      + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:90px">'
+        + '<div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Padr\u00e3o</div>'
+        + '<div style="font-size:.82rem;font-weight:800;color:var(--text)">' + g.padrao + '</div>'
+        + '<div style="font-size:.68rem;color:var(--muted);margin-top:3px">' + g.group_size + ' ve\u00edculos</div>'
+      + '</div>'
+
+      // Coocorrências
+      + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:80px">'
+        + '<div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Cooc.</div>'
+        + '<div style="font-size:1.2rem;font-weight:800;color:var(--accent2)">' + g.cameras_count + 'x</div>'
+        + '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">c\u00e2meras</div>'
+      + '</div>'
+
+      // Dias distintos
+      + '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;text-align:center;min-width:80px">'
+        + '<div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Dias</div>'
+        + '<div style="font-size:1.2rem;font-weight:800;color:' + (g.distinct_days >= 5 ? '#ef4444' : g.distinct_days >= 2 ? '#f59e0b' : 'var(--text)') + '">' + (g.distinct_days || 0) + '</div>'
+        + '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">distintos</div>'
+      + '</div>'
+
+    + '</div>'
+  + '</div>';
+
+  // ── 2. Grade de campos ────────────────────────────────────────────────────
+  var mkField = function(label, value) {
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px">'
+      + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:4px">' + label + '</div>'
+      + '<div style="font-size:.85rem;font-weight:600;color:var(--text)">' + value + '</div>'
+    + '</div>';
+  };
+
+  var locsHtml = (g.cameras_names && g.cameras_names.length)
+    ? g.cameras_names.map(function(n){ return '<span style="font-size:.76rem;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;white-space:nowrap">' + n + '</span>'; }).join(' ')
+    : dash;
+
+  var alvosHtml = (g.alvos && g.alvos.length)
+    ? g.alvos.map(function(a){
+        return '<span style="font-size:.76rem;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:2px 8px;color:#c4b5fd;white-space:nowrap">&#127919; ' + a.plate + (a.descricao ? ' &mdash; ' + a.descricao : '') + '</span>';
+      }).join('<br style="margin:2px">')
+    : dash;
+
+  var scoreReasonsHtml = (g.score_reason && g.score_reason.length)
+    ? g.score_reason.map(function(r){ return '<li style="font-size:.76rem;color:var(--muted)">' + r + '</li>'; }).join('')
+    : '<li style="font-size:.76rem;color:var(--muted)">Sem breakdown dispon\u00edvel</li>';
+
+  var fieldsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:18px">'
+    + mkField('&#128197; Primeiro visto', fmtTs(g.first_seen))
+    + mkField('&#128336; \u00daltima vez juntos', fmtTs(g.last_seen))
+    + mkField('&#128663; Span da viagem', fmtSec(g.trip_span_sec))
+    + mkField('&#127942; L\u00edder / Batedor', g.leader || dash)
+    + mkField('&#128198; Dias distintos (90d)', g.distinct_days ? String(g.distinct_days) + ' dias' : dash)
+    + mkField('&#128247; C\u00e2meras em comum', String(g.cameras_count))
+  + '</div>';
+
+  var locFieldHtml = '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+    + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:6px">&#128205; Localidades</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:5px">' + locsHtml + '</div>'
+  + '</div>';
+
+  var alvosFieldHtml = g.alvos && g.alvos.length
+    ? '<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:10px 14px;margin-bottom:8px">'
+        + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:#c4b5fd;font-weight:700;margin-bottom:6px">&#127919; Alvos Cadastrados no Grupo</div>'
+        + '<div style="display:flex;flex-direction:column;gap:4px">' + alvosHtml + '</div>'
+      + '</div>'
+    : '';
+
+  var scoreHtml = '<details style="margin-bottom:18px">'
+    + '<summary style="font-size:.8rem;font-weight:700;color:var(--accent2);cursor:pointer;padding:4px 0">&#128202; Breakdown do Score (' + g.score + ' pts)</summary>'
+    + '<ul style="margin:8px 0 0 16px;padding:0;list-style:disc">' + scoreReasonsHtml + '</ul>'
+  + '</details>';
+
+  // ── 3. Linha do tempo de passagens conjuntas ──────────────────────────────
+  var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
+    return new Date(a.ts_min) - new Date(b.ts_min);
+  });
+
+  var timelineHtml;
+  if (!camsCnf.length) {
+    timelineHtml = '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">&mdash; Sem passagens registradas.</div>';
+  } else {
+    var prevTs = null;
+    var rows = camsCnf.map(function(c, i) {
+      var tsMin = c.ts_min ? new Date(c.ts_min) : null;
+      var tsMax = c.ts_max ? new Date(c.ts_max) : null;
+      var tsStr = tsMin ? tsMin.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
+      var spanStr = c.span_sec ? fmtSec(c.span_sec) : '0s';
+      var ordem = c.plate_order && c.plate_order.length
+        ? c.plate_order.map(function(p,idx){
+            var isAlvo   = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
+            var isLeader = p === g.leader;
+            var color = isAlvo ? '#c4b5fd' : isLeader ? '#f87171' : 'var(--text)';
+            return '<span style="font-family:monospace;font-size:.8rem;font-weight:700;color:' + color + '">' + (idx+1) + '\u00ba ' + p + '</span>';
+          }).join(' \u2192 ')
+        : '<span style="color:var(--muted)">&mdash;</span>';
+
+      // intervalo desde câmera anterior
+      var intervalHtml = '';
+      if (prevTs && tsMin) {
+        var delta = (tsMin - prevTs) / 1000;
+        intervalHtml = '<div style="display:flex;align-items:center;gap:4px;padding:3px 0 3px 18px">'
+          + '<div style="width:1px;height:16px;background:var(--border);margin-left:5px"></div>'
+          + '<span style="font-size:.7rem;color:var(--muted);font-style:italic">&#8595; ' + fmtSec(delta) + ' depois</span>'
+          + '</div>';
+      }
+      prevTs = tsMax || tsMin;
+
+      var dotColor = i === 0 ? '#22c55e' : i === camsCnf.length-1 ? '#ef4444' : 'var(--primary)';
+      return intervalHtml
+        + '<div style="display:flex;gap:10px;align-items:flex-start">'
+          + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:4px">'
+            + '<div style="width:12px;height:12px;border-radius:50%;background:' + dotColor + ';border:2px solid rgba(255,255,255,.15);flex-shrink:0"></div>'
+          + '</div>'
+          + '<div style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 13px;margin-bottom:0">'
+            + '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:5px">'
+              + '<span style="font-size:.84rem;font-weight:700;color:var(--text)">' + (c.cam_nome || c.camera_id || '\u2014') + '</span>'
+              + '<span style="font-size:.72rem;color:var(--muted)">&#128336; ' + tsStr + '</span>'
+              + '<span style="font-size:.72rem;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.25);border-radius:99px;padding:1px 7px;color:#fde68a">span: ' + spanStr + '</span>'
+            + '</div>'
+            + '<div style="font-size:.76rem;color:var(--muted)">Ordem: ' + ordem + '</div>'
+          + '</div>'
+        + '</div>';
+    }).join('');
+
+    timelineHtml = '<div style="padding:4px 0">' + rows + '</div>';
+  }
+
+  // ── 4. Monta tudo ─────────────────────────────────────────────────────────
+  document.getElementById('cgs-det-body').innerHTML =
+    headerHtml
+    + fieldsHtml
+    + locFieldHtml
+    + alvosFieldHtml
+    + scoreHtml
+    + '<div style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">&#128203; Linha do Tempo &mdash; Passagens Conjuntas</div>'
+    + timelineHtml;
 }
 
 // ===================================================================
