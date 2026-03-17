@@ -3848,6 +3848,250 @@ def batedor_trajeto(
 
 
 # ===========================
+# CENTRAL — GRUPOS SUSPEITOS
+# ===========================
+
+@app.get("/api/central/grupos_suspeitos")
+def central_grupos_suspeitos(
+    window:      str = "24h",
+    co_window:   int = 300,
+    min_cameras: int = 2,
+    max_trip_gap: int = 86400,   # 24 h — janela operacional
+    group_sizes: str = "2,3+",
+    limit:       int = 100,
+    request:     Request = None,
+):
+    """
+    Endpoint para a Central de Descoberta Automática de Grupos Suspeitos.
+
+    Agrega grupos de comboio, enriquece com:
+      - score de risco composto
+      - flag is_alvo / alvo info para cada placa do grupo
+      - dias distintos de aparecimento
+      - localidades (câmeras únicas)
+      - padrão detectado (BATEDOR / COMBOIO / DUPLA etc.)
+      - classificação de risco (ALTO / MÉDIO / BAIXO)
+
+    Retorna lista ordenada do mais suspeito ao menos suspeito.
+    """
+    from collections import Counter
+
+    window_min = _parse_window_to_minutes(window)
+    co_win_s   = max(1, min(1000, int(co_window)))
+    min_cam    = max(2, int(min_cameras))
+    trip_gap   = max(1, int(max_trip_gap))
+    lim        = max(1, min(500, int(limit)))
+    t_to       = _utcnow()
+    t_from     = t_to - timedelta(minutes=window_min)
+
+    # valid group_sizes
+    valid_sizes: set = set()
+    allow_3plus = False
+    for s in str(group_sizes).split(","):
+        s = s.strip()
+        if s == "2":
+            valid_sizes.add(2)
+        elif s in ("3+", "3"):
+            allow_3plus = True
+    if not valid_sizes and not allow_3plus:
+        valid_sizes = {2}
+        allow_3plus = True
+
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # 1. Detecta grupos
+            raw_groups = _detect_convoy_groups(
+                cur, t_from, t_to,
+                window_s=co_win_s,
+                max_trip_gap_s=trip_gap,
+                min_cameras=min_cam,
+            )
+
+            # 2. Filtra tamanhos
+            if allow_3plus:
+                raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes or g["group_size"] >= 3]
+            else:
+                raw_groups = [g for g in raw_groups if g["group_size"] in valid_sizes]
+
+            # 3. Busca alvos cadastrados
+            cur.execute("SELECT plate, descricao FROM alvos")
+            alvo_map: dict = {row[0]: row[1] for row in cur.fetchall()}
+
+            # 4. Conta dias distintos por par de placas na janela 90d
+            t_from_hist = t_to - timedelta(days=90)
+            # Para cada grupo, conta quantos dias distintos as placas apareceram juntas
+            # Usa câmeras_confirmadas já presentes (dias dentro da janela do request)
+            # Para dias distintos históricos, busca co-detecção por dia
+            group_plates_all = set()
+            for g in raw_groups:
+                group_plates_all.update(g["plates"])
+
+            days_together_map: dict = {}  # frozenset(plates) -> distinct_days
+            if group_plates_all:
+                placeholders = ",".join(["%s"] * len(group_plates_all))
+                cur.execute(f"""
+                    SELECT
+                        camera_id,
+                        plate,
+                        DATE(COALESCE(occurred_at, ts)) AS day
+                    FROM lpr_events
+                    WHERE plate IN ({placeholders})
+                      AND COALESCE(occurred_at, ts) BETWEEN %s AND %s
+                """, list(group_plates_all) + [t_from_hist, t_to])
+                hist_rows = cur.fetchall()
+                # cam -> day -> set of plates
+                cam_day_plates: dict = {}
+                for cam_id, plate, day in hist_rows:
+                    key = (cam_id, str(day))
+                    if key not in cam_day_plates:
+                        cam_day_plates[key] = set()
+                    cam_day_plates[key].add(plate)
+
+                for g in raw_groups:
+                    plates_set = frozenset(g["plates"])
+                    distinct_days = set()
+                    for (cam_id, day), plates_present in cam_day_plates.items():
+                        if plates_set.issubset(plates_present):
+                            distinct_days.add(day)
+                    days_together_map[plates_set] = len(distinct_days)
+
+    # 5. Enriquece e calcula score
+    result = []
+    for g in raw_groups:
+        plates      = g["plates"]
+        plates_set  = frozenset(plates)
+        cams_count  = g["cameras_count"]
+        trip_sec    = g["trip_span_sec"]
+        first_seen  = g["first_seen"]
+        last_seen   = g["last_seen"]
+        cams_names  = list({c["cam_nome"] for c in g["cameras_confirmed"]})
+        distinct_days = days_together_map.get(plates_set, 0)
+
+        # Liderança
+        front_count: dict = Counter()
+        for cam in g["cameras_confirmed"]:
+            if cam.get("plate_order"):
+                front_count[cam["plate_order"][0]] += 1
+        leader = front_count.most_common(1)[0][0] if front_count else plates[0]
+        leader_ratio_val = front_count.get(leader, 0) / cams_count if cams_count else 0
+
+        # Padrão detectado
+        gs = g["group_size"]
+        if gs == 2:
+            if leader_ratio_val >= 0.70:
+                padrao = "BATEDOR"
+            else:
+                padrao = "DUPLA"
+        elif gs == 3:
+            if leader_ratio_val >= 0.70:
+                padrao = "COMBOIO 3"
+            else:
+                padrao = "GRUPO 3"
+        else:
+            padrao = f"GRUPO {gs}"
+
+        # Alvos no grupo
+        alvos_no_grupo = [{"plate": p, "descricao": alvo_map[p]} for p in plates if p in alvo_map]
+
+        # Score de risco
+        score = 0
+        score_reason = []
+
+        # a) câmeras em comum
+        if cams_count >= 5:
+            score += 40; score_reason.append(f"{cams_count} câm. em comum (+40)")
+        elif cams_count >= 3:
+            score += 25; score_reason.append(f"{cams_count} câm. em comum (+25)")
+        else:
+            score += 10; score_reason.append(f"{cams_count} câm. em comum (+10)")
+
+        # b) dias distintos históricos
+        if distinct_days >= 10:
+            score += 35; score_reason.append(f"{distinct_days} dias distintos (+35)")
+        elif distinct_days >= 5:
+            score += 25; score_reason.append(f"{distinct_days} dias distintos (+25)")
+        elif distinct_days >= 2:
+            score += 15; score_reason.append(f"{distinct_days} dias distintos (+15)")
+        elif distinct_days == 1:
+            score += 5;  score_reason.append("1 dia (+5)")
+
+        # c) padrão de batedor
+        if padrao == "BATEDOR" and leader_ratio_val >= 0.80:
+            score += 20; score_reason.append("batedor consistente (+20)")
+        elif padrao in ("BATEDOR", "COMBOIO 3"):
+            score += 10; score_reason.append("padrão hierárquico (+10)")
+
+        # d) grupo de 3+
+        if gs >= 3:
+            score += 10; score_reason.append(f"grupo de {gs} veículos (+10)")
+
+        # e) alvo cadastrado
+        if alvos_no_grupo:
+            score += 30 * len(alvos_no_grupo)
+            score_reason.append(f"{len(alvos_no_grupo)} alvo(s) cadastrado(s) (+{30*len(alvos_no_grupo)})")
+
+        # f) recência (última vez juntos)
+        try:
+            last_dt = None
+            if last_seen:
+                last_dt = datetime.fromisoformat(last_seen.replace("Z", "+00:00"))
+            if last_dt:
+                age_h = (t_to - last_dt).total_seconds() / 3600
+                if age_h <= 2:
+                    score += 20; score_reason.append("vistos há < 2h (+20)")
+                elif age_h <= 24:
+                    score += 10; score_reason.append("vistos há < 24h (+10)")
+                elif age_h <= 72:
+                    score += 5; score_reason.append("vistos há < 72h (+5)")
+        except Exception:
+            pass
+
+        # g) mudança de localidade
+        if cams_count >= 3:
+            unique_locs = len(set(cams_names))
+            if unique_locs >= 3:
+                score += 10; score_reason.append(f"{unique_locs} localidades (+10)")
+
+        # Classificação de risco
+        if score >= 80:
+            risco = "ALTO"
+        elif score >= 40:
+            risco = "MÉDIO"
+        else:
+            risco = "BAIXO"
+
+        result.append({
+            "id":             "_".join(sorted(plates)),
+            "plates":         plates,
+            "group_size":     gs,
+            "padrao":         padrao,
+            "cameras_count":  cams_count,
+            "cameras_names":  cams_names,
+            "trip_span_sec":  trip_sec,
+            "distinct_days":  distinct_days,
+            "first_seen":     first_seen,
+            "last_seen":      last_seen,
+            "leader":         leader,
+            "leader_ratio":   round(leader_ratio_val, 2),
+            "alvos":          alvos_no_grupo,
+            "score":          min(score, 200),
+            "score_reason":   score_reason,
+            "risco":          risco,
+            "cameras_confirmed": g["cameras_confirmed"],
+        })
+
+    result.sort(key=lambda x: x["score"], reverse=True)
+
+    return {
+        "groups":  result[:lim],
+        "total":   len(result),
+        "window":  window,
+        "t_from":  t_from.isoformat(),
+        "t_to":    t_to.isoformat(),
+    }
+
+
+# ===========================
 # BATEDOR — GRUPOS EM COMBOIO
 # ===========================
 
