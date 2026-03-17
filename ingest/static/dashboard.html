@@ -2954,10 +2954,28 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <button id="cgs-det-btn-comboio" onclick="_cgsDetAbrir()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128663;&#128663; Rel. Comboio</button>
+        <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
         <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
       </div>
     </div>
     <div id="cgs-det-body" style="overflow-y:auto;flex:1;padding:16px 20px"></div>
+  </div>
+</div>
+
+<!-- MODAL RELATÓRIO DO GRUPO SUSPEITO -->
+<div class="modal-overlay" id="cgs-rel-modal" onclick="if(event.target===this)closeModal('cgs-rel-modal')">
+  <div class="modal modal-wide" style="max-width:920px;max-height:94vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:1rem;display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
+        &#128196; Relatório do Grupo &mdash; <span id="cgs-rel-titulo" style="font-weight:800"></span>
+      </h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button onclick="_cgsExportarPDF()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128196; Exportar PDF</button>
+        <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
+        <button class="modal-close" onclick="closeModal('cgs-rel-modal')">&times;</button>
+      </div>
+    </div>
+    <div id="cgs-rel-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
   </div>
 </div>
 
@@ -3873,7 +3891,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal','cgs-detalhe-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal','cgs-detalhe-modal','cgs-rel-modal'].forEach(closeModal);
   }
 });
 
@@ -4851,6 +4869,208 @@ function _cgsBuildDetalhe(g) {
     + scoreHtml
     + '<div style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">&#128203; Linha do Tempo &mdash; Passagens Conjuntas</div>'
     + timelineHtml;
+}
+
+// ── Relatório do Grupo Suspeito ──────────────────────────────────────────────
+function _cgsGerarRelatorio() {
+  var g = _cgsCurrentGroup;
+  if (!g) return;
+
+  var tituloEl = document.getElementById('cgs-rel-titulo');
+  if (tituloEl) tituloEl.textContent = g.plates.join(' + ');
+
+  var dash = '—';
+  var fmtTs = function(iso) {
+    if (!iso) return dash;
+    return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  var fmtSec = function(s) {
+    if (!s) return dash;
+    s = Math.round(s);
+    if (s < 60)   return s + 's';
+    if (s < 3600) { var m = Math.floor(s/60); return m + ' min' + (s%60 ? ' ' + (s%60) + 's' : ''); }
+    var h = Math.floor(s/3600), rm = Math.floor((s%3600)/60);
+    return h + 'h' + (rm ? ' ' + rm + 'min' : '');
+  };
+
+  var now = new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // cabeçalho institucional
+  var hdr = '<div id="cgs-rel-print" style="color:#111">'  // wrapper print
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:20px">'
+      + '<div>'
+        + '<div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;font-weight:700;margin-bottom:2px">Sistema de Monitoramento de Fronteira</div>'
+        + '<div style="font-size:1.3rem;font-weight:800;color:#111">Relatório de Grupo Suspeito</div>'
+        + '<div style="font-size:.8rem;color:#374151;margin-top:4px">Placas: <strong>' + g.plates.join(' · ') + '</strong></div>'
+      + '</div>'
+      + '<div style="text-align:right">'
+        + '<div style="font-size:.68rem;color:#6b7280">Gerado em</div>'
+        + '<div style="font-size:.78rem;font-weight:700;color:#374151">' + now + '</div>'
+        + '<div style="margin-top:6px;display:inline-block;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:800;background:' + (g.risco==='ALTO'?'#dc2626':g.risco==='MÉDIO'?'#d97706':'#6b7280') + ';color:#fff">' + g.risco + ' · ' + g.score + ' pts</div>'
+      + '</div>'
+    + '</div>';
+
+  // seção helper
+  var sec = function(title, body) {
+    return '<div style="margin-bottom:14px">'
+      + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#1d4ed8;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin-bottom:8px">' + title + '</div>'
+      + body
+    + '</div>';
+  };
+  var field = function(label, value) {
+    return '<tr><td style="background:#f9fafb;font-weight:700;font-size:.76rem;color:#374151;white-space:nowrap;padding:6px 10px;width:38%;border:1px solid #e5e7eb">' + label + '</td>'
+      + '<td style="font-size:.82rem;padding:6px 10px;border:1px solid #e5e7eb;color:#111">' + (value || dash) + '</td></tr>';
+  };
+
+  // 1. Placas
+  var placasRows = g.plates.map(function(p) {
+    var isAlvo   = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
+    var isLeader = p === g.leader && g.leader_ratio >= 0.70;
+    var role = isAlvo ? 'ALVO' : isLeader ? 'BATEDOR' : 'MEMBRO';
+    var roleColor = isAlvo ? '#7c3aed' : isLeader ? '#dc2626' : '#374151';
+    var descr = '';
+    if (isAlvo && g.alvos) {
+      var a = g.alvos.find(function(x){ return x.plate === p; });
+      if (a && a.descricao) descr = a.descricao;
+    }
+    return '<tr>'
+      + '<td style="font-family:monospace;font-size:.9rem;font-weight:800;padding:6px 10px;border:1px solid #e5e7eb">' + p + '</td>'
+      + '<td style="padding:6px 10px;border:1px solid #e5e7eb"><span style="font-size:.7rem;font-weight:800;background:' + roleColor + ';color:#fff;padding:2px 8px;border-radius:99px">' + role + '</span></td>'
+      + '<td style="font-size:.78rem;padding:6px 10px;border:1px solid #e5e7eb;color:#374151">' + (descr || dash) + '</td>'
+    + '</tr>';
+  }).join('');
+
+  var placasTable = '<table style="width:100%;border-collapse:collapse">'
+    + '<thead><tr>'
+      + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Placa</th>'
+      + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Papel</th>'
+      + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Cadastro</th>'
+    + '</tr></thead>'
+    + '<tbody>' + placasRows + '</tbody>'
+  + '</table>';
+
+  // 2. Dados gerais
+  var locStr = (g.cameras_names && g.cameras_names.length) ? g.cameras_names.join(', ') : dash;
+  var alvosStr = (g.alvos && g.alvos.length)
+    ? g.alvos.map(function(a){ return a.plate + (a.descricao ? ' — ' + a.descricao : ''); }).join('; ')
+    : dash;
+
+  var dadosTable = '<table style="width:100%;border-collapse:collapse"><tbody>'
+    + field('Padrão detectado', g.padrao || dash)
+    + field('Risco', g.risco || dash)
+    + field('Score de ameaça', g.score != null ? String(g.score) + ' pts' : dash)
+    + field('Nº de veículos', g.group_size ? String(g.group_size) : dash)
+    + field('Coocorrências (câmeras)', g.cameras_count ? String(g.cameras_count) + 'x' : dash)
+    + field('Câmeras em comum', String(g.cameras_count || dash))
+    + field('Localidades', locStr)
+    + field('Primeira vez juntos', fmtTs(g.first_seen))
+    + field('Última vez juntos', fmtTs(g.last_seen))
+    + field('Span da viagem', fmtSec(g.trip_span_sec))
+    + field('Dias distintos (90d)', g.distinct_days ? String(g.distinct_days) + ' dias' : dash)
+    + field('Veículo líder / Batedor', g.leader || dash)
+    + field('Alvos cadastrados', alvosStr)
+  + '</tbody></table>';
+
+  // 3. Breakdown do score
+  var scoreBody = (g.score_reason && g.score_reason.length)
+    ? '<ul style="margin:0;padding-left:18px">' + g.score_reason.map(function(r){ return '<li style="font-size:.78rem;color:#374151;padding:2px 0">' + r + '</li>'; }).join('') + '</ul>'
+    : '<span style="color:#6b7280;font-size:.78rem">' + dash + '</span>';
+
+  // 4. Linha do tempo
+  var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
+    return new Date(a.ts_min) - new Date(b.ts_min);
+  });
+
+  var timelineBody;
+  if (!camsCnf.length) {
+    timelineBody = '<div style="font-size:.82rem;color:#6b7280">' + dash + '</div>';
+  } else {
+    var tlRows = camsCnf.map(function(c, i) {
+      var tsStr = c.ts_min ? new Date(c.ts_min).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : dash;
+      var ordem = c.plate_order && c.plate_order.length
+        ? c.plate_order.map(function(p,idx){
+            var isLeader = p === g.leader;
+            return (idx+1) + 'º ' + p + (isLeader ? ' [BATEDOR]' : '');
+          }).join(' → ')
+        : dash;
+      return '<tr>'
+        + '<td style="font-size:.76rem;font-weight:700;padding:6px 10px;border:1px solid #e5e7eb;text-align:center;color:#6b7280">' + (i+1) + '</td>'
+        + '<td style="font-size:.8rem;font-weight:700;padding:6px 10px;border:1px solid #e5e7eb">' + (c.cam_nome || c.camera_id || dash) + '</td>'
+        + '<td style="font-size:.78rem;padding:6px 10px;border:1px solid #e5e7eb;white-space:nowrap">' + tsStr + '</td>'
+        + '<td style="font-size:.76rem;padding:6px 10px;border:1px solid #e5e7eb;white-space:nowrap">' + (c.span_sec ? fmtSec(c.span_sec) : '0s') + '</td>'
+        + '<td style="font-size:.74rem;padding:6px 10px;border:1px solid #e5e7eb;color:#374151">' + ordem + '</td>'
+      + '</tr>';
+    }).join('');
+    timelineBody = '<table style="width:100%;border-collapse:collapse">'
+      + '<thead><tr>'
+        + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb;width:36px">#</th>'
+        + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Câmera</th>'
+        + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Horário</th>'
+        + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Span</th>'
+        + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Ordem das placas</th>'
+      + '</tr></thead>'
+      + '<tbody>' + tlRows + '</tbody>'
+    + '</table>';
+  }
+
+  // monta body completo
+  document.getElementById('cgs-rel-body').innerHTML =
+    hdr
+    + sec('1. Placas Envolvidas', placasTable)
+    + sec('2. Dados Gerais do Grupo', dadosTable)
+    + sec('3. Breakdown do Score', scoreBody)
+    + sec('4. Linha do Tempo — Passagens Conjuntas', timelineBody)
+    + '<div style="margin-top:18px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:.68rem;color:#9ca3af;text-align:right">Gerado em ' + now + ' · Sistema BPFRON Monitoramento</div>'
+    + '</div>'; // fecha cgs-rel-print
+
+  // injetar estilo de impressão uma vez
+  if (!document.getElementById('cgs-rel-print-style')) {
+    var s = document.createElement('style');
+    s.id = 'cgs-rel-print-style';
+    s.textContent = '@media print{'
+      + 'body > *:not(#cgs-rel-modal){display:none!important}'
+      + '#cgs-rel-modal{display:block!important;position:static!important;background:none!important;padding:0!important}'
+      + '#cgs-rel-modal .modal{max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important}'
+      + '#cgs-rel-modal .modal-header{display:none!important}'
+      + '#cgs-rel-print{color:#000!important}'
+      + '}';
+    document.head.appendChild(s);
+  }
+
+  openModal('cgs-rel-modal');
+}
+
+function _cgsExportarPDF() {
+  var body = document.getElementById('cgs-rel-body');
+  if (!body) return;
+  var g = _cgsCurrentGroup;
+  var nome = (g ? g.plates.join('_') : 'grupo').replace(/[^A-Z0-9_]/gi, '_');
+  var conteudo = body.innerHTML;
+  var win = window.open('', '_blank', 'width=950,height=720');
+  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
+    + '<meta charset="utf-8">'
+    + '<title>Relatorio_Grupo_' + nome + '</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'th,td{padding:7px 10px;font-size:12px}'
+    + 'th{background:#f3f4f6;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151;text-align:left}'
+    + 'tr{border-bottom:1px solid #e5e7eb}'
+    + '.no-print{display:none}'
+    + '@page{size:A4 portrait;margin:14mm 12mm}'
+    + '@media print{body{padding:0}.no-print{display:none!important}}'
+    + '</style>'
+    + '</head><body>'
+    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
+      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
+      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
+    + '</div>'
+    + conteudo
+    + '</body></html>');
+  win.document.close();
+  win.focus();
 }
 
 // ===================================================================
