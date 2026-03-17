@@ -4631,7 +4631,15 @@ function _cgsRenderTable(items, total) {
     var scoreBg = g.score >= 80 ? '#ef4444' : g.score >= 40 ? '#d97706' : '#6b7280';
     var scoreHtml = '<span style="font-size:.78rem;font-weight:800;background:' + scoreBg + ';color:#fff;padding:2px 9px;border-radius:99px">' + g.score + '</span>';
 
-    var rowStyle = g.risco === 'ALTO' ? 'background:rgba(239,68,68,.05)' : g.alvos && g.alvos.length ? 'background:rgba(139,92,246,.05)' : '';
+    var tcBadgesHtml = '';
+    if (g.threat_center && g.threat_center.threat_badges && g.threat_center.threat_badges.length) {
+      tcBadgesHtml = g.threat_center.threat_badges.map(function(badge) {
+        var isLider = badge === 'LÍDER_É_ALVO';
+        return '<br><span style="font-size:.6rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:1px 5px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO NO GRUPO') + '</span>';
+      }).join('');
+    }
+
+    var rowStyle = g.risco === 'ALTO' ? 'background:rgba(239,68,68,.05)' : (g.threat_center && g.threat_center.matched_target) || (g.alvos && g.alvos.length) ? 'background:rgba(139,92,246,.05)' : '';
 
     // Ações
     var safeId  = (g.id || '').replace(/'/g,"\\'");
@@ -4648,7 +4656,7 @@ function _cgsRenderTable(items, total) {
         + '<span style="font-size:.72rem;color:var(--muted)">c\u00e2m.</span></td>'
       + '<td>' + lastHtml + '</td>'
       + '<td style="font-size:.76rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + locs.join(', ') + '">' + locText + '</td>'
-      + '<td style="text-align:center">' + _cgsRiscoBadge(g.risco) + '<br>' + scoreHtml + '</td>'
+      + '<td style="text-align:center">' + _cgsRiscoBadge(g.risco) + '<br>' + scoreHtml + tcBadgesHtml + '</td>'
       + '<td style="white-space:nowrap">' + ações + '</td>'
       + '</tr>';
   }).join('');
@@ -4806,6 +4814,28 @@ function _cgsBuildDetalhe(g) {
     + '<ul style="margin:8px 0 0 16px;padding:0;list-style:disc">' + scoreReasonsHtml + '</ul>'
   + '</details>';
 
+  // ── Vínculo com alvo (Phase 1 — threat_center) ────────────────────────────
+  var tcAlertHtml = '';
+  if (g.threat_center && g.threat_center.matched_target) {
+    var tc = g.threat_center;
+    var tcBadges = tc.threat_badges.map(function(badge) {
+      var isLider = badge === 'LÍDER_É_ALVO';
+      return '<span style="font-size:.72rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 10px;border-radius:99px">'
+        + (isLider ? '\u2605 L\u00cdDER \u00c9 ALVO' : '\u26a1 ALVO NO GRUPO') + '</span>';
+    }).join(' ');
+    var tcPlates = tc.matched_plates && tc.matched_plates.length
+      ? '<span style="font-size:.76rem;color:#c4b5fd;margin-left:6px">Placas: <strong>' + tc.matched_plates.join(', ') + '</strong></span>'
+      : '';
+    tcAlertHtml = '<div style="background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.45);border-radius:10px;padding:10px 16px;margin-bottom:14px">'
+      + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">'
+        + '<span style="font-size:.95rem">&#127919;</span>'
+        + '<span style="font-size:.82rem;font-weight:800;color:#c4b5fd;letter-spacing:.03em">V\u00cdNCULO COM ALVO CADASTRADO</span>'
+        + tcPlates
+      + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:6px">' + tcBadges + '</div>'
+    + '</div>';
+  }
+
   // ── 3. Linha do tempo de passagens conjuntas ──────────────────────────────
   var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
     return new Date(a.ts_min) - new Date(b.ts_min);
@@ -4864,6 +4894,7 @@ function _cgsBuildDetalhe(g) {
   // ── 4. Monta tudo ─────────────────────────────────────────────────────────
   document.getElementById('cgs-det-body').innerHTML =
     headerHtml
+    + tcAlertHtml
     + fieldsHtml
     + locFieldHtml
     + alvosFieldHtml
@@ -4977,6 +5008,24 @@ function _cgsGerarRelatorio() {
     ? '<ul style="margin:0;padding-left:18px">' + g.score_reason.map(function(r){ return '<li style="font-size:.78rem;color:#374151;padding:2px 0">' + r + '</li>'; }).join('') + '</ul>'
     : '<span style="color:#6b7280;font-size:.78rem">' + dash + '</span>';
 
+  // 3b. Vínculos com Alvos — Fase 1 (threat_center)
+  var tcBody;
+  if (g.threat_center && g.threat_center.matched_target) {
+    var _tc = g.threat_center;
+    var _tcBadges = _tc.threat_badges.map(function(b) {
+      var isLider = b === 'LÍDER_É_ALVO';
+      return '<span style="font-size:.7rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 8px;border-radius:99px">' + (isLider ? 'L\u00cdDER \u00c9 ALVO' : 'ALVO NO GRUPO') + '</span>';
+    }).join(' ');
+    tcBody = '<table style="width:100%;border-collapse:collapse"><tbody>'
+      + field('Badges ativados', _tcBadges)
+      + field('Tipo de correspondência', _tc.match_type || dash)
+      + field('Placas alvo correspondentes', _tc.matched_plates && _tc.matched_plates.length ? _tc.matched_plates.join(', ') : dash)
+      + field('Acréscimo de score', '+' + (_tc.score_delta || 0) + ' pts')
+    + '</tbody></table>';
+  } else {
+    tcBody = '<div style="font-size:.78rem;color:#6b7280">Nenhum v\u00ednculo com alvos cadastrados identificado neste grupo.</div>';
+  }
+
   // 4. Linha do tempo
   var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
     return new Date(a.ts_min) - new Date(b.ts_min);
@@ -5020,6 +5069,7 @@ function _cgsGerarRelatorio() {
     + sec('1. Placas Envolvidas', placasTable)
     + sec('2. Dados Gerais do Grupo', dadosTable)
     + sec('3. Breakdown do Score', scoreBody)
+    + sec('&#9888; Vínculos com Alvos — Fase 1', tcBody)
     + sec('4. Linha do Tempo — Passagens Conjuntas', timelineBody)
     + '<div style="margin-top:18px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:.68rem;color:#9ca3af;text-align:right">Gerado em ' + now + ' · Sistema BPFRON Monitoramento</div>'
     + '</div>'; // fecha cgs-rel-print
@@ -5339,6 +5389,12 @@ function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
             + '<span style="font-size:.8rem;font-weight:800;color:#f59e0b">Grupo Suspeito</span>'
             + '<span style="font-size:.72rem;background:' + riscoBg + ';color:' + riscoColor + ';padding:2px 9px;border-radius:99px;font-weight:800">' + g.risco + '</span>'
             + '<span style="font-size:.72rem;background:' + scoreBg + ';color:#fff;padding:2px 9px;border-radius:99px;font-weight:800">' + g.score + ' pts</span>'
+            + (g.threat_center && g.threat_center.threat_badges && g.threat_center.threat_badges.length
+              ? g.threat_center.threat_badges.map(function(badge) {
+                  var isLider = badge === 'LÍDER_É_ALVO';
+                  return '<span style="font-size:.62rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 7px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO') + '</span>';
+                }).join('')
+              : '')
           + '</div>'
           + '<div style="display:flex;gap:6px">'
             + '<button class="btn btn-outline btn-xs" onclick="_cgsVoltarAoDetalhe()">&#8592; Detalhe</button>'
