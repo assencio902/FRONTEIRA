@@ -2823,6 +2823,30 @@
 </div>
 
 <!-- MODAL VER ALVO (somente leitura) -->
+
+<!-- MODAL RELATÓRIO OPERACIONAL DE ALVO RASTREADO -->
+<div class="modal-overlay" id="alvo-rel-modal" onclick="if(event.target===this)closeModal('alvo-rel-modal')">
+  <div class="modal modal-wide" style="max-width:920px;max-height:92vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:1.05rem;display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
+        &#128196; Relat&oacute;rio Operacional &mdash; <span id="alvo-rel-title" style="font-weight:700"></span>
+      </h2>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button onclick="_alvoDvExportarPDF()"
+          style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+          &#128196; Exportar PDF
+        </button>
+        <button onclick="window.print()"
+          style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+          &#128438; Imprimir
+        </button>
+        <button class="modal-close" onclick="closeModal('alvo-rel-modal')">&times;</button>
+      </div>
+    </div>
+    <div id="alvo-rel-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
+  </div>
+</div>
+
 <!-- ═══ TELA COMPLETA: DETALHE DE ALVO RASTREADO ═══════════════════════════ -->
 
 
@@ -6256,6 +6280,42 @@ function _alvoDvGerarRelatorio() {
   }
 
   openModal('alvo-rel-modal');
+}
+
+function _alvoDvExportarPDF() {
+  var body = document.getElementById('alvo-rel-body');
+  if (!body) return;
+  var plate = (_alvoDvPlate || 'relatorio').replace(/[^A-Z0-9]/gi, '_');
+  var conteudo = body.innerHTML;
+  var win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) { alert('Permita pop-ups para gerar o PDF.'); return; }
+  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
+    + '<meta charset="utf-8">'
+    + '<title>Relatorio_' + plate + '</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
+    + 'table{width:100%;border-collapse:collapse}'
+    + 'th,td{padding:7px 10px;font-size:12px}'
+    + 'th{background:#e5e7eb;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151}'
+    + 'tr{border-bottom:1px solid #e5e7eb}'
+    + 'img{max-width:100%}'
+    + '.no-print{display:none}'
+    + '@page{size:A4 portrait;margin:15mm 12mm}'
+    + '@media print{'
+      + 'body{padding:0}'
+      + '.no-print{display:none!important}'
+    + '}'
+    + '</style>'
+    + '</head><body>'
+    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
+      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
+      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
+    + '</div>'
+    + conteudo
+    + '</body></html>');
+  win.document.close();
+  win.focus();
 }
 
 // ── Alvo: Rota cronológica ───────────────────────────────────────────────────
