@@ -6033,12 +6033,16 @@ async function _alvoDvLoadPassagens(id) {
       return;
     }
     var rows = events.map(function(ev) {
-      var ts  = ev.occurred_at ? new Date(ev.occurred_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '&mdash;';
-      var cam = ev.camera || ev.channel_name || ev.camera_id || '&mdash;';
-      var dir = ev.direcao
+      var ts    = ev.occurred_at ? new Date(ev.occurred_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '&mdash;';
+      // LOCAL: channel_name costuma trazer o nome do ponto/local registrado pelo sistema de câmera
+      var local = ev.channel_name && ev.channel_name !== ev.camera
+        ? ev.channel_name
+        : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>';
+      var cam   = ev.camera || ev.camera_id || '&mdash;';
+      var dir   = ev.direcao
         ? '<span style="font-size:.75rem;font-weight:700;color:var(--accent)">' + ev.direcao + '</span>'
         : '<span style="color:var(--muted)">&mdash;</span>';
-      var img = ev.image_path
+      var img   = ev.image_path
         ? '<img src="/uploads/' + ev.image_path + '" style="height:38px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
         : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
       var acoes = ev.image_path
@@ -6046,7 +6050,8 @@ async function _alvoDvLoadPassagens(id) {
         : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
       return '<tr>'
         + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + ts + '</td>'
-        + '<td style="font-size:.78rem">' + cam + '</td>'
+        + '<td style="font-size:.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (ev.channel_name || '') + '">' + local + '</td>'
+        + '<td style="font-size:.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + cam + '">' + cam + '</td>'
         + '<td>' + dir + '</td>'
         + '<td style="text-align:center">' + img + '</td>'
         + '<td style="text-align:center">' + acoes + '</td>'
@@ -6055,7 +6060,12 @@ async function _alvoDvLoadPassagens(id) {
     el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
       + '<div style="padding:12px 16px 8px 16px">' + header + '</div>'
       + '<div class="table-wrap" style="margin:0"><table><thead><tr>'
-      + '<th style="white-space:nowrap">Data / Hora</th><th>C&acirc;mera / Local</th><th>Dire&ccedil;&atilde;o</th><th style="text-align:center">Imagem</th><th style="text-align:center">A&ccedil;&otilde;es</th>'
+      + '<th style="white-space:nowrap">Data / Hora</th>'
+      + '<th>Cidade / Local</th>'
+      + '<th>C&acirc;mera</th>'
+      + '<th>Dire&ccedil;&atilde;o</th>'
+      + '<th style="text-align:center">Imagem</th>'
+      + '<th style="text-align:center">A&ccedil;&otilde;es</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</div>';
   } catch(e) {
