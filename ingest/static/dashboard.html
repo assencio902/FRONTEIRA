@@ -1052,13 +1052,13 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab active" data-bat="central" onclick="switchBatTab('central',this)" id="bat-subtab-central">
-          &#9889; Central de Amea&ccedil;as
+        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
+          &#128101; Grupos Suspeitos
         </div>
-        <div class="sub-tab" data-bat="grupos" onclick="switchBatTab('grupos',this)" id="bat-subtab-grupos">
-          &#128101; Grupos de Comboio
+        <div class="sub-tab" data-bat="placas" onclick="switchBatTab('placas',this)" id="bat-subtab-placas">
+          &#128203; Placas Individuais
         </div>
-        <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)">
+        <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)" id="bat-subtab-alvos">
           &#127919; Alvos Rastreados
         </div>
         <button id="btn-bat-notif" class="btn btn-outline btn-sm" onclick="toggleBatNotif()"
@@ -1067,20 +1067,8 @@
         </button>
       </div>
 
-      <!-- SUB: CENTRAL DE AMEAÇAS -->
+      <!-- SUB: GRUPOS SUSPEITOS / PLACAS INDIVIDUAIS -->
       <div id="bat-sub-central" class="sub-pane active">
-
-        <!-- ── MODO TABS: Grupos Suspeitos | Placas Individuais ─────────── -->
-        <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px;flex-wrap:wrap">
-          <button id="cen-tab-grupos" onclick="_cenSwitchView('grupos')"
-            style="background:var(--primary);color:#fff;border:none;border-radius:8px 8px 0 0;padding:8px 20px;font-size:.82rem;font-weight:700;cursor:pointer;border-bottom:none;margin-right:2px">
-            &#128101; Grupos Suspeitos
-          </button>
-          <button id="cen-tab-placas" onclick="_cenSwitchView('placas')"
-            style="background:var(--card);color:var(--muted);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;padding:8px 20px;font-size:.82rem;font-weight:600;cursor:pointer;margin-right:2px">
-            &#128203; Placas Individuais
-          </button>
-        </div>
 
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!-- PAINEL: GRUPOS SUSPEITOS                                       -->
@@ -1309,80 +1297,6 @@
         </div><!-- /cen-view-placas -->
       </div><!-- /bat-sub-central -->
 
-      <!-- SUB: GRUPOS DE COMBOIO -->
-      <div id="bat-sub-grupos" class="sub-pane">
-        <div style="background:rgba(34,197,94,.09);border:1px solid rgba(34,197,94,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#6ee7a0">
-          <strong>&#128101; Grupos de Comboio</strong> &mdash; Detecta veículos andando juntos em <strong>2+ câmaras</strong> distintas. Utiliza análise de liderança, gap de tempo e padrão de trajeto.
-        </div>
-        <div class="cards-row">
-          <div class="card"><div class="card-icon">&#128101;</div><div class="card-label">Grupos detectados</div><div class="card-value" id="grupos-total">&#8212;</div></div>
-          <div class="card"><div class="card-icon">👥</div><div class="card-label">Total de ve&iacute;culos</div><div class="card-value" id="grupos-veiculos">&#8212;</div></div>
-          <div class="card"><div class="card-icon">📷</div><div class="card-label">M&eacute;dia de câmeras</div><div class="card-value" id="grupos-cam-media">&#8212;</div></div>
-          <div class="card"><div class="card-icon">🕐</div><div class="card-label">Maior trajeto</div><div class="card-value" id="grupos-max-trip">&#8212;</div></div>
-        </div>
-        <div class="toolbar" style="flex-wrap:wrap;gap:8px 12px">
-          <label>Janela de tempo:
-            <select id="grupos-window" onchange="loadGruposComboio(true)" style="margin-left:6px">
-              <option value="30m">30 minutos</option>
-              <option value="1h">1 hora</option>
-              <option value="2h" selected>2 horas</option>
-              <option value="6h">6 horas</option>
-              <option value="12h">12 horas</option>
-              <option value="24h">24 horas</option>
-            </select>
-          </label>
-          <label>Tamanho do grupo:
-            <select id="grupos-sizes" onchange="loadGruposComboio(true)" style="margin-left:6px">
-              <option value="2" selected>2 ve&iacute;culos juntos</option>
-              <option value="3+">3 ve&iacute;culos ou mais</option>
-            </select>
-          </label>
-          <label>M&iacute;n. câmeras:
-            <select id="grupos-min-cameras" onchange="loadGruposComboio(true)" style="margin-left:6px">
-              <option value="2" selected>&gt;= 2</option>
-              <option value="3">&gt;= 3</option>
-              <option value="4">&gt;= 4</option>
-              <option value="5">&gt;= 5</option>
-            </select>
-          </label>
-          <label>Modo de liderança:
-            <select id="grupos-order-mode" onchange="loadGruposComboio(true)" style="margin-left:6px">
-              <option value="any" selected>Qualquer ordem</option>
-              <option value="leader_front">L&iacute;der na frente</option>
-            </select>
-          </label>
-          <button class="btn btn-primary btn-sm" onclick="loadGruposComboio(true)" style="padding:5px 14px;font-size:.82rem">&#10003; Aplicar</button>
-          <button class="btn btn-outline btn-sm" onclick="_resetGruposFilters()" style="padding:5px 10px;font-size:.82rem">&#10007; Limpar</button>
-          <label style="display:flex;align-items:center;gap:5px;font-size:.82rem">&#9654; Intervalo:
-            <select id="grupos-interval" style="margin-left:4px">
-              <option value="30">30s</option>
-              <option value="60" selected>1 min</option>
-              <option value="120">2 min</option>
-              <option value="300">5 min</option>
-              <option value="600">10 min</option>
-            </select>
-          </label>
-          <button id="btn-grupos-live" class="btn btn-outline btn-sm" onclick="toggleGruposLive()" style="display:flex;align-items:center;gap:6px">
-            &#9654; <span id="grupos-live-label">Monitorar</span>
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="loadGruposComboio(true)">&#8635; Agora</button>
-          <span class="status-line" id="grupos-status"></span>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>ID Grupo</th>
-            <th>Placas</th>
-            <th>Tamanho</th>
-            <th>Câmeras Juntas</th>
-            <th>Câmeras</th>
-            <th>Trip Span</th>
-            <th>Visto</th>
-            <th>A&#231;&otilde;es</th>
-          </tr></thead>
-          <tbody id="grupos-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em &ldquo;&#9654; Monitorar&rdquo; para carregar grupos de comboio.</td></tr></tbody>
-          </table>
-        </div>
-      </div><!-- /bat-sub-grupos -->
       <div id="bat-sub-alvos" class="sub-pane">
         <div style="background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#c4b5fd">
           <strong>&#127919; Alvos Rastreados &mdash; Quem est&aacute; andando com o suspeito?</strong> &mdash;
@@ -3843,10 +3757,11 @@ function switchTab(name, el) {
   if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
-    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'central';
-    if (!batName || batName === 'central') loadCentral();
-    else if (batName === 'alvos') loadAlvos();
-    else loadCentral();
+    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
+    if (!batName || batName === 'suspeitos') _cgsLoad(true);
+    else if (batName === 'placas')  loadCentral();
+    else if (batName === 'alvos')   loadAlvos();
+    else _cgsLoad(true);
   }
   if (name === 'veiculos') { loadLists(); }
   if (name === 'cameras')  loadCameras();
@@ -3860,17 +3775,16 @@ function switchTab(name, el) {
 window.switchTab = switchTab;
 
 function switchBatTab(name, el) {
-  // para o monitoramento ao vivo da Central se sair dela
-  if (name !== 'central' && _cenLiveEnabled) {
+  // para o monitoramento ao vivo se sair de placas individuais
+  if (name !== 'suspeitos' && name !== 'placas' && _cenLiveEnabled) {
     _cenLiveEnabled = false; _cenStopTimer();
     var livBtn = document.getElementById('btn-cen-live');
     if (livBtn) { livBtn.classList.remove('btn-success'); livBtn.classList.add('btn-outline');
                   livBtn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
   }
   document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
-  // CORREÇÃO: 'grupos' estava ausente da lista — causava duplicação de filtros ao
-  // navegar de "Grupos" → "Ameaças" (bat-sub-grupos ficava ativo simultaneamente)
-  ['central', 'grupos', 'alvos'].forEach(function(n){
+  // desativa todos os panes reais existentes no DOM
+  ['central', 'alvos', 'grupos'].forEach(function(n){
     var el2 = document.getElementById('bat-sub-'+n);
     if (el2) el2.classList.remove('active');
   });
@@ -3879,9 +3793,18 @@ function switchBatTab(name, el) {
   if (dvEl) dvEl.classList.remove('active');
   el.classList.add('active');
   el.setAttribute('data-bat', name);
-  document.getElementById('bat-sub-' + name).classList.add('active');
-  if (name === 'central')    { _cgsLoad(true); /* carrega grupos automaticamente */ }
-  else if (name === 'alvos') { loadAlvos(); _loadAlvoCameras(); }
+  // 'suspeitos' e 'placas' compartilham bat-sub-central; alternam a view interna
+  if (name === 'suspeitos') {
+    document.getElementById('bat-sub-central').classList.add('active');
+    _cenSwitchView('grupos');
+    _cgsLoad(true);
+  } else if (name === 'placas') {
+    document.getElementById('bat-sub-central').classList.add('active');
+    _cenSwitchView('placas');
+  } else if (name === 'alvos') {
+    document.getElementById('bat-sub-alvos').classList.add('active');
+    loadAlvos(); _loadAlvoCameras();
+  }
 }
 
 function refreshCurrent() {
@@ -3889,10 +3812,11 @@ function refreshCurrent() {
   else if (currentTab === 'eventos') loadEvents();
   else if (currentTab === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
-    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'central';
-    if      (batName === 'central') loadCentral();
-    else if (batName === 'alvos')   loadAlvos();
-    else loadCentral();
+    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
+    if      (batName === 'suspeitos') _cgsLoad(true);
+    else if (batName === 'placas')    loadCentral();
+    else if (batName === 'alvos')     loadAlvos();
+    else _cgsLoad(true);
   }
   else if (currentTab === 'cameras') loadCameras();
   else if (currentTab === 'alarmes') loadAlarmes();
@@ -6692,16 +6616,22 @@ function renderListVehicles(items) {
     return;
   }
   tb.innerHTML = items.map(function(v) {
-    var alvoCell = v.is_alvo
-      ? '<span class="badge badge-red" style="background:rgba(220,38,38,.15);color:#fca5a5;padding:2px 7px;font-size:.7rem;border-radius:4px">&#127919; ALVO</span>'
-      : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>';
-    return '<tr data-vid="' + v.id + '" data-plate="' + v.plate.replace(/"/g,'&quot;') + '" data-notes="' + (v.notes||'').replace(/"/g,'&quot;') + '" data-is-alvo="' + (v.is_alvo ? '1' : '0') + '">' +
+    var isAlvo = !!v.is_alvo;
+    var plateBadge = isAlvo
+      ? ' <span style="display:inline-block;background:rgba(220,38,38,.18);color:#fca5a5;padding:1px 6px;font-size:.68rem;border-radius:4px;font-weight:700;letter-spacing:.04em;vertical-align:middle">ALVO</span>'
+      : '';
+    var rowStyle = isAlvo ? ' style="background:rgba(220,38,38,.055)"' : '';
+    var alvoToggleBtn = isAlvo
+      ? '<button class="btn btn-danger btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',true)" title="Remover dos alvos" style="white-space:nowrap">&#10060; Remover alvo</button>'
+      : '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919; Tornar alvo</button>';
+    return '<tr data-vid="' + v.id + '" data-plate="' + v.plate.replace(/"/g,'&quot;') + '" data-notes="' + (v.notes||'').replace(/"/g,'&quot;') + '" data-is-alvo="' + (isAlvo ? '1' : '0') + '"' + rowStyle + '>' +
       '<td style="color:var(--muted);font-size:.74rem">' + v.id + '</td>' +
-      '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span></td>' +
+      '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span>' + plateBadge + '</td>' +
       '<td style="font-size:.79rem;color:var(--muted)">' + (v.notes||'-') + '</td>' +
-      '<td style="text-align:center">' + alvoCell + '</td>' +
+      '<td style="text-align:center">' + (isAlvo ? '<span style="color:#fca5a5;font-size:.75rem">&#127919;</span>' : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>') + '</td>' +
       '<td style="font-size:.76rem;color:var(--muted)">' + fmtTs(v.created_at) + '</td>' +
-      '<td style="text-align:center;white-space:nowrap">' +
+      '<td style="text-align:center;white-space:nowrap;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">' +
+        alvoToggleBtn + ' ' +
         '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button> ' +
         '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>' +
       '</td>' +
@@ -6720,6 +6650,32 @@ function openAddVehicleModal() {
   document.getElementById('veh-save-btn').textContent = 'Cadastrar';
   openModal('vehicle-modal');
   setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
+}
+
+async function toggleVehicleAlvo(vehicleId, plate, currentIsAlvo) {
+  var newAlvo = !currentIsAlvo;
+  try {
+    var r = await fetch('/api/vehicles/' + vehicleId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_alvo: newAlvo })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var msg = newAlvo
+      ? '\u2713 Placa ' + plate + ' marcada como alvo'
+      : '\u2713 Placa ' + plate + ' removida dos alvos';
+    var stEl = document.getElementById('list-detail-status');
+    if (stEl) {
+      stEl.textContent = msg;
+      stEl.style.color = newAlvo ? '#fca5a5' : 'var(--muted)';
+      setTimeout(function(){ if(stEl.textContent===msg){ stEl.textContent=''; stEl.style.color=''; } }, 4000);
+    }
+    loadListVehicles();
+    if (typeof loadAlvos === 'function') loadAlvos();
+  } catch(e) {
+    var stEl = document.getElementById('list-detail-status');
+    if (stEl) { stEl.textContent = 'Erro ao atualizar: ' + e.message; stEl.style.color = 'var(--danger)'; }
+  }
 }
 
 async function openEditVehicleModal(vehicleId) {
