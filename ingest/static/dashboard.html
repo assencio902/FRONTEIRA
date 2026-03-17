@@ -5777,9 +5777,14 @@ async function loadAlvos() {
       var btnApagar = (_role === 'admin')
         ? '<button class="btn btn-outline btn-xs" onclick="alvoApagar(' + a.id + ',&#39;' + a.plate + '&#39;)" title="Apagar alvo" style="color:var(--danger)">&#128465; Apagar</button>'
         : '';
+      var descTxt   = (a.descricao || '').trim();
+      var descTitle = descTxt.replace(/"/g, '&quot;');
+      var descCell  = descTxt
+        ? '<span title="' + descTitle + '" style="display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + descTxt + '</span>'
+        : '<span style="color:var(--muted)">&#8212;</span>';
       return '<tr id="alvo-card-' + a.id + '">'
         + '<td>' + plateHtml(a.plate) + '</td>'
-        + '<td style="color:var(--muted)">' + (a.descricao || '<em style="color:var(--muted)">sem descri&ccedil;&atilde;o</em>') + '</td>'
+        + '<td style="color:var(--muted);max-width:260px">' + descCell + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
         + '<td style="white-space:nowrap;font-size:.78rem">' + lastSeen + '</td>'
         + '<td style="white-space:nowrap">' + btnVer + btnEditar + btnApagar + '</td>'
