@@ -5990,6 +5990,17 @@ var _editAlvoId = null;
 var _alvoDvId    = null;
 var _alvoDvPlate = null;
 
+// ── Janelas de análise automática (altere aqui para ajustar todos os blocos) ──
+var ALVO_DV_PASS_WINDOW = '7d';   // Últimas Passagens + Ver Rota   (padrão: 7 dias)
+var ALVO_DV_COMP_WINDOW = '30d';  // Acompanhantes / Comboio       (padrão: 30 dias)
+var ALVO_DV_HIST_WINDOW = '90d';  // Histórico ampliado (reservado) (padrão: 90 dias)
+// Formata a janela para exibição: '7d' → '7 dias', '30d' → '30 dias', '24h' → '24h'
+function _alvoDvFmtWindow(w) {
+  var m = String(w).match(/^(\d+)(d|h)$/i);
+  if (!m) return w;
+  return m[2].toLowerCase() === 'd' ? m[1] + ' dias' : m[1] + 'h';
+}
+
 // ── Alvo: Fechar tela de detalhes ────────────────────────────────────────────
 function alvoVerFechar() {
   var dvEl = document.getElementById('alvo-detalhe-view');
@@ -6058,7 +6069,7 @@ async function _alvoDvLoadPassagens(id) {
   if (rotaEl) { rotaEl.style.display = 'none'; rotaEl.innerHTML = ''; }
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
   try {
-    var resp = await fetch('/api/alvos/' + id + '/historico?range=7d&limit=20');
+    var resp = await fetch('/api/alvos/' + id + '/historico?range=' + ALVO_DV_PASS_WINDOW + '&limit=20');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
     var events = d.events || [];
@@ -6067,13 +6078,13 @@ async function _alvoDvLoadPassagens(id) {
     var hasRota = events.length >= 2;
     var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
-      + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos 7 dias</span>' : '')
+      + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '</span>' : '')
       + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
       + '</div>';
     if (events.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
         + header
-        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada nos &uacute;ltimos 7 dias.</div>'
+        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '.</div>'
         + '</div>';
       return;
     }
@@ -6239,9 +6250,9 @@ function _alvoDvGerarRelatorio() {
     + '</div>'
     // rota
     + '<div style="margin-bottom:20px">'
-      + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128336; Rota &mdash; Últimas passagens (7 dias)</div>'
+      + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128336; Rota &mdash; &Uacute;ltimas passagens (' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + ')</div>'
       + (passagens.length === 0
-        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhuma passagem registrada nos últimos 7 dias.</div>'
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhuma passagem registrada nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '.</div>'
         : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
           + '<thead><tr style="background:#e5e7eb">'
             + th('#') + th('Data / Hora') + th('Cidade / Local') + th('Câmera') + th('Direção') + th('Intervalo')
@@ -6251,7 +6262,7 @@ function _alvoDvGerarRelatorio() {
     + '<div style="margin-bottom:24px">'
       + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128101; Acompanhantes / Comboio</div>'
       + (companions.length === 0
-        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos últimos 30 dias.</div>'
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '.</div>'
         : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
           + '<thead><tr style="background:#e5e7eb">'
             + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
@@ -6349,7 +6360,7 @@ function _alvoDvVerRota() {
   var html = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
     + '<div style="padding:12px 16px 10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">'
     + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128663; Rota Cronol&oacute;gica</span>'
-    + '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' ponto(s) &bull; &uacute;ltimos 7 dias</span>'
+    + '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' ponto(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '</span>'
     + '</div>'
     + '<div style="padding:16px 20px 20px 20px">';
   var prevLocal = null;
@@ -6513,7 +6524,7 @@ async function _alvoDvLoadCompanions(id, plate) {
   if (!el || !plate) return;
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip;</p>';
   try {
-    var qs = '?window=30d&co_window=300&min_cameras=1&trip_max=7200&limit=20';
+    var qs = '?window=' + ALVO_DV_COMP_WINDOW + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
     var [compResp, alvosResp] = await Promise.all([
       fetch('/api/batedor/companions/' + encodeURIComponent(plate) + qs),
       fetch('/api/alvos')
@@ -6530,13 +6541,13 @@ async function _alvoDvLoadCompanions(id, plate) {
 
     var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
-      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; &uacute;ltimos 30 dias</span>' : '')
+      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '</span>' : '')
       + '</div>';
 
     if (companions.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
         + header
-        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos 30 dias.</div>'
+        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '.</div>'
         + '</div>';
       return;
     }
