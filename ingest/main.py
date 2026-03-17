@@ -3162,7 +3162,6 @@ async def vehicles_create(request: Request):
                 notes = None
         
         is_alvo = bool(data.get("is_alvo", False))
-        logger.info("[vehicles:create] plate=%s list_id=%s is_alvo=%s", plate, list_id, is_alvo)
         
         with _conn() as conn:
             with conn.cursor() as cur:
@@ -3232,7 +3231,6 @@ async def vehicles_update(vid: int, request: Request):
                 notes = None
         
         is_alvo_new = data.get("is_alvo")  # None significa "não enviado" (sem alteração)
-        logger.info("[vehicles:update] vid=%s is_alvo_new=%s plate=%s", vid, is_alvo_new, plate)
         
         with _conn() as conn:
             with conn.cursor() as cur:

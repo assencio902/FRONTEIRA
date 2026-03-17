@@ -6764,7 +6764,6 @@ async function saveVehicle() {
       bodyObj = { plate: plate, list_id: parseInt(listId), notes: notes || null, is_alvo: isAlvo };
     }
     var bodyStr = JSON.stringify(bodyObj);
-    console.log('[vehicle:save] método=' + method + ' url=' + url + ' payload=', bodyObj);
 
     var r = await fetch(url, {
       method: method,
@@ -6772,11 +6771,19 @@ async function saveVehicle() {
       body: bodyStr
     });
     var responseData = await r.json();
-    console.log('[vehicle:save] status=' + r.status + ' resposta=', responseData);
 
     if (!r.ok) { throw new Error(responseData.detail || r.status); }
 
     closeModal('vehicle-modal');
+
+    // Limpa o formulário após salvar com sucesso
+    _editVehicleId = null;
+    document.getElementById('veh-plate').value = '';
+    document.getElementById('veh-notes').value = '';
+    document.getElementById('veh-is-alvo').checked = false;
+    document.getElementById('veh-form-error').textContent = '';
+    document.getElementById('veh-modal-title').textContent = 'Cadastrar Placa';
+    document.getElementById('veh-save-btn').textContent = 'Cadastrar';
 
     // Atualiza TODAS as listas relevantes; allSettled garante que falha em
     // uma não impede as outras de rodarem.
@@ -6792,9 +6799,11 @@ async function saveVehicle() {
       }
     });
 
-    // Feedback visual quando salvo como alvo
+    // Feedback visual de sucesso
     if (isAlvo) {
       _flashMsg('🎯 ' + plate + ' salvo nos Alvos Rastreados!', '#22c55e');
+    } else {
+      _flashMsg('✅ Veículo ' + plate + ' salvo com sucesso!', '#2563eb');
     }
   } catch(e) {
     errEl.textContent = 'Erro: ' + e.message;
