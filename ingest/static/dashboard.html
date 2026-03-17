@@ -3805,13 +3805,20 @@ function fmtTs(ts) {
   } catch(e) { return ts; }
 }
 
+function formatConfidencePercent(value) {
+  var n = Number(value) || 0;
+  // normaliza: valores <= 1 são fração (0.91 → 91)
+  if (n > 0 && n <= 1) n = n * 100;
+  return Math.round(Math.max(0, Math.min(100, n)));
+}
+
 function fmtConf(c) {
   if (c == null || c === '') return '-';
   var n = parseFloat(c);
   if (isNaN(n)) return c;
-  var pct = n > 1 ? n : n * 100;
+  var pct = formatConfidencePercent(n);
   var cls = pct >= 85 ? 'badge-green' : pct >= 60 ? 'badge-yellow' : 'badge-red';
-  return '<span class="badge ' + cls + '">' + pct.toFixed(1) + '%</span>';
+  return '<span class="badge ' + cls + '">' + pct + '%</span>';
 }
 
 function scoreClass(s) {
@@ -3919,7 +3926,7 @@ function openImage(evId, plate) {
   // --- Badge: Confiança ---
   var confBadge = document.getElementById('img-modal-conf-badge');
   if (meta.confidence != null) {
-    var confVal = meta.confidence <= 1 ? Math.round(meta.confidence * 100) : Math.round(meta.confidence);
+    var confVal = formatConfidencePercent(meta.confidence);
     confBadge.textContent = '✓ ' + confVal + '% confiança';
     confBadge.style.display = 'inline-block';
     confBadge.style.background  = confVal >= 90 ? 'rgba(34,197,94,.15)' : confVal >= 70 ? 'rgba(234,179,8,.15)' : 'rgba(239,68,68,.15)';
@@ -4229,7 +4236,7 @@ function updateEvCards(total, items) {
   var confs = items.map(function(e){ return parseFloat(e.confidence); }).filter(function(n){ return !isNaN(n) && n > 0; });
   if (confs.length) {
     var avg = confs.reduce(function(a,b){ return a+b; }) / confs.length;
-    document.getElementById('ev-avg-conf').textContent = (avg > 1 ? avg : avg * 100).toFixed(1) + '%';
+    document.getElementById('ev-avg-conf').textContent = formatConfidencePercent(avg) + '%';
   } else {
     document.getElementById('ev-avg-conf').textContent = '-';
   }
