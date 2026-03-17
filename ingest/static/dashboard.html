@@ -1299,7 +1299,9 @@
         <!-- Cards de resumo -->
         <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
         <!-- Últimas Passagens (automático) -->
-        <div id="alvo-dv-passagens-recentes" style="margin-bottom:20px"></div>
+        <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
+        <!-- Linha do tempo de rota (toggle) -->
+        <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
         <!-- Barra de filtros -->
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
           <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
@@ -6012,18 +6014,26 @@ async function _alvoDvLoadDetalhes(id, descricaoLocal, desdeLocal) {
 }
 
 // ── Alvo: Carrega as últimas passagens automáticas (sem filtro) ─────────────
+var _alvoDvPassagensCache = [];
+
 async function _alvoDvLoadPassagens(id) {
   var el = document.getElementById('alvo-dv-passagens-recentes');
+  var rotaEl = document.getElementById('alvo-dv-rota');
   if (!el) return;
+  _alvoDvPassagensCache = [];
+  if (rotaEl) { rotaEl.style.display = 'none'; rotaEl.innerHTML = ''; }
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
   try {
     var resp = await fetch('/api/alvos/' + id + '/historico?range=7d&limit=20');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
     var events = d.events || [];
-    var header = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+    _alvoDvPassagensCache = events;
+    var hasRota = events.length >= 2;
+    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
       + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos 7 dias</span>' : '')
+      + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
       + '</div>';
     if (events.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
@@ -6071,6 +6081,95 @@ async function _alvoDvLoadPassagens(id) {
   } catch(e) {
     el.innerHTML = '<div style="color:var(--danger);font-size:.82rem;padding:6px 0">Erro ao carregar passagens: ' + e + '</div>';
   }
+}
+
+// ── Alvo: Rota cronológica ───────────────────────────────────────────────────
+function _fmtInterval(ms) {
+  if (ms == null || ms < 0) return null;
+  var s = Math.round(Math.abs(ms) / 1000);
+  if (s < 60)   return s + 's';
+  if (s < 3600) { var m = Math.floor(s/60), r = s % 60; return m + ' min' + (r ? ' ' + r + 's' : ''); }
+  var h = Math.floor(s/3600), rm = Math.floor((s%3600)/60);
+  return h + 'h' + (rm ? ' ' + rm + 'min' : '');
+}
+
+function _alvoDvVerRota() {
+  var rotaEl = document.getElementById('alvo-dv-rota');
+  var btn    = document.getElementById('btn-alvo-ver-rota');
+  if (!rotaEl) return;
+  // toggle fechar
+  if (rotaEl.style.display !== 'none') {
+    rotaEl.style.display = 'none';
+    if (btn) { btn.innerHTML = '&#128663; Ver Rota'; }
+    return;
+  }
+  // eventos em ordem cronológica (ASC) — cache vem DESC
+  var events = _alvoDvPassagensCache.slice().reverse();
+  if (events.length < 2) {
+    rotaEl.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;color:var(--muted);font-size:.85rem">Passagens insuficientes para montar a rota (m&iacute;nimo: 2).</div>';
+    rotaEl.style.display = 'block';
+    return;
+  }
+  if (btn) { btn.innerHTML = '&#10005; Fechar Rota'; }
+  var html = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+    + '<div style="padding:12px 16px 10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)">'
+    + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128663; Rota Cronol&oacute;gica</span>'
+    + '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' ponto(s) &bull; &uacute;ltimos 7 dias</span>'
+    + '</div>'
+    + '<div style="padding:16px 20px 20px 20px">';
+  var prevLocal = null;
+  events.forEach(function(ev, i) {
+    var ts        = ev.occurred_at ? new Date(ev.occurred_at) : null;
+    var tsStr     = ts ? ts.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
+    var cam       = ev.camera || ev.camera_id || '\u2014';
+    var local     = (ev.channel_name && ev.channel_name !== ev.camera) ? ev.channel_name : cam;
+    var dir       = ev.direcao || '';
+    var isFirst   = i === 0;
+    var isLast    = i === events.length - 1;
+    var locChange = prevLocal !== null && local !== prevLocal;
+    prevLocal = local;
+    // linha de intervalo entre passagens
+    var intervalHtml = '';
+    if (i > 0 && events[i-1].occurred_at && ev.occurred_at) {
+      var delta  = new Date(ev.occurred_at) - new Date(events[i-1].occurred_at);
+      var intStr = _fmtInterval(delta);
+      intervalHtml = '<div style="display:flex;align-items:stretch;gap:0;margin:0 0 0 5px">'
+        + '<div style="display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0">'
+        + '<div style="width:1px;flex:1;background:var(--border)"></div></div>'
+        + '<div style="padding:2px 10px;font-size:.72rem;color:var(--muted);font-style:italic;align-self:center">&#8595; ' + intStr + '</div>'
+        + '</div>';
+    }
+    var dotColor = isFirst ? '#22c55e' : isLast ? '#ef4444' : locChange ? '#f59e0b' : 'var(--primary)';
+    var dirBadge = dir ? ' <span style="font-size:.7rem;font-weight:700;color:var(--accent);background:rgba(250,204,21,.12);padding:1px 7px;border-radius:99px;border:1px solid rgba(250,204,21,.25)">' + dir + '</span>' : '';
+    var imgThumb = ev.image_path
+      ? '<img src="/uploads/' + ev.image_path + '" style="height:30px;border-radius:4px;border:1px solid var(--border);cursor:pointer;vertical-align:middle;margin-left:4px" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy" title="Ver imagem">'
+      : '';
+    var locBanner = locChange
+      ? '<div style="font-size:.7rem;color:#f59e0b;font-weight:600;margin-bottom:3px">&#128205; Nova localidade</div>'
+      : '';
+    html += intervalHtml
+      + '<div style="display:flex;gap:10px;align-items:flex-start">'
+        + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:4px">'
+          + '<div style="width:14px;height:14px;border-radius:50%;background:' + dotColor + ';border:2px solid rgba(255,255,255,.15);flex-shrink:0"></div>'
+        + '</div>'
+        + '<div style="flex:1;background:var(--bg2);border:1px solid var(--border)' + (locChange ? ';border-left:3px solid #f59e0b' : '') + ';border-radius:8px;padding:9px 12px;margin-bottom:0">'
+          + locBanner
+          + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:4px">'
+            + '<span style="font-size:.8rem;font-weight:700;color:var(--text)">' + (i+1) + '. ' + local + '</span>'
+            + dirBadge
+            + imgThumb
+          + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:14px">'
+            + '<span style="font-size:.74rem;color:var(--muted)">&#128247; ' + cam + '</span>'
+            + '<span style="font-size:.74rem;color:var(--muted)">&#128336; ' + tsStr + '</span>'
+          + '</div>'
+        + '</div>'
+      + '</div>';
+  });
+  html += '</div></div>';
+  rotaEl.innerHTML = html;
+  rotaEl.style.display = 'block';
+  rotaEl.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
