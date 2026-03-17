@@ -5967,12 +5967,36 @@ def batedor_central(
                     intel[row[0]]["vehicle_color"] = row[2] or None
 
             # ── 5. ALVOS cadastrados ───────────────────────────────────────
+            alvo_map: dict = {}
             cur.execute("SELECT plate, descricao FROM alvos")
             for row in cur.fetchall():
+                alvo_map[row[0]] = row[1] or ""
                 # marca mesmo que não tenha aparecido na janela (para exibir na central)
                 d = intel[row[0]]
                 d["is_alvo"]        = True
                 d["alvo_descricao"] = row[1] or ""
+
+            # ── 6. Câmeras por placa (para threat_center Phase 2) ────────────
+            plate_cameras: dict = {}
+            plate_cities:  dict = {}
+            if intel:
+                cur.execute("""
+                    SELECT e.plate, e.camera_id,
+                           COALESCE(c.nome, e.camera_id) AS cam_nome
+                    FROM lpr_events e
+                    LEFT JOIN cameras c ON c.camera_id = e.camera_id
+                    WHERE e.plate = ANY(%s)
+                      AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+                """, [list(intel.keys()), t_from, t_to])
+                for _p, _cam, _nome in cur.fetchall():
+                    plate_cameras.setdefault(_p, []).append(_cam)
+                    plate_cities.setdefault(_p, []).append(_nome)
+
+            # ── 7. Rotas históricas dos alvos (para threat_center Phase 2) ───
+            alvo_routes = _fetch_alvo_routes(
+                cur, list(alvo_map.keys()),
+                t_from - timedelta(days=30), t_to,
+            )
 
     # ── Monta itens ──────────────────────────────────────────────────────────
     items = []
@@ -5992,6 +6016,16 @@ def batedor_central(
         if   sinais >= 3: score_total = int(score_total * 1.5)
         elif sinais >= 2: score_total = int(score_total * 1.2)
 
+        # ── Threat Center (Phase 1 + Phase 2) ────────────────────────────────
+        tc_plates = [plate] + [g["plate"] for g in d["in_grupos"]]
+        tc  = compute_threat_center_phase1(tc_plates, alvo_map, leader=None)
+        tc2 = compute_threat_center_phase2_route_similarity(
+            group_cameras=plate_cameras.get(plate, []),
+            group_cities=plate_cities.get(plate, []),
+            alvo_routes=alvo_routes,
+        )
+        tc_final = _merge_threat_center_phases(tc, tc2)
+
         items.append({
             "plate":          plate,
             "score_total":    score_total,
@@ -6005,6 +6039,7 @@ def batedor_central(
             "last_seen":      d["last_seen"].isoformat()  if d["last_seen"]  else None,
             "vehicle_type":   d.get("vehicle_type"),
             "vehicle_color":  d.get("vehicle_color"),
+            "threat_center":  tc_final,
         })
 
     items.sort(key=lambda x: (x["sinais"], x["score_total"]), reverse=True)
