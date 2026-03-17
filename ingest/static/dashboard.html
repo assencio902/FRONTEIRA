@@ -1292,9 +1292,10 @@
       <!-- DETALHE DE ALVO RASTREADO (sub-pane interno) -->
       <div id="alvo-detalhe-view" class="sub-pane">
         <!-- Cabeçalho com botão voltar -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
           <div id="alvo-dv-titulo" style="font-size:1.05rem;font-weight:700;flex:1"></div>
+          <div id="alvo-dv-prioridade" style="flex-shrink:0"></div>
         </div>
         <!-- Cards de resumo -->
         <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
@@ -6012,11 +6013,15 @@ async function _alvoDvLoadDetalhes(id, descricaoLocal, desdeLocal) {
       _alvoDvMkCard('&#128336; &Uacute;ltima passagem', fmtTs(d.ultima_passagem)) +
       _alvoDvMkCard('&#127919; Total de eventos', d.total_eventos !== null ? String(d.total_eventos) : '&mdash;') +
       _alvoDvMkCard('&#128247; C&acirc;meras distintas', d.total_cameras !== null ? String(d.total_cameras) : '&mdash;');
+    _alvoDvDetalhesCache = d;
+    _alvoDvUpdatePrioridade();
   } catch(e) {}
 }
 
 // ── Alvo: Carrega as últimas passagens automáticas (sem filtro) ─────────────
 var _alvoDvPassagensCache = [];
+var _alvoDvDetalhesCache  = null;
+var _alvoDvCompanionsCache = [];
 
 async function _alvoDvLoadPassagens(id) {
   var el = document.getElementById('alvo-dv-passagens-recentes');
@@ -6031,6 +6036,7 @@ async function _alvoDvLoadPassagens(id) {
     var d = await resp.json();
     var events = d.events || [];
     _alvoDvPassagensCache = events;
+    _alvoDvUpdatePrioridade();
     var hasRota = events.length >= 2;
     var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
@@ -6174,6 +6180,106 @@ function _alvoDvVerRota() {
   rotaEl.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
+// ── Alvo: Indicador de risco / prioridade ───────────────────────────────────
+function _alvoDvUpdatePrioridade() {
+  var el = document.getElementById('alvo-dv-prioridade');
+  if (!el) return;
+
+  var d           = _alvoDvDetalhesCache;
+  var passagens   = _alvoDvPassagensCache || [];
+  var companions  = _alvoDvCompanionsCache || [];
+
+  // aguarda pelo menos os detalhes carregarem
+  var hasData = !!(d || passagens.length || companions.length);
+  if (!hasData) {
+    el.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);font-style:italic">Classificando&hellip;</span>';
+    return;
+  }
+
+  var score = 0;
+  var reasons = [];
+
+  // 1. Total de eventos (histório completo)
+  var totalEv = d ? (d.total_eventos || 0) : 0;
+  if (totalEv >= 51)       { score += 30; reasons.push(totalEv + ' passagens totais'); }
+  else if (totalEv >= 21)  { score += 20; reasons.push(totalEv + ' passagens totais'); }
+  else if (totalEv >= 6)   { score += 10; reasons.push(totalEv + ' passagens totais'); }
+  else if (totalEv >= 1)   { score +=  5; reasons.push(totalEv + ' passagem(ns) total'); }
+
+  // 2. Recência da última passagem
+  var ultima = d ? d.ultima_passagem : null;
+  if (ultima) {
+    var ageH = (Date.now() - new Date(ultima).getTime()) / 3600000;
+    if (ageH <= 24)        { score += 30; reasons.push('passagem há menos de 24h'); }
+    else if (ageH <= 168)  { score += 15; reasons.push('passagem nos últimos 7 dias'); }
+    else if (ageH <= 720)  { score +=  5; reasons.push('passagem nos últimos 30 dias'); }
+  }
+
+  // 3. Câmeras distintas (mobilidade)
+  var totalCam = d ? (d.total_cameras || 0) : 0;
+  if (totalCam >= 4)       { score += 20; reasons.push(totalCam + ' locais distintos'); }
+  else if (totalCam >= 2)  { score += 10; reasons.push(totalCam + ' locais distintos'); }
+  else if (totalCam >= 1)  { score +=  5; }
+
+  // 4. Passagens recentes (7 dias)
+  var rec7d = passagens.length;
+  if (rec7d >= 11)         { score += 20; reasons.push(rec7d + ' passagens em 7 dias'); }
+  else if (rec7d >= 4)     { score += 10; reasons.push(rec7d + ' passagens em 7 dias'); }
+  else if (rec7d >= 1)     { score +=  5; }
+
+  // 5. Localidades distintas nos últimos 7 dias
+  var locSet = {};
+  passagens.forEach(function(ev) {
+    var loc = (ev.channel_name && ev.channel_name !== ev.camera) ? ev.channel_name : (ev.camera || '');
+    if (loc) locSet[loc] = 1;
+  });
+  var nLoc = Object.keys(locSet).length;
+  if (nLoc >= 4)           { score += 20; reasons.push(nLoc + ' localidades distintas'); }
+  else if (nLoc >= 2)      { score += 10; reasons.push(nLoc + ' localidades distintas'); }
+
+  // 6. Acompanhantes / comboio
+  var nComp = companions.length;
+  var hasBatedor = companions.some(function(c) {
+    var tot = (c.companion_leads + c.target_leads) || 1;
+    return Math.round(c.companion_leads / tot * 100) >= 70;
+  });
+  if (nComp >= 2)          { score += 25; reasons.push(nComp + ' acompanhantes identificados'); }
+  else if (nComp === 1)    { score += 15; reasons.push('1 acompanhante identificado'); }
+  if (hasBatedor)          { score += 15; reasons.push('padrão de batedor detectado'); }
+
+  // Classificação
+  var level, label, bg, border, icon;
+  if (score <= 0) {
+    level = 0; label = 'SEM CLASSIFICAÇÃO';
+    bg = 'rgba(107,114,128,.15)'; border = 'rgba(107,114,128,.4)'; icon = '&#9898;';
+  } else if (score <= 20) {
+    level = 1; label = 'BAIXO';
+    bg = 'rgba(34,197,94,.12)';  border = 'rgba(34,197,94,.45)';  icon = '&#128994;'; // green dot
+  } else if (score <= 50) {
+    level = 2; label = 'MÉDIO';
+    bg = 'rgba(245,158,11,.12)'; border = 'rgba(245,158,11,.45)'; icon = '&#128993;'; // yellow dot
+  } else if (score <= 80) {
+    level = 3; label = 'ALTO';
+    bg = 'rgba(249,115,22,.14)'; border = 'rgba(249,115,22,.5)';  icon = '&#128992;'; // orange dot
+  } else {
+    level = 4; label = 'CRÍTICO';
+    bg = 'rgba(239,68,68,.15)';  border = 'rgba(239,68,68,.5)';   icon = '&#128308;'; // red dot
+  }
+
+  var textColor = ['#9ca3af','#4ade80','#fbbf24','#fb923c','#f87171'][level];
+  var reasonText = reasons.length
+    ? reasons.slice(0,3).join(' · ')
+    : 'dados insuficientes';
+
+  el.innerHTML =
+    '<div style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px">'
+    + '<span style="display:inline-flex;align-items:center;gap:6px;background:' + bg + ';border:1px solid ' + border + ';border-radius:99px;padding:4px 14px 4px 10px;font-size:.78rem;font-weight:800;color:' + textColor + ';letter-spacing:.06em;text-transform:uppercase;white-space:nowrap">'
+    + icon + ' ' + label
+    + '</span>'
+    + '<span style="font-size:.68rem;color:var(--muted);max-width:280px;text-align:right;line-height:1.4">' + reasonText + '</span>'
+    + '</div>';
+}
+
 // ── Alvo: Acompanhantes / Comboio ───────────────────────────────────────────
 async function _alvoDvLoadCompanions(id, plate) {
   var el = document.getElementById('alvo-dv-companions');
@@ -6189,6 +6295,8 @@ async function _alvoDvLoadCompanions(id, plate) {
     var compData  = await compResp.json();
     var alvosData = alvosResp.ok ? await alvosResp.json() : {alvos:[]};
     var companions = compData.companions || [];
+    _alvoDvCompanionsCache = companions;
+    _alvoDvUpdatePrioridade();
     // mapa placa -> {id, descricao} somente quando tbm é alvo rastreado
     var alvoMap = {};
     (alvosData.alvos || []).forEach(function(a) { alvoMap[a.plate] = a; });
@@ -6386,6 +6494,12 @@ async function alvoVer(id, plate, descricao, desde) {
   view.classList.add('active');
   document.getElementById('alvo-dv-titulo').innerHTML =
     '&#127919; Alvo: <span style="color:#f87171;font-weight:800;font-family:monospace;letter-spacing:.1em">' + _alvoDvPlate + '</span>';
+  // reseta caches de prioridade
+  _alvoDvDetalhesCache  = null;
+  _alvoDvCompanionsCache = [];
+  _alvoDvPassagensCache  = [];
+  var _prioEl = document.getElementById('alvo-dv-prioridade');
+  if (_prioEl) _prioEl.innerHTML = '<span style="font-size:.72rem;color:var(--muted);font-style:italic">Classificando&hellip;</span>';
   // reseta filtros
   var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '24h';
   var jEl = document.getElementById('alvo-dv-janela'); if (jEl) jEl.value = '';
