@@ -1326,7 +1326,7 @@
       <!-- DETALHE DE ALVO RASTREADO (sub-pane interno) -->
       <div id="alvo-detalhe-view" class="sub-pane">
         <!-- Cabeçalho com botão voltar -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
           <div id="alvo-dv-titulo" style="font-size:1.05rem;font-weight:700;flex:1"></div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
@@ -1334,18 +1334,10 @@
             <div id="alvo-dv-prioridade"></div>
           </div>
         </div>
-        <!-- Cards de resumo -->
-        <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
-        <!-- Últimas Passagens (automático) -->
-        <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
-        <!-- Linha do tempo de rota (toggle) -->
-        <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
-        <!-- Acompanhantes / Comboio -->
-        <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
         <!-- Barra de filtros -->
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
-          <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:12px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
-          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:16px">
+          <div style="font-size:.7rem;font-weight:700;letter-spacing:.07em;color:var(--accent2);margin-bottom:10px;text-transform:uppercase">&#128269; Filtros de an&aacute;lise</div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
             <div>
               <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Per&iacute;odo</div>
               <select id="alvo-dv-range" onchange="_alvoDvPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
@@ -1395,6 +1387,14 @@
             </div>
           </div>
         </div>
+        <!-- Cards de resumo -->
+        <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"></div>
+        <!-- Últimas Passagens (automático) -->
+        <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
+        <!-- Linha do tempo de rota (toggle) -->
+        <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
+        <!-- Acompanhantes / Comboio -->
+        <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
         <!-- Resultados -->
         <div id="alvo-dv-resultados">
           <p style="color:var(--muted);padding:12px 0">Selecione os filtros acima e clique em <strong>Aplicar filtros</strong>.</p>
