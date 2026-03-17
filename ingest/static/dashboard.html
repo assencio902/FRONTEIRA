@@ -1295,7 +1295,10 @@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
           <div id="alvo-dv-titulo" style="font-size:1.05rem;font-weight:700;flex:1"></div>
-          <div id="alvo-dv-prioridade" style="flex-shrink:0"></div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <button class="btn btn-outline btn-sm" onclick="_alvoDvGerarRelatorio()" style="white-space:nowrap">&#128203; Relat&oacute;rio</button>
+            <div id="alvo-dv-prioridade"></div>
+          </div>
         </div>
         <!-- Cards de resumo -->
         <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px"></div>
@@ -3709,7 +3712,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal'].forEach(closeModal);
   }
 });
 
@@ -6089,6 +6092,170 @@ async function _alvoDvLoadPassagens(id) {
   } catch(e) {
     el.innerHTML = '<div style="color:var(--danger);font-size:.82rem;padding:6px 0">Erro ao carregar passagens: ' + e + '</div>';
   }
+}
+
+// ── Alvo: Relatório operacional ───────────────────────────────────────────────
+function _alvoDvGerarRelatorio() {
+  var d           = _alvoDvDetalhesCache;
+  var passagens   = _alvoDvPassagensCache  || [];
+  var companions  = _alvoDvCompanionsCache || [];
+  var plate       = _alvoDvPlate || (d && d.plate) || '—';
+  var now         = new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  var descricao    = (d && d.descricao)           || '—';
+  var cadastradoEm = (d && d.created_at)          ? new Date(d.created_at).toLocaleDateString('pt-BR') : '—';
+  var ultimaPass   = (d && d.ultima_passagem)     ? new Date(d.ultima_passagem).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  var totalEv      = (d && d.total_eventos != null) ? d.total_eventos : (passagens.length ? passagens.length + '+' : '—');
+  var totalCam     = (d && d.total_cameras != null) ? d.total_cameras : '—';
+
+  // prioridade (mesma lógica de _alvoDvUpdatePrioridade)
+  var prioLabel = 'SEM CLASSIFICAÇÃO', prioColor = '#9ca3af';
+  var score = 0;
+  if (d) {
+    var ev = d.total_eventos || 0;
+    score += ev >= 51 ? 30 : ev >= 21 ? 20 : ev >= 6 ? 10 : ev >= 1 ? 5 : 0;
+    if (d.ultima_passagem) {
+      var ageH = (Date.now() - new Date(d.ultima_passagem).getTime()) / 3600000;
+      score += ageH <= 24 ? 30 : ageH <= 168 ? 15 : ageH <= 720 ? 5 : 0;
+    }
+    var tc = d.total_cameras || 0;
+    score += tc >= 4 ? 20 : tc >= 2 ? 10 : tc >= 1 ? 5 : 0;
+  }
+  score += passagens.length >= 11 ? 20 : passagens.length >= 4 ? 10 : passagens.length >= 1 ? 5 : 0;
+  var locSet2 = {}; passagens.forEach(function(pev){var l=(pev.channel_name&&pev.channel_name!==pev.camera)?pev.channel_name:(pev.camera||'');if(l)locSet2[l]=1;});
+  var nL2 = Object.keys(locSet2).length;
+  score += nL2 >= 4 ? 20 : nL2 >= 2 ? 10 : 0;
+  score += companions.length >= 2 ? 25 : companions.length === 1 ? 15 : 0;
+  if (companions.some(function(c){var t=(c.companion_leads+c.target_leads)||1;return Math.round(c.companion_leads/t*100)>=70;})) score+=15;
+  if      (score <= 0)  { prioLabel = 'SEM CLASSIFICAÇÃO'; prioColor = '#9ca3af'; }
+  else if (score <= 20) { prioLabel = 'BAIXO';   prioColor = '#4ade80'; }
+  else if (score <= 50) { prioLabel = 'MÉDIO';   prioColor = '#fbbf24'; }
+  else if (score <= 80) { prioLabel = 'ALTO';    prioColor = '#fb923c'; }
+  else                  { prioLabel = 'CRÍTICO'; prioColor = '#f87171'; }
+
+  // linhas da rota (ordem cronológica)
+  var rotaRows = '';
+  if (passagens.length) {
+    var evAsc = passagens.slice().reverse();
+    rotaRows = evAsc.map(function(pev, i) {
+      var ts    = pev.occurred_at ? new Date(pev.occurred_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '—';
+      var local = (pev.channel_name && pev.channel_name !== pev.camera) ? pev.channel_name : (pev.camera || pev.camera_id || '—');
+      var cam   = pev.camera || pev.camera_id || '—';
+      var dir   = pev.direcao || '—';
+      var intervalo = '—';
+      if (i > 0 && evAsc[i-1].occurred_at && pev.occurred_at) {
+        var ms = new Date(pev.occurred_at) - new Date(evAsc[i-1].occurred_at);
+        intervalo = _fmtInterval(Math.abs(ms)) || '—';
+      }
+      return '<tr style="border-bottom:1px solid #e5e7eb">'
+        + '<td style="padding:7px 10px;text-align:center;font-size:.78rem;color:#6b7280">' + (i+1) + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;white-space:nowrap">' + ts + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem">' + local + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem">' + cam + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;font-weight:700;color:#6366f1">' + dir + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;color:#9ca3af">' + intervalo + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  // linhas de acompanhantes
+  var compRows = '';
+  if (companions.length) {
+    compRows = companions.map(function(c) {
+      var tot = (c.companion_leads + c.target_leads) || 1;
+      var clPct = Math.round(c.companion_leads / tot * 100);
+      var tgPct = Math.round(c.target_leads   / tot * 100);
+      var papel = clPct >= 70 ? 'BATEDOR' : tgPct >= 70 ? 'SEGUIDOR' : 'COMBOIO';
+      var papelColor = clPct >= 70 ? '#dc2626' : tgPct >= 70 ? '#d97706' : '#6366f1';
+      var ev0 = (c.evidence || [])[0];
+      var local = ev0 ? (ev0.camera || ev0.camera_id || '—') : '—';
+      var lastTog = c.last_seen ? new Date(c.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      return '<tr style="border-bottom:1px solid #e5e7eb">'
+        + '<td style="padding:7px 10px;font-size:.82rem;font-weight:700;font-family:monospace;letter-spacing:.06em">' + c.companion + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;text-align:center;font-weight:700;color:' + papelColor + '">' + papel + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;text-align:center">' + c.cameras_together + ' câm.</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem;white-space:nowrap">' + lastTog + '</td>'
+        + '<td style="padding:7px 10px;font-size:.78rem">' + local + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  var field = function(label, value) {
+    return '<div style="margin-bottom:10px">'
+      + '<div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">' + label + '</div>'
+      + '<div style="font-size:.9rem;font-weight:600;color:#111827">' + (value !== undefined && value !== null ? value : '—') + '</div>'
+      + '</div>';
+  };
+
+  var th = function(t) {
+    return '<th style="padding:7px 10px;font-size:.68rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">' + t + '</th>';
+  };
+
+  var html =
+    '<div id="alvo-rel-print" style="color:#111827;font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.5">'
+    + '<div style="background:#0f172a;border-radius:10px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+      + '<div>'
+        + '<div style="font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:.06em;font-family:monospace">' + plate + '</div>'
+        + '<div style="font-size:.75rem;color:#94a3b8;margin-top:2px">Relatório Operacional &bull; ' + now + '</div>'
+      + '</div>'
+      + '<div style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:5px 16px">'
+        + '<span style="width:10px;height:10px;border-radius:50%;background:' + prioColor + ';flex-shrink:0"></span>'
+        + '<span style="font-size:.78rem;font-weight:800;color:' + prioColor + ';letter-spacing:.06em;text-transform:uppercase">' + prioLabel + '</span>'
+      + '</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:20px">'
+      + field('Placa', '<span style="font-family:monospace;color:#dc2626;font-weight:800">' + plate + '</span>')
+      + field('Descrição', descricao === '—' ? '<em style="color:#9ca3af">sem descrição</em>' : descricao)
+      + field('Prioridade', '<span style="color:' + prioColor + ';font-weight:800">' + prioLabel + '</span>')
+      + field('Cadastrado em', cadastradoEm)
+      + field('Última passagem', ultimaPass)
+      + field('Total de passagens', String(totalEv))
+      + field('Câmeras / Locais', String(totalCam))
+      + field('Acompanhantes', companions.length ? String(companions.length) : '—')
+    + '</div>'
+    // rota
+    + '<div style="margin-bottom:20px">'
+      + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128336; Rota &mdash; Últimas passagens (7 dias)</div>'
+      + (passagens.length === 0
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhuma passagem registrada nos últimos 7 dias.</div>'
+        : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+          + '<thead><tr style="background:#e5e7eb">'
+            + th('#') + th('Data / Hora') + th('Cidade / Local') + th('Câmera') + th('Direção') + th('Intervalo')
+          + '</tr></thead><tbody>' + rotaRows + '</tbody></table></div>')
+    + '</div>'
+    // acompanhantes
+    + '<div style="margin-bottom:24px">'
+      + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128101; Acompanhantes / Comboio</div>'
+      + (companions.length === 0
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos últimos 30 dias.</div>'
+        : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+          + '<thead><tr style="background:#e5e7eb">'
+            + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
+          + '</tr></thead><tbody>' + compRows + '</tbody></table></div>')
+    + '</div>'
+    // rodapé
+    + '<div style="font-size:.68rem;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;text-align:right">'
+      + 'Gerado em ' + now + ' &bull; Sistema de Monitoramento BPFRON'
+    + '</div></div>';
+
+  document.getElementById('alvo-rel-title').textContent = plate;
+  document.getElementById('alvo-rel-body').innerHTML = html;
+
+  // CSS de impressão (injetado uma única vez)
+  if (!document.getElementById('alvo-rel-print-style')) {
+    var s = document.createElement('style');
+    s.id = 'alvo-rel-print-style';
+    s.textContent = '@media print{'
+      + 'body > *:not(#alvo-rel-modal){display:none!important}'
+      + '#alvo-rel-modal{display:block!important;position:static!important;background:none!important;padding:0!important}'
+      + '#alvo-rel-modal .modal{max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important}'
+      + '#alvo-rel-modal .modal-header{display:none!important}'
+      + '#alvo-rel-print{color:#000!important}'
+      + '}';
+    document.head.appendChild(s);
+  }
+
+  openModal('alvo-rel-modal');
 }
 
 // ── Alvo: Rota cronológica ───────────────────────────────────────────────────
