@@ -132,6 +132,45 @@ def assert_authenticated(request: Request, message: str = "Não autenticado"):
 
 
 # ============================================================
+# FUNÇÕES AUXILIARES DE PERMISSÃO (nomes semânticos)
+# ============================================================
+
+def usuario_eh_admin(request: Request) -> bool:
+    """Retorna True se o usuário autenticado é admin."""
+    return is_admin(request)
+
+
+def usuario_pode_editar(request: Request) -> bool:
+    """Retorna True se o usuário pode editar (admin ou operador)."""
+    return is_admin_or_operator(request)
+
+
+def usuario_pode_cadastrar(request: Request) -> bool:
+    """Retorna True se o usuário pode cadastrar (admin ou operador)."""
+    return is_admin_or_operator(request)
+
+
+def usuario_somente_visualiza(request: Request) -> bool:
+    """Retorna True se o usuário é visualizador (somente leitura)."""
+    user = getattr(request.state, "user", {})
+    return normalize_role(user.get("role")) == Role.VISUALIZADOR.value
+
+
+def assert_pode_cadastrar(request: Request,
+                          message: str = "Apenas administradores e operadores podem cadastrar"):
+    """Lança 403 se não for admin ou operador."""
+    if not usuario_pode_cadastrar(request):
+        raise HTTPException(status_code=403, detail=message)
+
+
+def assert_pode_editar(request: Request,
+                       message: str = "Apenas administradores e operadores podem editar"):
+    """Lança 403 se não for admin ou operador."""
+    if not usuario_pode_editar(request):
+        raise HTTPException(status_code=403, detail=message)
+
+
+# ============================================================
 # MAPA DE ACESSO POR ROTA (DOCUMENTAÇÃO)
 # ============================================================
 
@@ -183,17 +222,17 @@ ROUTE_ACCESS_MAP = {
     "DELETE /api/vehicles/lists/{list_id}": ["admin"],
     
     # BATEDOR - Leitura para todos
-    "GET /api/batedor/*": ["admin", "operador", "visualizacao"],
+    "GET /api/batedor/*": ["admin", "operador", "visualizador"],
     
     # TRAJETÓRIA, COMPANIONS - Leitura para todos
-    "GET /api/vehicles/{plate}/trajectory": ["admin", "operador", "visualizacao"],
-    "GET /api/vehicles/{plate}/companions": ["admin", "operador", "visualizacao"],
+    "GET /api/vehicles/{plate}/trajectory": ["admin", "operador", "visualizador"],
+    "GET /api/vehicles/{plate}/companions": ["admin", "operador", "visualizador"],
     
     # RELATÓRIOS - Leitura para todos, decisões admin+operador
-    "GET /api/vehicle/report": ["admin", "operador", "visualizacao"],
+    "GET /api/vehicle/report": ["admin", "operador", "visualizador"],
     "POST /api/vehicle/report/decision": ["admin", "operador"],
-    "GET /api/vehicle/report/decisions": ["admin", "operador", "visualizacao"],
-    "GET /api/comboio/report": ["admin", "operador", "visualizacao"],
+    "GET /api/vehicle/report/decisions": ["admin", "operador", "visualizador"],
+    "GET /api/comboio/report": ["admin", "operador", "visualizador"],
     "POST /api/comboio/confirm": ["admin", "operador"],
     "POST /api/comboio/false_positive": ["admin", "operador"],
     
@@ -207,11 +246,39 @@ ROUTE_ACCESS_MAP = {
     "POST /api/alarmes/historico/{alert_id}/read": ["admin"],
     
     # FCM - Próprio token + admin pode gerenciar
-    "POST /api/fcm/register-token": ["admin", "operador", "visualizacao"],
-    "GET /api/fcm/my-token-status": ["admin", "operador", "visualizacao"],
-    "POST /api/fcm/test-self": ["admin", "operador", "visualizacao"],
+    "POST /api/fcm/register-token": ["admin", "operador", "visualizador"],
+    "GET /api/fcm/my-token-status": ["admin", "operador", "visualizador"],
+    "POST /api/fcm/test-self": ["admin", "operador", "visualizador"],
     "GET /api/fcm/status": ["admin"],
     "POST /api/fcm/send-alert": ["admin"],
+
+    # PESSOAS — Leitura para todos autenticados, escrita admin+operador, exclusão só admin
+    "GET /api/pessoas": ["admin", "operador", "visualizador"],
+    "GET /api/pessoas/existe-cpf": ["admin", "operador", "visualizador"],
+    "GET /api/pessoas/{pessoa_id}": ["admin", "operador", "visualizador"],
+    "GET /api/pessoas/{pessoa_id}/relatorio": ["admin", "operador", "visualizador"],
+    "POST /api/pessoas": ["admin", "operador"],
+    "PUT /api/pessoas/{pessoa_id}": ["admin", "operador"],
+    "DELETE /api/pessoas/{pessoa_id}": ["admin"],
+
+    # VEÍCULOS DE ABORDAGEM — Leitura para todos, escrita admin+operador
+    "GET /api/veiculos-abordagem": ["admin", "operador", "visualizador"],
+    "GET /api/veiculos-abordagem/busca": ["admin", "operador", "visualizador"],
+    "GET /api/veiculos-abordagem/{veiculo_id}": ["admin", "operador", "visualizador"],
+    "POST /api/veiculos-abordagem": ["admin", "operador"],
+    "PUT /api/veiculos-abordagem/{veiculo_id}": ["admin", "operador"],
+
+    # ABORDAGENS — Leitura para todos, escrita admin+operador, exclusão só admin
+    "GET /api/abordagens": ["admin", "operador", "visualizador"],
+    "GET /api/abordagens/{abordagem_id}": ["admin", "operador", "visualizador"],
+    "POST /api/abordagens": ["admin", "operador"],
+    "PUT /api/abordagens/{abordagem_id}": ["admin", "operador"],
+    "POST /api/abordagens/{abordagem_id}/pessoas": ["admin", "operador"],
+    "DELETE /api/abordagens/{abordagem_id}/pessoas/{pessoa_id}": ["admin", "operador"],
+    "DELETE /api/abordagens/{abordagem_id}": ["admin"],
+
+    # CONSULTA / RELATÓRIO — Leitura para todos autenticados
+    "GET /api/consulta-relatorio": ["admin", "operador", "visualizador"],
 }
 
 
