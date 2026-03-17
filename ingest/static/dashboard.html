@@ -7460,6 +7460,33 @@ function _alvoDvGerarRelatorio() {
             + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
           + '</tr></thead><tbody>' + compRows + '</tbody></table></div>')
     + '</div>'
+    // ── Central de Ameaças (threat_center do _cenAllItems) ─────────────────
+    + (function() {
+        var _ci  = (_cenAllItems || []).find(function(it){ return it.plate === plate; });
+        var _tc  = _ci && _ci.threat_center;
+        if (!_tc) return '';
+        var _rs  = _tc.route_similarity || {};
+        var _hasThreat = !!(_tc.matched_target || (_tc.threat_badges && _tc.threat_badges.length));
+        var _hasRoute  = !!(_rs.matched || (_rs.similarity_ratio && _rs.similarity_ratio > 0));
+        if (!_hasThreat && !_hasRoute) return '';
+        var _badgesHtml = (_tc.threat_badges && _tc.threat_badges.length)
+          ? _tc.threat_badges.map(function(b){ return '<span style="display:inline-block;background:#6d28d9;color:#ede9fe;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px;letter-spacing:.04em">' + b + '</span>'; }).join('')
+          : '';
+        var _simPct = (_rs.similarity_ratio != null && _rs.similarity_ratio > 0)
+          ? Math.round(_rs.similarity_ratio * 100) + '%' : '—';
+        var _rows =
+            '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Alvo cadastrado vinculado</td><td style="padding:6px 10px;font-size:.78rem">' + (_tc.matched_target ? '<strong style="color:#16a34a">&#9989; Sim</strong>' : '<span style="color:#9ca3af">— Não</span>') + '</td></tr>'
+          + (_tc.matched_plates && _tc.matched_plates.length ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Placas alvo no grupo</td><td style="padding:6px 10px;font-size:.78rem;font-family:monospace">' + _tc.matched_plates.join(', ') + '</td></tr>' : '')
+          + '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Rota parecida</td><td style="padding:6px 10px;font-size:.78rem">' + (_rs.matched ? '<strong style="color:#7c3aed">&#9989; Sim</strong>' : '<span style="color:#9ca3af">— Não</span>') + '</td></tr>'
+          + '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Similaridade de rota</td><td style="padding:6px 10px;font-size:.78rem;font-weight:700;color:#7c3aed">' + _simPct + '</td></tr>'
+          + (_rs.best_alvo ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Alvo mais similar</td><td style="padding:6px 10px;font-size:.78rem;font-family:monospace;font-weight:700">' + _rs.best_alvo + '</td></tr>' : '')
+          + (_rs.common_cameras && _rs.common_cameras.length ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Câmeras em comum</td><td style="padding:6px 10px;font-size:.78rem">' + _rs.common_cameras.join(', ') + '</td></tr>' : '')
+          + (_rs.common_cities  && _rs.common_cities.length  ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;color:#6b7280;font-weight:700;white-space:nowrap">Cidades em comum</td><td style="padding:6px 10px;font-size:.78rem">' + _rs.common_cities.join(', ') + '</td></tr>'  : '');
+        return '<div style="margin-bottom:20px;border:1px solid #7c3aed;border-radius:10px;overflow:hidden">'
+          + '<div style="background:#7c3aed;padding:9px 14px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#fff">&#127919; Central de Amea&ccedil;as — Fase 1 &amp; 2' + (_badgesHtml ? ' &nbsp;' + _badgesHtml : '') + '</div>'
+          + '<table style="width:100%;border-collapse:collapse;background:#faf5ff"><tbody>' + _rows + '</tbody></table>'
+          + '</div>';
+      })()
     // rodapé
     + '<div style="font-size:.68rem;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;text-align:right">'
       + 'Gerado em ' + now + ' &bull; Sistema de Monitoramento BPFRON'
