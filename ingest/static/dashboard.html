@@ -2878,42 +2878,21 @@
 </div>
 
 <!-- MODAL RELATÓRIO DO GRUPO SUSPEITO -->
-<div class="modal-overlay" id="cgs-rel-modal" onclick="if(event.target===this)closeModal('cgs-rel-modal')">
-  <div class="modal modal-wide" style="max-width:920px;max-height:94vh;display:flex;flex-direction:column">
+<!-- MODAL UNIFICADO DE RELATÓRIOS (Grupo Suspeito · Alvo Rastreado) -->
+<div class="modal-overlay" id="rel-modal" onclick="if(event.target===this)closeModal('rel-modal')">
+  <div class="modal modal-wide" style="max-width:940px;max-height:94vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2 style="margin:0;font-size:1rem;display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
-        &#128196; Relatório do Grupo &mdash; <span id="cgs-rel-titulo" style="font-weight:800"></span>
+        &#128196; Relat&oacute;rio &mdash; <span id="rel-modal-titulo" style="font-weight:800"></span>
       </h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button onclick="_cgsExportarPDF()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128196; Exportar PDF</button>
+        <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#128663; Ver rota</button>
+        <button onclick="_relExportarPDF()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128196; Exportar PDF</button>
         <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
-        <button class="modal-close" onclick="closeModal('cgs-rel-modal')">&times;</button>
+        <button class="modal-close" onclick="closeModal('rel-modal')">&times;</button>
       </div>
     </div>
-    <div id="cgs-rel-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
-  </div>
-</div>
-
-<!-- MODAL RELATÓRIO OPERACIONAL DE ALVO RASTREADO -->
-<div class="modal-overlay" id="alvo-rel-modal" onclick="if(event.target===this)closeModal('alvo-rel-modal')">
-  <div class="modal modal-wide" style="max-width:920px;max-height:92vh;display:flex;flex-direction:column">
-    <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <h2 style="margin:0;font-size:1.05rem;display:flex;align-items:center;gap:6px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
-        &#128196; Relat&oacute;rio Operacional &mdash; <span id="alvo-rel-title" style="font-weight:700"></span>
-      </h2>
-      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button onclick="_alvoDvExportarPDF()"
-          style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
-          &#128196; Exportar PDF
-        </button>
-        <button onclick="window.print()"
-          style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
-          &#128438; Imprimir
-        </button>
-        <button class="modal-close" onclick="closeModal('alvo-rel-modal')">&times;</button>
-      </div>
-    </div>
-    <div id="alvo-rel-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
+    <div id="rel-modal-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
   </div>
 </div>
 
@@ -3829,7 +3808,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','alvo-rel-modal','cgs-detalhe-modal','cgs-rel-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal'].forEach(closeModal);
   }
 });
 
@@ -4840,6 +4819,299 @@ function _cgsBuildDetalhe(g) {
     + timelineHtml;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MOTOR UNIFICADO DE RELATÓRIOS — _relEngine
+// Usado por: _cgsGerarRelatorio, _alvoDvGerarRelatorio
+// ═══════════════════════════════════════════════════════════════════════════
+var _relPdfTitleSlug = 'relatorio';
+var _relCurrentMapaFn = null;
+var _batedorReportData = null;  // cache dos dados carregados por openBatedorReport
+var _relEngine = (function() {
+  var D = '\u2014'; // em dash
+  function fmtTs(iso) {
+    if (!iso) return D;
+    return new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  function fmtSec(s) {
+    if (!s) return D;
+    s = Math.round(s);
+    if (s < 60) return s + 's';
+    if (s < 3600) { var m = Math.floor(s/60); return m + ' min' + (s%60 ? ' ' + (s%60) + 's' : ''); }
+    var h = Math.floor(s/3600), rm = Math.floor((s%3600)/60);
+    return h + 'h' + (rm ? ' ' + rm + 'min' : '');
+  }
+  function fmtInterval(ms) {
+    if (ms == null || ms < 0) return null;
+    return fmtSec(Math.round(Math.abs(ms) / 1000));
+  }
+  function riskColor(risco) {
+    if (!risco) return '#6b7280';
+    var r = risco.toUpperCase();
+    return r === 'CR\u00cdTICO' ? '#f87171' : r === 'ALTO' ? '#fb923c' : r === 'M\u00c9DIO' ? '#fbbf24' : r === 'BAIXO' ? '#4ade80' : '#6b7280';
+  }
+  function section(title, body) {
+    return '<div style="margin-bottom:16px">'
+      + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#1d4ed8;border-bottom:2px solid #e5e7eb;padding-bottom:5px;margin-bottom:10px">' + title + '</div>'
+      + body
+      + '</div>';
+  }
+  function buildHeader(o) {
+    var rc = riskColor(o.risco);
+    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;gap:10px">'
+      + '<div>'
+        + '<div style="font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;font-weight:700;margin-bottom:2px">Sistema de Monitoramento BPFRON</div>'
+        + '<div style="font-size:1.2rem;font-weight:800;color:#111">' + o.titulo + '</div>'
+        + (o.subtitulo ? '<div style="font-size:.8rem;color:#374151;margin-top:4px">' + o.subtitulo + '</div>' : '')
+      + '</div>'
+      + '<div style="text-align:right;flex-shrink:0">'
+        + '<div style="font-size:.65rem;color:#6b7280">Gerado em</div>'
+        + '<div style="font-size:.75rem;font-weight:700;color:#374151">' + o.now + '</div>'
+        + (o.risco ? '<div style="margin-top:6px;display:inline-block;padding:3px 10px;border-radius:99px;font-size:.74rem;font-weight:800;background:' + rc + ';color:#fff">' + o.risco.toUpperCase() + (o.score != null ? ' \u00b7 ' + o.score + ' pts' : '') + '</div>' : '')
+      + '</div>'
+    + '</div>';
+  }
+  function buildKPIs(kpis) {
+    var cards = kpis.filter(function(k){ return k != null; }).map(function(k) {
+      return '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;text-align:center">'
+        + '<div style="font-size:1.3rem;margin-bottom:4px">' + (k.icon || '') + '</div>'
+        + '<div style="font-size:.62rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">' + k.label + '</div>'
+        + '<div style="font-size:1rem;font-weight:800;color:' + (k.color || '#111') + '">' + (k.value != null ? k.value : D) + '</div>'
+      + '</div>';
+    }).join('');
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px">' + cards + '</div>';
+  }
+  function buildFooter(now) {
+    return '<div style="font-size:.65rem;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;margin-top:8px;text-align:right">'
+      + 'Gerado em ' + now + ' \u00b7 Sistema de Monitoramento BPFRON \u00b7 Confidencial'
+    + '</div>';
+  }
+  function render(blocks, printWrapperId) {
+    return '<div id="' + printWrapperId + '" style="color:#111827;font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.5">'
+      + blocks.join('')
+      + '</div>';
+  }
+  return { fmtTs:fmtTs, fmtSec:fmtSec, fmtInterval:fmtInterval, riskColor:riskColor,
+           section:section, buildHeader:buildHeader, buildKPIs:buildKPIs,
+           buildFooter:buildFooter, render:render };
+})();
+
+function _relExportarPDF() {
+  var body = document.getElementById('rel-modal-body');
+  if (!body) return;
+  var win = window.open('', '_blank', 'width=950,height=720');
+  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
+    + '<meta charset="utf-8"><title>Relatorio_' + _relPdfTitleSlug + '</title>'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
+    + 'table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;font-size:12px}'
+    + 'th{background:#f3f4f6;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151;text-align:left}'
+    + 'tr{border-bottom:1px solid #e5e7eb}.no-print{display:none}'
+    + '@page{size:A4 portrait;margin:14mm 12mm}@media print{body{padding:0}.no-print{display:none!important}}'
+    + '</style></head><body>'
+    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
+      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
+      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
+    + '</div>'
+    + body.innerHTML + '</body></html>');
+  win.document.close(); win.focus();
+}
+
+function _relInjectPrintStyle() {
+  if (document.getElementById('rel-print-style')) return;
+  var s = document.createElement('style');
+  s.id = 'rel-print-style';
+  s.textContent = '@media print{body > *:not(#rel-modal){display:none!important}'
+    + '#rel-modal{display:block!important;position:static!important;background:none!important;padding:0!important}'
+    + '#rel-modal .modal{max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important}'
+    + '#rel-modal .modal-header{display:none!important}#rel-print{color:#000!important}}';
+  document.head.appendChild(s);
+}
+
+function _relAbrirModal(titulo, html, mapaFn) {
+  document.getElementById('rel-modal-titulo').textContent = titulo;
+  document.getElementById('rel-modal-body').innerHTML = html;
+  var btnMapa = document.getElementById('rel-btn-mapa');
+  if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
+  _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
+  _relInjectPrintStyle();
+  openModal('rel-modal');
+}
+
+function _relVerRotaMapa() {
+  if (typeof _relCurrentMapaFn === 'function') { closeModal('rel-modal'); _relCurrentMapaFn(); }
+}
+
+// ── Relatório de Placa Individual ────────────────────────────────────────────
+function _abrirRelatorioPlacaIndividual() {
+  var rd = _batedorReportData;
+  if (!rd) return;
+  var plate    = rd.plate;
+  var d        = rd.d;
+  var events   = d.events || [];
+  var partners = d.convoy_partners || [];
+  var now      = new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var score    = d.score || 0;
+  var level    = d.level || 'normal';
+  var ricoColor = score >= 80 ? '#f87171' : score >= 40 ? '#fbbf24' : '#4ade80';
+
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  var kpisHtml = _relEngine.buildKPIs([
+    { icon: '\uD83D\uDCCA', label: 'Score',      value: score + ' pts',                         color: ricoColor },
+    { icon: '\u26A0\uFE0F', label: 'N\u00edvel',  value: level.toUpperCase(),                    color: ricoColor },
+    { icon: '\uD83D\uDCCB', label: 'Passagens',   value: String(d.summary ? d.summary.total_passes : events.length) },
+    { icon: '\uD83D\uDCF7', label: 'C\u00e2meras', value: d.summary ? String(d.summary.cameras_count) : '\u2014' },
+    partners.length ? { icon: '\uD83D\uDC65', label: 'Parceiros', value: String(partners.length) } : null,
+    d.is_alvo ? { icon: '\uD83C\uDFAF', label: 'Status', value: 'ALVO', color: '#f87171' } : null
+  ]);
+
+  // ── Seção 1: Identificação & Atividade ────────────────────────────────────
+  function _df(l, v) {
+    return '<div><div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">' + l + '</div>'
+      + '<div style="font-size:.88rem;font-weight:600;color:#111">' + (v != null ? v : '\u2014') + '</div></div>';
+  }
+  var dadosHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px">'
+    + _df('Placa', '<span style="font-family:monospace;color:#dc2626;font-weight:800">' + plate + '</span>')
+    + _df('Score', score + ' pts')
+    + _df('N\u00edvel', '<span style="font-weight:800;color:' + ricoColor + '">' + level.toUpperCase() + '</span>');
+  if (d.summary) {
+    dadosHtml += _df('Total de passagens', String(d.summary.total_passes || events.length));
+    dadosHtml += _df('C\u00e2meras', String(d.summary.cameras_count || '\u2014'));
+    dadosHtml += _df('Parceiros', String(d.summary.partners_count || partners.length || '\u2014'));
+    if (d.summary.avg_confidence > 0) dadosHtml += _df('Conf. m\u00e9dia', Math.round(d.summary.avg_confidence * 100) + '%');
+    if (d.summary.dom_direction) dadosHtml += _df('Dir. dominante', d.summary.dom_direction);
+  }
+  if (d.is_alvo) {
+    dadosHtml += _df('Status', '<span style="color:#dc2626;font-weight:800">\uD83C\uDFAF ALVO RASTREADO</span>');
+    if (d.alvo_descricao) dadosHtml += _df('Descri\u00e7\u00e3o', d.alvo_descricao);
+    if (d.alvo_list) dadosHtml += _df('Lista', d.alvo_list);
+  }
+  dadosHtml += '</div>';
+  var badges = (d.badges || []).map(function(b) {
+    var cl = b === 'ALVO' ? '#dc2626' : (b.indexOf('MULTI') >= 0 || b === 'COMBOIO') ? '#d97706' : '#4f46e5';
+    return '<span style="display:inline-block;background:' + cl + ';color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px">' + b + '</span>';
+  }).join('');
+  if (badges) dadosHtml += '<div style="margin-top:8px">' + badges + '</div>';
+
+  // ── Seção 2: Linha do Tempo ───────────────────────────────────────────────
+  var evRows = events.map(function(ev, i) {
+    var dtFmt = ev.ts ? new Date(ev.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
+    var conf  = ev.confidence > 0 ? Math.round(ev.confidence * 100) + '%' : '\u2014';
+    var intervalo = '\u2014';
+    if (i > 0 && events[i-1].ts && ev.ts) {
+      var ms = Math.abs(new Date(ev.ts) - new Date(events[i-1].ts));
+      intervalo = _relEngine.fmtSec(Math.round(ms / 1000));
+    }
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      + '<td style="padding:6px 10px;text-align:center;font-size:.75rem;color:#9ca3af">' + (i + 1) + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;white-space:nowrap">' + dtFmt + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem">' + (ev.camera_name || ev.camera_id || '\u2014') + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;font-weight:700;color:#6366f1">' + (ev.direcao || '\u2014') + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af">' + conf + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af">' + intervalo + '</td>'
+      + '</tr>';
+  }).join('');
+  var timelineHtml = events.length
+    ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+        + '<thead><tr style="background:#e5e7eb">'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">#</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Data / Hora</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">C\u00e2mera</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Dire\u00e7\u00e3o</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Conf.</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Intervalo</th>'
+        + '</tr></thead><tbody>' + evRows + '</tbody></table></div>'
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhuma passagem no per\u00edodo.</div>';
+
+  // ── Seção 3: Parceiros em Comboio ─────────────────────────────────────────
+  var partRows = partners.map(function(p) {
+    var tripMin  = Math.round((p.trip_span_sec || 0) / 60);
+    var alvoMark = p.is_alvo ? ' <span style="background:#dc2626;color:#fff;font-size:.62rem;padding:1px 6px;border-radius:99px">ALVO</span>' : '';
+    var camNames = (p.cameras_detail || []).map(function(c){ return c.cam_nome || c.camera_id; }).join(', ');
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      + '<td style="padding:6px 10px;font-size:.82rem;font-weight:700;font-family:monospace">' + p.plate + alvoMark + '</td>'
+      + '<td style="padding:6px 10px;text-align:center;font-weight:700;color:#6366f1">' + p.cameras_together + ' c\u00e2m.</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem">' + (tripMin > 0 ? tripMin + ' min' : (p.trip_span_sec || 0) + 's') + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + camNames + '</td>'
+      + '</tr>';
+  }).join('');
+  var comboioHtml = partners.length
+    ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+        + '<thead><tr style="background:#e5e7eb">'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Parceiro</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Cooc.</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Trip span</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">C\u00e2meras</th>'
+        + '</tr></thead><tbody>' + partRows + '</tbody></table></div>'
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum parceiro em comboio confirmado.</div>';
+
+  // ── Seção 4: Análise Automática ───────────────────────────────────────────
+  var analiseHtml = '';
+  if (d.score_breakdown && d.score_breakdown.length) {
+    var sbRows = d.score_breakdown.map(function(b) {
+      return '<tr style="border-bottom:1px solid #e5e7eb">'
+        + '<td style="padding:6px 10px;font-size:.78rem">' + b.label + '</td>'
+        + '<td style="padding:6px 10px;text-align:center;font-size:.78rem">' + b.value + '</td>'
+        + '<td style="padding:6px 10px;text-align:center;font-size:.78rem;color:#4f46e5">\u00d7' + b.multiplier + '</td>'
+        + '<td style="padding:6px 10px;text-align:center;font-size:.78rem;font-weight:700">+' + b.points + '</td>'
+        + '<td style="padding:6px 10px;font-size:.75rem;color:#9ca3af">' + (b.reason || '') + '</td>'
+        + '</tr>';
+    }).join('');
+    analiseHtml += '<div style="margin-bottom:12px;overflow-x:auto">'
+      + '<table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+      + '<thead><tr style="background:#e5e7eb">'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Fator</th>'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Val.</th>'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Mult.</th>'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Pts</th>'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Obs</th>'
+      + '</tr></thead><tbody>' + sbRows
+      + '<tr style="background:#e5e7eb;font-weight:700"><td colspan="3" style="padding:6px 10px;font-size:.78rem">TOTAL</td>'
+        + '<td style="padding:6px 10px;font-size:.78rem;text-align:center">+' + score + '</td><td></td></tr>'
+      + '</tbody></table></div>';
+  }
+  var _cenItem = (_cenAllItems || []).find(function(it) { return it.plate === plate; });
+  if (_cenItem && _cenItem.threat_center) {
+    var _tc = _cenItem.threat_center;
+    var _rs = _tc.route_similarity || {};
+    var _tmBadges = (_tc.threat_badges || []).map(function(b) {
+      return '<span style="display:inline-block;background:#6d28d9;color:#ede9fe;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px">' + b + '</span>';
+    }).join('');
+    var _simPct = (_rs.similarity_ratio != null && _rs.similarity_ratio > 0) ? Math.round(_rs.similarity_ratio * 100) + '%' : '\u2014';
+    analiseHtml += (_tmBadges ? '<div style="margin-bottom:8px">' + _tmBadges + '</div>' : '')
+      + '<table style="width:100%;border-collapse:collapse;margin-top:4px"><tbody>'
+      + '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb;width:40%">Alvo vinculado (Central)</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + (_tc.matched_target ? '<strong style="color:#16a34a">\u2705 Sim</strong>' : '<span style="color:#9ca3af">\u2014 N\u00e3o</span>') + '</td></tr>'
+      + (_rs.matched || (_rs.similarity_ratio && _rs.similarity_ratio > 0) ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">Similaridade de rota</td><td style="padding:6px 10px;font-size:.82rem;font-weight:700;color:#7c3aed;border:1px solid #e5e7eb">' + _simPct + (_rs.best_alvo ? ' \u2014 similar a ' + _rs.best_alvo : '') + '</td></tr>' : '')
+      + (_rs.common_cameras && _rs.common_cameras.length ? '<tr><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">C\u00e2meras em comum</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + _rs.common_cameras.join(', ') + '</td></tr>' : '')
+      + '</tbody></table>';
+  }
+  if (!analiseHtml) {
+    analiseHtml = '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum breakdown dispon\u00edvel.</div>';
+  }
+
+  // ── render ────────────────────────────────────────────────────────────────
+  var _rpiHtml = _relEngine.render([
+    _relEngine.buildHeader({
+      titulo: 'Relat\u00f3rio de Placa Individual',
+      subtitulo: 'Placa: <strong>' + plate + '</strong>',
+      risco: level.toUpperCase(),
+      score: score,
+      now: now
+    }),
+    kpisHtml,
+    _relEngine.section('1. Identifica\u00e7\u00e3o & Atividade', dadosHtml),
+    _relEngine.section('2. Linha do Tempo \u2014 Passagens (' + events.length + ')', timelineHtml),
+    _relEngine.section('3. Parceiros em Comboio (' + partners.length + ')', comboioHtml),
+    _relEngine.section('4. An\u00e1lise Autom\u00e1tica \u2014 Score Breakdown', analiseHtml),
+    _relEngine.buildFooter(now)
+  ], 'rel-print');
+
+  _relAbrirModal(plate, _rpiHtml, function() {
+    closeModal('detail-modal');
+    verTrajetoriaNoMapa();
+  });
+}
+
 // ── Relatório do Grupo Suspeito ──────────────────────────────────────────────
 function _cgsGerarRelatorio() {
   var g = _cgsCurrentGroup;
@@ -5000,66 +5272,31 @@ function _cgsGerarRelatorio() {
     + '</table>';
   }
 
-  // monta body completo
-  document.getElementById('cgs-rel-body').innerHTML =
-    hdr
-    + sec('1. Placas Envolvidas', placasTable)
-    + sec('2. Dados Gerais do Grupo', dadosTable)
-    + sec('3. Breakdown do Score', scoreBody)
-    + sec('&#9888; Vínculos com Alvos — Fase 1', tcBody)
-    + sec('4. Linha do Tempo — Passagens Conjuntas', timelineBody)
-    + '<div style="margin-top:18px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:.68rem;color:#9ca3af;text-align:right">Gerado em ' + now + ' · Sistema BPFRON Monitoramento</div>'
-    + '</div>'; // fecha cgs-rel-print
-
-  // injetar estilo de impressão uma vez
-  if (!document.getElementById('cgs-rel-print-style')) {
-    var s = document.createElement('style');
-    s.id = 'cgs-rel-print-style';
-    s.textContent = '@media print{'
-      + 'body > *:not(#cgs-rel-modal){display:none!important}'
-      + '#cgs-rel-modal{display:block!important;position:static!important;background:none!important;padding:0!important}'
-      + '#cgs-rel-modal .modal{max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important}'
-      + '#cgs-rel-modal .modal-header{display:none!important}'
-      + '#cgs-rel-print{color:#000!important}'
-      + '}';
-    document.head.appendChild(s);
-  }
-
-  openModal('cgs-rel-modal');
+  // ── monta e abre o relatório unificado ──────────────────────────────────
+  var _cgsKpis = _relEngine.buildKPIs([
+    { icon: '\uD83D\uDD34', label: 'Risco',          value: g.risco || dash,                        color: _relEngine.riskColor(g.risco) },
+    { icon: '\uD83D\uDCCA', label: 'Score',           value: g.score != null ? g.score + ' pts' : dash },
+    { icon: '\uD83D\uDCF7', label: 'Cooc. c\u00e2meras',  value: g.cameras_count ? g.cameras_count + 'x' : dash },
+    { icon: '\uD83D\uDE97', label: 'Ve\u00edculos',         value: g.group_size ? String(g.group_size) : dash },
+    { icon: '\uD83D\uDCC5', label: 'Dias distintos',  value: g.distinct_days ? g.distinct_days + ' d' : dash },
+    { icon: '\u23F1',       label: 'Span da viagem',  value: g.trip_span_sec ? fmtSec(g.trip_span_sec) : dash },
+    g.leader ? { icon: '\uD83C\uDFAF', label: 'Batedor/L\u00edder', value: g.leader, color: '#dc2626' } : null
+  ]);
+  var _cgsAnalise = scoreBody
+    + (g.threat_center && g.threat_center.matched_target ? '<div style="margin-top:10px">' + tcBody + '</div>' : '');
+  var _cgsHtml = _relEngine.render([
+    _relEngine.buildHeader({ titulo: 'Relat\u00f3rio de Grupo Suspeito', subtitulo: 'Placas: ' + g.plates.join(' \u00b7 '), risco: g.risco, score: g.score, now: now }),
+    _cgsKpis,
+    _relEngine.section('1. Placas Envolvidas', placasTable),
+    _relEngine.section('2. Dados Gerais do Grupo', dadosTable),
+    _relEngine.section('3. An\u00e1lise de Amea\u00e7a', _cgsAnalise),
+    _relEngine.section('4. Linha do Tempo \u2014 Passagens Conjuntas', timelineBody),
+    _relEngine.buildFooter(now)
+  ], 'rel-print');
+  _relAbrirModal(g.plates.join(' + '), _cgsHtml, _cgsVerRotaNoMapa);
 }
 
-function _cgsExportarPDF() {
-  var body = document.getElementById('cgs-rel-body');
-  if (!body) return;
-  var g = _cgsCurrentGroup;
-  var nome = (g ? g.plates.join('_') : 'grupo').replace(/[^A-Z0-9_]/gi, '_');
-  var conteudo = body.innerHTML;
-  var win = window.open('', '_blank', 'width=950,height=720');
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
-  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
-    + '<meta charset="utf-8">'
-    + '<title>Relatorio_Grupo_' + nome + '</title>'
-    + '<style>'
-    + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
-    + 'table{width:100%;border-collapse:collapse}'
-    + 'th,td{padding:7px 10px;font-size:12px}'
-    + 'th{background:#f3f4f6;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151;text-align:left}'
-    + 'tr{border-bottom:1px solid #e5e7eb}'
-    + '.no-print{display:none}'
-    + '@page{size:A4 portrait;margin:14mm 12mm}'
-    + '@media print{body{padding:0}.no-print{display:none!important}}'
-    + '</style>'
-    + '</head><body>'
-    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
-      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
-      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
-    + '</div>'
-    + conteudo
-    + '</body></html>');
-  win.document.close();
-  win.focus();
-}
+function _cgsExportarPDF() { _relExportarPDF(); } // compat: usa motor unificado
 
 // ── Rota do Grupo Suspeito no Mapa ───────────────────────────────────────
 function _cgsVoltarAoDetalhe() {
@@ -5774,6 +6011,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
         : '')
       + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Detalhes do Score</button>'
       + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="promptTrajetoria()">&#128663; Trajetória no Mapa</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="_abrirRelatorioPlacaIndividual()" style="font-size:.8rem">&#128196; Gerar Relat\u00f3rio</button>'
       + '</div>';
 
     // ---- 3: Decisao Operacional ----
@@ -5909,6 +6147,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     _mapaTrajetoria = { plates: [plate], points: events.map(function(ev){
       return { camera_id: ev.camera_id, ts: ev.ts||'', plate: plate, cam_nome: ev.camera_name||ev.camera_id||'' };
     })};
+    _batedorReportData = { plate: plate, d: d };
     if (_mb) _mb.style.display = events.length ? '' : 'none';
   } catch(e) {
     document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro ao carregar relat\u00f3rio: ' + e.message + '</p>';
@@ -7194,12 +7433,19 @@ var _alvoDvPlate = null;
 // ── Janelas de análise automática (altere aqui para ajustar todos os blocos) ──
 var ALVO_DV_PASS_WINDOW = '7d';   // Últimas Passagens + Ver Rota   (padrão: 7 dias)
 var ALVO_DV_COMP_WINDOW = '30d';  // Acompanhantes / Comboio       (padrão: 30 dias)
+var _alvoDvCompWindow   = '30d';  // Período ativo do seletor de acompanhantes (7d/15d/30d/90d/180d)
 var ALVO_DV_HIST_WINDOW = '90d';  // Histórico ampliado (reservado) (padrão: 90 dias)
 // Formata a janela para exibição: '7d' → '7 dias', '30d' → '30 dias', '24h' → '24h'
 function _alvoDvFmtWindow(w) {
   var m = String(w).match(/^(\d+)(d|h)$/i);
   if (!m) return w;
   return m[2].toLowerCase() === 'd' ? m[1] + ' dias' : m[1] + 'h';
+}
+
+// ── Alvo: Troca o período de análise de acompanhantes ────────────────────────
+function _alvoDvCompWindowChange(val) {
+  _alvoDvCompWindow = val || '30d';
+  if (_alvoDvId && _alvoDvPlate) _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
 }
 
 // ── Alvo: Fechar tela de detalhes ────────────────────────────────────────────
@@ -7427,18 +7673,81 @@ function _alvoDvGerarRelatorio() {
     return '<th style="padding:7px 10px;font-size:.68rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">' + t + '</th>';
   };
 
-  var html =
-    '<div id="alvo-rel-print" style="color:#111827;font-family:ui-sans-serif,system-ui,sans-serif;line-height:1.5">'
-    + '<div style="background:#0f172a;border-radius:10px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
-      + '<div>'
-        + '<div style="font-size:1.1rem;font-weight:800;color:#fff;letter-spacing:.06em;font-family:monospace">' + plate + '</div>'
-        + '<div style="font-size:.75rem;color:#94a3b8;margin-top:2px">Relatório Operacional &bull; ' + now + '</div>'
-      + '</div>'
-      + '<div style="display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:99px;padding:5px 16px">'
-        + '<span style="width:10px;height:10px;border-radius:50%;background:' + prioColor + ';flex-shrink:0"></span>'
-        + '<span style="font-size:.78rem;font-weight:800;color:' + prioColor + ';letter-spacing:.06em;text-transform:uppercase">' + prioLabel + '</span>'
-      + '</div>'
-    + '</div>'
+  // ── monta e abre o relatório unificado ──────────────────────────────────
+  var _alvoKpis = _relEngine.buildKPIs([
+    { icon: '\uD83C\uDFAF', label: 'Prioridade',       value: prioLabel,                   color: prioColor },
+    { icon: '\uD83D\uDCCA', label: 'Score',             value: score + ' pts',              color: prioColor },
+    { icon: '\uD83D\uDCCB', label: 'Passagens',         value: String(totalEv) },
+    { icon: '\uD83D\uDCF7', label: 'C\u00e2meras',      value: String(totalCam) },
+    companions.length ? { icon: '\uD83D\uDC65', label: 'Acompanhantes', value: String(companions.length) } : null,
+    { icon: '\uD83D\uDCC5', label: 'Janela',            value: _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) }
+  ]);
+  var _alvoDadosHtml = (function() {
+    function _f(l, v) {
+      return '<div><div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">' + l + '</div>'
+        + '<div style="font-size:.88rem;font-weight:600;color:#111">' + (v != null ? v : '\u2014') + '</div></div>';
+    }
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px">'
+      + _f('Placa', '<span style="font-family:monospace;color:#dc2626;font-weight:800">' + plate + '</span>')
+      + _f('Descri\u00e7\u00e3o', descricao === '\u2014' ? '<em style="color:#9ca3af">sem descri\u00e7\u00e3o</em>' : descricao)
+      + _f('Prioridade', '<span style="color:' + prioColor + ';font-weight:800">' + prioLabel + '</span>')
+      + _f('Cadastrado em', cadastradoEm)
+      + _f('\u00daltima passagem', ultimaPass)
+      + _f('Total de eventos', String(totalEv))
+      + _f('C\u00e2meras distintas', String(totalCam))
+      + _f('Acompanhantes', companions.length ? String(companions.length) : '\u2014')
+    + '</div>';
+  })();
+  var _alvoTimelineHtml = rotaRows
+    ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+        + '<thead><tr style="background:#e5e7eb">'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">#</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Data / Hora</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Local</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">C\u00e2mera</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Dire\u00e7\u00e3o</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Intervalo</th>'
+        + '</tr></thead><tbody>' + rotaRows + '</tbody></table></div>'
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhuma passagem registrada nos \u00faltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '.</div>';
+  var _alvoCompHtml = compRows
+    ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+        + '<thead><tr style="background:#e5e7eb">'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Placa</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Papel</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Cooc.</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">\u00dalt. Junto</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Local / C\u00e2mera</th>'
+        + '</tr></thead><tbody>' + compRows + '</tbody></table></div>'
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos \u00faltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>';
+  var _alvoAnaliseHtml = (function() {
+    var _ci = (_cenAllItems || []).find(function(it){ return it.plate === plate; });
+    var _tc = _ci && _ci.threat_center;
+    if (!_tc) return '<div style="font-size:.82rem;color:#9ca3af">Nenhum v\u00ednculo com Central de Amea\u00e7as identificado.</div>';
+    var _rs = _tc.route_similarity || {};
+    var _hasThreat = !!(_tc.matched_target || (_tc.threat_badges && _tc.threat_badges.length));
+    var _hasRoute  = !!(_rs.matched || (_rs.similarity_ratio && _rs.similarity_ratio > 0));
+    if (!_hasThreat && !_hasRoute) return '<div style="font-size:.82rem;color:#9ca3af">Sem atividade de amea\u00e7a detectada.</div>';
+    var _badges = (_tc.threat_badges || []).map(function(b){
+      return '<span style="display:inline-block;background:#6d28d9;color:#ede9fe;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px">' + b + '</span>';
+    }).join('');
+    var _simPct = (_rs.similarity_ratio != null && _rs.similarity_ratio > 0) ? Math.round(_rs.similarity_ratio*100)+'%' : '\u2014';
+    return (_badges ? '<div style="margin-bottom:8px">' + _badges + '</div>' : '')
+      + '<table style="width:100%;border-collapse:collapse"><tbody>'
+      + '<tr><td style="background:#f9fafb;font-weight:700;font-size:.75rem;white-space:nowrap;padding:6px 10px;border:1px solid #e5e7eb;width:40%">Alvo vinculado</td><td style="font-size:.82rem;padding:6px 10px;border:1px solid #e5e7eb">' + (_tc.matched_target ? '<strong style="color:#16a34a">&#9989; Sim</strong>' : '<span style="color:#9ca3af">N\u00e3o</span>') + '</td></tr>'
+      + (_rs.matched||_rs.similarity_ratio>0 ? '<tr><td style="background:#f9fafb;font-weight:700;font-size:.75rem;white-space:nowrap;padding:6px 10px;border:1px solid #e5e7eb">Similaridade de rota</td><td style="font-size:.82rem;padding:6px 10px;border:1px solid #e5e7eb;font-weight:700;color:#7c3aed">' + _simPct + (_rs.best_alvo ? ' \u2014 similar a ' + _rs.best_alvo : '') + '</td></tr>' : '')
+      + (_rs.common_cameras&&_rs.common_cameras.length ? '<tr><td style="background:#f9fafb;font-weight:700;font-size:.75rem;white-space:nowrap;padding:6px 10px;border:1px solid #e5e7eb">C\u00e2meras em comum</td><td style="font-size:.82rem;padding:6px 10px;border:1px solid #e5e7eb">' + _rs.common_cameras.join(', ') + '</td></tr>' : '')
+      + '</tbody></table>';
+  })();
+  var _alvoHtml = _relEngine.render([
+    _relEngine.buildHeader({ titulo: 'Relat\u00f3rio Operacional \u2014 Alvo Rastreado', subtitulo: 'Placa: <strong>' + plate + '</strong>' + (descricao !== '\u2014' ? ' \u2014 ' + descricao : ''), risco: prioLabel, score: score, now: now }),
+    _alvoKpis,
+    _relEngine.section('1. Identifica\u00e7\u00e3o', _alvoDadosHtml),
+    _relEngine.section('2. Linha do Tempo \u2014 Passagens (' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + ')', _alvoTimelineHtml),
+    _relEngine.section('3. Relacionamentos & Comboio', _alvoCompHtml),
+    _relEngine.section('4. An\u00e1lise de Amea\u00e7a', _alvoAnaliseHtml),
+    _relEngine.buildFooter(now)
+  ], 'rel-print');
+  var _alvoHtml_unused =
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;margin-bottom:20px">'
       + field('Placa', '<span style="font-family:monospace;color:#dc2626;font-weight:800">' + plate + '</span>')
       + field('Descrição', descricao === '—' ? '<em style="color:#9ca3af">sem descrição</em>' : descricao)
@@ -7463,7 +7772,7 @@ function _alvoDvGerarRelatorio() {
     + '<div style="margin-bottom:24px">'
       + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128101; Acompanhantes / Comboio</div>'
       + (companions.length === 0
-        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '.</div>'
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>'
         : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
           + '<thead><tr style="background:#e5e7eb">'
             + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
@@ -7501,61 +7810,10 @@ function _alvoDvGerarRelatorio() {
       + 'Gerado em ' + now + ' &bull; Sistema de Monitoramento BPFRON'
     + '</div></div>';
 
-  document.getElementById('alvo-rel-title').textContent = plate;
-  document.getElementById('alvo-rel-body').innerHTML = html;
-
-  // CSS de impressão (injetado uma única vez)
-  if (!document.getElementById('alvo-rel-print-style')) {
-    var s = document.createElement('style');
-    s.id = 'alvo-rel-print-style';
-    s.textContent = '@media print{'
-      + 'body > *:not(#alvo-rel-modal){display:none!important}'
-      + '#alvo-rel-modal{display:block!important;position:static!important;background:none!important;padding:0!important}'
-      + '#alvo-rel-modal .modal{max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important}'
-      + '#alvo-rel-modal .modal-header{display:none!important}'
-      + '#alvo-rel-print{color:#000!important}'
-      + '}';
-    document.head.appendChild(s);
-  }
-
-  openModal('alvo-rel-modal');
+  _relAbrirModal(plate, _alvoHtml, null);
 }
 
-function _alvoDvExportarPDF() {
-  var body = document.getElementById('alvo-rel-body');
-  if (!body) return;
-  var plate = (_alvoDvPlate || 'relatorio').replace(/[^A-Z0-9]/gi, '_');
-  var conteudo = body.innerHTML;
-  var win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) { alert('Permita pop-ups para gerar o PDF.'); return; }
-  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
-    + '<meta charset="utf-8">'
-    + '<title>Relatorio_' + plate + '</title>'
-    + '<style>'
-    + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
-    + 'table{width:100%;border-collapse:collapse}'
-    + 'th,td{padding:7px 10px;font-size:12px}'
-    + 'th{background:#e5e7eb;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151}'
-    + 'tr{border-bottom:1px solid #e5e7eb}'
-    + 'img{max-width:100%}'
-    + '.no-print{display:none}'
-    + '@page{size:A4 portrait;margin:15mm 12mm}'
-    + '@media print{'
-      + 'body{padding:0}'
-      + '.no-print{display:none!important}'
-    + '}'
-    + '</style>'
-    + '</head><body>'
-    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
-      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
-      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
-    + '</div>'
-    + conteudo
-    + '</body></html>');
-  win.document.close();
-  win.focus();
-}
+function _alvoDvExportarPDF() { _relExportarPDF(); } // compat: usa motor unificado
 
 // ── Alvo: Rota cronológica ───────────────────────────────────────────────────
 function _fmtInterval(ms) {
@@ -7750,9 +8008,9 @@ function _alvoDvUpdatePrioridade() {
 async function _alvoDvLoadCompanions(id, plate) {
   var el = document.getElementById('alvo-dv-companions');
   if (!el || !plate) return;
-  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip;</p>';
+  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip; <span style="font-size:.75rem;opacity:.7">(' + _alvoDvFmtWindow(_alvoDvCompWindow) + ')</span></p>';
   try {
-    var qs = '?window=' + ALVO_DV_COMP_WINDOW + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
+    var qs = '?window=' + encodeURIComponent(_alvoDvCompWindow) + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
     var [compResp, alvosResp] = await Promise.all([
       fetch('/api/batedor/companions/' + encodeURIComponent(plate) + qs),
       fetch('/api/alvos')
@@ -7767,15 +8025,33 @@ async function _alvoDvLoadCompanions(id, plate) {
     var alvoMap = {};
     (alvosData.alvos || []).forEach(function(a) { alvoMap[a.plate] = a; });
 
-    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+    // ---- seletor de período ------------------------------------------------
+    var selOpts = ['7d','15d','30d','90d','180d'].map(function(v) {
+      return '<option value="' + v + '"' + (v === _alvoDvCompWindow ? ' selected' : '') + '>' + _alvoDvFmtWindow(v) + '</option>';
+    }).join('');
+    var periodSel = '<select id="alvo-dv-comp-window-sel" onchange="_alvoDvCompWindowChange(this.value)"'
+      + ' style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 10px;font-size:.78rem;height:26px;outline:none;cursor:pointer">'
+      + selOpts + '</select>';
+    // ---- aviso para consultas ampliadas ------------------------------------
+    var warnHtml = '';
+    if (_alvoDvCompWindow === '90d') {
+      warnHtml = '<div style="margin-top:8px;padding:7px 12px;border-radius:7px;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);font-size:.78rem;color:#fbbf24">'
+        + '&#9719; Consulta ampliada: a an&aacute;lise de acompanhantes pode levar um pouco mais de tempo.</div>';
+    } else if (_alvoDvCompWindow === '180d') {
+      warnHtml = '<div style="margin-top:8px;padding:7px 12px;border-radius:7px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);font-size:.78rem;color:#f87171">'
+        + '&#9888; Consulta extensa: a an&aacute;lise de acompanhantes em 180 dias pode levar mais tempo.</div>';
+    }
+    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
-      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '</span>' : '')
-      + '</div>';
+      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s)</span>' : '')
+      + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)">Per&iacute;odo:&nbsp;' + periodSel + '</span>'
+      + '</div>'
+      + warnHtml;
 
     if (companions.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
         + header
-        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_COMP_WINDOW) + '.</div>'
+        + '<div style="color:var(--muted);font-size:.85rem;padding:10px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>'
         + '</div>';
       return;
     }
@@ -7831,7 +8107,7 @@ async function _alvoDvLoadCompanions(id, plate) {
       + '<th style="text-align:center">Papel / Cooc.</th>'
       + '<th style="white-space:nowrap">&Uacute;ltima vez junto</th>'
       + '<th>Local / C&acirc;mera</th>'
-      + '<th style="white-space:nowrap">&Iacute;ons</th>'
+      + '<th style="white-space:nowrap">A&ccedil;&otilde;es</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</div>';
   } catch(e) {
@@ -7878,6 +8154,8 @@ async function _alvoDvAplicar() {
   } catch(e) {
     res.innerHTML = '<p style="color:var(--danger);padding:8px 0">Erro ao carregar hist&oacute;rico: ' + e + '</p>';
   }
+  // Recarrega acompanhantes respeitando os mesmos filtros ativos
+  if (_alvoDvId && _alvoDvPlate) _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
 }
 
 // ── Alvo: Limpa filtros e re-executa ─────────────────────────────────────────
