@@ -9294,13 +9294,13 @@ function _plotarTrajetoria() {
 
       // ── Polyline por trecho (segmento-a-segmento) ───────────────
       if (seg.length >= 2) {
-        // Sombra
+        // Sombra discreta
         var shadowPath = seg.map(function(p) { return {lat: p.lat, lng: p.lng}; });
         var shadow = new google.maps.Polyline({
           path: shadowPath,
           strokeColor: '#000',
-          strokeOpacity: 0.25,
-          strokeWeight: 7,
+          strokeOpacity: 0.12,
+          strokeWeight: 8,
           map: _googleMap,
           zIndex: 1
         });
@@ -9312,13 +9312,19 @@ function _plotarTrajetoria() {
           path: mainPath,
           strokeColor: segColor,
           strokeOpacity: 0,
-          strokeWeight: 5,
+          strokeWeight: 4,
           map: _googleMap,
           zIndex: 2,
           icons: [{
-            icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, strokeColor: segColor, scale: 4 },
+            icon: {
+              path: 'M 0,-1 0,1',
+              strokeOpacity: 1,
+              strokeColor: segColor,
+              strokeWeight: 3,
+              scale: 6
+            },
             offset: '0',
-            repeat: '16px'
+            repeat: '20px'
           }]
         });
         _trajetoriaLayers.push(line);
