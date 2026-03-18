@@ -364,9 +364,33 @@
   <div class="page-footer">BPFRON &nbsp;·&nbsp; Sistema de Monitoramento &nbsp;·&nbsp; Uso Restrito</div>
 
   <script>
+    var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname'];
+
+    function _authMigrateLegacyStorage() {
+      _AUTH_KEYS.forEach(function(key) {
+        if (sessionStorage.getItem(key)) return;
+        var legacy = localStorage.getItem(key);
+        if (legacy) {
+          sessionStorage.setItem(key, legacy);
+          localStorage.removeItem(key);
+        }
+      });
+    }
+
+    function _authGet(key) {
+      return sessionStorage.getItem(key) || '';
+    }
+
+    function _authSetSession(data) {
+      Object.keys(data).forEach(function(key) {
+        sessionStorage.setItem(key, data[key] || '');
+        localStorage.removeItem(key);
+      });
+    }
     // Se já tem token válido, redirecionar para dashboard
     (function(){
-      var token = localStorage.getItem('bpfron_token');
+      _authMigrateLegacyStorage();
+      var token = _authGet('bpfron_token');
       if (token) {
         fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
           .then(function(r){ if (r.ok) window.location.replace('/dashboard'); })
@@ -398,10 +422,12 @@
         });
         var data = await r.json();
         if (!r.ok) { errEl.textContent = data.detail || 'Erro ao autenticar.'; return; }
-        localStorage.setItem('bpfron_token',     data.access_token);
-        localStorage.setItem('bpfron_role',      data.role);
-        localStorage.setItem('bpfron_user',      data.username);
-        localStorage.setItem('bpfron_fullname',  data.full_name);
+        _authSetSession({
+          bpfron_token: data.access_token,
+          bpfron_role: data.role,
+          bpfron_user: data.username,
+          bpfron_fullname: data.full_name
+        });
         window.location.replace('/dashboard');
       } catch(e) {
         errEl.textContent = 'Erro de conexão. Tente novamente.';

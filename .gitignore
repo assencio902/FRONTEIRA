@@ -1,5 +1,6 @@
 uploads/
 data/
+secrets/
 build_yolo.log
 __pycache__/
 *.pyc
@@ -17,6 +18,10 @@ yolo-worker/__pycache__/
 # Variáveis de ambiente
 .env
 .env.*
+flutter_app/android/key.properties
+flutter_app/android/app/google-services.json
+flutter_app/android/app/google-services-OLD.json
+flutter_app/android/app/keystore/
 
 # Temporários
 *.log

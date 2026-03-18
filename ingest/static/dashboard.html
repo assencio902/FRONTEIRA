@@ -28,6 +28,8 @@
     });
   </script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@500;700&display=swap');
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg:        #052e16;
@@ -111,7 +113,7 @@
     .nav-item:active { color:var(--pressed-text); }
     .nav-item svg { flex-shrink:0; width:18px; height:18px; color:currentColor; background:transparent; border:none; border-radius:0; padding:0; box-shadow:none; }
     .nav-item:hover svg, .nav-item.active svg { color:currentColor; }
-    .sidebar-footer { margin-top:auto; padding:14px 16px; font-size:11px; color:var(--muted); border-top:1px solid var(--border); font-weight:500; }
+    .sidebar-footer { margin-top:auto; padding:14px 16px; font-size:11px; color:var(--muted); border-top:1px solid var(--border); font-weight:500; text-align:center; display:flex; justify-content:center; align-items:center; }
     #main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh; }
     #topbar { background:var(--sidebar); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
     #topbar h1 { font-size:20px; font-weight:700; line-height:var(--lh-tight); }
@@ -179,7 +181,7 @@
     .sub-pane.active { display:block; }
     .cards-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; }
-    .card-label { font-size:13px; text-transform:none; letter-spacing:.01em; color:var(--card-label-color); margin-bottom:8px; line-height:var(--lh-tight); font-weight:500; }
+    .card-label { font-size:14px; text-transform:none; letter-spacing:.02em; color:var(--card-label-color); margin-bottom:10px; line-height:var(--lh-tight); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .card-label-special { color:var(--special-card-label) !important; }
     .card-value { font-size:1.8rem; font-weight:700; color:#ffffff; line-height:1.2; }
     .card-sub   { font-size:12px; color:#d4f5df; margin-top:6px; font-weight:400; }
@@ -588,6 +590,128 @@
     #bat-sub-central .cen-btn-clear:hover  { background:rgba(255,255,255,.06); border-color:var(--text); color:var(--text); }
     #bat-sub-central .cen-btn-clear:active { opacity:.8; }
     #bat-sub-central .cen-btn-clear:disabled { opacity:.4; cursor:not-allowed; }
+    /* ---- Tipografia padronizada: Aba Batedor (tema branco) ---- */
+    :root[data-theme="branco"] #tab-batedor .sub-tabs .sub-tab.active {
+      font-size:20px;
+      font-weight:700;
+      color:#1e3a8a;
+      line-height:1.2;
+    }
+    :root[data-theme="branco"] #tab-batedor #alvo-dv-titulo {
+      font-size:20px;
+      font-weight:700;
+      color:#1e3a8a;
+      line-height:1.2;
+    }
+    :root[data-theme="branco"] #tab-batedor .status-line,
+    :root[data-theme="branco"] #tab-batedor #cgs-page-info,
+    :root[data-theme="branco"] #tab-batedor #cen-page-info,
+    :root[data-theme="branco"] #tab-batedor .card-sub {
+      font-size:12px;
+      font-weight:500;
+      color:#64748b;
+      line-height:1.35;
+    }
+    :root[data-theme="branco"] #tab-batedor table thead th {
+      font-size:12px;
+      font-weight:700;
+      color:#243b6b;
+      line-height:1.3;
+    }
+    :root[data-theme="branco"] #tab-batedor table tbody td {
+      font-size:13px;
+      font-weight:500;
+      color:#1f2937;
+      line-height:1.4;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos .table-wrap {
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos table {
+      background:#ffffff;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos thead tr {
+      background:#f3f4f6;
+      border-bottom:2px solid #d1d5db;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos tbody tr {
+      background:#ffffff;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos tbody tr:hover {
+      background:#f9fafb;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos tbody td {
+      background:transparent;
+      color:#374151;
+      border-bottom:1px solid #f3f4f6;
+    }
+    :root[data-theme="branco"] #bat-sub-alvos {
+      background: var(--pmro-fundo);
+    }
+    :root[data-theme="branco"] #tab-batedor .btn {
+      font-size:15px;
+      font-weight:600;
+      line-height:1.25;
+    }
+    :root[data-theme="branco"] #tab-batedor .btn-sm,
+    :root[data-theme="branco"] #tab-batedor .btn-xs,
+    :root[data-theme="branco"] #tab-batedor .cen-btn-apply,
+    :root[data-theme="branco"] #tab-batedor .cen-btn-clear {
+      font-size:14px;
+      font-weight:600;
+      line-height:1.25;
+    }
+    :root[data-theme="branco"] #tab-batedor .cen-lbl,
+    :root[data-theme="branco"] #tab-batedor .toolbar label {
+      font-size:12px;
+      font-weight:500;
+      color:#64748b;
+      line-height:1.35;
+    }
+    :root[data-theme="branco"] #tab-batedor input[type="text"],
+    :root[data-theme="branco"] #tab-batedor input[type="date"],
+    :root[data-theme="branco"] #tab-batedor input[type="datetime-local"],
+    :root[data-theme="branco"] #tab-batedor input[type="number"],
+    :root[data-theme="branco"] #tab-batedor select,
+    :root[data-theme="branco"] #tab-batedor textarea,
+    :root[data-theme="branco"] #tab-batedor .cen-ctl {
+      font-size:13px;
+      font-weight:500;
+      color:#1f2937;
+      line-height:1.35;
+    }
+    :root[data-theme="branco"] #tab-batedor [class*="badge"] {
+      font-size:12px;
+      font-weight:600;
+      line-height:1.2;
+    }
+    :root[data-theme="branco"] #tab-cadastro #cad-tbody td.cad-acoes {
+      text-align:center;
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      justify-content:center;
+    }
+    :root[data-theme="branco"] #tab-cadastro #cad-tbody td.cad-acoes .btn {
+      white-space:nowrap;
+    }
+    :root[data-theme="branco"] #tab-veiculos #list-detail-tbody td.veh-acoes {
+      text-align:center;
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      justify-content:center;
+    }
+    :root[data-theme="branco"] #tab-veiculos #list-detail-tbody td.veh-acoes .btn {
+      white-space:nowrap;
+    }
+    :root[data-theme="branco"] #pn-pessoas {
+      color:#000000 !important;
+    }
+    :root[data-theme="branco"] #pn-pessoas-sub {
+      color:#64748b !important;
+    }
     .form-input { background:var(--input-bg); border:1px solid var(--input-border); border-radius:var(--radius);
       color:var(--text); padding:8px 12px; font-size:var(--fs-input); outline:none; line-height:var(--lh-tight); }
     .form-input:focus { border-color:var(--accent); box-shadow:var(--input-focus-shadow); }
@@ -611,10 +735,10 @@
       width:14px; height:14px; background:#fff; border-radius:50%; transition:left .2s; }
     .toggle-switch input[type=checkbox]:checked::after { left:21px; }
     .toggle-switch span { font-size:var(--fs-secondary); color:var(--text); }
-    .user-info-bar { padding:10px 16px 6px; border-top:1px solid var(--border); }
-    .user-info-bar .uname { font-size:16px; font-weight:700; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .user-info-bar { padding:10px 16px 8px; border-top:1px solid var(--border); display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .user-info-bar .uname { font-size:16px; font-weight:700; color:var(--sidebar-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; }
     .user-info-bar .urole { font-size:var(--fs-secondary); color:var(--muted); margin-bottom:7px; }
-    .btn-logout { display:flex; align-items:center; gap:6px; padding:10px 12px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:var(--fs-button); cursor:pointer; transition:all .15s; width:100%; line-height:var(--lh-tight); justify-content:center; font-weight:500; }
+    .btn-logout { display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:var(--fs-button); cursor:pointer; transition:all .15s; width:min(100%, 180px); line-height:var(--lh-tight); justify-content:center; font-weight:600; margin:0 auto; }
     .btn-logout:hover { background:rgba(255,107,107,.15); border-color:#ff6b6b; color:#ff6b6b; }
     :root[data-theme="verde"], :root:not([data-theme]) {
       --green-btn-active-bg: #facc15;
@@ -701,6 +825,954 @@
     :root:not([data-theme]) #ev-limit-select:hover {
       background: var(--green-btn-hover-bg);
       border-color: var(--green-btn-active-border);
+    }
+    :root[data-theme="verde"] #sidebar,
+    :root:not([data-theme]) #sidebar {
+      background:
+        linear-gradient(180deg, rgba(6,78,36,.98) 0%, rgba(5,46,22,.98) 100%);
+      border-right: 1px solid rgba(250,204,21,.16);
+      box-shadow: 6px 0 24px rgba(0,0,0,.16);
+    }
+    :root[data-theme="verde"] .sidebar-logo,
+    :root:not([data-theme]) .sidebar-logo {
+      padding: 22px 14px 18px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid rgba(250,204,21,.12);
+      background: transparent;
+    }
+    :root[data-theme="verde"] .sidebar-logo img,
+    :root:not([data-theme]) .sidebar-logo img {
+      max-height: 145px;
+      max-width: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      transform: scale(1.08);
+      transform-origin: center;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.22)) saturate(1.08) contrast(1.04);
+      mix-blend-mode: normal;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+    :root[data-theme="verde"] .sidebar-section,
+    :root:not([data-theme]) .sidebar-section {
+      color: rgba(250,204,21,.9);
+      font-weight: 800;
+      letter-spacing: .11em;
+      font-size: 11px;
+      padding: 15px 16px 8px;
+      margin-top: 6px;
+      text-shadow: 0 1px 0 rgba(0,0,0,.18);
+    }
+    :root[data-theme="verde"] .sidebar-section::after,
+    :root:not([data-theme]) .sidebar-section::after {
+      content: '';
+      display: block;
+      width: 42px;
+      height: 2px;
+      margin-top: 6px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, rgba(250,204,21,.75), rgba(250,204,21,0));
+    }
+    :root[data-theme="verde"] .nav-item,
+    :root:not([data-theme]) .nav-item {
+      color: rgba(255,255,255,.96);
+      font-weight: 600;
+      border-left-width: 4px;
+    }
+    :root[data-theme="verde"] .nav-item svg,
+    :root:not([data-theme]) .nav-item svg {
+      color: #facc15;
+      opacity: .95;
+    }
+    :root[data-theme="verde"] .nav-item:hover svg,
+    :root:not([data-theme]) .nav-item:hover svg,
+    :root[data-theme="verde"] .nav-item.active svg,
+    :root:not([data-theme]) .nav-item.active svg {
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .user-info-bar,
+    :root:not([data-theme]) .user-info-bar {
+      border-top: 1px solid rgba(250,204,21,.12);
+      background: transparent;
+    }
+    :root[data-theme="verde"] .sidebar-footer,
+    :root:not([data-theme]) .sidebar-footer {
+      background: transparent;
+    }
+    :root[data-theme="verde"] .user-info-bar .uname,
+    :root:not([data-theme]) .user-info-bar .uname {
+      color: #ffffff;
+      font-weight: 800;
+    }
+    :root[data-theme="verde"] .user-info-bar .urole,
+    :root:not([data-theme]) .user-info-bar .urole,
+    :root[data-theme="verde"] .sidebar-footer,
+    :root:not([data-theme]) .sidebar-footer {
+      color: rgba(212,245,223,.9);
+    }
+    :root[data-theme="verde"] .btn-logout,
+    :root:not([data-theme]) .btn-logout {
+      background: rgba(255,255,255,.04);
+      border-color: rgba(250,204,21,.18);
+      color: #fef3c7;
+      box-shadow: 0 6px 16px rgba(0,0,0,.14);
+    }
+    :root[data-theme="verde"] .btn-logout:hover,
+    :root:not([data-theme]) .btn-logout:hover {
+      background: rgba(250,204,21,.12);
+      border-color: rgba(250,204,21,.38);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(0,0,0,.18);
+    }
+    /* ---- Refinos visuais no tema verde para as abas revisadas ---- */
+    :root[data-theme="verde"] #tab-cadastro .pessoas-sub-btn,
+    :root:not([data-theme]) #tab-cadastro .pessoas-sub-btn,
+    :root[data-theme="verde"] #tab-alarmes .sub-tab,
+    :root:not([data-theme]) #tab-alarmes .sub-tab {
+      color: rgba(255,255,255,.78);
+      font-weight: 600;
+    }
+    :root[data-theme="verde"] #tab-cadastro .pessoas-sub-btn:hover,
+    :root:not([data-theme]) #tab-cadastro .pessoas-sub-btn:hover,
+    :root[data-theme="verde"] #tab-alarmes .sub-tab:hover,
+    :root:not([data-theme]) #tab-alarmes .sub-tab:hover {
+      color: #ffffff;
+      background: rgba(250,204,21,.08);
+    }
+    :root[data-theme="verde"] #tab-cadastro .pessoas-sub-btn.active,
+    :root:not([data-theme]) #tab-cadastro .pessoas-sub-btn.active,
+    :root[data-theme="verde"] #tab-alarmes .sub-tab.active,
+    :root:not([data-theme]) #tab-alarmes .sub-tab.active {
+      color: #facc15;
+      background: rgba(250,204,21,.12);
+      border-bottom-color: #facc15;
+      font-weight: 700;
+    }
+    :root[data-theme="verde"] #tab-cadastro .table-wrap,
+    :root:not([data-theme]) #tab-cadastro .table-wrap,
+    :root[data-theme="verde"] #tab-alarmes .table-wrap,
+    :root:not([data-theme]) #tab-alarmes .table-wrap {
+      background: rgba(3, 36, 18, .45);
+      border: 1px solid rgba(110,231,160,.18);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 28px rgba(0,0,0,.16);
+    }
+    :root[data-theme="verde"] #tab-cadastro table thead tr,
+    :root:not([data-theme]) #tab-cadastro table thead tr,
+    :root[data-theme="verde"] #tab-alarmes table thead tr,
+    :root:not([data-theme]) #tab-alarmes table thead tr {
+      background: rgba(6, 78, 36, .92);
+      border-bottom: 1px solid rgba(110,231,160,.18);
+    }
+    :root[data-theme="verde"] #tab-cadastro table tbody td,
+    :root:not([data-theme]) #tab-cadastro table tbody td,
+    :root[data-theme="verde"] #tab-alarmes table tbody td,
+    :root:not([data-theme]) #tab-alarmes table tbody td {
+      color: rgba(255,255,255,.92);
+      border-bottom: 1px solid rgba(110,231,160,.12);
+    }
+    :root[data-theme="verde"] #tab-cadastro table tbody tr:hover,
+    :root:not([data-theme]) #tab-cadastro table tbody tr:hover,
+    :root[data-theme="verde"] #tab-alarmes table tbody tr:hover,
+    :root:not([data-theme]) #tab-alarmes table tbody tr:hover {
+      background: rgba(250,204,21,.08);
+    }
+    :root[data-theme="verde"] #tab-cadastro input,
+    :root:not([data-theme]) #tab-cadastro input,
+    :root[data-theme="verde"] #tab-cadastro select,
+    :root:not([data-theme]) #tab-cadastro select,
+    :root[data-theme="verde"] #tab-cadastro textarea,
+    :root:not([data-theme]) #tab-cadastro textarea,
+    :root[data-theme="verde"] #tab-alarmes input,
+    :root:not([data-theme]) #tab-alarmes input,
+    :root[data-theme="verde"] #tab-alarmes select,
+    :root:not([data-theme]) #tab-alarmes select {
+      background: rgba(3, 36, 18, .58);
+      border-color: rgba(110,231,160,.24);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] #tab-cadastro input:focus,
+    :root:not([data-theme]) #tab-cadastro input:focus,
+    :root[data-theme="verde"] #tab-cadastro select:focus,
+    :root:not([data-theme]) #tab-cadastro select:focus,
+    :root[data-theme="verde"] #tab-cadastro textarea:focus,
+    :root:not([data-theme]) #tab-cadastro textarea:focus,
+    :root[data-theme="verde"] #tab-alarmes input:focus,
+    :root:not([data-theme]) #tab-alarmes input:focus,
+    :root[data-theme="verde"] #tab-alarmes select:focus,
+    :root:not([data-theme]) #tab-alarmes select:focus {
+      border-color: #facc15;
+      box-shadow: 0 0 0 3px rgba(250,204,21,.18);
+      outline: none;
+    }
+    :root[data-theme="verde"] #tab-alarmes .card,
+    :root:not([data-theme]) #tab-alarmes .card {
+      background: linear-gradient(180deg, rgba(10,92,42,.95) 0%, rgba(6,78,36,.92) 100%);
+      border-color: rgba(110,231,160,.18);
+      box-shadow: 0 10px 26px rgba(0,0,0,.14);
+    }
+    :root[data-theme="verde"] #tab-alarmes #alc-total,
+    :root:not([data-theme]) #tab-alarmes #alc-total,
+    :root[data-theme="verde"] #tab-alarmes #alc-ativos,
+    :root:not([data-theme]) #tab-alarmes #alc-ativos,
+    :root[data-theme="verde"] #tab-alarmes #alc-criticos,
+    :root:not([data-theme]) #tab-alarmes #alc-criticos,
+    :root[data-theme="verde"] #tab-alarmes #alc-inativos,
+    :root:not([data-theme]) #tab-alarmes #alc-inativos {
+      text-shadow: 0 1px 0 rgba(0,0,0,.18);
+    }
+    :root[data-theme="branco"] {
+      --pmro-azul-principal: #1e3a8a;
+      --pmro-azul-secundario: #2563eb;
+      --pmro-azul-claro: #dbeafe;
+      --pmro-fundo: #f5f7fa;
+      --pmro-card: #ffffff;
+      --pmro-borda: #e5e7eb;
+      --pmro-texto: #1f2937;
+      --pmro-texto-sec: #6b7280;
+    }
+    :root[data-theme="branco"] body {
+      background: var(--pmro-fundo);
+    }
+    :root[data-theme="branco"] #topbar,
+    :root[data-theme="branco"] #topbar.top-header {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      gap: 12px 20px;
+      padding: 0 0 0 16px;
+      height: 78px;
+      min-height: 78px;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: none;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    :root[data-theme="branco"] .topbar-title-group,
+    :root[data-theme="branco"] .topbar-title-group.brand-area {
+      display: flex;
+      align-items: stretch;
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      gap: 0;
+    }
+    :root[data-theme="branco"] .topbar-subtitle,
+    :root[data-theme="branco"] .topbar-subtitle.brand-title {
+      flex: 1 1 auto;
+      margin: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 12px;
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      min-width: 0;
+      max-width: 100%;
+      overflow: visible;
+      text-align: left;
+      color: #1e40af;
+      text-shadow:
+        0 0 4px rgba(30, 64, 175, 0.35),
+        0 0 10px rgba(59, 130, 246, 0.20);
+      animation: none;
+    }
+    :root[data-theme="branco"] .topbar-subtitle .topo-texto {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 100%;
+      max-width: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: nowrap;
+      gap: clamp(2px, 0.45vw, 8px);
+      text-align: left;
+      margin-left: clamp(12px, 1.4vw, 28px);
+    }
+    :root[data-theme="branco"] .topbar-subtitle .pmro-main,
+    :root[data-theme="branco"] .topbar-subtitle .brand-title {
+      font-family: 'Bahnschrift SemiBold Condensed', Bahnschrift, 'Arial Black', Arial, sans-serif;
+      font-size: clamp(32px, 4vw, 72px);
+      font-weight: 700;
+      letter-spacing: clamp(1px, 0.28vw, 4px);
+      text-transform: uppercase;
+      line-height: 1;
+      color: #1e40af;
+      text-shadow:
+        0 0 6px rgba(30, 64, 175, 0.35),
+        0 0 16px rgba(59, 130, 246, 0.28);
+      -webkit-text-stroke: 0.6px rgba(30, 64, 175, 0.22);
+      white-space: nowrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+    :root[data-theme="branco"] .topbar-subtitle .pmro-sub,
+    :root[data-theme="branco"] .topbar-subtitle .brand-subtitle {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(12px, 1.4vw, 28px);
+      font-weight: 500;
+      letter-spacing: clamp(0.4px, 0.12vw, 1.6px);
+      text-transform: none;
+      line-height: 1.1;
+      color: #1e40af;
+      opacity: 0.92;
+      white-space: nowrap;
+      overflow-wrap: normal;
+      text-align: center;
+      background: linear-gradient(
+        90deg,
+        rgba(30, 64, 175, 0.36) 0%,
+        rgba(30, 64, 175, 0.42) 38%,
+        rgba(96, 165, 250, 0.95) 50%,
+        rgba(191, 219, 254, 0.98) 56%,
+        rgba(30, 64, 175, 0.44) 68%,
+        rgba(30, 64, 175, 0.36) 100%
+      );
+      background-size: 240% 100%;
+      background-position: 0% 50%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 2px rgba(30, 64, 175, 0.16);
+      animation: pmroSloganGlow 3.2s ease-in-out infinite;
+      position: relative;
+      top: 5px;
+      min-width: 0;
+      max-width: 100%;
+    }
+    :root[data-theme="branco"] .topbar-subtitle .topo-pattern {
+      display: none;
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: none;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      padding: 0;
+      margin: 0;
+    }
+    :root[data-theme="branco"] .topbar-subtitle .topo-pattern img {
+      display: none;
+    }
+    :root[data-theme="branco"] .top-right,
+    :root[data-theme="branco"] .top-right.header-right {
+      display: flex;
+      align-items: stretch;
+      justify-content: flex-end;
+      gap: 0;
+      flex: 0 0 340px;
+      min-width: 340px;
+      max-width: 340px;
+      height: 100%;
+      margin-left: auto;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    :root[data-theme="branco"] .top-right .topo-pattern {
+      flex: 1 1 auto;
+      display: flex;
+      align-self: stretch;
+      align-items: stretch;
+      justify-content: flex-end;
+      height: 100%;
+      width: 100%;
+      padding: 0;
+      overflow: hidden;
+    }
+    :root[data-theme="branco"] .top-right .topo-pattern img {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      object-fit: cover;
+      object-position: center;
+      filter: saturate(1.28) contrast(1.12) brightness(1.06) drop-shadow(0 0 6px rgba(37, 99, 235, 0.28));
+      display: block;
+    }
+    :root[data-theme="branco"] .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 100%;
+      flex-wrap: nowrap;
+      min-width: 0;
+      max-width: 100%;
+    }
+    :root[data-theme="branco"] .header-actions #topbar-user {
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @media (max-width: 1400px) {
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        padding: 0 0 0 12px;
+        gap: 10px 14px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-texto {
+        margin-left: 12px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-pattern {
+        display: none;
+      }
+      :root[data-theme="branco"] .top-right,
+      :root[data-theme="branco"] .top-right.header-right {
+        flex: 0 0 300px;
+        min-width: 300px;
+        max-width: 300px;
+      }
+    }
+    @media (max-width: 1100px) {
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        align-items: flex-start;
+      }
+      :root[data-theme="branco"] .topbar-title-group,
+      :root[data-theme="branco"] .topbar-title-group.brand-area {
+        flex-basis: 100%;
+      }
+      :root[data-theme="branco"] .topbar-subtitle,
+      :root[data-theme="branco"] .topbar-subtitle.brand-title {
+        min-height: 82px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-texto {
+        margin-left: 10px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-main {
+        font-size: clamp(28px, 4.2vw, 56px);
+        letter-spacing: clamp(1px, 0.24vw, 2px);
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-sub {
+        font-size: clamp(12px, 1.8vw, 22px);
+        letter-spacing: clamp(0.4px, 0.1vw, 1px);
+      }
+      :root[data-theme="branco"] .top-right,
+      :root[data-theme="branco"] .top-right.header-right {
+        margin-left: auto;
+        flex: 0 0 270px;
+        min-width: 270px;
+        max-width: 270px;
+      }
+    }
+    @media (max-width: 900px) {
+      :root[data-theme="branco"] .topbar-subtitle .topo-texto {
+        align-items: center;
+        margin-left: 10px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-main {
+        font-size: clamp(26px, 5.2vw, 44px);
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-sub {
+        font-size: clamp(12px, 2vw, 18px);
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-pattern {
+        display: none;
+      }
+      :root[data-theme="branco"] .top-right,
+      :root[data-theme="branco"] .top-right.header-right {
+        flex: 0 0 240px;
+        min-width: 240px;
+        max-width: 240px;
+      }
+    }
+    @media (max-width: 700px) {
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        padding: 0 0 0 8px;
+        gap: 10px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle,
+      :root[data-theme="branco"] .topbar-subtitle.brand-title {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 8px;
+        min-height: 0;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-texto {
+        width: 100%;
+        margin-left: 8px;
+        gap: 4px;
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-main {
+        font-size: clamp(24px, 8.4vw, 36px);
+      }
+      :root[data-theme="branco"] .topbar-subtitle .pmro-sub {
+        font-size: clamp(11px, 3.2vw, 14px);
+      }
+      :root[data-theme="branco"] .topbar-subtitle .topo-pattern {
+        display: none;
+      }
+      :root[data-theme="branco"] .top-right,
+      :root[data-theme="branco"] .top-right.header-right {
+        flex: 0 0 200px;
+        min-width: 200px;
+        max-width: 200px;
+        width: auto;
+        justify-content: flex-end;
+      }
+      :root[data-theme="branco"] .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
+    :root[data-theme="branco"] .topbar-subtitle::before {
+      content: none !important;
+      display: none !important;
+    }
+    :root[data-theme="branco"] .topbar-subtitle::after {
+      content: none !important;
+      display: none !important;
+    }
+    @keyframes pmroTopbarFade {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @keyframes pmroTopbarShine {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+    @keyframes pmroTopbarPulse {
+      0%, 100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 0 rgba(96,165,250,0));
+      }
+      50% {
+        transform: translateY(-1px);
+        filter: drop-shadow(0 0 8px rgba(96,165,250,0.16));
+      }
+    }
+    @keyframes pmroSloganGlow {
+      0% {
+        opacity: 0.56;
+        background-position: 0% 50%;
+        text-shadow:
+          0 0 2px rgba(30, 64, 175, 0.12),
+          0 0 6px rgba(59, 130, 246, 0.05);
+      }
+      35% {
+        opacity: 0.76;
+        background-position: 38% 50%;
+        text-shadow:
+          0 0 4px rgba(47, 111, 255, 0.26),
+          0 0 10px rgba(59, 130, 246, 0.12);
+      }
+      70% {
+        opacity: 1;
+        background-position: 82% 50%;
+        text-shadow:
+          0 0 6px rgba(47, 111, 255, 0.45),
+          0 0 14px rgba(59, 130, 246, 0.24),
+          0 0 22px rgba(147, 197, 253, 0.18);
+      }
+      100% {
+        opacity: 0.62;
+        background-position: 100% 50%;
+        text-shadow:
+          0 0 3px rgba(47, 111, 255, 0.18),
+          0 0 8px rgba(59, 130, 246, 0.08);
+      }
+    }
+    :root[data-theme="branco"] .card {
+      background: var(--pmro-card);
+      border: 1px solid var(--pmro-borda);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    :root[data-theme="branco"] h1,
+    :root[data-theme="branco"] h2,
+    :root[data-theme="branco"] h3 {
+      color: var(--pmro-azul-principal);
+      font-weight: 600;
+    }
+    :root[data-theme="branco"] p,
+    :root[data-theme="branco"] span,
+    :root[data-theme="branco"] td {
+      color: var(--pmro-texto);
+    }
+    :root[data-theme="branco"] .text-muted {
+      color: var(--pmro-texto-sec);
+    }
+    :root[data-theme="branco"] table {
+      background: #fff;
+    }
+    :root[data-theme="branco"] thead {
+      background: #f1f5f9;
+    }
+    :root[data-theme="branco"] th {
+      color: var(--pmro-azul-principal);
+      font-weight: 600;
+    }
+    :root[data-theme="branco"] tbody tr:hover {
+      background: #f9fafb;
+    }
+    :root[data-theme="branco"] td {
+      padding: 12px;
+    }
+    :root[data-theme="branco"] td strong,
+    :root[data-theme="branco"] .placa,
+    :root[data-theme="branco"] .plate {
+      color: var(--pmro-azul-principal);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    :root[data-theme="branco"] .btn-primary {
+      background: var(--pmro-azul-principal);
+      border: none;
+      color: #fff;
+    }
+    :root[data-theme="branco"] .btn-primary:hover {
+      background: var(--pmro-azul-secundario);
+    }
+    :root[data-theme="branco"] .btn-danger {
+      background: #dc2626;
+    }
+    :root[data-theme="branco"] .btn-secondary {
+      background: #e5e7eb;
+      color: #111;
+    }
+    :root[data-theme="branco"] .badge {
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    :root[data-theme="branco"] .badge-alvo {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    :root[data-theme="branco"] .badge-info {
+      background: var(--pmro-azul-claro);
+      color: var(--pmro-azul-principal);
+    }
+    :root[data-theme="branco"] .card-sub {
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 400;
+    }
+    :root[data-theme="branco"] .card-label,
+    :root[data-theme="branco"] #sidebar ~ #main .card-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e3560;
+      border-left: 3px solid #2d4fa1;
+      padding-left: 8px;
+      margin-bottom: 12px;
+      letter-spacing: .015em;
+      line-height: 1.3;
+      text-shadow: none;
+    }
+    :root[data-theme="branco"] .card-label-special {
+      color: #1e3560 !important;
+      font-weight: 700;
+    }
+    :root[data-theme="branco"] .card-value {
+      color: #0f172a;
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    :root[data-theme="branco"] .card-icon {
+      color: #1e3a8a;
+      background: rgba(30, 58, 138, 0.08);
+      border: 1px solid rgba(30, 58, 138, 0.15);
+      box-shadow: 0 2px 6px rgba(30, 58, 138, 0.08);
+    }
+    :root[data-theme="branco"] .toolbar {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    :root[data-theme="branco"] .toolbar input,
+    :root[data-theme="branco"] .toolbar select {
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      color: #1f2937;
+    }
+    :root[data-theme="branco"] .toolbar input:focus,
+    :root[data-theme="branco"] .toolbar select:focus {
+      border-color: #1e3a8a;
+      box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+    }
+    :root[data-theme="branco"] .toolbar label {
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    :root[data-theme="branco"] table {
+      background: #ffffff;
+    }
+    :root[data-theme="branco"] thead tr {
+      background: #f3f4f6;
+      border-bottom: 2px solid #d1d5db;
+    }
+    :root[data-theme="branco"] thead th {
+      color: #1f2937;
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 14px 12px;
+    }
+    :root[data-theme="branco"] tbody td {
+      color: #374151;
+      padding: 13px 12px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    :root[data-theme="branco"] tbody tr:hover {
+      background: #f9fafb;
+    }
+    :root[data-theme="branco"] .sub-tab {
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 12px 20px;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+    }
+    :root[data-theme="branco"] .sub-tab:hover {
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+    :root[data-theme="branco"] .sub-tab.active {
+      color: #1e3a8a;
+      border-bottom-color: #1e3a8a;
+      font-weight: 700;
+      background: #eff6ff;
+    }
+    :root[data-theme="branco"] .people-sub-btn {
+      color: #6b7280;
+      font-weight: 600;
+    }
+    :root[data-theme="branco"] .people-sub-btn:hover {
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+    :root[data-theme="branco"] .people-sub-btn.active {
+      color: #1e3a8a;
+      background: #eff6ff;
+      border-bottom-color: #1e3a8a;
+    }
+    /* Ocultar banners/avisos informativos e campos de explicação */
+    #content > .info-banner,
+    #content > .helper-box,
+    #content > .guide,
+    #content > div[style*="background:rgba("],
+    .tab-pane > .info-message {
+      display: none !important;
+    }
+    :root[data-theme="branco"] input,
+    :root[data-theme="branco"] select {
+      border: 1px solid var(--pmro-borda);
+      border-radius: 8px;
+      padding: 8px;
+    }
+    :root[data-theme="branco"] input:focus,
+    :root[data-theme="branco"] select:focus {
+      border-color: var(--pmro-azul-principal);
+      box-shadow: 0 0 0 3px rgba(30,58,138,0.15);
+    }
+    :root[data-theme="branco"] .sidebar,
+    :root[data-theme="branco"] .app-sidebar,
+    :root[data-theme="branco"] aside.sidebar,
+    :root[data-theme="branco"] #sidebar {
+      background: #1e3a8a;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+    :root[data-theme="branco"] .sidebar-header,
+    :root[data-theme="branco"] .sidebar .logo,
+    :root[data-theme="branco"] .sidebar-brand,
+    :root[data-theme="branco"] .sidebar-logo,
+    :root[data-theme="branco"] #sidebar .sidebar-logo {
+      background: #1e3a8a;
+      padding: 22px 12px 20px;
+      min-height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: none;
+      position: relative;
+      gap: 8px;
+      margin-bottom: 8px;
+      box-shadow: none;
+    }
+    :root[data-theme="branco"] .sidebar-header::after,
+    :root[data-theme="branco"] .sidebar .logo::after,
+    :root[data-theme="branco"] .sidebar-brand::after,
+    :root[data-theme="branco"] .sidebar-logo::after,
+    :root[data-theme="branco"] #sidebar .sidebar-logo::after {
+      display: none;
+    }
+    :root[data-theme="branco"] .sidebar-header .logo-wrap,
+    :root[data-theme="branco"] .sidebar-header .brand-box,
+    :root[data-theme="branco"] .sidebar-header .logo-box,
+    :root[data-theme="branco"] .sidebar-logo .logo-wrap,
+    :root[data-theme="branco"] .sidebar-logo .brand-box,
+    :root[data-theme="branco"] .sidebar-logo .logo-box,
+    :root[data-theme="branco"] #sidebar .sidebar-logo .logo-wrap,
+    :root[data-theme="branco"] #sidebar .sidebar-logo .brand-box,
+    :root[data-theme="branco"] #sidebar .sidebar-logo .logo-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+      backdrop-filter: none;
+    }
+    :root[data-theme="branco"] .sidebar-header img,
+    :root[data-theme="branco"] .sidebar .logo img,
+    :root[data-theme="branco"] .sidebar-brand img,
+    :root[data-theme="branco"] .sidebar-logo img,
+    :root[data-theme="branco"] #sidebar .sidebar-logo img {
+      display: block;
+      max-width: 100%;
+      max-height: 135px;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      transform: scale(1.33);
+      transform-origin: center;
+      filter: none !important;
+      opacity: 1 !important;
+      mix-blend-mode: normal !important;
+      border-radius: 6px;
+    }
+    :root[data-theme="branco"] .sidebar .menu-section,
+    :root[data-theme="branco"] .sidebar .menu-title,
+    :root[data-theme="branco"] .sidebar .nav-section,
+    :root[data-theme="branco"] .sidebar .section-title,
+    :root[data-theme="branco"] .sidebar-section,
+    :root[data-theme="branco"] #sidebar .sidebar-section {
+      color: rgba(255,255,255,0.75);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    :root[data-theme="branco"] .sidebar a,
+    :root[data-theme="branco"] .sidebar .menu-item,
+    :root[data-theme="branco"] .sidebar .nav-link,
+    :root[data-theme="branco"] .sidebar button,
+    :root[data-theme="branco"] #sidebar a,
+    :root[data-theme="branco"] #sidebar .nav-item,
+    :root[data-theme="branco"] #sidebar button {
+      color: #ffffff;
+    }
+    :root[data-theme="branco"] .sidebar .menu-item:hover,
+    :root[data-theme="branco"] .sidebar .nav-link:hover,
+    :root[data-theme="branco"] .sidebar a:hover,
+    :root[data-theme="branco"] #sidebar .nav-item:hover,
+    :root[data-theme="branco"] #sidebar a:hover {
+      background: rgba(255,255,255,0.10);
+      color: #ffffff;
+      border-radius: 8px;
+    }
+    :root[data-theme="branco"] .sidebar .active,
+    :root[data-theme="branco"] .sidebar .menu-item.active,
+    :root[data-theme="branco"] .sidebar .nav-link.active,
+    :root[data-theme="branco"] .sidebar a.active,
+    :root[data-theme="branco"] #sidebar .active,
+    :root[data-theme="branco"] #sidebar .nav-item.active,
+    :root[data-theme="branco"] #sidebar a.active {
+      background: #dbeafe;
+      color: #1e3a8a;
+      font-weight: 600;
+      border-left: 4px solid #ffffff;
+      border-radius: 8px;
+    }
+    :root[data-theme="branco"] .sidebar .active i,
+    :root[data-theme="branco"] .sidebar .menu-item.active i,
+    :root[data-theme="branco"] .sidebar .nav-link.active i,
+    :root[data-theme="branco"] #sidebar .active i,
+    :root[data-theme="branco"] #sidebar .nav-item.active i {
+      color: #1e3a8a;
+    }
+    :root[data-theme="branco"] .sidebar i,
+    :root[data-theme="branco"] .sidebar svg,
+    :root[data-theme="branco"] #sidebar i,
+    :root[data-theme="branco"] #sidebar svg {
+      color: currentColor;
+    }
+    :root[data-theme="branco"] .sidebar-footer,
+    :root[data-theme="branco"] .sidebar-user,
+    :root[data-theme="branco"] .sidebar .user-panel,
+    :root[data-theme="branco"] #sidebar .sidebar-footer,
+    :root[data-theme="branco"] #sidebar .user-info-bar {
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.10);
+      color: #ffffff;
+    }
+    :root[data-theme="branco"] .user-info-bar .urole,
+    :root[data-theme="branco"] #sidebar .user-info-bar .urole,
+    :root[data-theme="branco"] #sb-role {
+      display: none;
+    }
+    :root[data-theme="branco"] .user-info-bar .uname,
+    :root[data-theme="branco"] #sidebar .user-info-bar .uname {
+      color: #ffffff;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      width: auto;
+      max-width: 100%;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 4px 12px rgba(15,23,42,0.18);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.28);
+    }
+    :root[data-theme="branco"] .sidebar-footer .btn,
+    :root[data-theme="branco"] .sidebar-user .btn,
+    :root[data-theme="branco"] #sidebar .sidebar-footer .btn,
+    :root[data-theme="branco"] #sidebar .user-info-bar .btn,
+    :root[data-theme="branco"] #sidebar .btn-logout {
+      background: #ffffff;
+      color: #1e3a8a;
+      border: 1px solid #dbeafe;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
+    }
+    :root[data-theme="branco"] .sidebar-footer .btn:hover,
+    :root[data-theme="branco"] .sidebar-user .btn:hover,
+    :root[data-theme="branco"] #sidebar .sidebar-footer .btn:hover,
+    :root[data-theme="branco"] #sidebar .user-info-bar .btn:hover,
+    :root[data-theme="branco"] #sidebar .btn-logout:hover {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+      box-shadow: 0 8px 20px rgba(30, 58, 138, 0.24);
     }
     .nav-admin-only { display:none; }
     .traj-num-label { background:transparent !important; border:none !important; box-shadow:none !important; color:#000 !important; font-weight:800 !important; font-size:.7rem !important; padding:0 !important; }
@@ -822,14 +1894,14 @@
 <!-- SIDEBAR -->
 <nav id="sidebar">
   <div class="sidebar-logo">
-    <img src="/static/logo.png" alt="Logo do sistema" onerror="this.style.display='none'">
+    <img id="sidebar-theme-logo" src="/static/logo.png" alt="Logo do sistema" onerror="this.style.display='none'">
   </div>
   <div class="sidebar-section">Operacional</div>
-  <div class="nav-item" onclick="switchTab('painel',this)">
+  <div class="nav-item active" onclick="switchTab('painel',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Painel
   </div>
-  <div class="nav-item active" onclick="switchTab('eventos',this)">
+  <div class="nav-item" onclick="switchTab('eventos',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Eventos
   </div>
@@ -872,32 +1944,25 @@
   <div class="user-info-bar">
     <div class="uname" id="sb-username"></div>
     <div class="urole" id="sb-role"></div>
-    <button class="btn-logout" onclick="doLogout()">&#128274; Sair do sistema</button>
+    <button class="btn-logout" onclick="doLogout()">&#128274; Sair</button>
   </div>
   <div class="sidebar-footer" id="sb-clock"></div>
 </nav>
 
 <!-- MAIN -->
 <div id="main">
-  <div id="topbar">
-    <div class="topbar-title-group">
+  <div id="topbar" class="top-header">
+    <div class="topbar-title-group brand-area">
       <h1 id="topbar-title" style="display:none">Painel</h1>
-      <span class="topbar-subtitle">Pol&#237;cia de Fronteiras e Divisas</span>
+      <span class="topbar-subtitle topo-faixa-institucional brand-title"><span class="topo-texto"><span class="pmro-main">PM RO</span><span class="pmro-sub brand-subtitle">servindo e protegendo</span></span></span>
     </div>
-    <div class="top-right">
-      <div class="badge-live"><span class="dot"></span> Ao vivo</div>
-      <span id="topbar-user" style="font-size:.78rem;color:var(--muted);padding:0 4px"></span>
-      <button id="btn-alerts" class="btn btn-outline btn-sm" onclick="openAlertsPanel()" title="Hist&#243;rico de alertas">
-        &#128276;<span id="alerts-badge" class="notif-badge" style="display:none">0</span>
-      </button>
-      <button class="btn btn-outline btn-sm" onclick="refreshCurrent()">&#8635; Atualizar</button>
-    </div>
+    <div class="top-right header-right"><span class="topo-pattern"><img src="/static/pmro-pattern.svg" alt="Padrão institucional"></span></div>
   </div>
 
   <div id="content">
 
     <!-- ===== ABA PAINEL ===== -->
-    <div id="tab-painel" class="tab-pane">
+    <div id="tab-painel" class="tab-pane active">
 
       <!-- cards topo -->
       <div class="cards-row" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
@@ -938,9 +2003,9 @@
         </div>
         <div class="card" style="cursor:pointer;border-color:rgba(34,197,94,.3)" onclick="openPessoasModal()" title="Ver todas as pessoas cadastradas">
           <div class="card-icon" style="background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#4ade80">&#128100;</div>
-          <div class="card-label" style="color:#86efac">Pessoas Cadastradas</div>
-          <div class="card-value" style="color:#4ade80" id="pn-pessoas">&#8212;</div>
-          <div class="card-sub" style="color:#86efac">clique para ver</div>
+          <div class="card-label">Pessoas Cadastradas</div>
+          <div class="card-value" id="pn-pessoas">&#8212;</div>
+          <div class="card-sub" id="pn-pessoas-sub">clique para ver</div>
         </div>
       </div>
 
@@ -971,7 +2036,13 @@
     </div>
 
     <!-- ===== ABA EVENTOS ===== -->
-    <div id="tab-eventos" class="tab-pane active">
+    <div id="tab-eventos" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128203; Eventos</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Visualize, filtre e analise eventos capturados pelas câmeras.</div>
+        </div>
+      </div>
       <div class="cards-row">
         <div class="card">
           <div class="card-icon">&#128203;</div>
@@ -1003,32 +2074,30 @@
           <div class="card-sub">placas monitoradas</div>
         </div>
       </div>
-      <div class="toolbar" style="flex-wrap:wrap;gap:6px 8px">
-        <input type="text" id="ev-search" placeholder="Filtrar por placa..." onkeydown="if(event.key==='Enter')filterEvents()">
-        <select id="ev-camera" onchange="filterEvents()"><option value="">Todas as cameras</option></select>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input type="text" id="ev-search" placeholder="Filtrar por placa..." onkeydown="if(event.key==='Enter')filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+        <select id="ev-camera" onchange="filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"><option value="">Todas as cameras</option></select>
         <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">De</label>
-        <input type="datetime-local" id="ev-date-from" style="width:auto" onchange="filterEvents()">
-        <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">Ate</label>
-        <input type="datetime-local" id="ev-date-to" style="width:auto" onchange="filterEvents()">
-        <div class="btn-preset-group">
-          <button class="btn btn-outline btn-sm" onclick="setDatePreset('today')">Hoje</button>
-          <button class="btn btn-outline btn-sm" onclick="setDatePreset('24h')">24h</button>
-          <button class="btn btn-outline btn-sm" onclick="setDatePreset('week')">7 dias</button>
-          <button class="btn btn-outline btn-sm" onclick="setDatePreset('30d')">30 dias</button>
-          <button class="btn btn-outline btn-sm" onclick="setDatePreset('90d')">90 dias</button>
-        </div>
+        <input type="datetime-local" id="ev-date-from" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="filterEvents()">
+        <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">Até</label>
+        <input type="datetime-local" id="ev-date-to" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="filterEvents()">
+        <button class="btn btn-outline btn-sm" onclick="setDatePreset('today')">Hoje</button>
+        <button class="btn btn-outline btn-sm" onclick="setDatePreset('24h')">24h</button>
+        <button class="btn btn-outline btn-sm" onclick="setDatePreset('week')">7 dias</button>
+        <button class="btn btn-outline btn-sm" onclick="setDatePreset('30d')">30 dias</button>
+        <button class="btn btn-outline btn-sm" onclick="setDatePreset('90d')">90 dias</button>
         <button class="btn btn-primary btn-sm" onclick="filterEvents()">&#128269; Filtrar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
-        <select id="ev-limit-select" onchange="setEvLimit(this.value)">
-            <option value="5" selected>5 por pág.</option>
-            <option value="10">10 por pág.</option>
-            <option value="50">50 por pág.</option>
-            <option value="100">100 por pág.</option>
-            <option value="200">200 por pág.</option>
-            <option value="300">300 por pág.</option>
-            <option value="400">400 por pág.</option>
-            <option value="500">500 por pág.</option>
-          </select>
+        <select id="ev-limit-select" onchange="setEvLimit(this.value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
+          <option value="5" selected>5 por pág.</option>
+          <option value="10">10 por pág.</option>
+          <option value="50">50 por pág.</option>
+          <option value="100">100 por pág.</option>
+          <option value="200">200 por pág.</option>
+          <option value="300">300 por pág.</option>
+          <option value="400">400 por pág.</option>
+          <option value="500">500 por pág.</option>
+        </select>
         <span class="status-line" id="events-status"></span>
       </div>
       <div class="table-wrap">
@@ -1042,10 +2111,10 @@
             <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
           </tbody>
         </table>
-        <div class="pagination">
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
           <button class="btn btn-outline btn-sm" id="ev-prev" onclick="evPage(-1)" disabled>&#8592; Anterior</button>
           <span id="ev-page-info">&#8212;</span>
-          <button class="btn btn-outline btn-sm" id="ev-next" onclick="evPage(1)" disabled>Proxima &#8594;</button>
+          <button class="btn btn-outline btn-sm" id="ev-next" onclick="evPage(1)" disabled>Próxima &#8594;</button>
         </div>
       </div>
       <div class="charts-row">
@@ -1063,11 +2132,11 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
-          &#128101; Grupos Suspeitos
-        </div>
         <div class="sub-tab" data-bat="placas" onclick="switchBatTab('placas',this)" id="bat-subtab-placas">
           &#128203; Placas Individuais
+        </div>
+        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
+          &#128101; Grupos Suspeitos
         </div>
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)" id="bat-subtab-alvos">
           &#127919; Alvos Rastreados
@@ -1085,12 +2154,6 @@
         <!-- PAINEL: GRUPOS SUSPEITOS                                       -->
         <!-- ══════════════════════════════════════════════════════════════ -->
         <div id="cen-view-grupos">
-          <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#fca5a5">
-            <strong>&#128101; Descoberta Autom&aacute;tica de Grupos Suspeitos</strong> &mdash;
-            Detecta automaticamente ve&iacute;culos que parecem estar andando juntos, sem necessidade de pesquisar uma placa espec&iacute;fica.
-            Ordenado do grupo de maior risco ao menor.
-          </div>
-
           <!-- Cards de resumo -->
           <div class="cards-row" style="margin-bottom:12px">
             <div class="card"><div class="card-icon">&#128101;</div><div class="card-label card-label-special">Grupos detectados</div><div class="card-value" id="cgs-total">&#8212;</div></div>
@@ -1100,7 +2163,7 @@
           </div>
 
           <!-- Filtros operacionais -->
-          <div class="cen-tb" style="margin-bottom:12px">
+          <div class="cen-tb">
             <label class="cen-lbl">Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
                 <option value="1h" selected>1 hora</option>
@@ -1112,14 +2175,16 @@
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
             </label>
-            <label class="cen-lbl">M&iacute;n. c&acirc;meras:
+            <span id="cgs-filter-cameras"><label class="cen-lbl">M&iacute;n. c&acirc;meras:
               <select id="cgs-min-cameras" onchange="_cgsLoad(true)" class="cen-ctl">
-                <option value="2" selected>&ge; 2</option>
-                <option value="3">&ge; 3</option>
-                <option value="4">&ge; 4</option>
-                <option value="5">&ge; 5</option>
+                <option value="0">Todas</option>
+                <option value="1">&gt;= 1</option>
+                <option value="2" selected>&gt;= 2</option>
+                <option value="3">&gt;= 3</option>
+                <option value="4">&gt;= 4</option>
+                <option value="5">&gt;= 5</option>
               </select>
-            </label>
+            </label></span>
             <label class="cen-lbl">&#9201; Janela/c&acirc;m:
               <select id="cgs-cowin" onchange="_cgsLoad(true)" class="cen-ctl">
                 <option value="60">1 min</option>
@@ -1131,8 +2196,9 @@
                 <option value="3600">1 hora</option>
               </select>
             </label>
-            <label class="cen-lbl">&#128101; Grupo:
-              <select id="cgs-gsizes" onchange="_cgsGroupSizeChange()" class="cen-ctl">
+            <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
+              <select id="cgs-gsizes" onchange="_cgsGroupSizeChange()" class="cen-ctl"
+                title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">
                 <option value="2" selected>2 ve&iacute;culos juntos</option>
                 <option value="3+">3 ve&iacute;culos ou mais</option>
               </select>
@@ -1143,14 +2209,6 @@
                 <option value="leader_front">L&iacute;der na frente</option>
               </select>
             </label>
-            <label class="cen-lbl">&#128308; Risco:
-              <select id="cgs-risco" onchange="_cgsApplyFilter()" class="cen-ctl">
-                <option value="">Todos</option>
-                <option value="ALTO">&#128293; Alto</option>
-                <option value="MÉDIO">&#9888; M&eacute;dio</option>
-                <option value="BAIXO">&#128994; Baixo</option>
-              </select>
-            </label>
             <span id="cgs-leader-opts" style="display:none;align-items:center;gap:8px">
               <label class="cen-lbl">&#127942; L&iacute;der &gt;=
                 <input id="cgs-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" class="cen-ctl cen-ctl-narrow">%
@@ -1159,9 +2217,16 @@
                 <input id="cgs-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
               </label>
             </span>
+            <label class="cen-lbl">&#128308; Risco:
+              <select id="cgs-risco" onchange="_cgsApplyFilter()" class="cen-ctl">
+                <option value="">Todos</option>
+                <option value="ALTO">&#128293; Alto</option>
+                <option value="MÉDIO">&#9888; M&eacute;dio</option>
+                <option value="BAIXO">&#128994; Baixo</option>
+              </select>
+            </label>
             <button class="cen-btn-apply" onclick="_cgsLoad(true)">&#128269; Filtrar</button>
             <button class="cen-btn-clear" onclick="_cgsReset()">Limpar</button>
-            <!-- período personalizado -->
             <span class="date-range-row" id="cgs-date-row">
               <span class="cen-lbl">De</span>
               <input type="datetime-local" id="cgs-ts-from" class="cen-ctl">
@@ -1201,10 +2266,7 @@
         <!-- ══════════════════════════════════════════════════════════════ -->
         <!-- PAINEL: PLACAS INDIVIDUAIS (legado)                            -->
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <div id="cen-view-placas" style="display:none">
-          <div style="background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.3);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#c4b5fd">
-            <strong>&#9889; Central de Amea&ccedil;as</strong> &mdash; Vis&atilde;o unificada em <strong>tempo real</strong> que cruza Suspeitos, Comboio, Grupos e Alvos. Placas em m&uacute;ltiplos m&oacute;dulos recebem badge <strong>&#9889; M&Uacute;LTIPLOS</strong> e score amplificado.
-          </div>
+                <div id="cen-view-placas" style="display:none">
           <div class="cards-row">
             <div class="card"><div class="card-icon">&#128203;</div><div class="card-label card-label-special">Placas analisadas</div><div class="card-value" id="cen-total">&#8212;</div></div>
             <div class="card"><div class="card-icon">&#9889;</div><div class="card-label card-label-special">M&uacute;ltiplos sinais</div><div class="card-value" id="cen-multi">&#8212;</div></div>
@@ -1327,12 +2389,7 @@
         </div><!-- /cen-view-placas -->
       </div><!-- /bat-sub-central -->
 
-      <div id="bat-sub-alvos" class="sub-pane">
-        <div style="background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:.79rem;color:#c4b5fd">
-          <strong>&#127919; Alvos Rastreados &mdash; Quem est&aacute; andando com o suspeito?</strong> &mdash;
-          Cadastre as placas que voc&ecirc; quer investigar. O sistema identifica quem foi visto na mesma c&acirc;mera e classifica o papel de cada acompanhante (batedor, protegido ou comboio).
-          As listas da aba <strong>Ve&iacute;culos</strong> continuam funcionando normalmente apenas para alarme de c&acirc;mera.
-        </div>
+      <div id="bat-sub-alvos" class="sub-pane pessoas-sub-pane">
         <div class="cards-row">
           <div class="card"><div class="card-icon">&#127919;</div><div class="card-label">Alvos cadastrados</div><div class="card-value" id="alvo-total">&#8212;</div></div>
           <div class="card"><div class="card-icon">&#128680;</div><div class="card-label">Com companheiros</div><div class="card-value" id="alvo-com-comp">&#8212;</div></div>
@@ -1354,7 +2411,7 @@
       </div><!-- /bat-sub-alvos -->
 
       <!-- DETALHE DE ALVO RASTREADO (sub-pane interno) -->
-      <div id="alvo-detalhe-view" class="sub-pane">
+      <div id="alvo-detalhe-view" class="sub-pane pessoas-sub-pane">
         <!-- Cabeçalho com botão voltar -->
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
@@ -1438,7 +2495,7 @@
     <div id="tab-veiculos" class="tab-pane">
       <!-- VIEW: LISTA DE LISTAS -->
       <div id="view-listas">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
           <div>
             <div style="font-weight:700;font-size:.97rem">Listas de Monitoramento</div>
             <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Crie listas para classificar veiculos (ex: Roubados, Furtados, Investigados...)</div>
@@ -1518,12 +2575,12 @@
 
     <!-- ===== ABA MAPA ===== -->
     <div id="tab-mapa" class="tab-pane">
-      <div class="mapa-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-weight:700;font-size:.97rem">&#127760; Mapa de C&#226;meras</div>
           <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Posi&#231;&#227;o geogr&#225;fica das c&#226;meras com coordenadas GPS cadastradas.</div>
         </div>
-        <div class="mapa-actions">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="loadMapa()">&#8635; Atualizar</button>
           <button id="btn-mapa-heat" class="btn btn-outline btn-sm" onclick="_toggleHeatMap()" title="Exibe um mapa de calor pela densidade de detecções por câmera">&#128293; Heat Map</button>
           <button id="btn-mapa-auto" class="btn btn-outline btn-sm" onclick="_toggleMapaAutoRefresh()" title="Atualiza o status dos marcadores automaticamente a cada 30 segundos">&#9711; Auto-refresh: OFF</button>
@@ -1603,9 +2660,11 @@
     <div id="tab-cadastro" class="tab-pane">
 
       <!-- Cabeçalho fixo -->
-      <div style="margin-bottom:14px">
-        <div style="font-weight:700;font-size:.97rem">&#128100; Cadastro Policial &mdash; Pessoas</div>
-        <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Cadastre pessoas, registre abordagens e consulte histórico.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128100; Cadastro Policial &mdash; Pessoas</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Cadastre pessoas, registre abordagens e consulte histórico.</div>
+        </div>
       </div>
 
       <!-- Sub-abas -->
@@ -1616,7 +2675,7 @@
         <button class="pessoas-sub-btn" id="psub-btn-abordagem" data-perm="operador-plus"
           onclick="switchPessoasSubTab('abordagem',this)">&#43; Adicionar Abordagem</button>
         <button class="pessoas-sub-btn" id="psub-btn-lista-abordagens"
-          onclick="switchPessoasSubTab('lista-abordagens',this)">&#128203; Lista de Abordagens</button>
+          onclick="switchPessoasSubTab('lista-abordagens',this)">&#128203; Hist&oacute;rico de Abordagens</button>
       </nav>
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -1635,7 +2694,7 @@
           <input type="text" id="cad-busca" placeholder="Filtrar por nome, apelido ou CPF..."
             style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
             onkeydown="if(event.key==='Enter')cadastroBuscar()">
-          <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()">&#128269; Buscar</button>
+          <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()" style="min-width:120px">&#128269; Pesquisar</button>
           <button class="btn btn-outline btn-sm" onclick="cadastroLimparBusca()">Limpar</button>
         </div>
 
@@ -2021,102 +3080,78 @@
       </div><!-- /pessoas-sub-abordagem -->
 
       <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- SUB-ABA: LISTA DE ABORDAGENS                                   -->
+      <!-- SUB-ABA: HISTÓRICO DE ABORDAGENS                               -->
       <!-- Endpoint: GET /api/abordagens?q=&dt_from=&dt_to=&limit=&offset= -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <div id="pessoas-sub-lista-abordagens" class="pessoas-sub-pane" style="display:none">
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <span style="font-size:.82rem;color:var(--muted)">Filtre por local, equipe, tipo ou período.</span>
+          <span style="font-size:.82rem;color:var(--muted)">Busque por local, equipe, tipo, placa ou pessoa.</span>
           <button class="btn btn-outline btn-sm" onclick="abListaCarregar()">&#8635; Atualizar</button>
         </div>
-
-        <!-- Filtros -->
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-          <input type="text" id="abl-busca" placeholder="Local, equipe ou tipo..."
-            style="flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
-            onkeydown="if(event.key==='Enter')abListaBuscar()">
-          <input type="date" id="abl-dt-from"
-            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" title="De">
-          <input type="date" id="abl-dt-to"
-            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" title="At&#233;">
+        <div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">
+            Busca
+            <input
+              type="text"
+              id="abl-busca"
+              placeholder="Local, equipe, tipo, placa ou pessoa"
+              onkeydown="if(event.key==='Enter')abListaBuscar()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;min-width:260px">
+          </label>
           <button class="btn btn-primary btn-sm" onclick="abListaBuscar()">&#128269; Filtrar</button>
           <button class="btn btn-outline btn-sm" onclick="abListaLimpar()">Limpar</button>
         </div>
 
-        <!-- Tabela -->
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>Data/Hora</th><th>Local</th><th>Equipe</th>
-              <th>Tipo/Motivo</th><th>Ve&iacute;culo</th><th>Pessoas</th>
-              <th style="text-align:center">A&#231;&otilde;es</th>
-            </tr></thead>
+        <div id="abl-status" style="font-size:.82rem;color:var(--muted);margin-bottom:10px"></div>
+
+        <div class="table-card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width:70px">ID</th>
+                <th style="width:150px">Data/Hora</th>
+                <th>Local</th>
+                <th>Equipe</th>
+                <th>Tipo/Motivo</th>
+                <th>Veículo</th>
+                <th>Pessoas</th>
+                <th style="width:150px;text-align:center">Ações</th>
+              </tr>
+            </thead>
             <tbody id="abl-tbody">
-              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Clique em &quot;Atualizar&quot; para carregar.</td></tr>
+              <tr>
+                <td colspan="8" style="text-align:center;color:var(--muted);padding:20px">
+                  <span class="spinner"></span> Carregando...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
-        <div id="abl-status" class="status-line" style="padding:6px 0"></div>
-        <div id="abl-paginacao" style="display:flex;gap:8px;margin-top:8px;align-items:center"></div>
 
-      </div><!-- /pessoas-sub-lista-abordagens -->
-
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <!-- SUB-ABA: RELATÓRIO COMPLETO DA PESSOA                               -->
-      <!-- Endpoint: GET /api/pessoas/{id}/relatorio                          -->
-      <!-- ═══════════════════════════════════════════════════════════════ -->
-      <div id="pessoas-sub-relatorio" class="pessoas-sub-pane" style="display:none">
-        <div id="relatorio-content">
-          <div style="text-align:center;padding:48px 20px;color:var(--muted)">
-            <div style="font-size:2.2rem;margin-bottom:10px">&#128202;</div>
-            <div style="font-size:.9rem;font-style:italic">Selecione uma pessoa na aba
-              <strong style="color:var(--accent)">Pesquisar</strong> e clique em
-              <strong style="color:var(--accent)">Ver abordagens</strong> para carregar o relatório completo.</div>
-          </div>
-        </div>
-      </div><!-- /pessoas-sub-relatorio -->
-
+        <div id="abl-paginacao" style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"></div>
+      </div>
     </div><!-- /tab-cadastro -->
 
-<!-- Modal de Visualização de Pessoa (somente leitura) -->
-<div class="modal-overlay" id="cad-view-modal" onclick="if(event.target===this)closeModal('cad-view-modal')">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <h2 id="cad-view-titulo">&#128100; Dados da Pessoa</h2>
-      <button class="modal-close" onclick="closeModal('cad-view-modal')">&times;</button>
-    </div>
-    <div id="cad-view-body" style="font-size:.87rem;line-height:1.7">
-      <!-- preenchido por cadastroVisualizar() -->
-    </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
-      <!-- Nova abordagem e Editar: apenas admin e operador -->
-      <button class="btn btn-primary btn-sm" id="cad-view-nova-ab-btn" data-perm="operador-plus" onclick="">&#10133; Nova abordagem</button>
-      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn" data-perm="operador-plus" onclick="">&#9998; Editar cadastro</button>
-      <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Confirmar Exclusão de Pessoa (requer senha) -->
+<!-- Modal: Confirmar Exclusão de Pessoa -->
 <div class="modal-overlay" id="cad-excluir-modal" onclick="if(event.target===this)_cadExcluirFechar()">
-  <div class="modal" style="max-width:440px;width:97%">
+  <div class="modal modal-sm" style="max-width:460px">
     <div class="modal-header">
-      <h2 style="color:#f87171">&#128465; Excluir Pessoa</h2>
+      <h2>&#128465; Confirmar Exclus&atilde;o</h2>
       <button class="modal-close" onclick="_cadExcluirFechar()">&times;</button>
     </div>
-    <div style="font-size:.87rem;line-height:1.65">
-      <p style="margin:0 0 10px">
-        Deseja excluir <strong id="cad-excluir-nome" style="color:var(--accent)"></strong>?
-      </p>
-      <p style="margin:0 0 16px;color:#fbbf24;font-size:.82rem">
-        &#9888; Todas as abordagens e v&iacute;nculos relacionados tamb&eacute;m ser&atilde;o apagados.
+    <div>
+      <div style="font-size:.88rem;line-height:1.6;color:var(--text);margin-bottom:12px">
+        Voc&ecirc; est&aacute; prestes a excluir o cadastro de
+        <strong id="cad-excluir-nome">—</strong>.
         Esta a&ccedil;&atilde;o &eacute; irrevers&iacute;vel.
-      </p>
-      <label style="display:flex;flex-direction:column;gap:5px;font-size:.82rem;margin-bottom:16px">
-        <span>Digite sua senha para autorizar:</span>
-        <input type="password" id="cad-excluir-senha" autocomplete="current-password"
-          placeholder="Sua senha de acesso"
+      </div>
+      <label style="display:block;font-size:.82rem;color:var(--muted);margin-bottom:8px">
+        Digite sua senha para confirmar:
+        <input
+          type="password"
+          id="cad-excluir-senha"
+          autocomplete="current-password"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.9rem;width:100%;box-sizing:border-box"
           onkeydown="if(event.key==='Enter')_cadExcluirConfirmar()">
       </label>
@@ -2131,7 +3166,7 @@
   </div>
 </div>
 
-<!-- Modal: Detalhe de Abordagem (Lista de Abordagens) -->
+<!-- Modal: Detalhe de Abordagem (Histórico de Abordagens) -->
 <div class="modal-overlay" id="ab-det-modal" onclick="if(event.target===this)closeModal('ab-det-modal')">
   <div class="modal" style="max-width:580px;width:97%;max-height:90vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0">
@@ -2555,7 +3590,7 @@
       <!-- SUB: Configuração de Alarmes -->
       <div id="alarm-sub-config" class="active">
         <!-- Cards resumo -->
-        <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap" id="alarmes-cards">
+        <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap" id="alarmes-cards">
           <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
             <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total</div>
             <div id="alc-total" style="font-size:1.6rem;font-weight:800;color:var(--text)">&#8212;</div>
@@ -2639,7 +3674,7 @@
       </div>
 
       <!-- Cards resumo -->
-      <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap" id="users-cards">
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap" id="users-cards">
         <div class="card" style="flex:1;min-width:130px;padding:14px 18px">
           <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total</div>
           <div id="uc-total" style="font-size:1.6rem;font-weight:800;color:var(--text)">—</div>
@@ -3699,7 +4734,7 @@ async function loadPainel() {
 }
 
 // ===== ESTADO =====
-var currentTab  = 'eventos';
+var currentTab  = 'painel';
 var curFilter   = '';
 var curCamera   = '';
 var curDateFrom = '';
@@ -4299,7 +5334,7 @@ function clearFilter() {
 }
 
 // ===== GRAFICOS =====
-var CG = { color:'#64748b', grid:'rgba(0,0,0,.07)', bar:'rgba(59,130,246,.7)', bar2:'rgba(168,85,247,.65)' };
+var CG = { color:'#64748b', grid:'rgba(0,0,0,.07)', bar:'rgba(59,130,246,.7)', bar2:'rgba(123,169,233,.75)' };
 
 function chartOpts() {
   return {
@@ -6888,25 +7923,39 @@ function renderListVehicles(items) {
     tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum veiculo cadastrado nesta lista.<br><small style="opacity:.7;margin-top:6px;display:block">Clique em "+ Adicionar Placa" para comecar.</small></td></tr>';
     return;
   }
+  var temaAtual = normalizeThemeName(document.documentElement.getAttribute('data-theme'));
+  var isTemaBranco = (temaAtual === 'branco');
   tb.innerHTML = items.map(function(v) {
     var isAlvo = !!v.is_alvo;
     var plateBadge = isAlvo
       ? ' <span style="display:inline-block;background:rgba(220,38,38,.18);color:#fca5a5;padding:1px 6px;font-size:.68rem;border-radius:4px;font-weight:700;letter-spacing:.04em;vertical-align:middle">ALVO</span>'
       : '';
-    var rowStyle = isAlvo ? ' style="background:rgba(220,38,38,.055)"' : '';
+    var rowStyle = (!isTemaBranco && isAlvo) ? ' style="background:rgba(220,38,38,.055)"' : '';
     var alvoToggleBtn = isAlvo
-      ? '<button class="btn btn-danger btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',true)" title="Remover dos alvos" style="white-space:nowrap">&#10060; Remover alvo</button>'
-      : '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919; Tornar alvo</button>';
+      ? ''
+      : (isTemaBranco
+        ? '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919; Tornar alvo</button>'
+        : '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919;</button>');
+    var editarBtn = isTemaBranco
+      ? '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button>'
+      : '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998;</button>';
+    var excluirBtn = isTemaBranco
+      ? '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>'
+      : '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>';
+    var tdAcoesClass = isTemaBranco ? ' class="veh-acoes"' : '';
+    var tdAcoesStyle = isTemaBranco
+      ? 'text-align:center'
+      : 'text-align:center;white-space:nowrap;display:flex;flex-wrap:wrap;gap:4px;justify-content:center';
     return '<tr data-vid="' + v.id + '" data-plate="' + v.plate.replace(/"/g,'&quot;') + '" data-notes="' + (v.notes||'').replace(/"/g,'&quot;') + '" data-is-alvo="' + (isAlvo ? '1' : '0') + '"' + rowStyle + '>' +
       '<td style="color:var(--muted);font-size:.74rem">' + v.id + '</td>' +
       '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span>' + plateBadge + '</td>' +
       '<td style="font-size:.79rem;color:var(--muted)">' + (v.notes||'-') + '</td>' +
       '<td style="text-align:center">' + (isAlvo ? '<span style="color:#fca5a5;font-size:.75rem">&#127919;</span>' : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>') + '</td>' +
       '<td style="font-size:.76rem;color:var(--muted)">' + fmtTs(v.created_at) + '</td>' +
-      '<td style="text-align:center;white-space:nowrap;display:flex;flex-wrap:wrap;gap:4px;justify-content:center">' +
+      '<td' + tdAcoesClass + ' style="' + tdAcoesStyle + '">' +
         alvoToggleBtn + ' ' +
-        '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button> ' +
-        '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>' +
+        editarBtn + ' ' +
+        excluirBtn +
       '</td>' +
       '</tr>';
   }).join('');
@@ -10256,17 +11305,42 @@ function _resetGruposFilters() {
   loadGruposComboio(true);
 }
 
+var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname'];
+
+function _authMigrateLegacyStorage() {
+  _AUTH_KEYS.forEach(function(key) {
+    if (sessionStorage.getItem(key)) return;
+    var legacy = localStorage.getItem(key);
+    if (legacy) {
+      sessionStorage.setItem(key, legacy);
+      localStorage.removeItem(key);
+    }
+  });
+}
+
+function _authGet(key) {
+  return sessionStorage.getItem(key) || '';
+}
+
+function _authClearSession() {
+  _AUTH_KEYS.forEach(function(key) {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  });
+}
+
 // ===== AUTH =====
 (function(){
-  var token = localStorage.getItem('bpfron_token');
+  _authMigrateLegacyStorage();
+  var token = _authGet('bpfron_token');
   if (!token) { window.location.replace('/login'); return; }
   // Expor token globalmente
   window._authToken = token;
-  window._authRole  = localStorage.getItem('bpfron_role') || '';
+  window._authRole  = _authGet('bpfron_role');
   if (window._authRole === 'operator') window._authRole = 'operador';
   if (window._authRole === 'viewer' || window._authRole === 'visualizacao') window._authRole = 'visualizador';
-  window._authUser  = localStorage.getItem('bpfron_user') || '';
-  window._authName  = localStorage.getItem('bpfron_fullname') || '';
+  window._authUser  = _authGet('bpfron_user');
+  window._authName  = _authGet('bpfron_fullname');
   // Mostrar info do usuário
   var sbUser = document.getElementById('sb-username');
   var sbRole = document.getElementById('sb-role');
@@ -10406,7 +11480,7 @@ function _applyRoleBasedUI(root) {
     }
     return origFetch.call(this, url, opts).then(function(resp) {
       if (resp.status === 401) {
-        localStorage.removeItem('bpfron_token');
+        _authClearSession();
         window.location.replace('/login');
       }
       return resp;
@@ -10416,10 +11490,7 @@ function _applyRoleBasedUI(root) {
 
 function doLogout() {
   if (!confirm('Deseja sair do sistema?')) return;
-  localStorage.removeItem('bpfron_token');
-  localStorage.removeItem('bpfron_role');
-  localStorage.removeItem('bpfron_user');
-  localStorage.removeItem('bpfron_fullname');
+  _authClearSession();
   window.location.replace('/login');
 }
 
@@ -10481,11 +11552,33 @@ var _THEMES = {
 };
 
 var _ALLOWED_THEMES = { verde: true, branco: true };
+var _THEME_LOGOS = {
+  verde: '/static/logo-bpfron.png.png',
+  branco: '/static/logo.png'
+};
 
 function normalizeThemeName(name) {
   if (name === 'claro-branco') return 'branco';
   if (name === 'azul' || name === 'cinza' || name === 'claro') return 'verde';
   return _ALLOWED_THEMES[name] ? name : 'verde';
+}
+
+function updateThemeLogo(themeName) {
+  var logo = document.getElementById('sidebar-theme-logo');
+  if (!logo) return;
+  var nextSrc = _THEME_LOGOS[themeName] || _THEME_LOGOS.branco;
+  logo.onerror = function() {
+    if (this.dataset.fallbackApplied === '1') {
+      this.style.display = 'none';
+      return;
+    }
+    this.dataset.fallbackApplied = '1';
+    this.src = _THEME_LOGOS.branco;
+    this.style.display = '';
+  };
+  logo.dataset.fallbackApplied = '0';
+  logo.style.display = '';
+  logo.src = nextSrc;
 }
 
 function applyTheme(name) {
@@ -10494,6 +11587,7 @@ function applyTheme(name) {
   Object.keys(t).forEach(function(k){ document.documentElement.style.setProperty(k, t[k]); });
   document.documentElement.setAttribute('data-theme', resolved);
   localStorage.setItem('bpfron_theme', resolved);
+  updateThemeLogo(resolved);
   document.querySelectorAll('#cfg-theme-list [data-theme]').forEach(function(el){
     var active = el.getAttribute('data-theme') === resolved;
     el.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
@@ -11053,7 +12147,7 @@ function _renderHistTable(items) {
   await loadMonPlates();
   // Carrega câmeras primeiro para o filtro ficar pronto antes dos eventos
   await loadCameras().catch(function(){});
-  await loadEvents(0);
+  await loadPainel();
   // Monitoramento automático sem dependência de controles no topo.
   _startBgAlarm();
   if (!_realtimeInterval) {
@@ -11150,16 +12244,28 @@ function renderCadResultado(pessoas) {
   tb.innerHTML = pessoas.map(function(p) {
     var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '\u2014';
     var dn = p.data_nascimento ? p.data_nascimento.substring(0,10) : '\u2014';
+    var temaAtual = normalizeThemeName(document.documentElement.getAttribute('data-theme'));
+    var isTemaBranco = (temaAtual === 'branco');
     // Botões de ação baseados no perfil do usuário logado
     var role = window._authRole || 'visualizador';
-    var botoesAcao = '<button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button>';
+    var botoesAcao = '';
     if (role === 'admin' || role === 'operador') {
-      botoesAcao += ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button>';
+      botoesAcao += isTemaBranco
+        ? ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998; Editar</button>'
+        : ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button>';
+    } else {
+      botoesAcao += isTemaBranco
+        ? ' <button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269; Visualizar</button>'
+        : ' <button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button>';
     }
     if (role === 'admin') {
       // Botão excluir cadastro: somente admin
-      botoesAcao += ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>';
+      botoesAcao += isTemaBranco
+        ? ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465; Excluir</button>'
+        : ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>';
     }
+    var tdAcoesClass = isTemaBranco ? ' class="cad-acoes"' : '';
+    var tdAcoesStyle = isTemaBranco ? 'text-align:center' : 'text-align:center;white-space:nowrap';
     return '<tr>' +
       '<td style="color:var(--muted);font-size:.8rem">' + p.id + '</td>' +
       '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
@@ -11169,7 +12275,7 @@ function renderCadResultado(pessoas) {
       '<td style="font-size:.78rem">' + dn + '</td>' +
       '<td>' + _esc(p.contato || '\u2014') + '</td>' +
       '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
-      '<td style="text-align:center;white-space:nowrap">' + botoesAcao + '</td>' +
+      '<td' + tdAcoesClass + ' style="' + tdAcoesStyle + '">' + botoesAcao + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -12000,7 +13106,7 @@ async function abSalvar() {
 }
 
 // =============================================================================
-// SUB-ABA: LISTA DE ABORDAGENS
+// SUB-ABA: HISTORICO DE ABORDAGENS
 // Endpoints:
 //   GET /api/abordagens?q=&dt_from=&dt_to=&limit=&offset=
 //   GET /api/abordagens/{id}
@@ -12237,20 +13343,26 @@ async function pmVerDetalhes(id) {
   closeModal('pm-pessoas-modal');
   await cadastroVisualizar(id);
   // ao fechar o view, reabrir o modal de listagem
-  var origClose = document.querySelector('#cad-view-modal .modal-close').onclick;
-  document.querySelector('#cad-view-modal .modal-close').onclick = function() {
-    closeModal('cad-view-modal');
-    openPessoasModal();
-    document.querySelector('#cad-view-modal .modal-close').onclick = origClose;
-  };
-  var origOverlay = document.getElementById('cad-view-modal').onclick;
-  document.getElementById('cad-view-modal').onclick = function(ev) {
-    if (ev.target === this) {
+  var closeBtn = document.querySelector('#cad-view-modal .modal-close');
+  if (closeBtn) {
+    var origClose = closeBtn.onclick;
+    closeBtn.onclick = function() {
       closeModal('cad-view-modal');
       openPessoasModal();
-      document.getElementById('cad-view-modal').onclick = origOverlay;
-    }
-  };
+      closeBtn.onclick = origClose;
+    };
+  }
+  var modalOverlay = document.getElementById('cad-view-modal');
+  if (modalOverlay) {
+    var origOverlay = modalOverlay.onclick;
+    modalOverlay.onclick = function(ev) {
+      if (ev.target === this) {
+        closeModal('cad-view-modal');
+        openPessoasModal();
+        modalOverlay.onclick = origOverlay;
+      }
+    };
+  }
 }
 
 (function() {
@@ -12983,3 +14095,4 @@ function _renderRelatorio(data) {
 
 </body>
 </html>
+

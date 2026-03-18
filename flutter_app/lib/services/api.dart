@@ -20,7 +20,7 @@ class ApiUnauthorizedException implements Exception {
 ///   - Local (emulador): http://10.0.2.2:8000
 ///   - Local (dispositivo): http://192.168.x.x:8000 (IP da máquina host)
 class Api {
-  static const String baseUrl = AppConfig.baseUrl;
+  static String get baseUrl => AppConfig.baseUrl;
 
   // ─── Headers ─────────────────────────────────────────────────────────────
 

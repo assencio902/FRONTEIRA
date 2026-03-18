@@ -2,13 +2,13 @@
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: monitor
-      POSTGRES_USER: monitor_user
-      POSTGRES_PASSWORD: monitor_pass
+      POSTGRES_DB: ${POSTGRES_DB:-monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U monitor_user"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-monitor_user} -d ${POSTGRES_DB:-monitor}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,26 +39,27 @@
       - "8000:8000"
     environment:
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: monitor
-      POSTGRES_USER: monitor_user
-      POSTGRES_PASSWORD: monitor_pass
-      REDIS_URL: redis://redis:6379/0
-      FCM_PROJECT_ID: "bpfron"
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      FCM_PROJECT_ID: ${FCM_PROJECT_ID:-bpfron}
       FCM_CREDENTIALS_PATH: "/app/secrets/firebase-adminsdk.json"
       # ── Auth / JWT ────────────────────────────────────────────────
-      JWT_SECRET: "bpfron-change-me-in-production"
-      JWT_EXPIRE_HOURS: "8"
-      ADMIN_USER: "admin"
-      ADMIN_PASSWORD: "admin123"
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no .env}
+      JWT_EXPIRE_HOURS: ${JWT_EXPIRE_HOURS:-8}
+      JWT_REFRESH_EXPIRE_DAYS: ${JWT_REFRESH_EXPIRE_DAYS:-30}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Defina ADMIN_PASSWORD no .env}
       # ── Retenção / Cleanup ─────────────────────────────────────────
-      CLEANUP_ENABLED: "true"
-      CLEANUP_INTERVAL_SECONDS: "600"
-      CLEANUP_DRY_RUN: "false"
-      RETENTION_DAYS_IMAGES: "7"
-      RETENTION_DAYS_EVENTS: "30"
-      MAX_UPLOADS_GB: "50"
-      UPLOADS_DIR: "/app/uploads"
+      CLEANUP_ENABLED: ${CLEANUP_ENABLED:-true}
+      CLEANUP_INTERVAL_SECONDS: ${CLEANUP_INTERVAL_SECONDS:-600}
+      CLEANUP_DRY_RUN: ${CLEANUP_DRY_RUN:-false}
+      RETENTION_DAYS_IMAGES: ${RETENTION_DAYS_IMAGES:-7}
+      RETENTION_DAYS_EVENTS: ${RETENTION_DAYS_EVENTS:-30}
+      MAX_UPLOADS_GB: ${MAX_UPLOADS_GB:-50}
+      UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,17 +80,17 @@
   yolo-worker:
     build: ./yolo-worker
     environment:
-      REDIS_URL: redis://redis:6379/0
-      IMAGES_DIR: /app/uploads
-      YOLO_MODEL: yolov8n.pt
-      YOLO_CONF: "0.35"
-      PICKUP_MAX_HEIGHT_FRAC: "0.45"
-      PICKUP_MAX_AREA_FRAC: "0.28"
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      IMAGES_DIR: ${UPLOADS_DIR:-/app/uploads}
+      YOLO_MODEL: ${YOLO_MODEL:-yolov8n.pt}
+      YOLO_CONF: ${YOLO_CONF:-0.35}
+      PICKUP_MAX_HEIGHT_FRAC: ${PICKUP_MAX_HEIGHT_FRAC:-0.45}
+      PICKUP_MAX_AREA_FRAC: ${PICKUP_MAX_AREA_FRAC:-0.28}
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: monitor
-      POSTGRES_USER: monitor_user
-      POSTGRES_PASSWORD: monitor_pass
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
       PYTHONPATH: /app
     depends_on:
       redis:
@@ -114,14 +115,14 @@
   camera-poller:
     build: ./camera-poller
     environment:
-      INGEST_URL: http://ingest:8000
+      INGEST_URL: ${INGEST_URL:-http://ingest:8000}
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: monitor
-      POSTGRES_USER: monitor_user
-      POSTGRES_PASSWORD: monitor_pass
-      RECONNECT_DELAY: "10"
-      REFRESH_INTERVAL: "60"
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      RECONNECT_DELAY: ${RECONNECT_DELAY:-10}
+      REFRESH_INTERVAL: ${REFRESH_INTERVAL:-60}
     depends_on:
       postgres:
         condition: service_healthy
