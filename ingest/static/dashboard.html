@@ -1252,6 +1252,15 @@
               <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
             </label>
           </span>
+          <!-- Risco -->
+          <label class="cen-lbl">&#128308; Risco:
+            <select id="cen-risco" onchange="cenApplyFilter()" class="cen-ctl">
+              <option value="">Todos</option>
+              <option value="ALTO">&#128293; Alto</option>
+              <option value="MÉDIO">&#9888; M&eacute;dio</option>
+              <option value="BAIXO">&#128994; Baixo</option>
+            </select>
+          </label>
           <!-- Ações -->
           <button class="cen-btn-apply" onclick="loadCentral(true)">&#128269; Filtrar</button>
           <button class="cen-btn-clear" onclick="_resetCenFilters()">Limpar</button>
@@ -5765,6 +5774,7 @@ async function loadCentral(showSpinner) {
 function _cenRenderPage() {
   var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);
   var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
+  var riscoFl = (document.getElementById('cen-risco') || {value:''}).value || '';
   var items = _cenAllItems.filter(function(i) {
     // filtro placa
     if (plateFl && i.plate.toUpperCase().indexOf(plateFl) === -1) return false;
@@ -5774,6 +5784,11 @@ function _cenRenderPage() {
       if (i.in_suspeitos && i.in_suspeitos.cameras) cams = Math.max(cams, i.in_suspeitos.cameras);
       if (i.in_comboio   && i.in_comboio.cameras)   cams = Math.max(cams, i.in_comboio.cameras);
       if (cams < mc) return false;
+    }
+    // filtro risco
+    if (riscoFl) {
+      var r = (i.risco || i.risk_level || '').toUpperCase();
+      if (r !== riscoFl) return false;
     }
     return true;
   });
@@ -7154,6 +7169,8 @@ function _resetCenFilters() {
   if (lr) lr.value = '0.70';
   var pm = document.getElementById('cen-payload-max');
   if (pm) pm.value = '0';
+  var risco = document.getElementById('cen-risco');
+  if (risco) risco.value = '';
 }
 
 var _alvoRepSavedCamera = null;
