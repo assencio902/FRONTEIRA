@@ -1092,12 +1092,12 @@
           <div class="cen-tb" style="margin-bottom:12px">
             <label class="cen-lbl">&#128197; Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
+                <option value="1h" selected>1 hora</option>
                 <option value="2h">2 horas</option>
+                <option value="3h">3 horas</option>
                 <option value="6h">6 horas</option>
                 <option value="12h">12 horas</option>
-                <option value="24h" selected>24 horas</option>
-                <option value="48h">48 horas</option>
-                <option value="7d">7 dias</option>
+                <option value="24h">24 horas</option>
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
             </label>
@@ -1197,13 +1197,8 @@
           <!-- Período -->
           <label class="cen-lbl">Per&iacute;odo:
             <select id="cen-window" onchange="cenWindowChange()" class="cen-ctl">
-              <option value="1m">1 minuto</option>
-              <option value="5m">5 minutos</option>
-              <option value="10m">10 minutos</option>
-              <option value="15m">15 minutos</option>
-              <option value="30m">30 minutos</option>
-              <option value="1h">1 hora</option>
-              <option value="2h" selected>2 horas</option>
+              <option value="1h" selected>1 hora</option>
+              <option value="2h">2 horas</option>
               <option value="3h">3 horas</option>
               <option value="6h">6 horas</option>
               <option value="12h">12 horas</option>
@@ -4395,7 +4390,7 @@ function _cgsWindowChange() {
 
 function _cgsReset() {
   var el;
-  el = document.getElementById('cgs-window');      if (el) { el.value = '24h'; _cgsWindowChange(); }
+  el = document.getElementById('cgs-window');      if (el) { el.value = '1h'; _cgsWindowChange(); }
   el = document.getElementById('cgs-gsizes');      if (el) el.value = '2,3+';
   el = document.getElementById('cgs-min-cameras'); if (el) el.value = '2';
   el = document.getElementById('cgs-cowin');       if (el) el.value = '300';
@@ -4418,13 +4413,13 @@ async function _cgsLoad(showSpinner) {
   if (showSpinner) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando grupos suspeitos&hellip;</td></tr>';
   }
-  var w = (document.getElementById('cgs-window') || {}).value || '24h';
+  var w = (document.getElementById('cgs-window') || {}).value || '1h';
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
     tsFrom = _toIso((document.getElementById('cgs-ts-from') || {}).value);
     tsTo   = _toIso((document.getElementById('cgs-ts-to')   || {}).value);
     if (!tsFrom || !tsTo) { alert('Informe o per\u00edodo personalizado.'); return; }
-    w = '24h';
+    w = '1h';
   }
   var gs     = (document.getElementById('cgs-gsizes')      || {}).value || '2,3+';
   var minCam = (document.getElementById('cgs-min-cameras') || {}).value || '2';
@@ -4592,7 +4587,7 @@ function _cgsOpenDetalhe(groupId) {
 
 function _cgsDetAbrir() {
   if (!_cgsCurrentGroup) return;
-  var w = (document.getElementById('cgs-window') || {}).value || '24h';
+  var w = (document.getElementById('cgs-window') || {}).value || '1h';
   openComboioReport(_cgsCurrentGroup.plates[0], _cgsCurrentGroup.plates, { window: w });
 }
 
@@ -5718,7 +5713,7 @@ async function loadCentral(showSpinner) {
     tsFrom = _toIso(document.getElementById('cen-ts-from').value);
     tsTo   = _toIso(document.getElementById('cen-ts-to').value);
     if (!tsFrom || !tsTo) { alert('Informe o período personalizado (De / Até).'); return; }
-    w = '2h';
+    w = '1h';
   }
   var prefix  = '';
   var gsizes    = (document.getElementById('cen-gsizes')     || {}).value || '2';
@@ -6576,8 +6571,8 @@ function _openComboioFromCentral(plate) {
     openBatedorReport(plate);
     return;
   }
-  var w = '2h';
-  try { w = document.getElementById('cen-window').value || '2h'; } catch(e){}
+  var w = '1h';
+  try { w = document.getElementById('cen-window').value || '1h'; } catch(e){}
   openComboioReport(plate, groupPlates, { window: w });
 }
 
@@ -7144,7 +7139,7 @@ function _resetCenFilters() {
   var plate = document.getElementById('cen-filter-plate');
   if (plate) plate.value = '';
   var win = document.getElementById('cen-window');
-  if (win) { win.value = '2h'; cenWindowChange(); }
+  if (win) { win.value = '1h'; cenWindowChange(); }
   var minCam = document.getElementById('cen-min-cameras');
   if (minCam) minCam.value = '2';
   var interval = document.getElementById('cen-interval');
