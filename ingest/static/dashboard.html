@@ -1101,13 +1101,6 @@
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
             </label>
-            <label class="cen-lbl">&#128101; Grupo:
-              <select id="cgs-gsizes" onchange="_cgsLoad(true)" class="cen-ctl">
-                <option value="2,3+" selected>2+ ve&iacute;culos</option>
-                <option value="2">Duplas (2)</option>
-                <option value="3+">3+ ve&iacute;culos</option>
-              </select>
-            </label>
             <label class="cen-lbl">&#128247; M&iacute;n. c&acirc;meras:
               <select id="cgs-min-cameras" onchange="_cgsLoad(true)" class="cen-ctl">
                 <option value="2" selected>&ge; 2</option>
@@ -1125,6 +1118,13 @@
                 <option value="1800">30 min</option>
               </select>
             </label>
+            <label class="cen-lbl">&#128101; Grupo:
+              <select id="cgs-gsizes" onchange="_cgsLoad(true)" class="cen-ctl">
+                <option value="2,3+" selected>2+ ve&iacute;culos</option>
+                <option value="2">Duplas (2)</option>
+                <option value="3+">3+ ve&iacute;culos</option>
+              </select>
+            </label>
             <label class="cen-lbl">&#128308; Risco:
               <select id="cgs-risco" onchange="_cgsApplyFilter()" class="cen-ctl">
                 <option value="">Todos</option>
@@ -1133,7 +1133,7 @@
                 <option value="BAIXO">&#128994; Baixo</option>
               </select>
             </label>
-            <button class="cen-btn-apply" onclick="_cgsLoad(true)">&#128269; Atualizar</button>
+            <button class="cen-btn-apply" onclick="_cgsLoad(true)">&#128269; Filtrar</button>
             <button class="cen-btn-clear" onclick="_cgsReset()">Limpar</button>
             <!-- período personalizado -->
             <span class="date-range-row" id="cgs-date-row">
@@ -1217,14 +1217,6 @@
               <option value="5">&gt;= 5</option>
             </select>
           </label></span>
-          <!-- Grupo -->
-          <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
-            <select id="cen-gsizes" onchange="cenGroupSizeChange()" class="cen-ctl"
-              title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">
-              <option value="2" selected>2 ve&iacute;culos juntos</option>
-              <option value="3+">3 ve&iacute;culos ou mais</option>
-            </select>
-          </label>
           <!-- Janela/câm -->
           <label class="cen-lbl">&#9201; Janela/c&acirc;m:
             <select id="cen-cowin" onchange="loadCentral(true)" class="cen-ctl">
@@ -1235,6 +1227,14 @@
               <option value="900">15 min</option>
               <option value="1800">30 min</option>
               <option value="3600">1 hora</option>
+            </select>
+          </label>
+          <!-- Grupo -->
+          <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
+            <select id="cen-gsizes" onchange="cenGroupSizeChange()" class="cen-ctl"
+              title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">
+              <option value="2" selected>2 ve&iacute;culos juntos</option>
+              <option value="3+">3 ve&iacute;culos ou mais</option>
             </select>
           </label>
           <!-- Modo -->
