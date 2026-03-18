@@ -1341,10 +1341,11 @@
             <div>
               <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Per&iacute;odo</div>
               <select id="alvo-dv-range" onchange="_alvoDvPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
-                <option value="24h">24 horas</option>
-                <option value="7d">7 dias</option>
+                <option value="7d" selected>7 dias</option>
                 <option value="15d">15 dias</option>
                 <option value="30d">30 dias</option>
+                <option value="90d">90 dias</option>
+                <option value="180d">180 dias</option>
                 <option value="custom">Per&iacute;odo personalizado</option>
               </select>
             </div>
@@ -7432,8 +7433,6 @@ var _alvoDvPlate = null;
 
 // ── Janelas de análise automática (altere aqui para ajustar todos os blocos) ──
 var ALVO_DV_PASS_WINDOW = '7d';   // Últimas Passagens + Ver Rota   (padrão: 7 dias)
-var ALVO_DV_COMP_WINDOW = '30d';  // Acompanhantes / Comboio       (padrão: 30 dias)
-var _alvoDvCompWindow   = '30d';  // Período ativo do seletor de acompanhantes (7d/15d/30d/90d/180d)
 var ALVO_DV_HIST_WINDOW = '90d';  // Histórico ampliado (reservado) (padrão: 90 dias)
 // Formata a janela para exibição: '7d' → '7 dias', '30d' → '30 dias', '24h' → '24h'
 function _alvoDvFmtWindow(w) {
@@ -7443,11 +7442,6 @@ function _alvoDvFmtWindow(w) {
 }
 
 // ── Alvo: Troca o período de análise de acompanhantes ────────────────────────
-function _alvoDvCompWindowChange(val) {
-  _alvoDvCompWindow = val || '30d';
-  if (_alvoDvId && _alvoDvPlate) _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
-}
-
 // ── Alvo: Fechar tela de detalhes ────────────────────────────────────────────
 function alvoVerFechar() {
   var dvEl = document.getElementById('alvo-detalhe-view');
@@ -7718,7 +7712,7 @@ function _alvoDvGerarRelatorio() {
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">\u00dalt. Junto</th>'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Local / C\u00e2mera</th>'
         + '</tr></thead><tbody>' + compRows + '</tbody></table></div>'
-    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos \u00faltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>';
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos \u00faltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'7d'}).value||'7d') + '.</div>';
   var _alvoAnaliseHtml = (function() {
     var _ci = (_cenAllItems || []).find(function(it){ return it.plate === plate; });
     var _tc = _ci && _ci.threat_center;
@@ -7772,7 +7766,7 @@ function _alvoDvGerarRelatorio() {
     + '<div style="margin-bottom:24px">'
       + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128101; Acompanhantes / Comboio</div>'
       + (companions.length === 0
-        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>'
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'7d'}).value||'7d') + '.</div>'
         : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
           + '<thead><tr style="background:#e5e7eb">'
             + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
@@ -8008,9 +8002,11 @@ function _alvoDvUpdatePrioridade() {
 async function _alvoDvLoadCompanions(id, plate) {
   var el = document.getElementById('alvo-dv-companions');
   if (!el || !plate) return;
-  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip; <span style="font-size:.75rem;opacity:.7">(' + _alvoDvFmtWindow(_alvoDvCompWindow) + ')</span></p>';
+  var _compRange = (document.getElementById('alvo-dv-range') || {value:'7d'}).value || '7d';
+  var _compWindow = _compRange !== 'custom' ? _compRange : '7d';  // custom usa o intervalo do filtro de histórico via params separados
+  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip; <span style="font-size:.75rem;opacity:.7">(' + _alvoDvFmtWindow(_compWindow) + ')</span></p>';
   try {
-    var qs = '?window=' + encodeURIComponent(_alvoDvCompWindow) + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
+    var qs = '?window=' + encodeURIComponent(_compWindow) + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
     var [compResp, alvosResp] = await Promise.all([
       fetch('/api/batedor/companions/' + encodeURIComponent(plate) + qs),
       fetch('/api/alvos')
@@ -8025,33 +8021,25 @@ async function _alvoDvLoadCompanions(id, plate) {
     var alvoMap = {};
     (alvosData.alvos || []).forEach(function(a) { alvoMap[a.plate] = a; });
 
-    // ---- seletor de período ------------------------------------------------
-    var selOpts = ['7d','15d','30d','90d','180d'].map(function(v) {
-      return '<option value="' + v + '"' + (v === _alvoDvCompWindow ? ' selected' : '') + '>' + _alvoDvFmtWindow(v) + '</option>';
-    }).join('');
-    var periodSel = '<select id="alvo-dv-comp-window-sel" onchange="_alvoDvCompWindowChange(this.value)"'
-      + ' style="background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 10px;font-size:.78rem;height:26px;outline:none;cursor:pointer">'
-      + selOpts + '</select>';
     // ---- aviso para consultas ampliadas ------------------------------------
     var warnHtml = '';
-    if (_alvoDvCompWindow === '90d') {
+    if (_compWindow === '90d') {
       warnHtml = '<div style="margin-top:8px;padding:7px 12px;border-radius:7px;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);font-size:.78rem;color:#fbbf24">'
         + '&#9719; Consulta ampliada: a an&aacute;lise de acompanhantes pode levar um pouco mais de tempo.</div>';
-    } else if (_alvoDvCompWindow === '180d') {
+    } else if (_compWindow === '180d') {
       warnHtml = '<div style="margin-top:8px;padding:7px 12px;border-radius:7px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);font-size:.78rem;color:#f87171">'
         + '&#9888; Consulta extensa: a an&aacute;lise de acompanhantes em 180 dias pode levar mais tempo.</div>';
     }
     var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
-      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s)</span>' : '')
-      + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)">Per&iacute;odo:&nbsp;' + periodSel + '</span>'
+      + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; ' + _alvoDvFmtWindow(_compWindow) + '</span>' : '')
       + '</div>'
       + warnHtml;
 
     if (companions.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
         + header
-        + '<div style="color:var(--muted);font-size:.85rem;padding:10px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos ' + _alvoDvFmtWindow(_alvoDvCompWindow) + '.</div>'
+        + '<div style="color:var(--muted);font-size:.85rem;padding:10px 0">Nenhum ve&iacute;culo encontrado viajando junto nos &uacute;ltimos ' + _alvoDvFmtWindow(_compWindow) + '.</div>'
         + '</div>';
       return;
     }
@@ -8128,7 +8116,7 @@ function _alvoCompSearch(plate) {
 
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
 async function _alvoDvAplicar() {
-  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
+  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'7d'}).value || '7d';
   var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value    || '';
   var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value    || '';
   var res = document.getElementById('alvo-dv-resultados');
@@ -8160,7 +8148,7 @@ async function _alvoDvAplicar() {
 
 // ── Alvo: Limpa filtros e re-executa ─────────────────────────────────────────
 function _alvoDvLimpar() {
-  [['alvo-dv-range','24h'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
+  [['alvo-dv-range','7d'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
    ['alvo-dv-start',''],['alvo-dv-end','']].forEach(function(f) {
     var el = document.getElementById(f[0]); if (el) el.value = f[1];
   });
@@ -8245,7 +8233,7 @@ async function alvoVer(id, plate, descricao, desde) {
   var _prioEl = document.getElementById('alvo-dv-prioridade');
   if (_prioEl) _prioEl.innerHTML = '<span style="font-size:.72rem;color:var(--muted);font-style:italic">Classificando&hellip;</span>';
   // reseta filtros
-  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '24h';
+  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '7d';
   var jEl = document.getElementById('alvo-dv-janela'); if (jEl) jEl.value = '';
   var mEl = document.getElementById('alvo-dv-mincam'); if (mEl) mEl.value = '';
   var ds  = document.getElementById('alvo-dv-start');  if (ds)  ds.value  = '';
