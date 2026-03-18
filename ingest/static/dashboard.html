@@ -5168,7 +5168,18 @@ function _abrirRelatorioPlacaIndividual() {
 
   _relAbrirModal(plate, _rpiHtml, function() {
     closeModal('detail-modal');
-    verTrajetoriaNoMapa();
+    var rd = _batedorReportData;
+    if (!rd) return;
+    var evs = (rd.d && rd.d.events) || [];
+    var tss = evs.map(function(e){ return e.ts; }).filter(Boolean).sort();
+    var nowMs = Date.now();
+    var tsFrom = tss.length
+      ? _toLocalDTInput(new Date(new Date(tss[0]).getTime() - 3600000))
+      : _toLocalDTInput(new Date(nowMs - 7*86400000));
+    var tsTo = tss.length
+      ? _toLocalDTInput(new Date(new Date(tss[tss.length-1]).getTime() + 3600000))
+      : _toLocalDTInput(new Date(nowMs));
+    _verRotaNaMapa(rd.plate, tsFrom, tsTo, evs.length + ' passagem(ns)');
   });
 }
 
@@ -5366,71 +5377,28 @@ function _cgsVoltarAoDetalhe() {
 async function _cgsVerRotaNoMapa() {
   var g = _cgsCurrentGroup;
   if (!g) return;
-
-  // garante cache de câmeras com coords
-  if (!_mapaCacheItems.length) {
-    try {
-      var r = await fetch('/api/cameras?include_inactive=true');
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      var d = await r.json();
-      _mapaCacheItems = d.items || [];
-    } catch(e) {
-      alert('Erro ao carregar câmeras: ' + e.message);
-      return;
-    }
-  }
-
-  // mapa de coordenadas por camera_id
-  var coordMap = {};
-  _mapaCacheItems.forEach(function(c) {
-    if (c.latitude != null && c.longitude != null)
-      coordMap[c.camera_id] = { lat: c.latitude, lng: c.longitude, direcao: c.direcao || null };
-  });
-
-  var confirmed = (g.cameras_confirmed || []).slice().sort(function(a, b) {
-    return new Date(a.ts_min) - new Date(b.ts_min);
-  });
-
-  var points = [];
-  var noGpsCams = [];
+  // Usa a placa líder (ou primeira do grupo) como representante
+  var plate = g.leader || g.plates[0];
+  if (!plate) return;
+  // Deriva período a partir das câmeras confirmadas do grupo
+  var confirmed = g.cameras_confirmed || [];
+  var tss = [];
   confirmed.forEach(function(c) {
-    var coord = coordMap[c.camera_id];
-    if (!coord) { noGpsCams.push(c.cam_nome || c.camera_id); return; }
-    points.push({
-      lat:       coord.lat,
-      lng:       coord.lng,
-      ts:        c.ts_min,
-      tsMax:     c.ts_max,
-      spanSec:   c.span_sec || 0,
-      plate:     g.leader || g.plates[0],   // chave de agrupamento
-      camera_id: c.camera_id,
-      cam_nome:  c.cam_nome || c.camera_id,
-      direcao:   coord.direcao,
-      plateOrder: c.plate_order || g.plates,
-      allPlates:  g.plates,
-      seq:       0
-    });
+    if (c.ts_min) tss.push(c.ts_min);
+    if (c.ts_max) tss.push(c.ts_max);
   });
-
-  if (!points.length) {
-    alert('Nenhuma câmera do grupo possui coordenadas GPS cadastradas.\n'
-      + (noGpsCams.length ? 'Sem GPS: ' + noGpsCams.join(', ') : ''));
-    return;
-  }
-
-  // navega para a aba do mapa fechando o modal
+  tss.sort();
+  var nowMs = Date.now();
+  var tsFrom = tss.length
+    ? _toLocalDTInput(new Date(new Date(tss[0]).getTime() - 3600000))
+    : _toLocalDTInput(new Date(nowMs - 7*86400000));
+  var tsTo = tss.length
+    ? _toLocalDTInput(new Date(new Date(tss[tss.length-1]).getTime() + 3600000))
+    : _toLocalDTInput(new Date(nowMs));
+  var roleLabel = (g.leader && g.leader === plate) ? ' (l\u00edder)' : '';
+  var infoLabel = 'Grupo \u2022 ' + plate + roleLabel + ' \u2022 ' + g.plates.length + ' ve\u00edculo(s)';
   closeModal('cgs-detalhe-modal');
-  var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
-  if (mapaNav) switchTab('mapa', mapaNav);
-
-  var doPlot = function() { _cgsDesenharRotaGrupo(g, points, noGpsCams); };
-
-  if (!_googleMap) {
-    await loadMapa();
-    setTimeout(doPlot, 500);
-  } else {
-    setTimeout(doPlot, 200);
-  }
+  _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel);
 }
 
 function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
@@ -7872,7 +7840,7 @@ function _alvoDvGerarRelatorio() {
       + 'Gerado em ' + now + ' &bull; Sistema de Monitoramento BPFRON'
     + '</div></div>';
 
-  _relAbrirModal(plate, _alvoHtml, null);
+  _relAbrirModal(plate, _alvoHtml, _alvoDvVerRotaMapa);
 }
 
 function _alvoDvExportarPDF() { _relExportarPDF(); } // compat: usa motor unificado
@@ -7966,7 +7934,43 @@ function _alvoDvVerRota() {
   rotaEl.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
-// ── Alvo: Rota no mapa — reutiliza renderVehicleTrajectory (mesmo pipeline de Mapas > Rotas)
+// ── Pipeline canônico (compartilhado): busca /trajectory e renderiza igual a Mapas > Rotas ──
+async function _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel) {
+  if (!plate) return;
+  var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
+          + '?start=' + encodeURIComponent(tsFrom)
+          + '&end='   + encodeURIComponent(tsTo)
+          + '&dedupe_seconds=5';
+  try {
+    var r = await fetch(url);
+    if (!r.ok) {
+      var errData = await r.json().catch(function(){ return {detail:'HTTP '+r.status}; });
+      throw new Error(errData.detail || 'HTTP ' + r.status);
+    }
+    var data = await r.json();
+    if (!data.points || data.points.length === 0) {
+      var msg = 'Nenhuma passagem com GPS encontrada neste per\u00edodo.';
+      if (data.cameras_without_gps && data.cameras_without_gps.length)
+        msg += '\nC\u00e2meras sem GPS: ' + data.cameras_without_gps.join(', ');
+      alert(msg);
+      return;
+    }
+    // Sincroniza campos da aba Mapas > Rotas
+    var pf = document.getElementById('traj-plate-field');
+    var sf = document.getElementById('traj-start-field');
+    var ef = document.getElementById('traj-end-field');
+    if (pf) pf.value = plate;
+    if (sf) sf.value = tsFrom;
+    if (ef) ef.value = tsTo;
+    // Abre overlay e renderiza pelo pipeline can\u00f4nico
+    _abrirMapaOverlay(plate, infoLabel || ((data.total_points || data.points.length) + ' passagem(ns)'));
+    setTimeout(function() { renderVehicleTrajectory(data); }, 400);
+  } catch(e) {
+    alert('Erro ao carregar trajet\u00f3ria: ' + e.message);
+  }
+}
+
+// ── Alvo: Rota no mapa ───────────────────────────────────────────────────────
 async function _alvoDvVerRotaMapa() {
   var plate = _alvoDvPlate || '';
   if (!plate) return;
@@ -7989,40 +7993,8 @@ async function _alvoDvVerRotaMapa() {
   }
   var btn = document.getElementById('btn-alvo-ver-rota-mapa');
   if (btn) { btn.disabled = true; btn.innerHTML = '&#128260; Carregando&hellip;'; }
-  try {
-    var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
-            + '?start=' + encodeURIComponent(tsFrom)
-            + '&end='   + encodeURIComponent(tsTo)
-            + '&dedupe_seconds=5';
-    var r = await fetch(url);
-    if (!r.ok) {
-      var errData = await r.json().catch(function(){ return {detail:'HTTP '+r.status}; });
-      throw new Error(errData.detail || 'HTTP '+r.status);
-    }
-    var data = await r.json();
-    if (!data.points || data.points.length === 0) {
-      var msg = 'Nenhuma passagem com GPS encontrada neste per\u00edodo.';
-      if (data.cameras_without_gps && data.cameras_without_gps.length)
-        msg += '\nC\u00e2meras sem GPS: ' + data.cameras_without_gps.join(', ');
-      alert(msg);
-      return;
-    }
-    // Preenche campos da aba Mapas > Rotas para manter estado consistente
-    var plateField = document.getElementById('traj-plate-field');
-    var startField = document.getElementById('traj-start-field');
-    var endField   = document.getElementById('traj-end-field');
-    if (plateField) plateField.value = plate;
-    if (startField) startField.value = tsFrom;
-    if (endField)   endField.value   = tsTo;
-    // Abre overlay temporário (guarda aba atual e volta ao fechar com ESC)
-    _abrirMapaOverlay(plate, (data.total_points || data.points.length) + ' passagem(ns) \u2022 ' + periodLabel);
-    // Usa exatamente o mesmo pipeline da aba Mapas > Rotas
-    setTimeout(function() { renderVehicleTrajectory(data); }, 400);
-  } catch(e) {
-    alert('Erro ao carregar trajet\u00f3ria: ' + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '&#128506; Ver no Mapa'; }
-  }
+  await _verRotaNaMapa(plate, tsFrom, tsTo, periodLabel);
+  if (btn) { btn.disabled = false; btn.innerHTML = '&#128506; Ver no Mapa'; }
 }
 
 // ── Alvo: Indicador de risco / prioridade ───────────────────────────────────
