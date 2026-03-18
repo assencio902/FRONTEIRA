@@ -7575,6 +7575,7 @@ async function _alvoDvLoadPassagens(id) {
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
       + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '</span>' : '')
       + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
+      + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-ver-rota-mapa">&#128506; Ver no Mapa</button>' : '')
       + '</div>';
     if (events.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
@@ -7950,6 +7951,70 @@ function _alvoDvVerRota() {
   rotaEl.innerHTML = html;
   rotaEl.style.display = 'block';
   rotaEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ── Alvo: Rota no mapa (usa período do filtro principal) ─────────────────────
+async function _alvoDvVerRotaMapa() {
+  var plate = _alvoDvPlate || '';
+  if (!plate) return;
+  var rangeEl = document.getElementById('alvo-dv-range');
+  var range   = rangeEl ? rangeEl.value : '7d';
+  var now = Date.now();
+  var tsTo   = _toLocalDTInput(new Date(now));
+  var tsFrom;
+  var msMap = { '7d': 7*86400000, '15d': 15*86400000, '30d': 30*86400000, '90d': 90*86400000, '180d': 180*86400000 };
+  if (range === 'custom') {
+    var f = (document.getElementById('alvo-dv-start') || {}).value;
+    var t = (document.getElementById('alvo-dv-end')   || {}).value;
+    if (!f || !t) { alert('Defina as datas De e Até para usar o período personalizado.'); return; }
+    tsFrom = f + 'T00:00';
+    tsTo   = t + 'T23:59';
+  } else {
+    tsFrom = _toLocalDTInput(new Date(now - (msMap[range] || 7*86400000)));
+  }
+  var btn = document.getElementById('btn-alvo-ver-rota-mapa');
+  if (btn) { btn.disabled = true; btn.innerHTML = '&#128260; Carregando&hellip;'; }
+  try {
+    var url = '/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
+            + '?start=' + encodeURIComponent(tsFrom)
+            + '&end='   + encodeURIComponent(tsTo)
+            + '&dedupe_seconds=5';
+    var r = await fetch(url);
+    if (!r.ok) {
+      var errData = await r.json().catch(function(){ return {detail:'HTTP '+r.status}; });
+      throw new Error(errData.detail || 'HTTP '+r.status);
+    }
+    var data = await r.json();
+    if (!data.points || data.points.length === 0) {
+      var msg = 'Nenhuma passagem com GPS encontrada neste período.';
+      if (data.cameras_without_gps && data.cameras_without_gps.length)
+        msg += '\nCâmeras sem GPS: ' + data.cameras_without_gps.join(', ');
+      alert(msg);
+      return;
+    }
+    _reportCurrentPlate = plate;
+    _mapaTrajMode = false;
+    _mapaTrajetoria = {
+      plates: [plate],
+      points: data.points.map(function(p) {
+        return { lat: p.lat, lng: p.lon, ts: p.ts, plate: plate,
+                 camera_id: p.camera_id, cam_nome: p.camera_name,
+                 direcao: p.direction, seq: 0 };
+      }),
+      stats: {
+        total_points: data.total_points,
+        total_events: data.total_events,
+        cameras_without_gps: data.cameras_without_gps || []
+      }
+    };
+    var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
+    if (mapaNav) switchTab('mapa', mapaNav);
+    setTimeout(_plotarTrajetoria, 400);
+  } catch(e) {
+    alert('Erro ao carregar trajetória: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '&#128506; Ver no Mapa'; }
+  }
 }
 
 // ── Alvo: Indicador de risco / prioridade ───────────────────────────────────
