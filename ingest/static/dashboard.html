@@ -1090,7 +1090,7 @@
 
           <!-- Filtros operacionais -->
           <div class="cen-tb" style="margin-bottom:12px">
-            <label class="cen-lbl">&#128197; Per&iacute;odo:
+            <label class="cen-lbl">Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
                 <option value="1h" selected>1 hora</option>
                 <option value="2h">2 horas</option>
@@ -1101,7 +1101,7 @@
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
             </label>
-            <label class="cen-lbl">&#128247; M&iacute;n. c&acirc;meras:
+            <label class="cen-lbl">M&iacute;n. c&acirc;meras:
               <select id="cgs-min-cameras" onchange="_cgsLoad(true)" class="cen-ctl">
                 <option value="2" selected>&ge; 2</option>
                 <option value="3">&ge; 3</option>
@@ -1111,18 +1111,25 @@
             </label>
             <label class="cen-lbl">&#9201; Janela/c&acirc;m:
               <select id="cgs-cowin" onchange="_cgsLoad(true)" class="cen-ctl">
+                <option value="60">1 min</option>
                 <option value="120">2 min</option>
                 <option value="300" selected>5 min</option>
                 <option value="600">10 min</option>
                 <option value="900">15 min</option>
                 <option value="1800">30 min</option>
+                <option value="3600">1 hora</option>
               </select>
             </label>
             <label class="cen-lbl">&#128101; Grupo:
-              <select id="cgs-gsizes" onchange="_cgsLoad(true)" class="cen-ctl">
-                <option value="2,3+" selected>2+ ve&iacute;culos</option>
-                <option value="2">Duplas (2)</option>
-                <option value="3+">3+ ve&iacute;culos</option>
+              <select id="cgs-gsizes" onchange="_cgsGroupSizeChange()" class="cen-ctl">
+                <option value="2" selected>2 ve&iacute;culos juntos</option>
+                <option value="3+">3 ve&iacute;culos ou mais</option>
+              </select>
+            </label>
+            <label class="cen-lbl">&#128110; Modo:
+              <select id="cgs-ordermode" onchange="_cgsOrderModeChange()" class="cen-ctl">
+                <option value="any" selected>Qualquer ordem</option>
+                <option value="leader_front">L&iacute;der na frente</option>
               </select>
             </label>
             <label class="cen-lbl">&#128308; Risco:
@@ -1133,6 +1140,14 @@
                 <option value="BAIXO">&#128994; Baixo</option>
               </select>
             </label>
+            <span id="cgs-leader-opts" style="display:none;align-items:center;gap:8px">
+              <label class="cen-lbl">&#127942; L&iacute;der &gt;=
+                <input id="cgs-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" class="cen-ctl cen-ctl-narrow">%
+              </label>
+              <label id="cgs-payload-label" class="cen-lbl" style="display:none">&#128230; Payload 1&ordm; &le;
+                <input id="cgs-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
+              </label>
+            </span>
             <button class="cen-btn-apply" onclick="_cgsLoad(true)">&#128269; Filtrar</button>
             <button class="cen-btn-clear" onclick="_cgsReset()">Limpar</button>
             <!-- período personalizado -->
@@ -4391,6 +4406,24 @@ function _cenSwitchView(view) {
   }
 }
 
+function _cgsGroupSizeChange() {
+  var gs   = (document.getElementById('cgs-gsizes')    || {}).value || '2';
+  var mode = (document.getElementById('cgs-ordermode') || {}).value;
+  var plLabel = document.getElementById('cgs-payload-label');
+  if (plLabel) plLabel.style.display = (mode === 'leader_front' && gs === '3+') ? 'inline' : 'none';
+  _cgsLoad(true);
+}
+
+function _cgsOrderModeChange() {
+  var mode = (document.getElementById('cgs-ordermode') || {}).value;
+  var opts = document.getElementById('cgs-leader-opts');
+  if (opts) opts.style.display = (mode === 'leader_front') ? 'inline' : 'none';
+  var gs = (document.getElementById('cgs-gsizes') || {}).value || '2';
+  var plLabel = document.getElementById('cgs-payload-label');
+  if (plLabel) plLabel.style.display = (mode === 'leader_front' && gs === '3+') ? 'inline' : 'none';
+  _cgsLoad(true);
+}
+
 function _cgsWindowChange() {
   var v = document.getElementById('cgs-window').value;
   document.getElementById('cgs-date-row').classList.toggle('visible', v === 'custom');
@@ -4400,10 +4433,13 @@ function _cgsWindowChange() {
 function _cgsReset() {
   var el;
   el = document.getElementById('cgs-window');      if (el) { el.value = '1h'; _cgsWindowChange(); }
-  el = document.getElementById('cgs-gsizes');      if (el) el.value = '2,3+';
+  el = document.getElementById('cgs-gsizes');      if (el) el.value = '2';
   el = document.getElementById('cgs-min-cameras'); if (el) el.value = '2';
   el = document.getElementById('cgs-cowin');       if (el) el.value = '300';
   el = document.getElementById('cgs-risco');       if (el) el.value = '';
+  var om = document.getElementById('cgs-ordermode'); if (om) { om.value = 'any'; _cgsOrderModeChange(); }
+  var lr = document.getElementById('cgs-leader-ratio'); if (lr) lr.value = '0.70';
+  var pm = document.getElementById('cgs-payload-max');  if (pm) pm.value = '0';
 }
 
 function _cgsApplyFilter() {
@@ -4430,14 +4466,20 @@ async function _cgsLoad(showSpinner) {
     if (!tsFrom || !tsTo) { alert('Informe o per\u00edodo personalizado.'); return; }
     w = '1h';
   }
-  var gs     = (document.getElementById('cgs-gsizes')      || {}).value || '2,3+';
-  var minCam = (document.getElementById('cgs-min-cameras') || {}).value || '2';
-  var cowin  = (document.getElementById('cgs-cowin')       || {}).value || '300';
+  var gs        = (document.getElementById('cgs-gsizes')      || {}).value || '2';
+  var minCam    = (document.getElementById('cgs-min-cameras') || {}).value || '2';
+  var cowin     = (document.getElementById('cgs-cowin')       || {}).value || '300';
+  var orderMode = (document.getElementById('cgs-ordermode')   || {}).value || 'any';
+  var leaderR   = (document.getElementById('cgs-leader-ratio')|| {}).value || '0.70';
+  var payloadM  = (document.getElementById('cgs-payload-max') || {}).value || '0';
   var url = '/api/central/grupos_suspeitos'
     + '?window=' + encodeURIComponent(w)
     + '&group_sizes=' + encodeURIComponent(gs)
     + '&min_cameras=' + encodeURIComponent(minCam)
     + '&co_window=' + encodeURIComponent(cowin)
+    + '&order_mode=' + encodeURIComponent(orderMode)
+    + '&leader_ratio=' + encodeURIComponent(leaderR)
+    + '&payload_max_front=' + encodeURIComponent(payloadM)
     + '&limit=200';
   if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom);
   if (tsTo)   url += '&ts_to='   + encodeURIComponent(tsTo);
