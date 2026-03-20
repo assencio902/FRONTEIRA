@@ -7979,9 +7979,9 @@ function _cgsRenderTable(items, total) {
       var isAlvo = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
       var isLeader = p === g.leader;
       var style = 'font-family:monospace;font-weight:800;font-size:.9rem;letter-spacing:.06em;white-space:nowrap';
-      var color = isAlvo ? 'color:#c4b5fd' : isLeader ? 'color:#f87171' : 'color:var(--text)';
+      var color = isAlvo ? 'color:#dbc483' : isLeader ? 'color:#f87171' : 'color:var(--text)';
       var badge = isAlvo
-        ? ' <span style="font-size:.62rem;background:#7c3aed;color:#fff;padding:1px 5px;border-radius:99px;vertical-align:middle">ALVO</span>'
+        ? ' <span style="font-size:.62rem;background:#a07a24;color:#fff7db;padding:1px 5px;border-radius:99px;vertical-align:middle">ALVO</span>'
         : isLeader && g.leader_ratio >= 0.70
         ? ' <span style="font-size:.62rem;background:#dc2626;color:#fff;padding:1px 5px;border-radius:99px;vertical-align:middle">&#128308;</span>'
         : '';
@@ -8013,11 +8013,11 @@ function _cgsRenderTable(items, total) {
     if (g.threat_center && g.threat_center.threat_badges && g.threat_center.threat_badges.length) {
       tcBadgesHtml = g.threat_center.threat_badges.map(function(badge) {
         var isLider = badge === 'LÍDER_É_ALVO';
-        return '<br><span style="font-size:.6rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:1px 5px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO NO GRUPO') + '</span>';
+        return '<br><span style="font-size:.6rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#a07a24') + ';color:' + (isLider ? '#fff' : '#fff7db') + ';padding:1px 5px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO NO GRUPO') + '</span>';
       }).join('');
     }
 
-    var rowStyle = g.risco === 'ALTO' ? 'background:rgba(239,68,68,.05)' : (g.threat_center && g.threat_center.matched_target) || (g.alvos && g.alvos.length) ? 'background:rgba(139,92,246,.05)' : '';
+    var rowStyle = g.risco === 'ALTO' ? 'background:rgba(239,68,68,.05)' : (g.threat_center && g.threat_center.matched_target) || (g.alvos && g.alvos.length) ? 'background:rgba(196,166,74,.08)' : '';
 
     // Ações
     var safeId  = (g.id || '').replace(/'/g,"\\'");
@@ -8090,10 +8090,10 @@ function _cgsBuildDetalhe(g) {
   var placasHtml = g.plates.map(function(p) {
     var isAlvo   = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
     var isLeader = p === g.leader && g.leader_ratio >= 0.70;
-    var roleLabel = isAlvo ? '<span style="font-size:.65rem;font-weight:700;background:#7c3aed;color:#fff;padding:1px 6px;border-radius:99px">ALVO</span>'
+    var roleLabel = isAlvo ? '<span style="font-size:.65rem;font-weight:700;background:#a07a24;color:#fff7db;padding:1px 6px;border-radius:99px">ALVO</span>'
       : isLeader ? '<span style="font-size:.65rem;font-weight:700;background:#dc2626;color:#fff;padding:1px 6px;border-radius:99px">BATEDOR</span>'
       : '<span style="font-size:.65rem;font-weight:700;background:#374151;color:#d1d5db;padding:1px 6px;border-radius:99px">MEMBRO</span>';
-    var plateColor = isAlvo ? '#c4b5fd' : isLeader ? '#f87171' : 'var(--text)';
+    var plateColor = isAlvo ? '#dbc483' : isLeader ? '#f87171' : 'var(--text)';
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:100px">'
       + '<span style="font-family:monospace;font-size:1.1rem;font-weight:800;letter-spacing:.1em;color:' + plateColor + ';white-space:nowrap">' + p + '</span>'
       + roleLabel
@@ -8160,7 +8160,7 @@ function _cgsBuildDetalhe(g) {
 
   var alvosHtml = (g.alvos && g.alvos.length)
     ? g.alvos.map(function(a){
-        return '<span style="font-size:.76rem;background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);border-radius:6px;padding:2px 8px;color:#c4b5fd;white-space:nowrap">&#127919; ' + a.plate + (a.descricao ? ' &mdash; ' + a.descricao : '') + '</span>';
+        return '<span style="font-size:.76rem;background:rgba(196,166,74,.16);border:1px solid rgba(196,166,74,.38);border-radius:6px;padding:2px 8px;color:#dbc483;white-space:nowrap">&#127919; ' + a.plate + (a.descricao ? ' &mdash; ' + a.descricao : '') + '</span>';
       }).join('<br style="margin:2px">')
     : dash;
 
@@ -8200,16 +8200,16 @@ function _cgsBuildDetalhe(g) {
     var tc = g.threat_center;
     var tcBadges = tc.threat_badges.map(function(badge) {
       var isLider = badge === 'LÍDER_É_ALVO';
-      return '<span style="font-size:.72rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 10px;border-radius:99px">'
+      return '<span style="font-size:.72rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#a07a24') + ';color:' + (isLider ? '#fff' : '#fff7db') + ';padding:2px 10px;border-radius:99px">'
         + (isLider ? '\u2605 L\u00cdDER \u00c9 ALVO' : '\u26a1 ALVO NO GRUPO') + '</span>';
     }).join(' ');
     var tcPlates = tc.matched_plates && tc.matched_plates.length
-      ? '<span style="font-size:.76rem;color:#c4b5fd;margin-left:6px">Placas: <strong>' + tc.matched_plates.join(', ') + '</strong></span>'
+      ? '<span style="font-size:.76rem;color:#dbc483;margin-left:6px">Placas: <strong>' + tc.matched_plates.join(', ') + '</strong></span>'
       : '';
-    tcAlertHtml = '<div style="background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.45);border-radius:10px;padding:10px 16px;margin-bottom:14px">'
+    tcAlertHtml = '<div style="background:rgba(196,166,74,.12);border:1px solid rgba(196,166,74,.45);border-radius:10px;padding:10px 16px;margin-bottom:14px">'
       + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px">'
         + '<span style="font-size:.95rem">&#127919;</span>'
-        + '<span style="font-size:.82rem;font-weight:800;color:#c4b5fd;letter-spacing:.03em">V\u00cdNCULO COM ALVO CADASTRADO</span>'
+        + '<span style="font-size:.82rem;font-weight:800;color:#dbc483;letter-spacing:.03em">V\u00cdNCULO COM ALVO CADASTRADO</span>'
         + tcPlates
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:6px">' + tcBadges + '</div>'
@@ -8699,7 +8699,7 @@ function _cgsGerarRelatorio() {
     var _tc = g.threat_center;
     var _tcBadges = _tc.threat_badges.map(function(b) {
       var isLider = b === 'LÍDER_É_ALVO';
-      return '<span style="font-size:.7rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 8px;border-radius:99px">' + (isLider ? 'L\u00cdDER \u00c9 ALVO' : 'ALVO NO GRUPO') + '</span>';
+      return '<span style="font-size:.7rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#a07a24') + ';color:' + (isLider ? '#fff' : '#fff7db') + ';padding:2px 8px;border-radius:99px">' + (isLider ? 'L\u00cdDER \u00c9 ALVO' : 'ALVO NO GRUPO') + '</span>';
     }).join(' ');
     tcBody = '<table style="width:100%;border-collapse:collapse"><tbody>'
       + field('Badges ativados', _tcBadges)
@@ -8998,7 +8998,7 @@ function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
             + (g.threat_center && g.threat_center.threat_badges && g.threat_center.threat_badges.length
               ? g.threat_center.threat_badges.map(function(badge) {
                   var isLider = badge === 'LÍDER_É_ALVO';
-                  return '<span style="font-size:.62rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#7c3aed') + ';color:#fff;padding:2px 7px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO') + '</span>';
+                  return '<span style="font-size:.62rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#a07a24') + ';color:' + (isLider ? '#fff' : '#fff7db') + ';padding:2px 7px;border-radius:99px">' + (isLider ? '\u2605 L\u00cdDER ALVO' : '\u26a1 ALVO') + '</span>';
                 }).join('')
               : '')
           + '</div>'
