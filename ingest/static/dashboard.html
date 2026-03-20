@@ -127,8 +127,8 @@
     .btn:hover { opacity:.9; transform:translateY(-1px); }
     .btn:active { transform:translateY(0); }
     .btn-primary { background:var(--accent); color:var(--btn-primary-text); }
-    .btn-add { background:#728857; border:1px solid rgba(255,255,255,.08); color:#ffffff; }
-    .btn-add:hover:not(:disabled) { background:#64784b; border-color:rgba(250,204,21,.4); color:#ffffff; opacity:1; }
+    .btn-add, .btn-search { background:#728857; border:1px solid rgba(255,255,255,.08); color:#ffffff; }
+    .btn-add:hover:not(:disabled), .btn-search:hover:not(:disabled) { background:#64784b; border-color:rgba(250,204,21,.4); color:#ffffff; opacity:1; }
     .btn-success { background:var(--success); color:var(--btn-success-text); }
     .btn-danger  { background:var(--danger); color:var(--btn-danger-text); }
     .btn-warning { background:#d97706; color:var(--btn-warning-text); }
@@ -349,8 +349,14 @@
       cursor:pointer; font-family:inherit; white-space:nowrap;
       transition:background .15s, border-color .15s, color .15s;
     }
-    .traj-period-btn:hover { background:rgba(22,163,74,.22); border-color:var(--accent,#facc15); }
-    .traj-period-btn.active { background:var(--primary,#16a34a); border-color:var(--primary,#16a34a); color:#fff; font-weight:700; }
+    .traj-period-btn:hover { background:rgba(114,136,87,.18); border-color:#728857; }
+    .traj-period-btn.active {
+      background:#728857;
+      border-color:#728857;
+      color:#fff;
+      font-weight:700;
+      box-shadow:0 0 0 1px rgba(255,255,255,.05) inset;
+    }
     .traj-plate-inp {
       width:96px; height:34px; padding:0 10px;
       background:var(--bg,#081a0e); border:1px solid var(--border);
@@ -1213,6 +1219,16 @@
     #bat-sub-central .cen-btn-apply:hover  { background:#e2b800; border-color:#e2b800; }
     #bat-sub-central .cen-btn-apply:active { opacity:.82; }
     #bat-sub-central .cen-btn-apply:disabled { opacity:.4; cursor:not-allowed; }
+    #bat-sub-central .cen-btn-search {
+      background:#728857;
+      color:#ffffff;
+      border-color:rgba(255,255,255,.08);
+    }
+    #bat-sub-central .cen-btn-search:hover {
+      background:#64784b;
+      border-color:rgba(250,204,21,.4);
+      color:#ffffff;
+    }
     /* Botão Limpar */
     #bat-sub-central .cen-btn-clear {
       display:inline-flex; align-items:center; justify-content:center; gap:5px;
@@ -1429,7 +1445,9 @@
       color: #ffffff;
     }
     :root[data-theme="verde"] .btn-add,
-    :root:not([data-theme]) .btn-add {
+    :root:not([data-theme]) .btn-add,
+    :root[data-theme="verde"] .btn-search,
+    :root:not([data-theme]) .btn-search {
       background: var(--green-btn-success-bg);
       border-color: rgba(255,255,255,.08);
       color: #ffffff;
@@ -1441,7 +1459,21 @@
       color: #ffffff;
     }
     :root[data-theme="verde"] .btn-add:hover:not(:disabled),
-    :root:not([data-theme]) .btn-add:hover:not(:disabled) {
+    :root:not([data-theme]) .btn-add:hover:not(:disabled),
+    :root[data-theme="verde"] .btn-search:hover:not(:disabled),
+    :root:not([data-theme]) .btn-search:hover:not(:disabled) {
+      background: var(--green-btn-success-hover);
+      border-color: rgba(250,204,21,.4);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] #tab-batedor .cen-btn-search,
+    :root:not([data-theme]) #tab-batedor .cen-btn-search {
+      background: var(--green-btn-success-bg);
+      border-color: rgba(255,255,255,.08);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] #tab-batedor .cen-btn-search:hover,
+    :root:not([data-theme]) #tab-batedor .cen-btn-search:hover {
       background: var(--green-btn-success-hover);
       border-color: rgba(250,204,21,.4);
       color: #ffffff;
@@ -2441,7 +2473,8 @@
       border: none;
       color: #fff;
     }
-    :root[data-theme="branco"] .btn-add {
+    :root[data-theme="branco"] .btn-add,
+    :root[data-theme="branco"] .btn-search {
       background: #5d7c43;
       border: none;
       color: #fff;
@@ -2449,8 +2482,19 @@
     :root[data-theme="branco"] .btn-primary:hover {
       background: var(--pmro-azul-secundario);
     }
-    :root[data-theme="branco"] .btn-add:hover {
+    :root[data-theme="branco"] .btn-add:hover,
+    :root[data-theme="branco"] .btn-search:hover {
       background: #4f6a39;
+    }
+    :root[data-theme="branco"] #tab-batedor .cen-btn-search {
+      background: #5d7c43;
+      border-color: transparent;
+      color: #fff;
+    }
+    :root[data-theme="branco"] #tab-batedor .cen-btn-search:hover {
+      background: #4f6a39;
+      border-color: transparent;
+      color: #fff;
     }
     :root[data-theme="branco"] .btn-danger {
       background: #dc2626;
@@ -3481,7 +3525,7 @@
         <button class="btn btn-outline btn-sm" onclick="setDatePreset('week')">7 dias</button>
         <button class="btn btn-outline btn-sm" onclick="setDatePreset('30d')">30 dias</button>
         <button class="btn btn-outline btn-sm" onclick="setDatePreset('90d')">90 dias</button>
-        <button class="btn btn-primary btn-sm" onclick="filterEvents()">&#128269; Filtrar</button>
+        <button class="btn btn-search btn-sm" onclick="filterEvents()">&#128269; Buscar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
         <select id="ev-limit-select" onchange="setEvLimit(this.value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
           <option value="5" selected>5 por pág.</option>
@@ -3620,7 +3664,7 @@
                 <option value="BAIXO">&#128994; Baixo</option>
               </select>
             </label>
-            <button class="cen-btn-apply" onclick="_cgsLoad(true)">&#128269; Filtrar</button>
+              <button class="cen-btn-apply cen-btn-search" onclick="_cgsLoad(true)">&#128269; Buscar</button>
             <button class="cen-btn-clear" onclick="_cgsReset()">Limpar</button>
             <span class="date-range-row" id="cgs-date-row">
               <span class="cen-lbl">De</span>
@@ -3745,7 +3789,7 @@
             </select>
           </label>
           <!-- Ações -->
-          <button class="cen-btn-apply" onclick="loadCentral(true)">&#128269; Filtrar</button>
+          <button class="cen-btn-apply cen-btn-search" onclick="loadCentral(true)">&#128269; Buscar</button>
           <button class="cen-btn-clear" onclick="_resetCenFilters()">Limpar</button>
           <!-- Período personalizado -->
           <span class="date-range-row" id="cen-date-row">
@@ -3912,7 +3956,7 @@
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input type="text" id="list-detail-search" placeholder="Buscar placa..." style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius);font-size:.84rem;width:160px" onkeydown="if(event.key==='Enter')loadListVehicles()">
-            <button class="btn btn-outline btn-sm" onclick="loadListVehicles()">Filtrar</button>
+            <button class="btn btn-search btn-sm" onclick="loadListVehicles()">Buscar</button>
             <button class="btn btn-add btn-sm" onclick="openAddVehicleModal()">+ Adicionar Placa</button>
           </div>
         </div>
@@ -4031,7 +4075,7 @@
         <div class="traj-tg">
           <span class="traj-tlabel" style="visibility:hidden">.</span>
           <div class="traj-actions">
-            <button class="btn btn-primary btn-sm" onclick="loadVehicleTrajectory()">&#128270; Buscar</button>
+            <button class="btn btn-search btn-sm" onclick="loadVehicleTrajectory()">&#128270; Buscar</button>
             <button class="btn btn-outline btn-sm" onclick="clearVehicleTrajectory()">&#10005; Limpar</button>
           </div>
         </div>
@@ -4065,7 +4109,7 @@
       <!-- Sub-abas -->
       <nav class="pessoas-sub-nav" role="tablist">
         <button class="pessoas-sub-btn active" id="psub-btn-pesquisar"
-          onclick="switchPessoasSubTab('pesquisar',this)">&#128269; Pesquisar</button>
+          onclick="switchPessoasSubTab('pesquisar',this)">&#128269; Buscar</button>
         <!-- Sub-aba "Adicionar Abordagem": apenas admin e operador -->
         <button class="pessoas-sub-btn" id="psub-btn-abordagem" data-perm="operador-plus"
           onclick="switchPessoasSubTab('abordagem',this)">&#43; Adicionar Abordagem</button>
@@ -4089,7 +4133,7 @@
           <input type="text" id="cad-busca" placeholder="Filtrar por nome, apelido ou CPF..."
             style="flex:1;min-width:180px;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
             onkeydown="if(event.key==='Enter')cadastroBuscar()">
-          <button class="btn btn-primary btn-sm" onclick="cadastroBuscar()" style="min-width:120px">&#128269; Pesquisar</button>
+          <button class="btn btn-search btn-sm" onclick="cadastroBuscar()" style="min-width:120px">&#128269; Buscar</button>
           <button class="btn btn-outline btn-sm" onclick="cadastroLimparBusca()">Limpar</button>
         </div>
 
@@ -4267,7 +4311,7 @@
               <div class="ab-ig">
                 <input type="text" id="ab-nome" maxlength="120" placeholder="Nome completo" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorNome()}">
-                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorNome()" title="Pesquisar por nome">&#128269;</button>
+<button type="button" class="btn btn-search btn-sm" onclick="abPesquisarPorNome()" title="Buscar por nome">&#128269;</button>
               </div>
             </div>
           </div>
@@ -4281,7 +4325,7 @@
                 <input type="text" id="ab-cpf" maxlength="11" placeholder="00000000000" inputmode="numeric"
                   oninput="this.value=this.value.replace(/\D/g,'');abVerificarCpfDuplicado()" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorCpf()}">
-                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorCpf()" title="Pesquisar por CPF">&#128269;</button>
+<button type="button" class="btn btn-search btn-sm" onclick="abPesquisarPorCpf()" title="Buscar por CPF">&#128269;</button>
               </div>
             </div>
             <div class="ab-field">
@@ -4290,7 +4334,7 @@
               <div class="ab-ig">
                 <input type="text" id="ab-rg" maxlength="20" placeholder="0000000" class="ab-ctrl"
                   onkeydown="if(event.key==='Enter'){event.preventDefault();abPesquisarPorRg()}">
-                <button type="button" class="btn btn-outline btn-sm" onclick="abPesquisarPorRg()" title="Pesquisar por RG">&#128269;</button>
+<button type="button" class="btn btn-search btn-sm" onclick="abPesquisarPorRg()" title="Buscar por RG">&#128269;</button>
               </div>
             </div>
             <div class="ab-field">
@@ -4434,7 +4478,7 @@
                   <input type="text" id="ab-placa" maxlength="10" placeholder="ABC1234"
                     oninput="this.value=this.value.toUpperCase()" class="ab-ctrl" style="text-transform:uppercase"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();abBuscarVeiculo()}">
-                  <button type="button" class="btn btn-outline btn-sm" onclick="abBuscarVeiculo()" title="Buscar cadastro">&#128269;</button>
+<button type="button" class="btn btn-search btn-sm" onclick="abBuscarVeiculo()" title="Buscar cadastro">&#128269;</button>
                 </div>
               </div>
               <div class="ab-field">
@@ -4525,7 +4569,7 @@
               onkeydown="if(event.key==='Enter')abListaBuscar()"
               style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem;min-width:260px">
           </label>
-          <button class="btn btn-primary btn-sm" onclick="abListaBuscar()">&#128269; Filtrar</button>
+          <button class="btn btn-search btn-sm" onclick="abListaBuscar()">&#128269; Buscar</button>
           <button class="btn btn-outline btn-sm" onclick="abListaLimpar()">Limpar</button>
         </div>
 
@@ -4996,7 +5040,7 @@
       <input id="pm-busca" type="text" placeholder="Buscar por nome, apelido ou CPF..."
         style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
         oninput="pmBuscar()" onkeydown="if(event.key==='Enter')pmBuscar()">
-      <button class="btn btn-primary btn-sm" onclick="pmBuscar()">&#128269; Buscar</button>
+        <button class="btn btn-search btn-sm" onclick="pmBuscar()">&#128269; Buscar</button>
       <button class="btn btn-outline btn-sm" onclick="document.getElementById('pm-busca').value='';pmBuscar()">Limpar</button>
     </div>
     <!-- tabela -->
@@ -15724,7 +15768,7 @@ function abAdicionarPessoa(dados) {
     +'<input type="text" id="ab-pb-'+idx+'-nome" maxlength="120" placeholder="Nome completo"'
     +' value="'+_esc(String(d.nome||''))+'" style="flex:1;'+s+'"'
     +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarNome('+idx+')}">'
-    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarNome('+idx+')" title="Pesquisar por nome">&#128269;</button>'
+    +'<button type="button" class="btn btn-search btn-sm" onclick="abPessoaPesquisarNome('+idx+')" title="Buscar por nome">&#128269;</button>'
     +'</div></label>'
     +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">CPF'
     +'<div style="display:flex;gap:4px">'
@@ -15732,14 +15776,14 @@ function abAdicionarPessoa(dados) {
     +' inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"'
     +' value="'+_esc(String(d.cpf||''))+'" style="flex:1;'+s+'"'
     +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarCpf('+idx+')}">'
-    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarCpf('+idx+')" title="Pesquisar por CPF">&#128269;</button>'
+    +'<button type="button" class="btn btn-search btn-sm" onclick="abPessoaPesquisarCpf('+idx+')" title="Buscar por CPF">&#128269;</button>'
     +'</div></label>'
     +'<label style="display:flex;flex-direction:column;gap:3px;font-size:.82rem">RG'
     +'<div style="display:flex;gap:4px">'
     +'<input type="text" id="ab-pb-'+idx+'-rg" maxlength="20" placeholder="0000000"'
     +' value="'+_esc(String(d.rg||''))+'" style="flex:1;'+s+'"'
     +' onkeydown="if(event.key===\'Enter\'){event.preventDefault();abPessoaPesquisarRg('+idx+')}">'
-    +'<button type="button" class="btn btn-outline btn-sm" onclick="abPessoaPesquisarRg('+idx+')" title="Pesquisar por RG">&#128269;</button>'
+    +'<button type="button" class="btn btn-search btn-sm" onclick="abPessoaPesquisarRg('+idx+')" title="Buscar por RG">&#128269;</button>'
     +'</div></label>'
     +'</div>'
     // Linha 2: Contato / Profissão
@@ -16347,19 +16391,19 @@ function cadAbordagemAdicionarOcupante() {
       '<label style="'+lS+';grid-column:1/-1">Nome'+
         '<div style="'+fR+'">'+
           '<input type="text" id="cad-ab-oc-nome-'+idx+'" placeholder="Nome completo" maxlength="120" style="'+iS+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarNome('+idx+')}">'+
-          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarNome('+idx+')" title="Buscar por nome">&#128269;</button>'+
+          '<button type="button" class="btn btn-search btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarNome('+idx+')" title="Buscar por nome">&#128269;</button>'+
         '</div>'+
       '</label>'+
       '<label style="'+lS+'">CPF'+
         '<div style="'+fR+'">'+
           '<input type="text" id="cad-ab-oc-cpf-'+idx+'" placeholder="000.000.000-00" maxlength="14" inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarCpf('+idx+')}" style="'+iS+'">'+
-          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarCpf('+idx+')" title="Buscar por CPF">&#128269;</button>'+
+          '<button type="button" class="btn btn-search btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarCpf('+idx+')" title="Buscar por CPF">&#128269;</button>'+
         '</div>'+
       '</label>'+
       '<label style="'+lS+'">RG'+
         '<div style="'+fR+'">'+
           '<input type="text" id="cad-ab-oc-rg-'+idx+'" placeholder="RG" maxlength="20" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cadAbOcPesquisarRg('+idx+')}" style="'+iS+'">'+
-          '<button type="button" class="btn btn-outline btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarRg('+idx+')" title="Buscar por RG">&#128269;</button>'+
+          '<button type="button" class="btn btn-search btn-sm" style="'+bS+'" onclick="cadAbOcPesquisarRg('+idx+')" title="Buscar por RG">&#128269;</button>'+
         '</div>'+
       '</label>'+
       '<label style="'+lS+'">Contato'+
