@@ -743,6 +743,199 @@
         max-width:none;
       }
     }
+    #tab-painel .painel-shell { gap:14px; }
+    #tab-painel .painel-status-bar {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px 18px;
+      flex-wrap:wrap;
+      padding:14px 18px;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,0) 58%),
+        radial-gradient(circle at top right, rgba(250,204,21,.12), transparent 36%),
+        var(--card);
+      box-shadow:0 12px 24px rgba(0,0,0,.12);
+    }
+    #tab-painel .painel-status-main {
+      min-width:260px;
+      flex:1 1 420px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    #tab-painel .painel-status-title {
+      color:var(--accent2);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    #tab-painel .painel-status-copy {
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+    #tab-painel .painel-status-side {
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+      flex:1 1 320px;
+    }
+    #tab-painel .painel-status-updated {
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      padding:8px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      min-width:190px;
+    }
+    #tab-painel .painel-status-kicker {
+      color:var(--accent2);
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    #tab-painel .painel-status-value {
+      color:var(--text);
+      font-size:12px;
+      font-weight:700;
+      line-height:1.35;
+    }
+    #tab-painel .painel-pill-row.compact {
+      margin:0;
+      gap:6px;
+      justify-content:flex-end;
+    }
+    #tab-painel .painel-pill-row.compact .painel-pill {
+      padding:6px 10px;
+      font-size:11px;
+    }
+    #tab-painel .painel-kpi-grid {
+      gap:12px;
+      margin-top:0;
+    }
+    #tab-painel .painel-kpi-grid-primary {
+      grid-template-columns:repeat(4,minmax(0,1fr));
+    }
+    #tab-painel .painel-kpi-grid-secondary {
+      grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+    #tab-painel .painel-kpi-grid-primary .card,
+    #tab-painel .painel-kpi-grid-secondary .card {
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+    }
+    #tab-painel .painel-kpi-grid-primary .card {
+      min-height:108px;
+      padding:16px 16px 14px;
+    }
+    #tab-painel .painel-kpi-grid-primary .card-label {
+      margin-bottom:10px;
+      font-size:13px;
+      max-width:calc(100% - 56px);
+    }
+    #tab-painel .painel-kpi-grid-primary .card-value {
+      font-size:clamp(1.7rem, 2.2vw, 2.15rem);
+    }
+    #tab-painel .painel-kpi-grid-primary .card-sub {
+      max-width:none;
+      margin-top:6px;
+      font-size:11px;
+      line-height:1.35;
+    }
+    #tab-painel .painel-kpi-grid-secondary .card {
+      min-height:86px;
+      padding:14px 16px 12px;
+    }
+    #tab-painel .painel-kpi-grid-secondary .card::before {
+      height:2px;
+      opacity:.72;
+    }
+    #tab-painel .painel-kpi-grid-secondary .card-label {
+      margin-bottom:8px;
+      font-size:12px;
+      max-width:calc(100% - 50px);
+    }
+    #tab-painel .painel-kpi-grid-secondary .card-value {
+      font-size:1.38rem;
+      line-height:1.05;
+    }
+    #tab-painel .painel-kpi-grid-secondary .card-sub {
+      max-width:none;
+      margin-top:4px;
+      font-size:11px;
+      line-height:1.3;
+    }
+    #tab-painel .painel-kpi-grid-secondary .card-icon {
+      top:12px;
+      right:12px;
+      width:34px;
+      height:34px;
+      border-radius:9px;
+      font-size:1rem;
+    }
+    #tab-painel .panel-chart-card {
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+    }
+    #tab-painel .chart-card-head {
+      padding:13px 16px 10px;
+      gap:10px;
+    }
+    #tab-painel .chart-subtitle {
+      font-size:11px;
+      line-height:1.35;
+    }
+    #tab-painel .chart-badge {
+      padding:6px 10px;
+      font-size:10px;
+    }
+    #tab-painel .chart-card-body {
+      padding:12px 16px 16px;
+    }
+    #tab-painel .chart-wrap {
+      min-height:190px;
+    }
+    :root[data-theme="branco"] #tab-painel .painel-status-bar,
+    :root[data-theme="branco"] #tab-painel .painel-kpi-grid-primary .card,
+    :root[data-theme="branco"] #tab-painel .painel-kpi-grid-secondary .card,
+    :root[data-theme="branco"] #tab-painel .panel-chart-card {
+      box-shadow:0 10px 22px rgba(30,58,138,.08);
+    }
+    @media (max-width:1200px) {
+      #tab-painel .painel-kpi-grid-primary {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+    }
+    @media (max-width:900px) {
+      #tab-painel .painel-status-side {
+        justify-content:flex-start;
+      }
+      #tab-painel .painel-kpi-grid-secondary {
+        grid-template-columns:1fr;
+      }
+    }
+    @media (max-width:640px) {
+      #tab-painel .painel-status-bar {
+        padding:12px 14px;
+      }
+      #tab-painel .painel-status-updated {
+        min-width:0;
+        width:100%;
+      }
+      #tab-painel .painel-pill-row.compact {
+        justify-content:flex-start;
+      }
+      #tab-painel .painel-kpi-grid-primary {
+        grid-template-columns:1fr;
+      }
+    }
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; align-items:center; justify-content:center; }
     .modal-overlay.open { display:flex; }
     /* ── Viewer bar de trajetória temporária ── */
@@ -2620,31 +2813,25 @@
     <!-- ===== ABA PAINEL ===== -->
     <div id="tab-painel" class="tab-pane active">
       <div class="painel-shell">
-        <div class="painel-hero">
-          <div class="painel-hero-main">
-            <div class="painel-hero-eyebrow">&#128737; Centro de monitoramento</div>
-            <h2 class="painel-hero-title">Vis&atilde;o operacional em tempo real</h2>
-            <p class="painel-hero-copy">Acompanhe atividade recente, c&acirc;meras ativas, alertas do dia e o comportamento do fluxo monitorado em um painel mais direto para leitura de turno.</p>
+        <div class="painel-status-bar">
+          <div class="painel-status-main">
+            <div class="painel-status-title">Resumo operacional</div>
+            <div class="painel-status-copy" id="pn-status-text">Preparando indicadores operacionais para a equipe.</div>
           </div>
-          <div class="painel-hero-side">
-            <div class="painel-hero-meta-card">
-              <div class="painel-meta-label">&Uacute;ltima atualiza&ccedil;&atilde;o</div>
-              <div class="painel-meta-value" id="pn-updated-at">Sincronizando painel...</div>
-              <div class="painel-meta-sub" id="pn-status-text">Preparando indicadores operacionais para a equipe.</div>
+          <div class="painel-status-side">
+            <div class="painel-status-updated">
+              <span class="painel-status-kicker">Atualizado</span>
+              <span class="painel-status-value" id="pn-updated-at">Sincronizando painel...</span>
             </div>
-            <div class="painel-hero-meta-card">
-              <div class="painel-meta-label">Leitura r&aacute;pida</div>
-              <div class="painel-pill-row">
-                <span class="painel-pill" id="pn-pill-cameras">C&acirc;meras: --</span>
-                <span class="painel-pill" id="pn-pill-monitorados">Monitorados: --</span>
-                <span class="painel-pill" id="pn-pill-alerts">Alertas: --</span>
-              </div>
-              <div class="painel-meta-sub">Resumo imediato para triagem e acompanhamento do servi&ccedil;o.</div>
+            <div class="painel-pill-row compact">
+              <span class="painel-pill" id="pn-pill-cameras">C&acirc;meras: --</span>
+              <span class="painel-pill" id="pn-pill-monitorados">Monitorados: --</span>
+              <span class="painel-pill" id="pn-pill-alerts">Alertas: --</span>
             </div>
           </div>
         </div>
 
-        <div class="painel-kpi-grid">
+        <div class="painel-kpi-grid painel-kpi-grid-primary">
           <div class="card">
             <div class="card-icon">&#128203;</div>
             <div class="card-label">Total de eventos</div>
@@ -2669,6 +2856,9 @@
             <div class="card-value" id="pn-cameras">&#8212;</div>
             <div class="card-sub">&uacute;ltimas 24 horas</div>
           </div>
+        </div>
+
+        <div class="painel-kpi-grid painel-kpi-grid-secondary">
           <div class="card">
             <div class="card-icon">&#128663;</div>
             <div class="card-label">Monitorados</div>
@@ -2694,7 +2884,7 @@
             <div class="chart-card-head">
               <div class="chart-title-block">
                 <div class="chart-title">Eventos por hora</div>
-                <div class="chart-subtitle">Distribui&ccedil;&atilde;o das &uacute;ltimas 24 horas para leitura r&aacute;pida de pico e ociosidade.</div>
+                <div class="chart-subtitle">Picos e ociosidade nas &uacute;ltimas 24h.</div>
               </div>
               <div class="chart-badge" id="pn-hour-badge">24h</div>
             </div>
@@ -2715,7 +2905,7 @@
             <div class="chart-card-head">
               <div class="chart-title-block">
                 <div class="chart-title">Eventos por dia</div>
-                <div class="chart-subtitle">Tend&ecirc;ncia consolidada dos &uacute;ltimos 30 dias para leitura de ritmo operacional.</div>
+                <div class="chart-subtitle">Tend&ecirc;ncia consolidada dos &uacute;ltimos 30 dias.</div>
               </div>
               <div class="chart-badge" id="pn-day-badge">30 dias</div>
             </div>
@@ -2739,7 +2929,7 @@
             <div class="chart-card-head">
               <div class="chart-title-block">
                 <div class="chart-title">Top 10 placas mais vistas</div>
-                <div class="chart-subtitle">Ranking operacional para identificar recorr&ecirc;ncia de passagens no recorte atual.</div>
+                <div class="chart-subtitle">Recorr&ecirc;ncia de passagens no recorte atual.</div>
               </div>
               <div class="chart-badge" id="pn-plates-badge">Ranking</div>
             </div>
@@ -2760,7 +2950,7 @@
             <div class="chart-card-head">
               <div class="chart-title-block">
                 <div class="chart-title">Eventos por c&acirc;mera</div>
-                <div class="chart-subtitle">Distribui&ccedil;&atilde;o da atividade recente por equipamento monitorado.</div>
+                <div class="chart-subtitle">Distribui&ccedil;&atilde;o recente por equipamento.</div>
               </div>
               <div class="chart-badge" id="pn-cam-badge">Distribui&ccedil;&atilde;o</div>
             </div>
@@ -5513,13 +5703,13 @@ function _panelSetOverviewMeta(ov) {
   }
   if (statusText) {
     if (alerts > 0) {
-      statusText.textContent = alerts.toLocaleString('pt-BR') + ' alerta(s) registrado(s) hoje. Priorize a triagem operacional.';
+      statusText.textContent = alerts.toLocaleString('pt-BR') + ' alerta(s) hoje. Priorize a triagem.';
     } else if (cameras > 0) {
-      statusText.textContent = cameras.toLocaleString('pt-BR') + ' camera(s) ativa(s) nas ultimas 24h e ' + total.toLocaleString('pt-BR') + ' evento(s) acumulados no sistema.';
+      statusText.textContent = cameras.toLocaleString('pt-BR') + ' camera(s) ativa(s) nas ultimas 24h e ' + total.toLocaleString('pt-BR') + ' evento(s) no acumulado.';
     } else if (monitored > 0) {
-      statusText.textContent = 'Sem atividade recente nas cameras, mas ha ' + monitored.toLocaleString('pt-BR') + ' placa(s) monitorada(s) cadastrada(s).';
+      statusText.textContent = 'Sem atividade recente. Ha ' + monitored.toLocaleString('pt-BR') + ' placa(s) monitorada(s) cadastrada(s).';
     } else {
-      statusText.textContent = 'Painel sincronizado. Assim que houver novas capturas, os indicadores serao atualizados.';
+      statusText.textContent = 'Painel sincronizado. Aguardando novas capturas.';
     }
   }
 }
@@ -5584,7 +5774,7 @@ async function loadPainel() {
     var pq = await fetch('/api/pessoas?limit=1').then(function(r){ return r.json(); });
     document.getElementById('pn-pessoas').textContent = (pq.total || 0).toLocaleString('pt-BR');
     var pessoasSub = document.getElementById('pn-pessoas-sub');
-    if (pessoasSub) pessoasSub.textContent = (pq.total || 0) > 0 ? 'clique para consultar cadastros' : 'nenhum cadastro encontrado';
+    if (pessoasSub) pessoasSub.textContent = (pq.total || 0) > 0 ? 'abrir cadastros' : 'nenhum cadastro';
   } catch(e) { console.error('pessoas count', e); }
 
   try {
