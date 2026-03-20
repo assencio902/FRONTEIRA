@@ -1,10 +1,69 @@
+import json
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
 
-PAPEIS_VALIDOS = {"motorista", "proprietario", "passageiro", "garupa", "outro"}
+PAPEIS_VALIDOS = {"abordado", "motorista", "proprietario", "passageiro", "garupa", "outro"}
+_ABORDADO_IMAGES_DIR = Path(os.getenv("ABORDADO_IMAGES_DIR", "/app/abordados"))
+_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
+
+
+def _guess_image_extension(filename: str, content_type: Optional[str]) -> str:
+    suffix = Path(filename or "").suffix.lower()
+    if suffix in _ALLOWED_EXTENSIONS:
+        return ".jpg" if suffix == ".jpeg" else suffix
+    mapping = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/gif": ".gif",
+        "image/bmp": ".bmp",
+    }
+    return mapping.get((content_type or "").lower(), ".jpg")
+
+
+async def _save_abordado_image(upload) -> Optional[str]:
+    if not upload or not getattr(upload, "filename", None):
+        return None
+    content_type = (getattr(upload, "content_type", "") or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="A imagem do abordado deve ser um arquivo de imagem valido")
+    data = await upload.read()
+    if not data:
+        return None
+    day_dir = datetime.utcnow().strftime("%Y-%m-%d")
+    rel_dir = Path(day_dir)
+    abs_dir = _ABORDADO_IMAGES_DIR / rel_dir
+    abs_dir.mkdir(parents=True, exist_ok=True)
+    ext = _guess_image_extension(upload.filename, content_type)
+    filename = f"abordado-{datetime.utcnow().strftime('%H%M%S')}-{os.urandom(6).hex()}{ext}"
+    abs_path = abs_dir / filename
+    abs_path.write_bytes(data)
+    return "/abordados/" + str((rel_dir / filename).as_posix()).lstrip("/")
+
+
+async def _save_vehicle_image(upload) -> Optional[str]:
+    if not upload or not getattr(upload, "filename", None):
+        return None
+    content_type = (getattr(upload, "content_type", "") or "").lower()
+    if content_type and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="A imagem do veiculo deve ser um arquivo de imagem valido")
+    data = await upload.read()
+    if not data:
+        return None
+    day_dir = datetime.utcnow().strftime("%Y-%m-%d")
+    rel_dir = Path("veiculos") / day_dir
+    abs_dir = _ABORDADO_IMAGES_DIR / rel_dir
+    abs_dir.mkdir(parents=True, exist_ok=True)
+    ext = _guess_image_extension(upload.filename, content_type)
+    filename = f"veiculo-{datetime.utcnow().strftime('%H%M%S')}-{os.urandom(6).hex()}{ext}"
+    abs_path = abs_dir / filename
+    abs_path.write_bytes(data)
+    return "/abordados/" + str((rel_dir / filename).as_posix()).lstrip("/")
 
 
 def build_abordagens_router(
@@ -140,7 +199,7 @@ def build_abordagens_router(
                     """
                     SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
                            a.observacoes, a.veiculo_id, a.data_cadastro,
-                           v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.observacoes
+                           v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.foto_path, v.observacoes
                     FROM abordagens a
                     LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
                     WHERE a.id = %s LIMIT 1
@@ -166,7 +225,8 @@ def build_abordagens_router(
                         "cor": row[11],
                         "ano": row[12],
                         "tipo": row[13],
-                        "observacoes": row[14],
+                        "foto_path": row[14],
+                        "observacoes": row[15],
                     }
                     if row[8]
                     else None,
@@ -176,7 +236,7 @@ def build_abordagens_router(
                     """
                     SELECT ap.papel, ap.observacao_pessoal,
                            p.id, p.nome, p.apelido, p.cpf, p.rg,
-                           p.data_nascimento, p.naturalidade, p.estado_naturalidade,
+                           p.foto_path, p.data_nascimento, p.naturalidade, p.estado_naturalidade,
                            p.nome_mae, p.nome_pai, p.contato, p.profissao, p.endereco
                     FROM abordagem_pessoas ap
                     JOIN pessoas p ON p.id = ap.pessoa_id
@@ -195,14 +255,15 @@ def build_abordagens_router(
                             "apelido": pessoa[4],
                             "cpf": pessoa[5],
                             "rg": pessoa[6],
-                            "data_nascimento": pessoa[7].isoformat() if pessoa[7] else None,
-                            "naturalidade": pessoa[8],
-                            "estado_naturalidade": pessoa[9],
-                            "nome_mae": pessoa[10],
-                            "nome_pai": pessoa[11],
-                            "contato": pessoa[12],
-                            "profissao": pessoa[13],
-                            "endereco": pessoa[14],
+                            "foto_path": pessoa[7],
+                            "data_nascimento": pessoa[8].isoformat() if pessoa[8] else None,
+                            "naturalidade": pessoa[9],
+                            "estado_naturalidade": pessoa[10],
+                            "nome_mae": pessoa[11],
+                            "nome_pai": pessoa[12],
+                            "contato": pessoa[13],
+                            "profissao": pessoa[14],
+                            "endereco": pessoa[15],
                         }
                     )
         return abordagem
@@ -216,7 +277,29 @@ def build_abordagens_router(
             request,
             "Apenas administradores e operadores podem registrar abordagens",
         )
-        data = await request.json()
+        content_type = (request.headers.get("content-type") or "").lower()
+        abordado_foto_path = None
+        veiculo_foto_path = None
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            raw_payload = form.get("payload")
+            if raw_payload is None:
+                raise HTTPException(status_code=400, detail="payload nao informado")
+            try:
+                data = json.loads(str(raw_payload))
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=400, detail="payload invalido") from exc
+            abordado_foto_path = await _save_abordado_image(form.get("abordado_imagem"))
+            veiculo_foto_path = await _save_vehicle_image(form.get("veiculo_imagem"))
+            for pessoa_data in (data.get("pessoas") or []):
+                upload_key = str(pessoa_data.get("foto_upload_key") or "").strip()
+                if not upload_key:
+                    continue
+                foto_path = await _save_abordado_image(form.get(upload_key))
+                if foto_path:
+                    pessoa_data["foto_path"] = foto_path
+        else:
+            data = await request.json()
 
         veiculo_id = None
         veiculo_data = data.get("veiculo")
@@ -235,7 +318,8 @@ def build_abordagens_router(
                             UPDATE veiculos_abordagem
                             SET marca=COALESCE(%s, marca), modelo=COALESCE(%s, modelo),
                                 cor=COALESCE(%s, cor), ano=COALESCE(%s, ano),
-                                tipo=COALESCE(%s, tipo), observacoes=COALESCE(%s, observacoes)
+                                tipo=COALESCE(%s, tipo), foto_path=COALESCE(%s, foto_path),
+                                observacoes=COALESCE(%s, observacoes)
                             WHERE id=%s
                             """,
                             (
@@ -244,6 +328,7 @@ def build_abordagens_router(
                                 normalize_str_fn(veiculo_data.get("cor")),
                                 ano,
                                 normalize_str_fn(veiculo_data.get("tipo")),
+                                veiculo_foto_path,
                                 normalize_str_fn(veiculo_data.get("observacoes")),
                                 veiculo_id,
                             ),
@@ -254,8 +339,8 @@ def build_abordagens_router(
                         cur.execute(
                             """
                             INSERT INTO veiculos_abordagem
-                                   (placa, marca, modelo, cor, ano, tipo, observacoes)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s)
+                                   (placa, marca, modelo, cor, ano, tipo, foto_path, observacoes)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                             RETURNING id
                             """,
                             (
@@ -265,6 +350,7 @@ def build_abordagens_router(
                                 normalize_str_fn(veiculo_data.get("cor")),
                                 ano,
                                 normalize_str_fn(veiculo_data.get("tipo")),
+                                veiculo_foto_path,
                                 normalize_str_fn(veiculo_data.get("observacoes")),
                             ),
                         )
@@ -319,11 +405,14 @@ def build_abordagens_router(
             if papel not in PAPEIS_VALIDOS:
                 papel = "outro"
             obs_pessoal = normalize_str_fn(pessoa_data.get("observacao_pessoal"))
+            pessoa_foto_path = normalize_str_fn(pessoa_data.get("foto_path"))
 
             pessoa_id = pessoa_data.get("pessoa_id")
             if pessoa_id:
                 pessoa_id = int(pessoa_id)
                 atualizacoes: dict = {}
+                if pessoa_foto_path:
+                    atualizacoes["foto_path"] = pessoa_foto_path
                 cpf_atualizado = clean_cpf_fn(pessoa_data.get("cpf"))
                 if cpf_atualizado:
                     atualizacoes["cpf"] = cpf_atualizado
@@ -372,6 +461,13 @@ def build_abordagens_router(
                                     found_id = row[0]
                 if found_id:
                     pessoa_id = found_id
+                    if pessoa_foto_path:
+                        with conn_factory() as conn:
+                            with conn.cursor() as cur:
+                                cur.execute(
+                                    "UPDATE pessoas SET foto_path=%s WHERE id=%s",
+                                    (pessoa_foto_path, pessoa_id),
+                                )
                 else:
                     nome = normalize_str_fn(pessoa_data.get("nome"))
                     if not nome:
@@ -384,8 +480,8 @@ def build_abordagens_router(
                                 INSERT INTO pessoas
                                     (nome, apelido, contato, profissao, cpf, rg,
                                      data_nascimento, naturalidade, estado_naturalidade,
-                                     nome_mae, nome_pai, endereco)
-                                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                     nome_mae, nome_pai, endereco, foto_path)
+                                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                                 RETURNING id
                                 """,
                                 (
@@ -401,6 +497,7 @@ def build_abordagens_router(
                                     normalize_str_fn(pessoa_data.get("nome_mae")),
                                     normalize_str_fn(pessoa_data.get("nome_pai")),
                                     normalize_str_fn(pessoa_data.get("endereco")),
+                                    pessoa_foto_path,
                                 ),
                             )
                             pessoa_id = cur.fetchone()[0]

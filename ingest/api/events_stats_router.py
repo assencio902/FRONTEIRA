@@ -14,6 +14,16 @@ def build_events_stats_router(
 ) -> APIRouter:
     router = APIRouter(tags=["events-stats"])
 
+    def _normalize_image_url(value: str | None) -> str | None:
+        if not value:
+            return None
+        value = str(value).strip()
+        if not value:
+            return None
+        if value.startswith(("http://", "https://", "/")):
+            return value
+        return f"/uploads/{value.lstrip('./')}"
+
     @router.get("/api/events")
     def list_events(
         page: int = 1,
@@ -84,7 +94,7 @@ def build_events_stats_router(
         items = []
         for row in rows:
             ts = row[7].isoformat() if row[7] else None
-            img = row[6]
+            img = _normalize_image_url(row[6])
             raw_yolo = row[8]
             if raw_yolo is None:
                 yolo = None
@@ -146,7 +156,7 @@ def build_events_stats_router(
                 )
                 row = cur.fetchone()
         if not row:
-            raise HTTPException(status_code=404, detail="evento não encontrado")
+            raise HTTPException(status_code=404, detail="evento nao encontrado")
 
         ts = row[7].isoformat() if row[7] else None
         raw_yolo = row[8]
@@ -157,6 +167,7 @@ def build_events_stats_router(
         else:
             yolo = json.loads(raw_yolo)
 
+        image_url = _normalize_image_url(row[6])
         return {
             "id": row[0],
             "plate": row[1],
@@ -164,12 +175,12 @@ def build_events_stats_router(
             "channel_name": row[3],
             "camera_ip": row[4],
             "confidence": float(row[5] or 0.0),
-            "image_path": row[6],
+            "image_path": image_url,
             "occurred_at": ts,
             "camera": row[9] or row[3],
             "timestamp": ts,
-            "image": row[6],
-            "thumb": row[6],
+            "image": image_url,
+            "thumb": image_url,
             "yolo_result": yolo,
             "sem_placa_motivo": yolo.get("sem_placa_motivo") if yolo else None,
             "vehicle_details": yolo.get("vehicle_details") if yolo else None,
@@ -186,18 +197,19 @@ def build_events_stats_router(
             with conn.cursor() as cur:
                 cur.execute("SELECT image_path FROM lpr_events WHERE id=%s LIMIT 1", (event_id,))
                 row = cur.fetchone()
-        if not row or not row[0]:
-            raise HTTPException(status_code=404, detail="imagem não encontrada")
-        return RedirectResponse(url=row[0])
+        image_url = _normalize_image_url(row[0] if row else None)
+        if not image_url:
+            raise HTTPException(status_code=404, detail="imagem nao encontrada")
+        return RedirectResponse(url=image_url)
 
     @router.get("/api/events/{event_id}/thumbnail")
     def api_event_thumbnail(event_id: int, w: int = 144, h: int = 96):
         event = get_event_by_id_fn(event_id)
         if not event:
-            raise HTTPException(status_code=404, detail="Evento não encontrado")
-        thumb = event.get("thumb") or event.get("image") or event.get("image_path")
+            raise HTTPException(status_code=404, detail="evento nao encontrado")
+        thumb = _normalize_image_url(event.get("thumb") or event.get("image") or event.get("image_path"))
         if not thumb:
-            raise HTTPException(status_code=404, detail="Imagem não disponível para este evento")
+            raise HTTPException(status_code=404, detail="imagem nao disponivel para este evento")
         return RedirectResponse(url=thumb, status_code=302)
 
     @router.get("/api/stats/overview")

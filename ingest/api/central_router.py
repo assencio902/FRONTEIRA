@@ -25,8 +25,13 @@ def build_central_router(
         window: str = "24h",
         co_window: int = 300,
         min_cameras: int = 2,
-        max_trip_gap: int = 86400,
+        max_trip_gap: int = 3600,
         group_sizes: str = "2,3+",
+        order_mode: str = "any",
+        leader_ratio: float = 0.7,
+        payload_max_front: int = 0,
+        ts_from: str | None = None,
+        ts_to: str | None = None,
         limit: int = 100,
         request: Request = None,
     ):
@@ -35,8 +40,17 @@ def build_central_router(
         min_cam = max(2, int(min_cameras))
         trip_gap = max(1, int(max_trip_gap))
         lim = max(1, min(500, int(limit)))
-        t_to = utcnow_fn()
-        t_from = t_to - timedelta(minutes=window_min)
+        order = str(order_mode).strip().lower()
+        if order not in ("any", "leader_front"):
+            order = "any"
+        lr = max(0.0, min(1.0, float(leader_ratio)))
+        p_max_front = max(0, int(payload_max_front))
+        if ts_from and ts_to:
+            t_from = parse_dt_fn(ts_from) or (utcnow_fn() - timedelta(minutes=window_min))
+            t_to = parse_dt_fn(ts_to) or utcnow_fn()
+        else:
+            t_to = utcnow_fn()
+            t_from = t_to - timedelta(minutes=window_min)
 
         valid_sizes: set[int] = set()
         allow_3plus = False
@@ -64,6 +78,48 @@ def build_central_router(
                     raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes or group["group_size"] >= 3]
                 else:
                     raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes]
+
+                filtered_groups = []
+                for group in raw_groups:
+                    cameras_count = group["cameras_count"]
+                    plates_set = set(group["plates"])
+                    gs = group["group_size"]
+                    front_count = Counter()
+                    for camera in group["cameras_confirmed"]:
+                        if camera.get("plate_order"):
+                            front_count[camera["plate_order"][0]] += 1
+
+                    leader_plate = front_count.most_common(1)[0][0] if front_count else group["plates"][0]
+                    leader_front_cnt = front_count.get(leader_plate, 0)
+                    leader_ratio_val = leader_front_cnt / cameras_count if cameras_count else 0
+
+                    if order == "leader_front":
+                        if leader_ratio_val < lr:
+                            continue
+                        skip = False
+                        for plate in plates_set:
+                            if plate == leader_plate:
+                                continue
+                            other_ratio = front_count.get(plate, 0) / cameras_count if cameras_count else 0
+                            if other_ratio > 0.3:
+                                skip = True
+                                break
+                        if skip:
+                            continue
+                        if gs == 3:
+                            payload_plate = min(
+                                (plate for plate in plates_set if plate != leader_plate),
+                                key=lambda plate: front_count.get(plate, 0),
+                            )
+                            if front_count.get(payload_plate, 0) > p_max_front:
+                                continue
+
+                    group["leader"] = leader_plate
+                    group["leader_front_count"] = leader_front_cnt
+                    group["leader_ratio"] = round(leader_ratio_val, 3)
+                    filtered_groups.append(group)
+
+                raw_groups = filtered_groups
 
                 cur.execute("SELECT plate, descricao FROM alvos")
                 alvo_map = {row[0]: row[1] for row in cur.fetchall()}
@@ -120,12 +176,8 @@ def build_central_router(
             cams_names = list({camera["cam_nome"] for camera in group["cameras_confirmed"]})
             distinct_days = days_together_map.get(plates_set, 0)
 
-            front_count = Counter()
-            for camera in group["cameras_confirmed"]:
-                if camera.get("plate_order"):
-                    front_count[camera["plate_order"][0]] += 1
-            leader = front_count.most_common(1)[0][0] if front_count else plates[0]
-            leader_ratio_val = front_count.get(leader, 0) / cams_count if cams_count else 0
+            leader = group.get("leader") or plates[0]
+            leader_ratio_val = float(group.get("leader_ratio") or 0.0)
 
             gs = group["group_size"]
             if gs == 2:

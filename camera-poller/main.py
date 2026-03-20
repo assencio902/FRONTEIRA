@@ -12,6 +12,9 @@ import logging
 import threading
 import xml.etree.ElementTree as ET
 
+# LEGADO: o ambiente atual opera em push e o servico camera-poller
+# foi removido do docker-compose. Este modulo fica apenas como referencia.
+
 import requests
 from requests.auth import HTTPDigestAuth, HTTPBasicAuth
 import psycopg2
@@ -278,6 +281,7 @@ def camera_worker(cam: dict):
 # ── Loop principal ─────────────────────────────────────────────────────────────
 
 def main():
+    log.warning("camera-poller legado: ambiente atual opera apenas em push.")
     log.info("=" * 60)
     log.info("Camera Poller iniciando")
     log.info("  INGEST_URL      : %s", INGEST_URL)

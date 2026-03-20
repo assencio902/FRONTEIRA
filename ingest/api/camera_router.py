@@ -21,7 +21,8 @@ def build_camera_router(
                     SELECT c.id, c.camera_id, c.nome, c.ativa, c.criticidade, c.peso,
                            c.created_at, c.ip,
                            s.last_seen, s.total_events, s.events_today,
-                           c.direcao, c.latitude, c.longitude, c.modo_integracao, c.usuario
+                           c.direcao, c.latitude, c.longitude, c.modo_integracao, c.usuario,
+                           le.last_event_camera_id, le.last_event_camera_ip, le.last_event_at
                     FROM cameras c
                     LEFT JOIN (
                         SELECT camera_id,
@@ -34,6 +35,18 @@ def build_camera_router(
                         GROUP BY camera_id
                     ) s ON s.camera_id = c.camera_id
                           OR s.camera_id = c.ip
+                    LEFT JOIN LATERAL (
+                        SELECT
+                            e.camera_id AS last_event_camera_id,
+                            e.camera_ip AS last_event_camera_ip,
+                            COALESCE(e.occurred_at, e.ts) AS last_event_at
+                        FROM lpr_events e
+                        WHERE e.camera_id = c.camera_id
+                           OR e.camera_id = c.ip
+                           OR (c.ip IS NOT NULL AND e.camera_ip = c.ip)
+                        ORDER BY COALESCE(e.occurred_at, e.ts) DESC
+                        LIMIT 1
+                    ) le ON TRUE
                     {where}
                     ORDER BY c.id ASC
                     """
@@ -58,8 +71,11 @@ def build_camera_router(
                     "direcao": row[11] or None,
                     "latitude": float(row[12]) if row[12] is not None else None,
                     "longitude": float(row[13]) if row[13] is not None else None,
-                    "modo_integracao": row[14] or "push",
-                    "usuario": row[15] or None,
+                    "modo_integracao": "push",
+                    "usuario": None,
+                    "last_event_camera_id": row[16] or None,
+                    "last_event_camera_ip": row[17] or None,
+                    "last_event_at": row[18].isoformat() if row[18] else None,
                 }
             )
         return {"items": items, "total": len(items)}
@@ -86,7 +102,7 @@ def build_camera_router(
     async def create_camera(request: Request):
         assert_admin_or_operator(
             request,
-            "Apenas administradores e operadores podem criar câmeras",
+            "Apenas administradores e operadores podem criar cameras",
         )
         data = await request.json()
         camera_id = (data.get("camera_id") or "").strip()
@@ -97,19 +113,9 @@ def build_camera_router(
         direcao = (data.get("direcao") or "").strip().upper() or None
         latitude = float(data["latitude"]) if data.get("latitude") not in (None, "") else None
         longitude = float(data["longitude"]) if data.get("longitude") not in (None, "") else None
-        modo_integracao = (data.get("modo_integracao") or "push").strip().lower()
-        usuario = (data.get("usuario") or "").strip() or None
-        senha = (data.get("senha") or "").strip() or None
 
-        if modo_integracao not in ("push", "listen"):
-            raise HTTPException(status_code=400, detail="modo_integracao deve ser 'push' ou 'listen'")
-        if modo_integracao == "listen" and (not usuario or not senha):
-            raise HTTPException(
-                status_code=400,
-                detail="usuario e senha são obrigatórios no modo 'listen'",
-            )
         if not camera_id or not nome:
-            raise HTTPException(status_code=400, detail="camera_id e nome são obrigatórios")
+            raise HTTPException(status_code=400, detail="camera_id e nome sao obrigatorios")
         if criticidade not in ("NORMAL", "CRITICA"):
             raise HTTPException(status_code=400, detail="criticidade deve ser 'NORMAL' ou 'CRITICA'")
         if peso <= 0:
@@ -131,7 +137,7 @@ def build_camera_router(
                     if dup:
                         raise HTTPException(
                             status_code=400,
-                            detail=f"IP {ip} já está em uso pela câmera '{dup[0]}'",
+                            detail=f"IP {ip} ja esta em uso pela camera '{dup[0]}'",
                         )
 
                 cur.execute(
@@ -140,7 +146,7 @@ def build_camera_router(
                         camera_id, nome, ativa, criticidade, peso, peso_score,
                         ip, direcao, latitude, longitude, modo_integracao, usuario, senha
                     )
-                    VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, 'push', NULL, NULL)
                     ON CONFLICT (camera_id) DO UPDATE SET
                         nome = EXCLUDED.nome,
                         ativa = TRUE,
@@ -151,9 +157,9 @@ def build_camera_router(
                         direcao = EXCLUDED.direcao,
                         latitude = COALESCE(EXCLUDED.latitude, cameras.latitude),
                         longitude = COALESCE(EXCLUDED.longitude, cameras.longitude),
-                        modo_integracao = EXCLUDED.modo_integracao,
-                        usuario = COALESCE(EXCLUDED.usuario, cameras.usuario),
-                        senha = COALESCE(EXCLUDED.senha, cameras.senha)
+                        modo_integracao = 'push',
+                        usuario = NULL,
+                        senha = NULL
                     """,
                     (
                         camera_id,
@@ -165,9 +171,6 @@ def build_camera_router(
                         direcao,
                         latitude,
                         longitude,
-                        modo_integracao,
-                        usuario,
-                        senha,
                     ),
                 )
 
@@ -177,7 +180,7 @@ def build_camera_router(
     async def update_camera(cam_id: int, request: Request):
         assert_admin_or_operator(
             request,
-            "Apenas administradores e operadores podem editar câmeras",
+            "Apenas administradores e operadores podem editar cameras",
         )
         data = await request.json()
         nome = data.get("nome")
@@ -205,7 +208,7 @@ def build_camera_router(
             with conn.cursor() as cur:
                 cur.execute("SELECT 1 FROM cameras WHERE id=%s LIMIT 1", (cam_id,))
                 if not cur.fetchone():
-                    raise HTTPException(status_code=404, detail="câmera não encontrada")
+                    raise HTTPException(status_code=404, detail="camera nao encontrada")
 
                 sets: list[str] = []
                 vals: list[Any] = []
@@ -238,7 +241,7 @@ def build_camera_router(
                         if dup:
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"IP {clean_ip} já está em uso pela câmera '{dup[0]}'",
+                                detail=f"IP {clean_ip} ja esta em uso pela camera '{dup[0]}'",
                             )
                     sets.append("ip=%s")
                     vals.append(clean_ip)
@@ -251,21 +254,6 @@ def build_camera_router(
                         )
                     sets.append("direcao=%s")
                     vals.append(d_val)
-                if "modo_integracao" in data:
-                    m_val = str(data["modo_integracao"]).strip().lower()
-                    if m_val not in ("push", "listen"):
-                        raise HTTPException(
-                            status_code=400,
-                            detail="modo_integracao deve ser 'push' ou 'listen'",
-                        )
-                    sets.append("modo_integracao=%s")
-                    vals.append(m_val)
-                if "usuario" in data:
-                    sets.append("usuario=%s")
-                    vals.append(str(data["usuario"]).strip() or None)
-                if "senha" in data:
-                    sets.append("senha=%s")
-                    vals.append(str(data["senha"]).strip() or None)
                 if "latitude" in data:
                     lat_val = float(data["latitude"]) if data["latitude"] not in (None, "") else None
                     sets.append("latitude=%s")
@@ -274,6 +262,10 @@ def build_camera_router(
                     lng_val = float(data["longitude"]) if data["longitude"] not in (None, "") else None
                     sets.append("longitude=%s")
                     vals.append(lng_val)
+
+                sets.append("modo_integracao='push'")
+                sets.append("usuario=NULL")
+                sets.append("senha=NULL")
 
                 if sets:
                     vals.append(cam_id)
@@ -284,7 +276,7 @@ def build_camera_router(
                 cur.execute(
                     """
                     SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip,
-                           latitude, longitude, usuario, modo_integracao
+                           latitude, longitude
                     FROM cameras
                     WHERE id=%s
                     LIMIT 1
@@ -294,7 +286,7 @@ def build_camera_router(
                 row = cur.fetchone()
 
         if not row:
-            raise HTTPException(status_code=404, detail="câmera não encontrada")
+            raise HTTPException(status_code=404, detail="camera nao encontrada")
 
         peso_val = float(row[5] or 1.0)
         return {
@@ -309,15 +301,15 @@ def build_camera_router(
             "ip": row[7],
             "latitude": float(row[8]) if row[8] is not None else None,
             "longitude": float(row[9]) if row[9] is not None else None,
-            "usuario": row[10] or None,
-            "modo_integracao": row[11] or "push",
+            "usuario": None,
+            "modo_integracao": "push",
         }
 
     @router.delete("/api/cameras/{cam_id}")
     def delete_camera(cam_id: int, request: Request):
         assert_admin_or_operator(
             request,
-            "Apenas administradores e operadores podem deletar câmeras",
+            "Apenas administradores e operadores podem deletar cameras",
         )
         with conn_factory() as conn:
             with conn.cursor() as cur:

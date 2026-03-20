@@ -50,9 +50,11 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
             drogas_apreendidas_kg = float(row[3] or 0)
         if drogas_apreendidas_kg <= 0 and float(row[4] or 0) > 0:
             drogas_apreendidas_kg = float(row[4] or 0) * 1000.0
-        cur.execute("SELECT COUNT(DISTINCT pessoa_id) FROM abordagem_pessoas")
+        # Os totais de abordados precisam refletir as ocorrencias registradas
+        # no modulo de abordagens, e nao apenas cadastros unicos.
+        cur.execute("SELECT COUNT(*) FROM abordagem_pessoas")
         pessoas_abordadas = int(cur.fetchone()[0] or 0)
-        cur.execute("SELECT COUNT(*) FROM veiculos_abordagem")
+        cur.execute("SELECT COUNT(*) FROM abordagens WHERE veiculo_id IS NOT NULL")
         veiculos_abordados = int(cur.fetchone()[0] or 0)
         return {
             "id": int(row[0]),
@@ -88,6 +90,7 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
         assert_admin(request, "Apenas administradores podem atualizar a produtividade")
         data = await _safe_json(request)
         user = require_auth(request)
+        modo = str(data.get("modo") or "substituir").strip().lower()
         drogas_kg_input = data.get("drogas_apreendidas_kg", data.get("peso_kg", None))
         if drogas_kg_input in (None, "") and data.get("drogas_toneladas", None) not in (None, ""):
             drogas_kg_input = _coerce_float(data.get("drogas_toneladas", 0), "drogas_toneladas") * 1000.0
@@ -101,27 +104,50 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
         with conn_factory() as conn:
             with conn.cursor() as cur:
                 _ensure_singleton(cur)
-                cur.execute(
-                    """
-                    UPDATE painel_produtividade
-                    SET armas_apreendidas = %s,
-                        drogas_apreendidas_kg = %s,
-                        peso_kg = %s,
-                        drogas_toneladas = %s,
-                        veiculos_recuperados = %s,
-                        updated_at = NOW(),
-                        updated_by = %s
-                    WHERE id = 1
-                    """,
-                    (
-                        payload["armas_apreendidas"],
-                        payload["drogas_apreendidas_kg"],
-                        payload["drogas_apreendidas_kg"],
-                        payload["drogas_apreendidas_kg"] / 1000.0,
-                        payload["veiculos_recuperados"],
-                        payload["updated_by"],
-                    ),
-                )
+                if modo in {"incrementar", "somar", "adicionar", "acumular"}:
+                    cur.execute(
+                        """
+                        UPDATE painel_produtividade
+                        SET armas_apreendidas = COALESCE(armas_apreendidas, 0) + %s,
+                            drogas_apreendidas_kg = COALESCE(drogas_apreendidas_kg, 0) + %s,
+                            peso_kg = COALESCE(peso_kg, 0) + %s,
+                            drogas_toneladas = COALESCE(drogas_toneladas, 0) + %s,
+                            veiculos_recuperados = COALESCE(veiculos_recuperados, 0) + %s,
+                            updated_at = NOW(),
+                            updated_by = %s
+                        WHERE id = 1
+                        """,
+                        (
+                            payload["armas_apreendidas"],
+                            payload["drogas_apreendidas_kg"],
+                            payload["drogas_apreendidas_kg"],
+                            payload["drogas_apreendidas_kg"] / 1000.0,
+                            payload["veiculos_recuperados"],
+                            payload["updated_by"],
+                        ),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE painel_produtividade
+                        SET armas_apreendidas = %s,
+                            drogas_apreendidas_kg = %s,
+                            peso_kg = %s,
+                            drogas_toneladas = %s,
+                            veiculos_recuperados = %s,
+                            updated_at = NOW(),
+                            updated_by = %s
+                        WHERE id = 1
+                        """,
+                        (
+                            payload["armas_apreendidas"],
+                            payload["drogas_apreendidas_kg"],
+                            payload["drogas_apreendidas_kg"],
+                            payload["drogas_apreendidas_kg"] / 1000.0,
+                            payload["veiculos_recuperados"],
+                            payload["updated_by"],
+                        ),
+                    )
                 return _fetch_payload(cur)
 
     return router

@@ -94,7 +94,7 @@ def build_pessoas_router(
                     """
                     SELECT a.id, a.data_hora, a.local, a.equipe, a.tipo_motivo,
                            a.observacoes, a.data_cadastro,
-                           v.id, v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.observacoes
+                           v.id, v.placa, v.marca, v.modelo, v.cor, v.ano, v.tipo, v.foto_path, v.observacoes
                     FROM abordagem_pessoas ap
                     JOIN abordagens a ON a.id = ap.abordagem_id
                     LEFT JOIN veiculos_abordagem v ON v.id = a.veiculo_id
@@ -124,7 +124,8 @@ def build_pessoas_router(
                                 "cor": row[11],
                                 "ano": row[12],
                                 "tipo": row[13],
-                                "observacoes": row[14],
+                                "foto_path": row[14],
+                                "observacoes": row[15],
                                 "listas": [],
                             }
                             if row[7]
@@ -138,7 +139,7 @@ def build_pessoas_router(
                     cur.execute(
                         """
                         SELECT ap.abordagem_id, ap.papel, ap.observacao_pessoal,
-                               p.id, p.nome, p.apelido, p.cpf, p.rg
+                               p.id, p.nome, p.apelido, p.cpf, p.rg, p.foto_path
                         FROM abordagem_pessoas ap
                         JOIN pessoas p ON p.id = ap.pessoa_id
                         WHERE ap.abordagem_id = ANY(%s)
@@ -159,6 +160,7 @@ def build_pessoas_router(
                                         "apelido": pessoa_relacionada[5],
                                         "cpf": pessoa_relacionada[6],
                                         "rg": pessoa_relacionada[7],
+                                        "foto_path": pessoa_relacionada[8],
                                     }
                                 )
                                 break

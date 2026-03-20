@@ -807,21 +807,24 @@
       border-radius:9px;
       font-size:1rem;
     }
-    #tab-painel .painel-prod-card {
+    #tab-painel .painel-prod-card,
+    #tab-produtividade .painel-prod-card {
       padding:16px 18px 18px;
       box-shadow:0 10px 22px rgba(0,0,0,.12);
       display:flex;
       flex-direction:column;
       gap:14px;
     }
-    #tab-painel .painel-prod-head {
+    #tab-painel .painel-prod-head,
+    #tab-produtividade .painel-prod-head {
       display:flex;
       align-items:flex-start;
       justify-content:space-between;
       gap:14px;
       flex-wrap:wrap;
     }
-    #tab-painel .painel-prod-actions {
+    #tab-painel .painel-prod-actions,
+    #tab-produtividade .painel-prod-actions {
       display:flex;
       flex-wrap:wrap;
       justify-content:flex-end;
@@ -829,17 +832,20 @@
       gap:10px;
       margin-left:auto;
     }
-    #tab-painel .painel-prod-meta {
+    #tab-painel .painel-prod-meta,
+    #tab-produtividade .painel-prod-meta {
       font-size:11px;
       color:var(--muted);
       text-align:right;
     }
-    #tab-painel .painel-prod-grid {
+    #tab-painel .painel-prod-grid,
+    #tab-produtividade .painel-prod-grid {
       display:grid;
       grid-template-columns:repeat(4,minmax(0,1fr));
       gap:12px;
     }
-    #tab-painel .painel-prod-item {
+    #tab-painel .painel-prod-item,
+    #tab-produtividade .painel-prod-item {
       position:relative;
       border:1px solid var(--border);
       border-radius:12px;
@@ -847,7 +853,8 @@
       background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
       overflow:hidden;
     }
-    #tab-painel .painel-prod-item::before {
+    #tab-painel .painel-prod-item::before,
+    #tab-produtividade .painel-prod-item::before {
       content:'';
       position:absolute;
       inset:0 auto auto 0;
@@ -856,7 +863,8 @@
       background:linear-gradient(90deg, var(--accent), transparent);
       opacity:.55;
     }
-    #tab-painel .painel-prod-label {
+    #tab-painel .painel-prod-label,
+    #tab-produtividade .painel-prod-label {
       display:block;
       font-size:11px;
       font-weight:700;
@@ -864,7 +872,8 @@
       text-transform:uppercase;
       color:var(--muted);
     }
-    #tab-painel .painel-prod-value {
+    #tab-painel .painel-prod-value,
+    #tab-produtividade .painel-prod-value {
       display:block;
       margin-top:10px;
       font-size:clamp(1.4rem, 2vw, 1.9rem);
@@ -872,39 +881,86 @@
       font-weight:800;
       color:var(--text);
     }
-    #tab-painel .painel-prod-sub {
+    #tab-painel .painel-prod-sub,
+    #tab-produtividade .painel-prod-sub {
       display:block;
       margin-top:5px;
       font-size:11px;
       color:var(--muted);
       line-height:1.35;
     }
-    #tab-painel .painel-prod-split {
+    #tab-painel .painel-prod-split,
+    #tab-produtividade .painel-prod-split {
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
       gap:10px;
       margin-top:12px;
     }
-    #tab-painel .painel-prod-mini {
+    #tab-painel .painel-prod-mini,
+    #tab-produtividade .painel-prod-mini {
       border:1px solid rgba(255,255,255,.06);
       border-radius:10px;
       padding:10px 10px 9px;
       background:rgba(255,255,255,.025);
     }
-    #tab-painel .painel-prod-mini-value {
+    #tab-painel .painel-prod-mini-value,
+    #tab-produtividade .painel-prod-mini-value {
       display:block;
       font-size:1.15rem;
       line-height:1.05;
       font-weight:800;
       color:var(--text);
     }
-    #tab-painel .painel-prod-mini-label {
+    #tab-painel .painel-prod-mini-label,
+    #tab-produtividade .painel-prod-mini-label {
       display:block;
       margin-top:4px;
       font-size:10px;
       letter-spacing:.04em;
       text-transform:uppercase;
       color:var(--muted);
+    }
+    #tab-produtividade .prod-shell {
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    #tab-produtividade .prod-form-card {
+      padding:18px 20px;
+      box-shadow:0 10px 22px rgba(0,0,0,.12);
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    #tab-produtividade .prod-form-title {
+      font-size:1rem;
+      font-weight:700;
+      color:var(--text);
+      line-height:1.3;
+    }
+    #tab-produtividade .prod-form-copy,
+    #tab-produtividade .prod-summary-copy,
+    #tab-produtividade .prod-form-note {
+      font-size:.82rem;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    #tab-produtividade .prod-form-grid {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:0 14px;
+    }
+    #tab-produtividade .prod-form-actions {
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
+    #tab-produtividade .prod-success {
+      display:none;
+      font-size:12px;
+      color:#4ade80;
+      font-weight:600;
     }
     #tab-painel .panel-chart-card {
       box-shadow:0 10px 22px rgba(0,0,0,.12);
@@ -927,6 +983,18 @@
     #tab-painel .chart-wrap {
       min-height:190px;
     }
+    .card-sub,
+    .chart-subtitle,
+    .chart-empty-copy,
+    #tab-painel .painel-prod-meta,
+    #tab-produtividade .painel-prod-meta,
+    #tab-painel .painel-prod-sub,
+    #tab-produtividade .painel-prod-sub,
+    #tab-produtividade .prod-form-copy,
+    #tab-produtividade .prod-summary-copy,
+    #tab-produtividade .prod-form-note {
+      display:none !important;
+    }
     :root[data-theme="branco"] #tab-painel .painel-kpi-grid-primary .card,
     :root[data-theme="branco"] #tab-painel .painel-kpi-grid-secondary .card,
     :root[data-theme="branco"] #tab-painel .panel-chart-card,
@@ -937,7 +1005,11 @@
       #tab-painel .painel-kpi-grid-primary {
         grid-template-columns:repeat(2,minmax(0,1fr));
       }
-      #tab-painel .painel-prod-grid {
+      #tab-painel .painel-prod-grid,
+      #tab-produtividade .painel-prod-grid {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      #tab-produtividade .prod-form-grid {
         grid-template-columns:repeat(2,minmax(0,1fr));
       }
     }
@@ -946,7 +1018,9 @@
         grid-template-columns:1fr;
       }
       #tab-painel .painel-prod-actions,
-      #tab-painel .painel-prod-meta {
+      #tab-produtividade .painel-prod-actions,
+      #tab-painel .painel-prod-meta,
+      #tab-produtividade .painel-prod-meta {
         text-align:left;
         justify-content:flex-start;
       }
@@ -955,13 +1029,18 @@
       #tab-painel .painel-kpi-grid-primary {
         grid-template-columns:1fr;
       }
-      #tab-painel .painel-prod-grid {
+      #tab-painel .painel-prod-grid,
+      #tab-produtividade .painel-prod-grid,
+      #tab-produtividade .prod-form-grid {
         grid-template-columns:1fr;
       }
-      #tab-painel .painel-prod-card {
+      #tab-painel .painel-prod-card,
+      #tab-produtividade .painel-prod-card,
+      #tab-produtividade .prod-form-card {
         padding:15px 14px 16px;
       }
-      #tab-painel .painel-prod-split {
+      #tab-painel .painel-prod-split,
+      #tab-produtividade .painel-prod-split {
         grid-template-columns:1fr;
       }
     }
@@ -2821,7 +2900,7 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     Veiculos
   </div>
-  <div class="nav-item nav-admin-only" onclick="openProdutividadeModal()">
+  <div class="nav-item nav-admin-only" data-menu="produtividade" onclick="switchTab('produtividade',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
     Produtividade
   </div>
@@ -2877,17 +2956,14 @@
             <div class="painel-prod-item">
               <span class="painel-prod-label">Armas apreendidas</span>
               <span class="painel-prod-value" id="pn-prod-armas">&#8212;</span>
-              <span class="painel-prod-sub">quantidade acumulada informada</span>
             </div>
             <div class="painel-prod-item">
               <span class="painel-prod-label">Drogas apreendidas</span>
               <span class="painel-prod-value" id="pn-prod-drogas-kg">&#8212;</span>
-              <span class="painel-prod-sub" id="pn-prod-drogas-sub">equivalente em toneladas: &#8212;</span>
             </div>
             <div class="painel-prod-item">
               <span class="painel-prod-label">Ve&iacute;culos recuperados</span>
               <span class="painel-prod-value" id="pn-prod-veiculos">&#8212;</span>
-              <span class="painel-prod-sub">quantidade de recupera&ccedil;&otilde;es registradas</span>
             </div>
             <div class="painel-prod-item">
               <span class="painel-prod-label">Pessoas / Ve&iacute;culos abordados</span>
@@ -2901,7 +2977,6 @@
                   <span class="painel-prod-mini-label">Ve&iacute;culos</span>
                 </div>
               </div>
-              <span class="painel-prod-sub">totais autom&aacute;ticos do m&oacute;dulo de abordagens</span>
             </div>
           </div>
         </div>
@@ -3037,6 +3112,99 @@
                     <div class="chart-empty-icon">&#128247;</div>
                     <div class="chart-empty-title">Nenhuma c&acirc;mera com atividade</div>
                     <div class="chart-empty-copy">Quando as c&acirc;meras enviarem eventos, a distribui&ccedil;&atilde;o por equipamento ser&aacute; exibida aqui.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ABA PRODUTIVIDADE ===== -->
+    <div id="tab-produtividade" class="tab-pane">
+      <div class="prod-shell">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:700;font-size:.97rem">&#128202; Produtividade Operacional</div>
+            <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Lance cada ocorr&ecirc;ncia separadamente. Cada salvamento soma ao acumulado atual do painel.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" type="button" onclick="loadProdutividadeTab(false)">&#8635; Atualizar</button>
+          </div>
+        </div>
+
+        <div class="sub-tabs" id="prod-sub-tabs">
+          <div class="sub-tab active" data-prod="lancamentos" onclick="switchProdutividadeSub('lancamentos',this)">
+            &#9998; Nova ocorr&ecirc;ncia
+          </div>
+          <div class="sub-tab" data-prod="resumo" onclick="switchProdutividadeSub('resumo',this)">
+            &#128202; Resumo acumulado
+          </div>
+        </div>
+
+        <div id="prod-sub-lancamentos" class="sub-pane active">
+          <div class="card prod-form-card">
+            <div class="prod-form-title">Registrar nova ocorr&ecirc;ncia</div>
+            <div class="prod-form-copy">Preencha somente o que aconteceu agora. Os campos enviados ser&atilde;o somados ao total j&aacute; existente.</div>
+            <div class="prod-form-grid">
+              <div class="form-group">
+                <label>Armas apreendidas nesta ocorr&ecirc;ncia</label>
+                <input type="number" id="prod-entry-armas" min="0" step="1" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label>Drogas apreendidas nesta ocorr&ecirc;ncia (kg)</label>
+                <input type="number" id="prod-entry-drogas-kg" min="0" step="0.01" placeholder="0,00">
+              </div>
+              <div class="form-group">
+                <label>Ve&iacute;culos recuperados nesta ocorr&ecirc;ncia</label>
+                <input type="number" id="prod-entry-veiculos" min="0" step="1" placeholder="0">
+              </div>
+            </div>
+            <div class="prod-form-note" id="prod-launch-meta">Aguardando leitura do acumulado atual.</div>
+            <div class="form-error" id="prod-entry-error"></div>
+            <div class="prod-success" id="prod-entry-ok"></div>
+            <div class="prod-form-actions">
+              <button class="btn btn-outline btn-sm" type="button" onclick="resetProdutividadeForm()">Limpar</button>
+              <button class="btn btn-primary btn-sm" type="button" id="prod-entry-save-btn" onclick="saveProdutividadeLancamento()">&#128190; Somar ao acumulado</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="prod-sub-resumo" class="sub-pane">
+          <div class="card painel-prod-card">
+            <div class="painel-prod-head">
+              <div>
+                <div class="prod-form-title">Totais acumulados</div>
+                <div class="prod-summary-copy">Esses valores alimentam o card do painel principal e s&atilde;o atualizados a cada novo lan&ccedil;amento salvo.</div>
+              </div>
+              <div class="painel-prod-actions">
+                <div class="painel-prod-meta" id="prod-summary-meta">Aguardando atualiza&ccedil;&atilde;o.</div>
+              </div>
+            </div>
+            <div class="painel-prod-grid">
+              <div class="painel-prod-item">
+                <span class="painel-prod-label">Armas apreendidas</span>
+                <span class="painel-prod-value" id="prod-total-armas">&#8212;</span>
+              </div>
+              <div class="painel-prod-item">
+                <span class="painel-prod-label">Drogas apreendidas</span>
+                <span class="painel-prod-value" id="prod-total-drogas-kg">&#8212;</span>
+              </div>
+              <div class="painel-prod-item">
+                <span class="painel-prod-label">Ve&iacute;culos recuperados</span>
+                <span class="painel-prod-value" id="prod-total-veiculos">&#8212;</span>
+              </div>
+              <div class="painel-prod-item">
+                <span class="painel-prod-label">Pessoas / Ve&iacute;culos abordados</span>
+                <div class="painel-prod-split">
+                  <div class="painel-prod-mini">
+                    <span class="painel-prod-mini-value" id="prod-total-pessoas">&#8212;</span>
+                    <span class="painel-prod-mini-label">Pessoas</span>
+                  </div>
+                  <div class="painel-prod-mini">
+                    <span class="painel-prod-mini-value" id="prod-total-veiculos-abordados">&#8212;</span>
+                    <span class="painel-prod-mini-label">Ve&iacute;culos</span>
                   </div>
                 </div>
               </div>
@@ -5920,32 +6088,66 @@ function _parseProdInput(id) {
   return isFinite(parsed) ? parsed : NaN;
 }
 
+function _produtividadeMetaText(data, adminFallback, userFallback) {
+  data = data || {};
+  if (data.updated_at) {
+    return 'Ultimo lancamento em ' + _fmtAdminTs(data.updated_at, true) + (data.updated_by ? ' por ' + data.updated_by : '');
+  }
+  if ((window._authRole || '') === 'admin') {
+    return adminFallback || 'Use a aba "Produtividade" para registrar novas ocorrencias.';
+  }
+  return userFallback || 'Indicadores aguardando atualizacao do administrador.';
+}
+
 function _setPainelProdutividade(data) {
   data = data || {};
   var armasEl = document.getElementById('pn-prod-armas');
   var drogasKgEl = document.getElementById('pn-prod-drogas-kg');
-  var drogasSubEl = document.getElementById('pn-prod-drogas-sub');
   var veicEl = document.getElementById('pn-prod-veiculos');
   var pessoasEl = document.getElementById('pn-prod-pessoas');
   var veicAbEl = document.getElementById('pn-prod-veiculos-abordados');
   var metaEl = document.getElementById('pn-prod-meta');
   var drogasKg = _prodNumber(data.drogas_apreendidas_kg != null ? data.drogas_apreendidas_kg : data.peso_kg);
-  var drogasTon = _prodNumber(data.drogas_apreendidas_toneladas != null ? data.drogas_apreendidas_toneladas : data.drogas_toneladas);
   if (armasEl) armasEl.textContent = _fmtProdNumber(data.armas_apreendidas, 0);
   if (drogasKgEl) drogasKgEl.textContent = _fmtProdNumber(drogasKg, 2) + ' kg';
-  if (drogasSubEl) drogasSubEl.textContent = 'equivalente em toneladas: ' + _fmtProdNumber(drogasTon, 3) + ' t';
   if (veicEl) veicEl.textContent = _fmtProdNumber(data.veiculos_recuperados, 0);
   if (pessoasEl) pessoasEl.textContent = _fmtProdNumber(data.pessoas_abordadas, 0);
   if (veicAbEl) veicAbEl.textContent = _fmtProdNumber(data.veiculos_abordados, 0);
   if (metaEl) {
-    if (data.updated_at) {
-      metaEl.textContent = 'Atualizado em ' + _fmtAdminTs(data.updated_at, false) + (data.updated_by ? ' por ' + data.updated_by : '');
-    } else if (window._authRole === 'admin') {
-      metaEl.textContent = 'Use "Editar produtividade" para informar armas, drogas apreendidas e veiculos recuperados.';
-    } else {
-      metaEl.textContent = 'Indicadores aguardando atualizacao do administrador.';
-    }
+    metaEl.textContent = data.updated_at
+      ? 'Atualizado em ' + _fmtAdminTs(data.updated_at, false) + (data.updated_by ? ' por ' + data.updated_by : '')
+      : _produtividadeMetaText(data, 'Use a aba "Produtividade" para registrar novas ocorrencias.');
   }
+}
+
+function _setProdutividadeTab(data) {
+  data = data || {};
+  var drogasKg = _prodNumber(data.drogas_apreendidas_kg != null ? data.drogas_apreendidas_kg : data.peso_kg);
+  var summaryMetaEl = document.getElementById('prod-summary-meta');
+  var launchMetaEl = document.getElementById('prod-launch-meta');
+  var currentText = 'Acumulado atual: '
+    + _fmtProdNumber(data.armas_apreendidas, 0) + ' armas, '
+    + _fmtProdNumber(drogasKg, 2) + ' kg e '
+    + _fmtProdNumber(data.veiculos_recuperados, 0) + ' veiculos recuperados.';
+  var metaText = _produtividadeMetaText(
+    data,
+    'Cada novo lancamento sera somado ao acumulado do painel.',
+    'Indicadores aguardando o primeiro lancamento.'
+  );
+
+  var totalArmasEl = document.getElementById('prod-total-armas');
+  var totalDrogasEl = document.getElementById('prod-total-drogas-kg');
+  var totalVeiculosEl = document.getElementById('prod-total-veiculos');
+  var totalPessoasEl = document.getElementById('prod-total-pessoas');
+  var totalVeiculosAbEl = document.getElementById('prod-total-veiculos-abordados');
+
+  if (totalArmasEl) totalArmasEl.textContent = _fmtProdNumber(data.armas_apreendidas, 0);
+  if (totalDrogasEl) totalDrogasEl.textContent = _fmtProdNumber(drogasKg, 2) + ' kg';
+  if (totalVeiculosEl) totalVeiculosEl.textContent = _fmtProdNumber(data.veiculos_recuperados, 0);
+  if (totalPessoasEl) totalPessoasEl.textContent = _fmtProdNumber(data.pessoas_abordadas, 0);
+  if (totalVeiculosAbEl) totalVeiculosAbEl.textContent = _fmtProdNumber(data.veiculos_abordados, 0);
+  if (summaryMetaEl) summaryMetaEl.textContent = metaText;
+  if (launchMetaEl) launchMetaEl.textContent = currentText + ' ' + metaText;
 }
 
 async function loadPainelProdutividade() {
@@ -5954,29 +6156,126 @@ async function loadPainelProdutividade() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     _painelProdutividadeCache = await resp.json();
     _setPainelProdutividade(_painelProdutividadeCache);
+    _setProdutividadeTab(_painelProdutividadeCache);
   } catch(e) {
     console.error('produtividade', e);
     _painelProdutividadeCache = null;
     _setPainelProdutividade({});
+    _setProdutividadeTab({});
   }
 }
 
-async function openProdutividadeModal() {
+function resetProdutividadeForm() {
+  ['prod-entry-armas', 'prod-entry-drogas-kg', 'prod-entry-veiculos'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var errorEl = document.getElementById('prod-entry-error');
+  var okEl = document.getElementById('prod-entry-ok');
+  if (errorEl) errorEl.textContent = '';
+  if (okEl) {
+    okEl.textContent = '';
+    okEl.style.display = 'none';
+  }
+}
+
+function switchProdutividadeSub(name, el) {
+  var target = el || document.querySelector('#prod-sub-tabs .sub-tab[data-prod="' + name + '"]');
+  document.querySelectorAll('#prod-sub-tabs .sub-tab').forEach(function(tab) {
+    tab.classList.remove('active');
+  });
+  if (target) target.classList.add('active');
+  var launchPane = document.getElementById('prod-sub-lancamentos');
+  var summaryPane = document.getElementById('prod-sub-resumo');
+  if (launchPane) launchPane.classList.toggle('active', name === 'lancamentos');
+  if (summaryPane) summaryPane.classList.toggle('active', name === 'resumo');
+  var labels = {
+    lancamentos: 'Produtividade / Nova ocorrencia',
+    resumo: 'Produtividade / Resumo acumulado'
+  };
+  trackPageView('produtividade:' + name, labels[name] || ('Produtividade / ' + name), '/dashboard#produtividade/' + name);
+}
+
+async function loadProdutividadeTab(resetForm, preferredSub) {
   if ((window._authRole || '') !== 'admin') return;
   if (!_painelProdutividadeCache) await loadPainelProdutividade();
-  var data = _painelProdutividadeCache || {};
-  var errorEl = document.getElementById('prod-form-error');
-  var metaEl = document.getElementById('prod-modal-meta');
-  if (errorEl) errorEl.textContent = '';
-  document.getElementById('prod-armas').value = String(_prodNumber(data.armas_apreendidas || 0));
-  document.getElementById('prod-veiculos').value = String(_prodNumber(data.veiculos_recuperados || 0));
-  document.getElementById('prod-drogas-kg').value = String(_prodNumber(data.drogas_apreendidas_kg != null ? data.drogas_apreendidas_kg : data.peso_kg || 0));
-  if (metaEl) {
-    metaEl.textContent = data.updated_at
-      ? 'Ultima atualizacao em ' + _fmtAdminTs(data.updated_at, true) + (data.updated_by ? ' por ' + data.updated_by : '')
-      : 'Esses indicadores aparecem no Painel para todos os perfis. Pessoas e veiculos abordados sao preenchidos automaticamente.';
+  else _setProdutividadeTab(_painelProdutividadeCache);
+  if (resetForm !== false) resetProdutividadeForm();
+  var activeTabEl = document.querySelector('#prod-sub-tabs .sub-tab.active');
+  var activeSub = preferredSub || ((resetForm === false && activeTabEl) ? activeTabEl.getAttribute('data-prod') : '') || 'lancamentos';
+  switchProdutividadeSub(activeSub);
+}
+
+function openProdutividadeModal() {
+  if ((window._authRole || '') !== 'admin') return;
+  var navEl = document.querySelector('#sidebar .nav-item[data-menu="produtividade"]');
+  if (navEl) {
+    switchTab('produtividade', navEl);
+    return;
   }
-  openModal('painel-produtividade-modal');
+}
+
+async function saveProdutividadeLancamento() {
+  if ((window._authRole || '') !== 'admin') return;
+  var errorEl = document.getElementById('prod-entry-error');
+  var okEl = document.getElementById('prod-entry-ok');
+  var btn = document.getElementById('prod-entry-save-btn');
+  if (errorEl) errorEl.textContent = '';
+  if (okEl) {
+    okEl.textContent = '';
+    okEl.style.display = 'none';
+  }
+
+  var payload = {
+    modo: 'incrementar',
+    armas_apreendidas: _parseProdInput('prod-entry-armas'),
+    drogas_apreendidas_kg: _parseProdInput('prod-entry-drogas-kg'),
+    veiculos_recuperados: _parseProdInput('prod-entry-veiculos')
+  };
+
+  if (!isFinite(payload.armas_apreendidas) || !isFinite(payload.drogas_apreendidas_kg) || !isFinite(payload.veiculos_recuperados)) {
+    if (errorEl) errorEl.textContent = 'Preencha apenas numeros validos.';
+    return;
+  }
+  if (payload.armas_apreendidas < 0 || payload.drogas_apreendidas_kg < 0 || payload.veiculos_recuperados < 0) {
+    if (errorEl) errorEl.textContent = 'Os indicadores nao podem ser negativos.';
+    return;
+  }
+  if (payload.armas_apreendidas === 0 && payload.drogas_apreendidas_kg === 0 && payload.veiculos_recuperados === 0) {
+    if (errorEl) errorEl.textContent = 'Informe ao menos um valor maior que zero para registrar a ocorrencia.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    var resp = await fetch('/api/produtividade', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function(){ return {}; });
+      throw new Error(errData.detail || ('HTTP ' + resp.status));
+    }
+    _painelProdutividadeCache = await resp.json();
+    _setPainelProdutividade(_painelProdutividadeCache);
+    _setProdutividadeTab(_painelProdutividadeCache);
+    ['prod-entry-armas', 'prod-entry-drogas-kg', 'prod-entry-veiculos'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    if (okEl) {
+      okEl.textContent = 'Ocorrencia somada ao acumulado com sucesso.';
+      okEl.style.display = 'block';
+    }
+  } catch(e) {
+    console.error('save produtividade incremento', e);
+    if (errorEl) errorEl.textContent = 'Erro: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#128190; Somar ao acumulado';
+  }
 }
 
 async function saveProdutividade() {
@@ -5986,6 +6285,7 @@ async function saveProdutividade() {
   if (errorEl) errorEl.textContent = '';
 
   var payload = {
+    modo: 'substituir',
     armas_apreendidas: _parseProdInput('prod-armas'),
     drogas_apreendidas_kg: _parseProdInput('prod-drogas-kg'),
     veiculos_recuperados: _parseProdInput('prod-veiculos')
@@ -6014,9 +6314,10 @@ async function saveProdutividade() {
     }
     _painelProdutividadeCache = await resp.json();
     _setPainelProdutividade(_painelProdutividadeCache);
+    _setProdutividadeTab(_painelProdutividadeCache);
     closeModal('painel-produtividade-modal');
   } catch(e) {
-    console.error('save produtividade', e);
+    console.error('save produtividade legado', e);
     if (errorEl) errorEl.textContent = 'Erro: ' + e.message;
   } finally {
     btn.disabled = false;
@@ -6254,7 +6555,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', config: 'Configura\u00e7\u00f5es' };
+var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 var _painelProdutividadeCache = null;
 
@@ -6269,6 +6570,7 @@ function switchTab(name, el) {
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
   if (name === 'painel')  loadPainel();
+  if (name === 'produtividade') loadProdutividadeTab(true, 'lancamentos');
   if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');

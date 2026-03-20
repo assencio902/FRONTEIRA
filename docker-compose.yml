@@ -60,6 +60,7 @@
       RETENTION_DAYS_EVENTS: ${RETENTION_DAYS_EVENTS:-30}
       MAX_UPLOADS_GB: ${MAX_UPLOADS_GB:-50}
       UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
+      ABORDADO_IMAGES_DIR: ${ABORDADO_IMAGES_DIR:-/app/abordados}
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +75,7 @@
     volumes:
       - ./data:/data
       - ./uploads:/app/uploads
+      - ./abordados:/app/abordados
       - ./ingest/static:/app/static
       - ./secrets:/app/secrets:ro
 
@@ -111,29 +113,6 @@
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
-  camera-poller:
-    build: ./camera-poller
-    environment:
-      INGEST_URL: ${INGEST_URL:-http://ingest:8000}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-monitor}
-      POSTGRES_USER: ${POSTGRES_USER:-monitor_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
-      RECONNECT_DELAY: ${RECONNECT_DELAY:-10}
-      REFRESH_INTERVAL: ${REFRESH_INTERVAL:-60}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      ingest:
-        condition: service_started
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 volumes:
   pgdata:

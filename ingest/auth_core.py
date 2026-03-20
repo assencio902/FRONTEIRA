@@ -95,6 +95,7 @@ _PUBLIC_PREFIXES = (
     "/api/health",
     "/static",
     "/uploads",
+    "/abordados",
     "/login",
     "/api/webhook",
     "/api/simple-webhook",
