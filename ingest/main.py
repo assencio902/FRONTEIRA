@@ -45,6 +45,7 @@ from api.core_router import build_core_router
 from api.events_stats_router import build_events_stats_router
 from api.fcm_router import build_fcm_router
 from api.pessoas_router import build_pessoas_router
+from api.produtividade_router import build_produtividade_router
 from api.trajetoria_router import build_trajetoria_router
 from api.users_router import build_users_router
 from api.vehicle_report_router import build_vehicle_report_router
@@ -100,6 +101,7 @@ logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path("static")
 UPLOAD_DIR = Path("uploads")
+ABORDADOS_DIR = Path(os.getenv("ABORDADO_IMAGES_DIR", "abordados"))
 
 # Inicialização robusta: detecta se o path existe como arquivo (erro comum de
 # bind mount incorreto no Docker, ex: host tem arquivo 'uploads' em vez de dir).
@@ -112,6 +114,8 @@ if UPLOAD_DIR.exists() and not UPLOAD_DIR.is_dir():
     )
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 logger.info("UPLOAD_DIR inicializado: %s", UPLOAD_DIR.resolve())
+ABORDADOS_DIR.mkdir(parents=True, exist_ok=True)
+logger.info("ABORDADOS_DIR inicializado: %s", ABORDADOS_DIR.resolve())
 
 MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
 
@@ -356,6 +360,42 @@ def _init_db():
                 "CREATE INDEX IF NOT EXISTS idx_admin_user_activity_type_time ON admin_user_activity_log(activity_type, created_at DESC);"
             )
 
+            # Indicadores de produtividade operacional do painel
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS painel_produtividade (
+                    id INTEGER PRIMARY KEY,
+                    armas_apreendidas INTEGER NOT NULL DEFAULT 0,
+                    drogas_apreendidas_kg NUMERIC(14,2) NOT NULL DEFAULT 0,
+                    peso_kg NUMERIC(14,2) NOT NULL DEFAULT 0,
+                    drogas_toneladas NUMERIC(14,3) NOT NULL DEFAULT 0,
+                    veiculos_recuperados INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_by TEXT DEFAULT ''
+                );
+                """
+            )
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS armas_apreendidas INTEGER NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS drogas_apreendidas_kg NUMERIC(14,2) NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS peso_kg NUMERIC(14,2) NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS drogas_toneladas NUMERIC(14,3) NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS veiculos_recuperados INTEGER NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();")
+            cur.execute("ALTER TABLE painel_produtividade ADD COLUMN IF NOT EXISTS updated_by TEXT DEFAULT '';")
+            cur.execute("INSERT INTO painel_produtividade (id) VALUES (1) ON CONFLICT (id) DO NOTHING;")
+            cur.execute(
+                """
+                UPDATE painel_produtividade
+                SET drogas_apreendidas_kg = CASE
+                    WHEN COALESCE(drogas_apreendidas_kg, 0) > 0 THEN drogas_apreendidas_kg
+                    WHEN COALESCE(peso_kg, 0) > 0 THEN peso_kg
+                    WHEN COALESCE(drogas_toneladas, 0) > 0 THEN drogas_toneladas * 1000
+                    ELSE 0
+                END
+                WHERE COALESCE(drogas_apreendidas_kg, 0) = 0;
+                """
+            )
+
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS vehicle_list_items (
                     id SERIAL PRIMARY KEY,
@@ -497,6 +537,7 @@ def _init_db():
                     estado_naturalidade TEXT,
                     nome_mae TEXT,
                     nome_pai TEXT,
+                    foto_path TEXT,
                     data_cadastro TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
@@ -512,6 +553,7 @@ def _init_db():
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS estado_naturalidade TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_mae TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS nome_pai TEXT;")
+            cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS foto_path TEXT;")
             # Colunas legadas (mantidas para compatibilidade durante migração — NÃO remover ainda)
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS relatorio_abordagem TEXT;")
             cur.execute("ALTER TABLE pessoas ADD COLUMN IF NOT EXISTS veiculo_placa TEXT;")
@@ -536,10 +578,12 @@ def _init_db():
                     cor           TEXT,
                     ano           INT,
                     tipo          TEXT,
+                    foto_path     TEXT,
                     observacoes   TEXT,
                     data_cadastro TIMESTAMPTZ DEFAULT NOW()
                 );
             """)
+            cur.execute("ALTER TABLE veiculos_abordagem ADD COLUMN IF NOT EXISTS foto_path TEXT;")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_veiculo_abord_placa ON veiculos_abordagem(placa);")
 
             # Abordagem — entidade principal
@@ -908,9 +952,11 @@ def get_camera_name(camera_id: str | None) -> str | None:
 
 def _lookup_camera_by_channel(channel_name: str) -> dict | None:
     """
-    Fallback: busca câmera pelo channelName do XML contra camera_id ou nome no banco.
-    Útil quando o IP enviado no XML não está cadastrado mas o nome do canal casa.
-    Compara de forma case-insensitive e ignora espaços/hífens/sublinhados extras.
+    Fallback restrito: busca câmera pelo channelName do XML apenas quando houver
+    correspondência EXATA (após normalização) com camera_id ou nome.
+
+    Isso evita o casamento frouxo por "nome parecido", que podia associar um
+    evento à câmera errada quando havia canais com nomes semelhantes.
     """
     if not channel_name:
         return None
@@ -926,19 +972,28 @@ def _lookup_camera_by_channel(channel_name: str) -> dict | None:
                     "SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip, direcao, latitude, longitude FROM cameras WHERE ativa = TRUE"
                 )
                 rows = cur.fetchall()
+        matches = []
         for row in rows:
-            cam_id_norm  = _norm(row[1] or "")
+            cam_id_norm = _norm(row[1] or "")
             cam_nome_norm = _norm(row[2] or "")
-            if needle in cam_id_norm or cam_id_norm in needle or \
-               needle in cam_nome_norm or cam_nome_norm in needle:
-                return {
-                    "id": row[0], "camera_id": row[1], "nome": row[2],
-                    "ativa": row[3], "criticidade": (row[4] or "NORMAL").upper(),
-                    "peso": float(row[5] or 1.0), "peso_score": float(row[5] or 1.0),
-                    "ip": row[7], "direcao": row[8] or None,
-                    "latitude":  float(row[9])  if row[9]  is not None else None,
-                    "longitude": float(row[10]) if row[10] is not None else None,
-                }
+            if needle == cam_id_norm or needle == cam_nome_norm:
+                matches.append(
+                    {
+                        "id": row[0], "camera_id": row[1], "nome": row[2],
+                        "ativa": row[3], "criticidade": (row[4] or "NORMAL").upper(),
+                        "peso": float(row[5] or 1.0), "peso_score": float(row[5] or 1.0),
+                        "ip": row[7], "direcao": row[8] or None,
+                        "latitude": float(row[9]) if row[9] is not None else None,
+                        "longitude": float(row[10]) if row[10] is not None else None,
+                    }
+                )
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            print(
+                f"[CAMERA] _lookup_camera_by_channel ambíguo channel_name={channel_name!r} "
+                f"matches={[m['camera_id'] for m in matches]}"
+            )
     except Exception as e:
         print(f"[CAMERA] _lookup_camera_by_channel erro: {e}")
     return None
@@ -1057,11 +1112,13 @@ app.add_middleware(AuthMiddleware)
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+app.mount("/abordados", StaticFiles(directory=str(ABORDADOS_DIR)), name="abordados")
 
 
 app.include_router(build_auth_router(_conn))
 app.include_router(build_admin_activity_router(_conn))
 app.include_router(build_camera_router(_conn, get_camera_row))
+app.include_router(build_produtividade_router(_conn))
 app.include_router(
     build_pessoas_router(
         _conn,
@@ -1920,7 +1977,7 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
         default_nome = channel_name_xml or camera_id
         cam = ensure_camera_exists(camera_id, default_name=default_nome, ip=xml_ip)
 
-        # Fallback: câmera não encontrada por IP — tenta pelo channelName do XML
+        # Fallback restrito: só aceita channelName quando o casamento for exato e único.
         if not cam.get("id") and channel_name_xml:
             cam = _lookup_camera_by_channel(channel_name_xml) or cam
 

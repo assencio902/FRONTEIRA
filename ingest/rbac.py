@@ -191,6 +191,8 @@ ROUTE_ACCESS_MAP = {
     "POST /api/admin/activity/heartbeat": ["admin", "operador", "visualizador"],
     "POST /api/admin/activity/page-view": ["admin", "operador", "visualizador"],
     "POST /api/admin/activity/logout": ["admin", "operador", "visualizador"],
+    "GET /api/produtividade": ["admin", "operador", "visualizador"],
+    "PUT /api/produtividade": ["admin"],
     
     # CÂMERAS - Leitura para todos, criar/editar/deletar apenas admin
     "GET /api/cameras": ["admin", "operador", "visualizacao"],
