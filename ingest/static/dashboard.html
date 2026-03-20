@@ -418,6 +418,331 @@
     .chart-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px 22px; }
     .chart-title { font-size:15px; text-transform:none; letter-spacing:.01em; color:var(--accent2); margin-bottom:14px; font-weight:700; line-height:var(--lh-tight); }
     .chart-wrap { position:relative; height:175px; }
+    #tab-painel .painel-shell { display:flex; flex-direction:column; gap:18px; }
+    #tab-painel .painel-hero { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,.95fr); gap:16px; align-items:stretch; }
+    #tab-painel .painel-hero-main,
+    #tab-painel .painel-hero-meta-card,
+    #tab-painel .panel-chart-card,
+    #tab-painel .painel-kpi-grid .card {
+      position:relative;
+      overflow:hidden;
+      box-shadow:0 14px 30px rgba(0,0,0,.14);
+    }
+    #tab-painel .painel-hero-main,
+    #tab-painel .painel-hero-meta-card {
+      background:
+        radial-gradient(circle at top right, rgba(250,204,21,.18), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,0) 58%),
+        var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+    }
+    #tab-painel .painel-hero-main {
+      padding:22px 24px;
+      min-height:156px;
+    }
+    #tab-painel .painel-hero-main::after {
+      content:'';
+      position:absolute;
+      right:-46px;
+      bottom:-64px;
+      width:220px;
+      height:220px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(74,222,128,.18), rgba(74,222,128,0) 68%);
+      pointer-events:none;
+    }
+    #tab-painel .painel-hero-eyebrow {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 12px;
+      border-radius:999px;
+      background:rgba(250,204,21,.12);
+      border:1px solid rgba(250,204,21,.22);
+      color:var(--accent2);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:14px;
+    }
+    #tab-painel .painel-hero-title {
+      font-size:clamp(1.55rem, 2.6vw, 2.35rem);
+      line-height:1.08;
+      font-weight:900;
+      color:var(--text);
+      max-width:16ch;
+      margin:0 0 10px;
+    }
+    #tab-painel .painel-hero-copy {
+      max-width:62ch;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.6;
+      margin:0;
+    }
+    #tab-painel .painel-hero-side {
+      display:grid;
+      grid-template-rows:repeat(2,minmax(0,1fr));
+      gap:16px;
+    }
+    #tab-painel .painel-hero-meta-card {
+      padding:18px 18px 16px;
+      min-height:70px;
+    }
+    #tab-painel .painel-meta-label {
+      color:var(--accent2);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+    #tab-painel .painel-meta-value {
+      color:var(--text);
+      font-size:1.02rem;
+      line-height:1.35;
+      font-weight:800;
+      margin-bottom:6px;
+    }
+    #tab-painel .painel-meta-sub {
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    #tab-painel .painel-pill-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:10px 0 8px;
+    }
+    #tab-painel .painel-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:7px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      color:var(--text);
+      font-size:12px;
+      font-weight:700;
+      line-height:1;
+      white-space:nowrap;
+    }
+    #tab-painel .painel-pill.is-alert {
+      color:#fecaca;
+      background:rgba(127,29,29,.2);
+      border-color:rgba(248,113,113,.28);
+    }
+    #tab-painel .painel-pill.is-ok {
+      color:#dcfce7;
+      background:rgba(20,83,45,.26);
+      border-color:rgba(74,222,128,.22);
+    }
+    #tab-painel .painel-kpi-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+      gap:16px;
+    }
+    #tab-painel .painel-kpi-grid .card {
+      min-height:128px;
+      padding:18px 18px 16px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 52%),
+        var(--card);
+    }
+    #tab-painel .painel-kpi-grid .card::before {
+      content:'';
+      position:absolute;
+      inset:0 0 auto 0;
+      height:3px;
+      background:linear-gradient(90deg, rgba(250,204,21,.9), rgba(74,222,128,.55));
+      opacity:.9;
+    }
+    #tab-painel .painel-kpi-grid .card-label {
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      max-width:calc(100% - 58px);
+      margin-bottom:14px;
+    }
+    #tab-painel .painel-kpi-grid .card-value {
+      font-size:clamp(1.95rem, 2.5vw, 2.6rem);
+      font-weight:800;
+      line-height:1.05;
+    }
+    #tab-painel .painel-kpi-grid .card-sub {
+      margin-top:8px;
+      max-width:80%;
+      font-size:12px;
+      line-height:1.45;
+    }
+    #tab-painel .painel-kpi-grid .card-icon {
+      float:none;
+      position:absolute;
+      top:16px;
+      right:16px;
+      margin:0;
+    }
+    #tab-painel .painel-row-primary,
+    #tab-painel .painel-row-secondary {
+      margin-top:0;
+    }
+    #tab-painel .painel-row-primary { grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr); }
+    #tab-painel .painel-row-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #tab-painel .panel-chart-card {
+      padding:0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 54%),
+        var(--card);
+    }
+    #tab-painel .chart-card-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      padding:16px 18px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    #tab-painel .chart-title-block {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    #tab-painel .panel-chart-card .chart-title {
+      margin:0;
+    }
+    #tab-painel .chart-subtitle {
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    #tab-painel .chart-badge {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 12px;
+      border-radius:999px;
+      background:rgba(250,204,21,.12);
+      border:1px solid rgba(250,204,21,.22);
+      color:var(--accent2);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.04em;
+      white-space:nowrap;
+    }
+    #tab-painel .chart-card-body {
+      padding:14px 18px 18px;
+    }
+    #tab-painel .chart-wrap {
+      min-height:220px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)),
+        rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+    #tab-painel .chart-wrap canvas {
+      position:relative;
+      z-index:1;
+    }
+    #tab-painel .chart-empty {
+      display:none;
+      position:absolute;
+      inset:0;
+      z-index:2;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:24px;
+      background:linear-gradient(180deg, rgba(5,46,22,.18), rgba(5,46,22,.08));
+    }
+    #tab-painel .chart-wrap.is-empty .chart-empty {
+      display:flex;
+    }
+    #tab-painel .chart-wrap.is-empty canvas {
+      opacity:.16;
+      filter:saturate(.55);
+    }
+    #tab-painel .chart-empty-body {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      max-width:320px;
+    }
+    #tab-painel .chart-empty-icon {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      background:rgba(250,204,21,.13);
+      border:1px solid rgba(250,204,21,.22);
+      color:var(--accent2);
+      font-size:1.2rem;
+    }
+    #tab-painel .chart-empty-title {
+      color:var(--text);
+      font-size:14px;
+      font-weight:800;
+      line-height:1.3;
+    }
+    #tab-painel .chart-empty-copy {
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
+    }
+    :root[data-theme="branco"] #tab-painel .painel-hero-main,
+    :root[data-theme="branco"] #tab-painel .painel-hero-meta-card,
+    :root[data-theme="branco"] #tab-painel .panel-chart-card,
+    :root[data-theme="branco"] #tab-painel .painel-kpi-grid .card {
+      box-shadow:0 12px 28px rgba(30,58,138,.08);
+    }
+    :root[data-theme="branco"] #tab-painel .chart-card-head {
+      border-bottom-color:rgba(30,58,138,.08);
+    }
+    :root[data-theme="branco"] #tab-painel .chart-wrap {
+      border-color:rgba(30,58,138,.08);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.94)),
+        #ffffff;
+    }
+    :root[data-theme="branco"] #tab-painel .chart-empty {
+      background:linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.9));
+    }
+    @media (max-width:1200px) {
+      #tab-painel .painel-hero,
+      #tab-painel .painel-row-primary {
+        grid-template-columns:1fr;
+      }
+    }
+    @media (max-width:900px) {
+      #tab-painel .painel-row-secondary {
+        grid-template-columns:1fr;
+      }
+      #tab-painel .painel-kpi-grid {
+        grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      }
+    }
+    @media (max-width:640px) {
+      #tab-painel .painel-hero-main,
+      #tab-painel .painel-hero-meta-card {
+        padding:18px 16px;
+      }
+      #tab-painel .chart-card-head {
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      #tab-painel .painel-kpi-grid .card-sub {
+        max-width:none;
+      }
+    }
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:200; align-items:center; justify-content:center; }
     .modal-overlay.open { display:flex; }
     /* ── Viewer bar de trajetória temporária ── */
@@ -903,7 +1228,7 @@
     }
     :root[data-theme="verde"] #topbar,
     :root:not([data-theme]) #topbar {
-                min-height: 116px;
+                min-height: 92px;
                 padding-top: 0;
                 padding-bottom: 0;
                 align-items: stretch;
@@ -912,7 +1237,7 @@
     :root[data-theme="verde"] .topbar-title-group,
     :root:not([data-theme]) .topbar-title-group {
                 align-items: stretch;
-                min-height: 116px;
+                min-height: 92px;
                 flex: 1 1 auto;
                 min-width: 0;
                 justify-content: center;
@@ -923,7 +1248,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                min-height: 116px;
+                min-height: 92px;
                 height: 100%;
                 flex-wrap: nowrap;
                 white-space: nowrap;
@@ -933,7 +1258,7 @@
     :root[data-theme="verde"] .brand-verde-title,
     :root:not([data-theme]) .brand-verde-title {
               display: block;
-              font-size: clamp(34px, 3.8vw, 64px);
+              font-size: clamp(28px, 3.1vw, 50px);
               font-weight: 900;
               letter-spacing: .04em;
               line-height: 1;
@@ -990,8 +1315,8 @@
                 justify-content: center;
                 align-items: stretch;
                 width: 100%;
-                min-height: 116px;
-                padding: 0 24px;
+                min-height: 92px;
+                padding: 0 18px;
                 background:
                 linear-gradient(90deg, rgba(250,204,21,.06), rgba(250,204,21,.11), rgba(250,204,21,.06));
                 border-top: 1px solid rgba(250,204,21,.12);
@@ -2294,76 +2619,166 @@
 
     <!-- ===== ABA PAINEL ===== -->
     <div id="tab-painel" class="tab-pane active">
+      <div class="painel-shell">
+        <div class="painel-hero">
+          <div class="painel-hero-main">
+            <div class="painel-hero-eyebrow">&#128737; Centro de monitoramento</div>
+            <h2 class="painel-hero-title">Vis&atilde;o operacional em tempo real</h2>
+            <p class="painel-hero-copy">Acompanhe atividade recente, c&acirc;meras ativas, alertas do dia e o comportamento do fluxo monitorado em um painel mais direto para leitura de turno.</p>
+          </div>
+          <div class="painel-hero-side">
+            <div class="painel-hero-meta-card">
+              <div class="painel-meta-label">&Uacute;ltima atualiza&ccedil;&atilde;o</div>
+              <div class="painel-meta-value" id="pn-updated-at">Sincronizando painel...</div>
+              <div class="painel-meta-sub" id="pn-status-text">Preparando indicadores operacionais para a equipe.</div>
+            </div>
+            <div class="painel-hero-meta-card">
+              <div class="painel-meta-label">Leitura r&aacute;pida</div>
+              <div class="painel-pill-row">
+                <span class="painel-pill" id="pn-pill-cameras">C&acirc;meras: --</span>
+                <span class="painel-pill" id="pn-pill-monitorados">Monitorados: --</span>
+                <span class="painel-pill" id="pn-pill-alerts">Alertas: --</span>
+              </div>
+              <div class="painel-meta-sub">Resumo imediato para triagem e acompanhamento do servi&ccedil;o.</div>
+            </div>
+          </div>
+        </div>
 
-      <!-- cards topo -->
-      <div class="cards-row" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
-        <div class="card">
-          <div class="card-icon">&#128203;</div>
-          <div class="card-label">Total de eventos</div>
-          <div class="card-value" id="pn-total">&#8212;</div>
+        <div class="painel-kpi-grid">
+          <div class="card">
+            <div class="card-icon">&#128203;</div>
+            <div class="card-label">Total de eventos</div>
+            <div class="card-value" id="pn-total">&#8212;</div>
+            <div class="card-sub">hist&oacute;rico acumulado do sistema</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#128197;</div>
+            <div class="card-label">Hoje</div>
+            <div class="card-value" id="pn-today">&#8212;</div>
+            <div class="card-sub">eventos registrados no dia</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#9201;</div>
+            <div class="card-label">&Uacute;ltima hora</div>
+            <div class="card-value" id="pn-lasthour">&#8212;</div>
+            <div class="card-sub">movimenta&ccedil;&atilde;o mais recente</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#128247;</div>
+            <div class="card-label">C&acirc;meras ativas</div>
+            <div class="card-value" id="pn-cameras">&#8212;</div>
+            <div class="card-sub">&uacute;ltimas 24 horas</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">&#128663;</div>
+            <div class="card-label">Monitorados</div>
+            <div class="card-value" id="pn-monitored">&#8212;</div>
+            <div class="card-sub">placas cadastradas para acompanhamento</div>
+          </div>
+          <div class="card" style="border-color:rgba(239,68,68,.35)">
+            <div class="card-icon">&#128680;</div>
+            <div class="card-label">Alertas hoje</div>
+            <div class="card-value" style="color:var(--danger)" id="pn-alerts">&#8212;</div>
+            <div class="card-sub">acionamentos do dia atual</div>
+          </div>
+          <div class="card" style="cursor:pointer;border-color:rgba(34,197,94,.3)" onclick="openPessoasModal()" title="Ver todas as pessoas cadastradas">
+            <div class="card-icon" style="background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#4ade80">&#128100;</div>
+            <div class="card-label">Pessoas cadastradas</div>
+            <div class="card-value" id="pn-pessoas">&#8212;</div>
+            <div class="card-sub" id="pn-pessoas-sub">clique para consultar</div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-icon">&#128197;</div>
-          <div class="card-label">Hoje</div>
-          <div class="card-value" id="pn-today">&#8212;</div>
-          <div class="card-sub">eventos no dia</div>
+
+        <div class="charts-row painel-row-primary">
+          <div class="chart-card panel-chart-card">
+            <div class="chart-card-head">
+              <div class="chart-title-block">
+                <div class="chart-title">Eventos por hora</div>
+                <div class="chart-subtitle">Distribui&ccedil;&atilde;o das &uacute;ltimas 24 horas para leitura r&aacute;pida de pico e ociosidade.</div>
+              </div>
+              <div class="chart-badge" id="pn-hour-badge">24h</div>
+            </div>
+            <div class="chart-card-body">
+              <div class="chart-wrap" id="pn-chart-hour-wrap" style="height:220px">
+                <canvas id="pn-chart-hour"></canvas>
+                <div class="chart-empty">
+                  <div class="chart-empty-body">
+                    <div class="chart-empty-icon">&#128202;</div>
+                    <div class="chart-empty-title">Sem eventos recentes</div>
+                    <div class="chart-empty-copy">Assim que houver movimenta&ccedil;&atilde;o, este gr&aacute;fico vai mostrar a distribui&ccedil;&atilde;o por hora.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-card panel-chart-card">
+            <div class="chart-card-head">
+              <div class="chart-title-block">
+                <div class="chart-title">Eventos por dia</div>
+                <div class="chart-subtitle">Tend&ecirc;ncia consolidada dos &uacute;ltimos 30 dias para leitura de ritmo operacional.</div>
+              </div>
+              <div class="chart-badge" id="pn-day-badge">30 dias</div>
+            </div>
+            <div class="chart-card-body">
+              <div class="chart-wrap" id="pn-chart-day-wrap" style="height:220px">
+                <canvas id="pn-chart-day"></canvas>
+                <div class="chart-empty">
+                  <div class="chart-empty-body">
+                    <div class="chart-empty-icon">&#128198;</div>
+                    <div class="chart-empty-title">Sem hist&oacute;rico para exibir</div>
+                    <div class="chart-empty-copy">Quando houver registros di&aacute;rios, a curva vai aparecer aqui com a evolu&ccedil;&atilde;o do per&iacute;odo.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-icon">&#9201;</div>
-          <div class="card-label">Ultima hora</div>
-          <div class="card-value" id="pn-lasthour">&#8212;</div>
-          <div class="card-sub">eventos</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">&#128247;</div>
-          <div class="card-label">Cameras ativas</div>
-          <div class="card-value" id="pn-cameras">&#8212;</div>
-          <div class="card-sub">ultimas 24h</div>
-        </div>
-        <div class="card">
-          <div class="card-icon">&#128663;</div>
-          <div class="card-label">Monitorados</div>
-          <div class="card-value" id="pn-monitored">&#8212;</div>
-          <div class="card-sub">placas cadastradas</div>
-        </div>
-        <div class="card" style="border-color:rgba(239,68,68,.35)">
-          <div class="card-icon">&#128680;</div>
-          <div class="card-label">Alertas hoje</div>
-          <div class="card-value" style="color:var(--danger)" id="pn-alerts">&#8212;</div>
-          <div class="card-sub">placas monitoradas</div>
-        </div>
-        <div class="card" style="cursor:pointer;border-color:rgba(34,197,94,.3)" onclick="openPessoasModal()" title="Ver todas as pessoas cadastradas">
-          <div class="card-icon" style="background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#4ade80">&#128100;</div>
-          <div class="card-label">Pessoas Cadastradas</div>
-          <div class="card-value" id="pn-pessoas">&#8212;</div>
-          <div class="card-sub" id="pn-pessoas-sub">clique para ver</div>
+
+        <div class="charts-row painel-row-secondary">
+          <div class="chart-card panel-chart-card">
+            <div class="chart-card-head">
+              <div class="chart-title-block">
+                <div class="chart-title">Top 10 placas mais vistas</div>
+                <div class="chart-subtitle">Ranking operacional para identificar recorr&ecirc;ncia de passagens no recorte atual.</div>
+              </div>
+              <div class="chart-badge" id="pn-plates-badge">Ranking</div>
+            </div>
+            <div class="chart-card-body">
+              <div class="chart-wrap" id="pn-chart-plates-wrap" style="height:240px">
+                <canvas id="pn-chart-plates"></canvas>
+                <div class="chart-empty">
+                  <div class="chart-empty-body">
+                    <div class="chart-empty-icon">&#128663;</div>
+                    <div class="chart-empty-title">Nenhuma placa no ranking</div>
+                    <div class="chart-empty-copy">O ranking aparece automaticamente quando houver passagens suficientes para compara&ccedil;&atilde;o.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chart-card panel-chart-card">
+            <div class="chart-card-head">
+              <div class="chart-title-block">
+                <div class="chart-title">Eventos por c&acirc;mera</div>
+                <div class="chart-subtitle">Distribui&ccedil;&atilde;o da atividade recente por equipamento monitorado.</div>
+              </div>
+              <div class="chart-badge" id="pn-cam-badge">Distribui&ccedil;&atilde;o</div>
+            </div>
+            <div class="chart-card-body">
+              <div class="chart-wrap" id="pn-chart-cam-wrap" style="height:240px">
+                <canvas id="pn-chart-cam"></canvas>
+                <div class="chart-empty">
+                  <div class="chart-empty-body">
+                    <div class="chart-empty-icon">&#128247;</div>
+                    <div class="chart-empty-title">Nenhuma c&acirc;mera com atividade</div>
+                    <div class="chart-empty-copy">Quando as c&acirc;meras enviarem eventos, a distribui&ccedil;&atilde;o por equipamento ser&aacute; exibida aqui.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- linha 1: eventos/hora + eventos/dia -->
-      <div class="charts-row" style="grid-template-columns:3fr 2fr;margin-bottom:16px">
-        <div class="chart-card">
-          <div class="chart-title">Eventos por hora &mdash; ultimas 24h</div>
-          <div class="chart-wrap" style="height:200px"><canvas id="pn-chart-hour"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Eventos por dia &mdash; ultimos 30 dias</div>
-          <div class="chart-wrap" style="height:200px"><canvas id="pn-chart-day"></canvas></div>
-        </div>
-      </div>
-
-      <!-- linha 2: top placas + cameras -->
-      <div class="charts-row" style="grid-template-columns:1fr 1fr">
-        <div class="chart-card">
-          <div class="chart-title">Top 10 placas mais vistas</div>
-          <div class="chart-wrap" style="height:220px"><canvas id="pn-chart-plates"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Eventos por camera &mdash; ultimas 24h</div>
-          <div class="chart-wrap" style="height:220px"><canvas id="pn-chart-cam"></canvas></div>
-        </div>
-      </div>
-
     </div>
 
     <!-- ===== ABA EVENTOS ===== -->
@@ -5033,10 +5448,87 @@ function triggerAlarm(plate, lists, direcao) {
 // ===== PAINEL =====
 var _CHART_COLORS = ['#3b82f6','#22c55e','#f59e0b','#a855f7','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#64748b','#10b981','#8b5cf6'];
 
+function _chartUiColors() {
+  var style = getComputedStyle(document.documentElement);
+  var isBranco = document.documentElement.getAttribute('data-theme') === 'branco';
+  return {
+    tick: (style.getPropertyValue('--muted') || (isBranco ? '#64748b' : '#d4f5df')).trim(),
+    text: (style.getPropertyValue('--text') || (isBranco ? '#0f172a' : '#ffffff')).trim(),
+    grid: isBranco ? 'rgba(15,23,42,.08)' : 'rgba(212,245,223,.08)',
+    gridStrong: isBranco ? 'rgba(15,23,42,.12)' : 'rgba(212,245,223,.12)',
+    doughnutBorder: isBranco ? '#ffffff' : 'rgba(5,46,22,.88)'
+  };
+}
+
+function _destroyPanelChart(id) {
+  if (_pnCharts[id]) {
+    _pnCharts[id].destroy();
+    delete _pnCharts[id];
+  }
+}
+
+function _panelHasData(values) {
+  return Array.isArray(values) && values.some(function(v){ return Number(v || 0) > 0; });
+}
+
+function _panelSetChartState(wrapId, badgeId, hasData, emptyTitle, emptyCopy, badgeText) {
+  var wrap = document.getElementById(wrapId);
+  if (wrap) {
+    wrap.classList.toggle('is-empty', !hasData);
+    var title = wrap.querySelector('.chart-empty-title');
+    var copy = wrap.querySelector('.chart-empty-copy');
+    if (title && emptyTitle) title.textContent = emptyTitle;
+    if (copy && emptyCopy) copy.textContent = emptyCopy;
+  }
+  var badge = document.getElementById(badgeId);
+  if (badge && badgeText) badge.textContent = badgeText;
+}
+
+function _panelSetUpdatedAt(date) {
+  var el = document.getElementById('pn-updated-at');
+  if (!el) return;
+  var d = date instanceof Date ? date : new Date();
+  el.textContent = d.toLocaleDateString('pt-BR') + ' - ' + d.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function _panelSetOverviewMeta(ov) {
+  var total = Number(ov.total_events || ov.total || 0);
+  var cameras = Number(ov.active_cameras || 0);
+  var monitored = Number(ov.monitored_plates || 0);
+  var alerts = Number(ov.alerts_today || ov.alerts || 0);
+  var pillCameras = document.getElementById('pn-pill-cameras');
+  var pillMonitorados = document.getElementById('pn-pill-monitorados');
+  var pillAlerts = document.getElementById('pn-pill-alerts');
+  var statusText = document.getElementById('pn-status-text');
+  if (pillCameras) pillCameras.textContent = 'Cameras: ' + cameras.toLocaleString('pt-BR');
+  if (pillMonitorados) pillMonitorados.textContent = 'Monitorados: ' + monitored.toLocaleString('pt-BR');
+  if (pillAlerts) {
+    pillAlerts.textContent = 'Alertas: ' + alerts.toLocaleString('pt-BR');
+    pillAlerts.classList.toggle('is-alert', alerts > 0);
+    pillAlerts.classList.toggle('is-ok', alerts === 0);
+  }
+  if (statusText) {
+    if (alerts > 0) {
+      statusText.textContent = alerts.toLocaleString('pt-BR') + ' alerta(s) registrado(s) hoje. Priorize a triagem operacional.';
+    } else if (cameras > 0) {
+      statusText.textContent = cameras.toLocaleString('pt-BR') + ' camera(s) ativa(s) nas ultimas 24h e ' + total.toLocaleString('pt-BR') + ' evento(s) acumulados no sistema.';
+    } else if (monitored > 0) {
+      statusText.textContent = 'Sem atividade recente nas cameras, mas ha ' + monitored.toLocaleString('pt-BR') + ' placa(s) monitorada(s) cadastrada(s).';
+    } else {
+      statusText.textContent = 'Painel sincronizado. Assim que houver novas capturas, os indicadores serao atualizados.';
+    }
+  }
+}
+
 function _mkChart(id, type, labels, datasets, opts) {
   if (_pnCharts[id]) { _pnCharts[id].destroy(); }
   var ctx = document.getElementById(id);
   if (!ctx) return;
+  var ui = _chartUiColors();
   _pnCharts[id] = new Chart(ctx, {
     type: type,
     data: { labels: labels, datasets: datasets },
@@ -5045,8 +5537,8 @@ function _mkChart(id, type, labels, datasets, opts) {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.06)' } },
-        y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.07)' }, beginAtZero: true }
+        x: { ticks: { color: ui.tick, font: { size: 10 } }, grid: { color: ui.grid } },
+        y: { ticks: { color: ui.tick, font: { size: 10 } }, grid: { color: ui.gridStrong }, beginAtZero: true }
       }
     }, opts || {})
   });
@@ -5056,25 +5548,27 @@ function _mkDoughnut(id, labels, data) {
   if (_pnCharts[id]) { _pnCharts[id].destroy(); }
   var ctx = document.getElementById(id);
   if (!ctx) return;
+  var ui = _chartUiColors();
   _pnCharts[id] = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels: labels,
-      datasets: [{ data: data, backgroundColor: _CHART_COLORS, borderColor: '#ffffff', borderWidth: 2 }]
+      datasets: [{ data: data, backgroundColor: _CHART_COLORS, borderColor: ui.doughnutBorder, borderWidth: 2 }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '60%',
       plugins: {
-        legend: { display: true, position: 'right',
-          labels: { color: '#475569', font: { size: 10 }, boxWidth: 10, padding: 8 } }
+        legend: { display: true, position: 'bottom',
+          labels: { color: ui.tick, font: { size: 10 }, boxWidth: 10, padding: 10 } }
       }
     }
   });
 }
 
 async function loadPainel() {
+  _panelSetUpdatedAt(new Date());
   try {
     var ov = await fetch('/api/stats/overview').then(function(r){ return r.json(); });
     document.getElementById('pn-total').textContent     = (ov.total_events    || ov.total || 0).toLocaleString('pt-BR');
@@ -5083,11 +5577,14 @@ async function loadPainel() {
     document.getElementById('pn-cameras').textContent   = (ov.active_cameras  || 0).toLocaleString('pt-BR');
     document.getElementById('pn-monitored').textContent = (ov.monitored_plates || 0).toLocaleString('pt-BR');
     document.getElementById('pn-alerts').textContent    = (ov.alerts_today    || ov.alerts || 0).toLocaleString('pt-BR');
+    _panelSetOverviewMeta(ov || {});
   } catch(e) { console.error('overview', e); }
 
   try {
     var pq = await fetch('/api/pessoas?limit=1').then(function(r){ return r.json(); });
     document.getElementById('pn-pessoas').textContent = (pq.total || 0).toLocaleString('pt-BR');
+    var pessoasSub = document.getElementById('pn-pessoas-sub');
+    if (pessoasSub) pessoasSub.textContent = (pq.total || 0) > 0 ? 'clique para consultar cadastros' : 'nenhum cadastro encontrado';
   } catch(e) { console.error('pessoas count', e); }
 
   try {
@@ -5095,18 +5592,39 @@ async function loadPainel() {
     var phItems    = ph.items || [];
     var hourLabels = phItems.map(function(d){ return d.hour || d.label || ''; });
     var hourData   = phItems.map(function(d){ return d.count || d.total || 0; });
+    var hasHourData = _panelHasData(hourData);
     _mkChart('pn-chart-hour', 'bar', hourLabels, [{
       label: 'Eventos', data: hourData,
       backgroundColor: 'rgba(59,130,246,.55)', borderColor: '#3b82f6', borderWidth: 1,
       borderRadius: 3
     }], { plugins: { legend: { display: false } } });
-  } catch(e) { console.error('hour', e); }
+    _panelSetChartState(
+      'pn-chart-hour-wrap',
+      'pn-hour-badge',
+      hasHourData,
+      'Sem eventos recentes',
+      'Assim que houver movimentacao, este grafico vai mostrar a distribuicao por hora.',
+      hasHourData ? phItems.length.toLocaleString('pt-BR') + ' faixas' : 'Sem fluxo'
+    );
+  } catch(e) {
+    console.error('hour', e);
+    _destroyPanelChart('pn-chart-hour');
+    _panelSetChartState(
+      'pn-chart-hour-wrap',
+      'pn-hour-badge',
+      false,
+      'Grafico indisponivel',
+      'Nao foi possivel carregar os eventos por hora neste momento.',
+      'Indisponivel'
+    );
+  }
 
   try {
     var pd = await fetch('/api/stats/events-per-day').then(function(r){ return r.json(); });
     var pdItems   = pd.items || [];
     var dayLabels = pdItems.map(function(d){ return (d.day || '').substring(5); });
     var dayData   = pdItems.map(function(d){ return d.count || d.total || 0; });
+    var hasDayData = _panelHasData(dayData);
     _mkChart('pn-chart-day', 'line', dayLabels, [{
       label: 'Eventos', data: dayData,
       borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)',
@@ -5114,17 +5632,37 @@ async function loadPainel() {
     }], {
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }, grid: { color: 'rgba(0,0,0,.06)' } },
-        y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.07)' }, beginAtZero: true }
+        x: { ticks: { color: _chartUiColors().tick, font: { size: 9 }, maxRotation: 45 }, grid: { color: _chartUiColors().grid } },
+        y: { ticks: { color: _chartUiColors().tick, font: { size: 10 } }, grid: { color: _chartUiColors().gridStrong }, beginAtZero: true }
       }
     });
-  } catch(e) { console.error('day', e); }
+    _panelSetChartState(
+      'pn-chart-day-wrap',
+      'pn-day-badge',
+      hasDayData,
+      'Sem historico para exibir',
+      'Quando houver registros diarios, a curva vai aparecer aqui com a evolucao do periodo.',
+      hasDayData ? pdItems.length.toLocaleString('pt-BR') + ' dias' : 'Sem historico'
+    );
+  } catch(e) {
+    console.error('day', e);
+    _destroyPanelChart('pn-chart-day');
+    _panelSetChartState(
+      'pn-chart-day-wrap',
+      'pn-day-badge',
+      false,
+      'Grafico indisponivel',
+      'Nao foi possivel carregar a serie diaria neste momento.',
+      'Indisponivel'
+    );
+  }
 
   try {
     var tp = await fetch('/api/stats/top-plates?limit=10').then(function(r){ return r.json(); });
     var tpItems = tp.items || [];
     var pLabels = tpItems.map(function(d){ return d.plate || ''; });
     var pData   = tpItems.map(function(d){ return d.count || d.total || 0; });
+    var hasPlateData = _panelHasData(pData);
     _mkChart('pn-chart-plates', 'bar', pLabels, [{
       label: 'Passagens', data: pData,
       backgroundColor: _CHART_COLORS.map(function(c){ return c + '99'; }),
@@ -5133,22 +5671,65 @@ async function loadPainel() {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.06)' }, beginAtZero: true },
-        y: { ticks: { color: '#1e293b', font: { size: 10, weight: '600' } }, grid: { display: false } }
+        x: { ticks: { color: _chartUiColors().tick, font: { size: 10 } }, grid: { color: _chartUiColors().grid }, beginAtZero: true },
+        y: { ticks: { color: _chartUiColors().text, font: { size: 10, weight: '600' } }, grid: { display: false } }
       }
     });
-  } catch(e) { console.error('plates', e); }
+    _panelSetChartState(
+      'pn-chart-plates-wrap',
+      'pn-plates-badge',
+      hasPlateData,
+      'Nenhuma placa no ranking',
+      'O ranking aparece automaticamente quando houver passagens suficientes para comparacao.',
+      hasPlateData ? tpItems.length.toLocaleString('pt-BR') + ' placas' : 'Sem ranking'
+    );
+  } catch(e) {
+    console.error('plates', e);
+    _destroyPanelChart('pn-chart-plates');
+    _panelSetChartState(
+      'pn-chart-plates-wrap',
+      'pn-plates-badge',
+      false,
+      'Ranking indisponivel',
+      'Nao foi possivel carregar o ranking de placas agora.',
+      'Indisponivel'
+    );
+  }
 
   try {
     var ec = await fetch('/api/stats/events-per-camera').then(function(r){ return r.json(); });
     var ecItems = ec.items || [];
-    if (ecItems.length > 0) {
+    var camData = ecItems.map(function(d){ return d.count || d.total || 0; });
+    var hasCamData = _panelHasData(camData);
+    if (hasCamData) {
       _mkDoughnut('pn-chart-cam',
         ecItems.map(function(d){ return d.camera || ''; }),
-        ecItems.map(function(d){ return d.count || d.total || 0; })
+        camData
       );
+    } else {
+      _destroyPanelChart('pn-chart-cam');
     }
-  } catch(e) { console.error('cam', e); }
+    _panelSetChartState(
+      'pn-chart-cam-wrap',
+      'pn-cam-badge',
+      hasCamData,
+      'Nenhuma camera com atividade',
+      'Quando as cameras enviarem eventos, a distribuicao por equipamento sera exibida aqui.',
+      hasCamData ? ecItems.length.toLocaleString('pt-BR') + ' cameras' : 'Sem distribuicao'
+    );
+  } catch(e) {
+    console.error('cam', e);
+    _destroyPanelChart('pn-chart-cam');
+    _panelSetChartState(
+      'pn-chart-cam-wrap',
+      'pn-cam-badge',
+      false,
+      'Distribuicao indisponivel',
+      'Nao foi possivel carregar a atividade por camera neste momento.',
+      'Indisponivel'
+    );
+  }
+  _panelSetUpdatedAt(new Date());
 }
 
 // ===== ESTADO =====
