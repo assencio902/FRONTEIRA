@@ -1766,9 +1766,9 @@
     }
     :root[data-theme="verde"] #tab-alarmes .card,
     :root:not([data-theme]) #tab-alarmes .card {
-      background: linear-gradient(180deg, rgba(10,92,42,.95) 0%, rgba(6,78,36,.92) 100%);
-      border-color: rgba(110,231,160,.18);
-      box-shadow: 0 10px 26px rgba(0,0,0,.14);
+      background: var(--card);
+      border-color: var(--border);
+      box-shadow: none;
     }
     :root[data-theme="verde"] #tab-alarmes #alc-total,
     :root:not([data-theme]) #tab-alarmes #alc-total,
@@ -2821,6 +2821,10 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
     Veiculos
   </div>
+  <div class="nav-item nav-admin-only" onclick="openProdutividadeModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+    Produtividade
+  </div>
   <div class="nav-item" onclick="switchTab('cameras',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
     C&#226;meras
@@ -2867,7 +2871,6 @@
           <div class="painel-prod-head">
             <div class="painel-prod-actions">
               <div class="painel-prod-meta" id="pn-prod-meta">Aguardando atualiza&ccedil;&atilde;o da produtividade operacional.</div>
-              <button class="btn btn-outline btn-sm" type="button" data-perm="admin-only" onclick="openProdutividadeModal()">&#9998; Editar produtividade</button>
             </div>
           </div>
           <div class="painel-prod-grid">
@@ -4178,7 +4181,7 @@
     </div><!-- /tab-cadastro -->
 
 <!-- Modal: Confirmar Exclusão de Pessoa -->
-<div class="modal-overlay" id="cad-excluir-modal" onclick="if(event.target===this)_cadExcluirFechar()">
+<div class="modal-overlay" id="cad-excluir-modal">
   <div class="modal modal-sm" style="max-width:460px">
     <div class="modal-header">
       <h2>&#128465; Confirmar Exclus&atilde;o</h2>
@@ -4246,7 +4249,7 @@
 </div>
 
 <!-- Modal: Editar cadastro de pessoa -->
-<div class="modal-overlay" id="cad-edit-modal" onclick="if(event.target===this)_cadEditFechar()">
+<div class="modal-overlay" id="cad-edit-modal">
   <div class="modal" style="max-width:640px;width:97%;max-height:90vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0">
       <h2 id="cad-edit-titulo">&#9998; Editar cadastro</h2>
@@ -4367,7 +4370,7 @@
 </div>
 
 <!-- Modal: Nova Abordagem Rápida (a partir da ficha da pessoa) -->
-<div class="modal-overlay" id="cad-nova-ab-modal" onclick="if(event.target===this)closeModal('cad-nova-ab-modal')">
+<div class="modal-overlay" id="cad-nova-ab-modal">
   <div class="modal" style="max-width:720px;width:97%">
     <div class="modal-header">
       <h2>&#10133; Nova Abordagem</h2>
@@ -4598,7 +4601,7 @@
 </div>
 
 <!-- Modal: Pessoas Cadastradas (painel) -->
-<div class="modal-overlay" id="pm-pessoas-modal" onclick="if(event.target===this)closeModal('pm-pessoas-modal')">
+<div class="modal-overlay" id="pm-pessoas-modal">
   <div class="modal" style="max-width:900px;width:97%">
     <div class="modal-header">
       <h2>&#128100; Pessoas Cadastradas</h2>
@@ -5132,7 +5135,7 @@
 </div>
 
 <!-- MODAL JANELA TRAJETÓRIA -->
-<div class="modal-overlay" id="traj-picker-modal" onclick="if(event.target===this)closeModal('traj-picker-modal')">
+<div class="modal-overlay" id="traj-picker-modal">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
       <h2>&#128663; Trajet&#243;ria no Mapa</h2>
@@ -5171,7 +5174,7 @@
 </div>
 
 <!-- MODAL NOVA/EDITAR LISTA -->
-<div class="modal-overlay" id="list-modal" onclick="if(event.target===this)closeModal('list-modal')">
+<div class="modal-overlay" id="list-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="list-modal-title">Nova Lista</h2>
@@ -5190,7 +5193,7 @@
 </div>
 
 <!-- MODAL CADASTRAR VEICULO -->
-<div class="modal-overlay" id="vehicle-modal" onclick="if(event.target===this)closeModal('vehicle-modal')">
+<div class="modal-overlay" id="vehicle-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="veh-modal-title">Cadastrar Placa</h2>
@@ -5219,7 +5222,7 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="vehicle-target-modal" onclick="if(event.target===this)closeModal('vehicle-target-modal')">
+<div class="modal-overlay" id="vehicle-target-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2>Cadastrar Como Alvo</h2>
@@ -5245,7 +5248,7 @@
 </div>
 
 <!-- MODAL ADICIONAR/EDITAR C\u00c2MERA -->
-<div class="modal-overlay" id="camera-modal" onclick="if(event.target===this)closeModal('camera-modal')">
+<div class="modal-overlay" id="camera-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="camera-modal-title">Adicionar C&#226;mera</h2>
@@ -5311,7 +5314,7 @@
 </div>
 
 <!-- MODAL: PRODUTIVIDADE -->
-<div class="modal-overlay" id="painel-produtividade-modal" onclick="if(event.target===this)closeModal('painel-produtividade-modal')">
+<div class="modal-overlay" id="painel-produtividade-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2>Produtividade operacional</h2>
@@ -5341,7 +5344,7 @@
 </div>
 
 <!-- MODAL: USUARIO -->
-<div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeModal('user-modal')">
+<div class="modal-overlay" id="user-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="user-modal-title">Novo Usu&#225;rio</h2>
@@ -5387,7 +5390,7 @@
 </div>
 
 <!-- MODAL ALARME -->
-<div class="modal-overlay" id="alarme-modal" onclick="if(event.target===this)closeModal('alarme-modal')">
+<div class="modal-overlay" id="alarme-modal">
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="alarme-modal-title">Novo Alarme</h2>
