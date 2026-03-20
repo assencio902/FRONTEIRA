@@ -127,6 +127,8 @@
     .btn:hover { opacity:.9; transform:translateY(-1px); }
     .btn:active { transform:translateY(0); }
     .btn-primary { background:var(--accent); color:var(--btn-primary-text); }
+    .btn-add { background:#728857; border:1px solid rgba(255,255,255,.08); color:#ffffff; }
+    .btn-add:hover:not(:disabled) { background:#64784b; border-color:rgba(250,204,21,.4); color:#ffffff; opacity:1; }
     .btn-success { background:var(--success); color:var(--btn-success-text); }
     .btn-danger  { background:var(--danger); color:var(--btn-danger-text); }
     .btn-warning { background:#d97706; color:var(--btn-warning-text); }
@@ -1369,9 +1371,9 @@
       width:14px; height:14px; background:#fff; border-radius:50%; transition:left .2s; }
     .toggle-switch input[type=checkbox]:checked::after { left:21px; }
     .toggle-switch span { font-size:var(--fs-secondary); color:var(--text); }
-    .user-info-bar { padding:10px 16px 8px; border-top:1px solid var(--border); display:flex; flex-direction:column; align-items:center; gap:8px; }
-    .user-info-bar .uname { font-size:16px; font-weight:700; color:var(--sidebar-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; }
-    .user-info-bar .urole { font-size:var(--fs-secondary); color:var(--muted); margin-bottom:7px; }
+    .user-info-bar { padding:10px 16px 8px; border-top:1px solid var(--border); display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; }
+    .user-info-bar .uname { font-size:16px; font-weight:700; color:var(--sidebar-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; text-align:center; line-height:1.25; }
+    .user-info-bar .urole { width:100%; text-align:center; font-size:var(--fs-secondary); color:var(--muted); margin-bottom:7px; line-height:1.3; }
     .btn-logout { display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:var(--fs-button); cursor:pointer; transition:all .15s; width:min(100%, 180px); line-height:var(--lh-tight); justify-content:center; font-weight:600; margin:0 auto; }
     .btn-logout:hover { background:rgba(255,107,107,.15); border-color:#ff6b6b; color:#ff6b6b; }
     :root[data-theme="verde"], :root:not([data-theme]) {
@@ -1426,8 +1428,20 @@
       border-color: rgba(255,255,255,.08);
       color: #ffffff;
     }
+    :root[data-theme="verde"] .btn-add,
+    :root:not([data-theme]) .btn-add {
+      background: var(--green-btn-success-bg);
+      border-color: rgba(255,255,255,.08);
+      color: #ffffff;
+    }
     :root[data-theme="verde"] .btn-success:hover:not(:disabled),
     :root:not([data-theme]) .btn-success:hover:not(:disabled) {
+      background: var(--green-btn-success-hover);
+      border-color: rgba(250,204,21,.4);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-add:hover:not(:disabled),
+    :root:not([data-theme]) .btn-add:hover:not(:disabled) {
       background: var(--green-btn-success-hover);
       border-color: rgba(250,204,21,.4);
       color: #ffffff;
@@ -2427,8 +2441,16 @@
       border: none;
       color: #fff;
     }
+    :root[data-theme="branco"] .btn-add {
+      background: #5d7c43;
+      border: none;
+      color: #fff;
+    }
     :root[data-theme="branco"] .btn-primary:hover {
       background: var(--pmro-azul-secundario);
+    }
+    :root[data-theme="branco"] .btn-add:hover {
+      background: #4f6a39;
     }
     :root[data-theme="branco"] .btn-danger {
       background: #dc2626;
@@ -2718,7 +2740,9 @@
     :root[data-theme="branco"] .user-info-bar .urole,
     :root[data-theme="branco"] #sidebar .user-info-bar .urole,
     :root[data-theme="branco"] #sb-role {
-      display: none;
+      display: block;
+      color: rgba(255,255,255,0.82);
+      text-align: center;
     }
     :root[data-theme="branco"] .user-info-bar .uname,
     :root[data-theme="branco"] #sidebar .user-info-bar .uname {
@@ -3871,7 +3895,7 @@
             <div style="font-weight:700;font-size:.97rem">Listas de Monitoramento</div>
             <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Crie listas para classificar veiculos (ex: Roubados, Furtados, Investigados...)</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openListModal()">+ Nova Lista</button>
+          <button class="btn btn-add btn-sm" onclick="openListModal()">+ Nova Lista</button>
         </div>
         <div id="lists-grid" class="list-grid">
           <div class="empty-state"><div class="icon">&#128193;</div>Carregando...</div>
@@ -3889,7 +3913,7 @@
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input type="text" id="list-detail-search" placeholder="Buscar placa..." style="background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius);font-size:.84rem;width:160px" onkeydown="if(event.key==='Enter')loadListVehicles()">
             <button class="btn btn-outline btn-sm" onclick="loadListVehicles()">Filtrar</button>
-            <button class="btn btn-success btn-sm" onclick="openAddVehicleModal()">+ Adicionar Placa</button>
+            <button class="btn btn-add btn-sm" onclick="openAddVehicleModal()">+ Adicionar Placa</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -3920,7 +3944,7 @@
           <button id="cam-sort-ip" class="btn btn-outline btn-xs" onclick="_setCamSort('ip')">IP</button>
           <button id="cam-sort-status" class="btn btn-outline btn-xs" onclick="_setCamSort('status')">Status</button>
           <button class="btn btn-outline btn-sm" onclick="loadCameras()" id="btn-refresh-cameras" title="Atualizar lista">&#8635; Atualizar</button>
-          <button class="btn btn-primary btn-sm" onclick="openCameraModal()">+ Adicionar c&#226;mera</button>
+          <button class="btn btn-add btn-sm" onclick="openCameraModal()">+ Adicionar c&#226;mera</button>
         </div>
       </div>
       <div class="form-error" id="cameras-error" style="margin-bottom:12px"></div>
@@ -4057,7 +4081,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <span style="font-size:.82rem;color:var(--muted)">Pesquise por nome, apelido, CPF ou RG &mdash; ou deixe em branco para ver todos.</span>
           <!-- Botão "+ Nova Pessoa": apenas admin e operador -->
-          <button class="btn btn-outline btn-sm" data-perm="operador-plus" onclick="cadastroNovaPessoa()">&#43; Nova Pessoa</button>
+<button class="btn btn-add btn-sm" data-perm="operador-plus" onclick="cadastroNovaPessoa()">&#43; Nova Pessoa</button>
         </div>
 
         <!-- Barra de busca -->
@@ -4298,7 +4322,7 @@
             <div style="font-size:.82rem;font-weight:600;color:var(--accent);margin-bottom:4px">&#128100; Cadastro j&aacute; existente no sistema</div>
             <div id="ab-cadastro-existente-info" style="font-size:.81rem;color:var(--text);margin-bottom:8px"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px">
-              <button type="button" class="btn btn-sm" style="background:var(--accent);color:#000;font-weight:600" onclick="abUsarCadastroExistente()">&#43; Adicionar nova abordagem para este cadastro</button>
+              <button type="button" class="btn btn-add btn-sm" onclick="abUsarCadastroExistente()">&#43; Adicionar nova abordagem para este cadastro</button>
               <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relat&oacute;rio completo</button>
             </div>
           </div>
@@ -4307,7 +4331,7 @@
             <div style="font-size:.82rem;font-weight:600;color:#f59e0b;margin-bottom:4px">&#9888; CPF j&aacute; cadastrado no banco de dados</div>
             <div style="font-size:.81rem;color:var(--text);margin-bottom:8px">Deseja adicionar nova abordagem para este cadastro?</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <button type="button" class="btn btn-outline btn-sm" onclick="abUsarCadastroExistente()">&#43; Nova abordagem para este cadastro</button>
+              <button type="button" class="btn btn-add btn-sm" onclick="abUsarCadastroExistente()">&#43; Nova abordagem para este cadastro</button>
               <button type="button" class="btn btn-outline btn-sm" style="font-size:.8rem" onclick="abAbrirRelatorioExistente()">&#128202; Abrir relat&oacute;rio completo</button>
             </div>
           </div>
@@ -4465,7 +4489,7 @@
         <!-- Acompanhantes -->
         <div style="margin-bottom:20px">
           <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">&#128101; Acompanhantes</div>
-          <button type="button" class="btn btn-outline btn-sm" style="margin-bottom:12px" onclick="abAdicionarPessoa()">&#43; Adicionar acompanhante</button>
+          <button type="button" class="btn btn-add btn-sm" style="margin-bottom:12px" onclick="abAdicionarPessoa()">&#43; Adicionar acompanhante</button>
           <div id="ab-pessoas-list">
             <div data-placeholder="1" style="color:var(--muted);font-size:.82rem;font-style:italic;padding:8px 0">Nenhum acompanhante adicionado.</div>
           </div>
@@ -4941,7 +4965,7 @@
     <div style="margin-bottom:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">&#128101; Acompanhantes Adicionais</div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="cadAbordagemAdicionarOcupante()">&#43; Adicionar acompanhante</button>
+          <button type="button" class="btn btn-add btn-sm" onclick="cadAbordagemAdicionarOcupante()">&#43; Adicionar acompanhante</button>
       </div>
       <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Outras pessoas presentes na abordagem (al&eacute;m da pessoa vinculada).</div>
       <div id="cad-ab-ocupantes-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -5018,7 +5042,7 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="loadAlarmes()" title="Atualizar">&#8635; Atualizar</button>
-          <button class="btn btn-primary btn-sm nav-admin-only" onclick="openAlarmeModal(null)">+ Novo Alarme</button>
+          <button class="btn btn-add btn-sm nav-admin-only" onclick="openAlarmeModal(null)">+ Novo Alarme</button>
         </div>
       </div>
 
@@ -5110,7 +5134,8 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="loadUsers()" title="Atualizar">&#8635; Atualizar</button>
-          <button class="btn btn-primary btn-sm" onclick="openUserModal(null)">+ Novo Usu&#225;rio</button>
+          <button class="btn btn-outline btn-sm" id="users-activity-toggle-btn" onclick="toggleUsersActivitySection()" title="Mostrar ou ocultar logs de acesso">&#128203; Ver logs de acesso</button>
+          <button class="btn btn-add btn-sm" onclick="openUserModal(null)">+ Novo Usu&#225;rio</button>
         </div>
       </div>
 
@@ -5134,13 +5159,16 @@
         </div>
       </div>
 
-      <div class="card" style="padding:18px;margin-bottom:18px">
+      <div class="card" id="users-activity-panel" style="padding:18px;margin-bottom:18px;display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px">
           <div>
             <div style="font-weight:700;font-size:.92rem">Monitoramento de acesso</div>
             <div style="font-size:.78rem;color:var(--muted);margin-top:3px">Acompanhe logins, paginas acessadas e usuarios online em tempo real.</div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="loadAdminActivity()" title="Atualizar monitoramento">&#8635; Atualizar acessos</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="loadAdminActivity()" title="Atualizar monitoramento">&#8635; Atualizar acessos</button>
+            <button class="btn btn-outline btn-sm" onclick="toggleUsersActivitySection(false)" title="Ocultar logs de acesso">&#10005; Fechar logs</button>
+          </div>
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
@@ -6305,6 +6333,14 @@ function _fmtProdNumber(value, maxDigits) {
   });
 }
 
+function _fmtProdDrogas(value) {
+  var drogasKg = _prodNumber(value);
+  if (drogasKg >= 1000) {
+    return _fmtProdNumber(drogasKg / 1000, 2) + ' t';
+  }
+  return _fmtProdNumber(drogasKg, 2) + ' kg';
+}
+
 function _parseProdInput(id) {
   var el = document.getElementById(id);
   var raw = String((el && el.value) || '').trim();
@@ -6335,7 +6371,7 @@ function _setPainelProdutividade(data) {
   var metaEl = document.getElementById('pn-prod-meta');
   var drogasKg = _prodNumber(data.drogas_apreendidas_kg != null ? data.drogas_apreendidas_kg : data.peso_kg);
   if (armasEl) armasEl.textContent = _fmtProdNumber(data.armas_apreendidas, 0);
-  if (drogasKgEl) drogasKgEl.textContent = _fmtProdNumber(drogasKg, 2) + ' kg';
+  if (drogasKgEl) drogasKgEl.textContent = _fmtProdDrogas(drogasKg);
   if (veicEl) veicEl.textContent = _fmtProdNumber(data.veiculos_recuperados, 0);
   if (pessoasEl) pessoasEl.textContent = _fmtProdNumber(data.pessoas_abordadas, 0);
   if (veicAbEl) veicAbEl.textContent = _fmtProdNumber(data.veiculos_abordados, 0);
@@ -6353,7 +6389,7 @@ function _setProdutividadeTab(data) {
   var launchMetaEl = document.getElementById('prod-launch-meta');
   var currentText = 'Acumulado atual: '
     + _fmtProdNumber(data.armas_apreendidas, 0) + ' armas, '
-    + _fmtProdNumber(drogasKg, 2) + ' kg e '
+    + _fmtProdDrogas(drogasKg) + ' e '
     + _fmtProdNumber(data.veiculos_recuperados, 0) + ' veiculos recuperados.';
   var metaText = _produtividadeMetaText(
     data,
@@ -6368,7 +6404,7 @@ function _setProdutividadeTab(data) {
   var totalVeiculosAbEl = document.getElementById('prod-total-veiculos-abordados');
 
   if (totalArmasEl) totalArmasEl.textContent = _fmtProdNumber(data.armas_apreendidas, 0);
-  if (totalDrogasEl) totalDrogasEl.textContent = _fmtProdNumber(drogasKg, 2) + ' kg';
+  if (totalDrogasEl) totalDrogasEl.textContent = _fmtProdDrogas(drogasKg);
   if (totalVeiculosEl) totalVeiculosEl.textContent = _fmtProdNumber(data.veiculos_recuperados, 0);
   if (totalPessoasEl) totalPessoasEl.textContent = _fmtProdNumber(data.pessoas_abordadas, 0);
   if (totalVeiculosAbEl) totalVeiculosAbEl.textContent = _fmtProdNumber(data.veiculos_abordados, 0);
@@ -13785,8 +13821,14 @@ window.addEventListener('focus', function() {
   var sbUser = document.getElementById('sb-username');
   var sbRole = document.getElementById('sb-role');
   var tbUser = document.getElementById('topbar-user');
-  if (sbUser) sbUser.textContent = window._authName || window._authUser;
-  if (sbRole) sbRole.textContent = window._authRole === 'admin' ? '&#128081; Administrador' : window._authRole === 'operador' ? '&#128100; Operador' : '&#128065;&#65039; Visualizador';
+  var authDisplayName = (window._authName || '').trim() || (window._authUser || '').trim() || 'Usuario';
+  var authRoleLabel = window._authRole === 'admin'
+    ? 'Administrador'
+    : window._authRole === 'operador'
+      ? 'Operador'
+      : 'Visualizador';
+  if (sbUser) sbUser.textContent = authDisplayName;
+  if (sbRole) sbRole.textContent = 'Nivel de acesso: ' + authRoleLabel;
   if (tbUser) tbUser.textContent = window._authUser;
   // Mostrar itens de admin
   if (window._authRole === 'admin') {
@@ -14151,6 +14193,8 @@ async function changeMyPassword() {
 var _usersCache = [];
 var _adminActivityOnlineCache = [];
 var _adminActivityRecentCache = [];
+var _usersActivityVisible = false;
+var _usersActivityLoaded = false;
 
 function _fmtAdminTs(value, withSeconds) {
   if (!value) return '\u2014';
@@ -14181,6 +14225,24 @@ function _activityBadge(activityType, activityLabel) {
         ? 'badge-green'
         : 'badge-yellow';
   return '<span class="badge ' + cls + '">' + (activityLabel || activityType || 'Atividade') + '</span>';
+}
+
+function _syncUsersActivityToggleButton() {
+  var btn = document.getElementById('users-activity-toggle-btn');
+  if (!btn) return;
+  btn.innerHTML = _usersActivityVisible ? '&#128203; Ocultar logs' : '&#128203; Ver logs de acesso';
+}
+
+async function toggleUsersActivitySection(forceOpen) {
+  var panel = document.getElementById('users-activity-panel');
+  if (!panel) return;
+  var nextVisible = typeof forceOpen === 'boolean' ? forceOpen : !_usersActivityVisible;
+  _usersActivityVisible = nextVisible;
+  panel.style.display = nextVisible ? 'block' : 'none';
+  _syncUsersActivityToggleButton();
+  if (nextVisible && !_usersActivityLoaded) {
+    await loadAdminActivity();
+  }
 }
 
 function _renderOnlineUsers(items) {
@@ -14272,6 +14334,7 @@ async function loadAdminActivity() {
 
     _renderOnlineUsers(_adminActivityOnlineCache);
     _renderRecentActivity(_adminActivityRecentCache);
+    _usersActivityLoaded = true;
   } catch (e) {
     if (err) err.textContent = 'Erro ao carregar monitoramento de acesso: ' + e.message;
     if (onlineBody) onlineBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:24px">Falha ao carregar usuarios online.</td></tr>';
@@ -14296,7 +14359,8 @@ async function loadUsers() {
     document.getElementById('uc-admins').textContent    = _usersCache.filter(function(u){ return u.role==='admin'; }).length;
     document.getElementById('uc-operators').textContent = _usersCache.filter(function(u){ return u.role==='operador' || u.role==='operator'; }).length;
     document.getElementById('uc-inactive').textContent  = _usersCache.filter(function(u){ return !u.ativa; }).length;
-    await loadAdminActivity();
+    _syncUsersActivityToggleButton();
+    if (_usersActivityVisible) await loadAdminActivity();
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar usu\u00e1rios: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
