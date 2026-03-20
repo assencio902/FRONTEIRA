@@ -134,6 +134,14 @@
     .btn-warning { background:#d97706; color:var(--btn-warning-text); }
     .btn-outline { background:var(--btn-secondary-bg); border:1px solid var(--btn-secondary-border); color:var(--btn-secondary-text); }
     .btn-outline:hover { color:var(--accent); border-color:var(--accent); background:var(--btn-secondary-hover-bg); }
+    .ev-period-btn:hover { background:rgba(114,136,87,.18); border-color:#728857; color:#fff; }
+    .ev-period-btn.active {
+      background:#728857;
+      border-color:#728857;
+      color:#fff;
+      font-weight:700;
+      box-shadow:0 0 0 1px rgba(255,255,255,.05) inset;
+    }
     .btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
     .btn-sm { padding:8px 14px; font-size:14px; border-radius:7px; height:34px; }
     .btn-xs { padding:6px 11px; font-size:13px; border-radius:6px; height:30px; }
@@ -1242,6 +1250,62 @@
     #bat-sub-central .cen-btn-clear:hover  { background:rgba(255,255,255,.06); border-color:var(--text); color:var(--text); }
     #bat-sub-central .cen-btn-clear:active { opacity:.8; }
     #bat-sub-central .cen-btn-clear:disabled { opacity:.4; cursor:not-allowed; }
+    #cen-view-placas .plate-tag {
+      background:rgba(196,166,74,.12);
+      color:#dbc483;
+      border-color:rgba(196,166,74,.28);
+    }
+    #cen-view-placas .plate-tag.plate-alert {
+      background:rgba(239,68,68,.18);
+      color:#fca5a5;
+      border-color:rgba(239,68,68,.4);
+    }
+    #cen-view-placas .cen-target-badge {
+      background:rgba(160,122,36,.32);
+      color:#fff7db;
+      border:1px solid rgba(196,166,74,.32);
+    }
+    #cen-view-placas .cen-route-badge {
+      background:rgba(160,122,36,.24);
+      color:#fff7db;
+      border:1px solid rgba(196,166,74,.28);
+    }
+    :root[data-theme="verde"] #cen-view-placas .table-wrap,
+    :root:not([data-theme]) #cen-view-placas .table-wrap,
+    :root[data-theme="verde"] #cen-view-grupos .table-wrap,
+    :root:not([data-theme]) #cen-view-grupos .table-wrap {
+      background:rgba(20,26,18,.52);
+      border:1px solid rgba(196,166,74,.16);
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 10px 28px rgba(0,0,0,.16);
+    }
+    :root[data-theme="verde"] #cen-view-placas table thead tr,
+    :root:not([data-theme]) #cen-view-placas table thead tr,
+    :root[data-theme="verde"] #cen-view-grupos table thead tr,
+    :root:not([data-theme]) #cen-view-grupos table thead tr {
+      background:rgba(39,48,31,.92);
+      border-bottom:1px solid rgba(196,166,74,.14);
+    }
+    :root[data-theme="verde"] #cen-view-placas table tbody tr,
+    :root:not([data-theme]) #cen-view-placas table tbody tr,
+    :root[data-theme="verde"] #cen-view-grupos table tbody tr,
+    :root:not([data-theme]) #cen-view-grupos table tbody tr {
+      background:rgba(61,73,44,.42);
+    }
+    :root[data-theme="verde"] #cen-view-placas table tbody td,
+    :root:not([data-theme]) #cen-view-placas table tbody td,
+    :root[data-theme="verde"] #cen-view-grupos table tbody td,
+    :root:not([data-theme]) #cen-view-grupos table tbody td {
+      color:rgba(241,236,217,.92);
+      border-bottom:1px solid rgba(196,166,74,.08);
+    }
+    :root[data-theme="verde"] #cen-view-placas table tbody tr:hover,
+    :root:not([data-theme]) #cen-view-placas table tbody tr:hover,
+    :root[data-theme="verde"] #cen-view-grupos table tbody tr:hover,
+    :root:not([data-theme]) #cen-view-grupos table tbody tr:hover {
+      background:rgba(196,166,74,.08);
+    }
     /* ---- Tipografia padronizada: Aba Batedor (tema branco) ---- */
     :root[data-theme="branco"] #tab-batedor .sub-tabs .sub-tab.active {
       font-size:20px;
@@ -1545,6 +1609,14 @@
       background: var(--green-btn-outline-hover-bg);
       border-color: var(--green-btn-outline-hover-border);
       color: var(--green-btn-outline-hover-text);
+    }
+    :root[data-theme="verde"] .ev-period-btn.active,
+    :root:not([data-theme]) .ev-period-btn.active,
+    :root[data-theme="branco"] .ev-period-btn.active {
+      background:#728857;
+      border-color:#728857;
+      color:#fff;
+      box-shadow:0 0 0 1px rgba(255,255,255,.05) inset;
     }
     :root[data-theme="verde"] .nav-item:hover,
     :root:not([data-theme]) .nav-item:hover,
@@ -3517,14 +3589,14 @@
         <input type="text" id="ev-search" placeholder="Filtrar por placa..." onkeydown="if(event.key==='Enter')filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
         <select id="ev-camera" onchange="filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"><option value="">Todas as cameras</option></select>
         <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">De</label>
-        <input type="datetime-local" id="ev-date-from" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="filterEvents()">
+        <input type="datetime-local" id="ev-date-from" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
         <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">Até</label>
-        <input type="datetime-local" id="ev-date-to" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="filterEvents()">
-        <button class="btn btn-outline btn-sm" onclick="setDatePreset('today')">Hoje</button>
-        <button class="btn btn-outline btn-sm" onclick="setDatePreset('24h')">24h</button>
-        <button class="btn btn-outline btn-sm" onclick="setDatePreset('week')">7 dias</button>
-        <button class="btn btn-outline btn-sm" onclick="setDatePreset('30d')">30 dias</button>
-        <button class="btn btn-outline btn-sm" onclick="setDatePreset('90d')">90 dias</button>
+        <input type="datetime-local" id="ev-date-to" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
+        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="today" onclick="setDatePreset('today')">Hoje</button>
+        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="24h" onclick="setDatePreset('24h')">24h</button>
+        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="week" onclick="setDatePreset('week')">7 dias</button>
+        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="30d" onclick="setDatePreset('30d')">30 dias</button>
+        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="90d" onclick="setDatePreset('90d')">90 dias</button>
         <button class="btn btn-search btn-sm" onclick="filterEvents()">&#128269; Buscar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
         <select id="ev-limit-select" onchange="setEvLimit(this.value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
@@ -5523,7 +5595,6 @@
         <h2 id="cgs-det-titulo" style="margin:0;font-size:1rem;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Detalhe do Grupo</h2>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button id="cgs-det-btn-comboio" onclick="_cgsDetAbrir()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128663;&#128663; Rel. Comboio</button>
         <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
         <button onclick="_cgsVerRotaNoMapa()" style="background:#15803d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127760; Ver rota no mapa</button>
         <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
@@ -7503,6 +7574,18 @@ function _toLocalInput(d) {
     'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
+function _clearEventPresetActive() {
+  document.querySelectorAll('#tab-eventos .ev-period-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+}
+
+function _setEventPresetActive(preset) {
+  document.querySelectorAll('#tab-eventos .ev-period-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-preset') === preset);
+  });
+}
+
 function setDatePreset(preset) {
   var now  = new Date();
   var from;
@@ -7517,6 +7600,7 @@ function setDatePreset(preset) {
   } else if (preset === '90d') {
     from = new Date(now.getTime() - 90 * 24 * 3600 * 1000);
   }
+  _setEventPresetActive(preset);
   document.getElementById('ev-date-from').value = _toLocalInput(from);
   document.getElementById('ev-date-to').value   = _toLocalInput(now);
   filterEvents();
@@ -7561,6 +7645,7 @@ function clearFilter() {
   document.getElementById('ev-camera').value = '';
   document.getElementById('ev-date-from').value = '';
   document.getElementById('ev-date-to').value = '';
+  _clearEventPresetActive();
   curFilter   = '';
   curCamera   = '';
   curDateFrom = '';
@@ -8065,10 +8150,8 @@ function _cgsRenderTable(items, total) {
 
     // Ações
     var safeId  = (g.id || '').replace(/'/g,"\\'");
-    var safePls = JSON.stringify(g.plates).replace(/'/g,"\\'");
     var ações = '<div class="action-buttons">'
       + '<button class="btn btn-outline btn-xs" title="Visualizar grupo" onclick="_cgsOpenDetalhe(\'' + safeId + '\')">&#128269; Visualizar</button>'
-      + '<button class="btn btn-xs" style="background:rgba(239,68,68,.6);color:#fff" title="Relatório de comboio" onclick="openComboioReport(\'' + g.plates[0].replace(/'/g,"\\'") + '\',' + safePls.replace(/'/g,"\\'") + ',{window:(document.getElementById(\'cgs-window\')||{}).value||\'24h\'})">&#128663;&#128663; Comboio</button>'
       + '</div>';
 
     return '<tr style="' + rowStyle + '">'
@@ -8095,12 +8178,6 @@ function _cgsOpenDetalhe(groupId) {
   _cgsCurrentGroup = group;
   _cgsBuildDetalhe(group);
   openModal('cgs-detalhe-modal');
-}
-
-function _cgsDetAbrir() {
-  if (!_cgsCurrentGroup) return;
-  var w = (document.getElementById('cgs-window') || {}).value || '24h';
-  openComboioReport(_cgsCurrentGroup.plates[0], _cgsCurrentGroup.plates, { window: w });
 }
 
 function _cgsBuildDetalhe(g) {
@@ -9322,11 +9399,11 @@ function _sinaisBadges(item) {
     var gs = item.in_grupos.map(function(g){ return g.plate + ' (' + g.cameras_together + 'câm)'; }).join(', ');
     parts.push('<span class="badge" style="background:rgba(34,197,94,.2);color:#86efac" title="Grupos — junto com: ' + gs + '">&#128101; G</span>');
   }
-  if (item.is_alvo) parts.push('<span class="badge badge-red" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="Alvo rastreado: ' + (item.alvo_descricao||'') + '">&#127919; A</span>');
+  if (item.is_alvo) parts.push('<span class="badge cen-target-badge" title="Alvo rastreado: ' + (item.alvo_descricao||'') + '">&#127919; A</span>');
   if (_tcHasRouteSimilarity(item)) {
     var _rs = item.threat_center.route_similarity;
     var _pct = Math.round((_rs.similarity_ratio || 0) * 100);
-    parts.push('<span class="badge" style="background:rgba(124,58,237,.4);color:#ddd8fe" title="Rota parecida com alvo ' + (_rs.best_alvo||'?') + ' — ' + _pct + '% câmeras em comum">&#128336; ROTA ' + _pct + '%</span>');
+    parts.push('<span class="badge cen-route-badge" title="Rota parecida com alvo ' + (_rs.best_alvo||'?') + ' — ' + _pct + '% câmeras em comum">&#128336; ROTA ' + _pct + '%</span>');
   }
   if (item.sinais >= 3) parts.unshift('<span class="badge badge-red" style="font-size:.7rem">&#9889; MÚLTIPLOS</span>');
   return parts.join(' ');
@@ -9368,9 +9445,9 @@ function renderCentral(items, total) {
         : '<span style="font-size:.76rem;color:#fca5a5">Parceiro não encontrado</span>';
     }
     var alvoCell = item.is_alvo
-      ? '<span class="badge" style="background:rgba(139,92,246,.3);color:#c4b5fd" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
+      ? '<span class="badge cen-target-badge" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
-    var rowStyle = item.sinais >= 3 ? 'background:rgba(239,68,68,.06)' : item.is_alvo ? 'background:rgba(139,92,246,.05)' : '';
+    var rowStyle = item.sinais >= 3 ? 'background:rgba(239,68,68,.06)' : item.is_alvo ? 'background:rgba(196,166,74,.08)' : '';
     return '<tr style="' + rowStyle + '">'
       + '<td>' + plateHtml(item.plate) + '</td>'
       + '<td><span class="badge ' + _cenScoreClass(item.score_total) + '">' + item.score_total + '</span></td>'
@@ -9383,7 +9460,6 @@ function renderCentral(items, total) {
       + '<td style="white-space:nowrap">' + fmtTs(item.last_seen)  + '</td>'
       + '<td class="action-cell"><div class="action-buttons">'
       + '<button class="btn btn-outline btn-xs" title="Hist&oacute;rico de eventos" onclick="openDetail(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128269; Visualizar</button>'
-      + '<button class="btn btn-xs" style="background:rgba(139,92,246,.5);color:#fff" title="Relat&oacute;rio de batedor" onclick="openBatedorReport(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128196; Relat&oacute;rio</button>'
       + '</div></td>'
       + '</tr>';
   }).join('');
