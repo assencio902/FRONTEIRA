@@ -364,7 +364,7 @@
   <div class="page-footer">BPFRON &nbsp;·&nbsp; Sistema de Monitoramento &nbsp;·&nbsp; Uso Restrito</div>
 
   <script>
-    var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname'];
+    var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname', 'bpfron_session_id'];
 
     function _authMigrateLegacyStorage() {
       _AUTH_KEYS.forEach(function(key) {
@@ -426,7 +426,8 @@
           bpfron_token: data.access_token,
           bpfron_role: data.role,
           bpfron_user: data.username,
-          bpfron_fullname: data.full_name
+          bpfron_fullname: data.full_name,
+          bpfron_session_id: data.session_id
         });
         window.location.replace('/dashboard');
       } catch(e) {

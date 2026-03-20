@@ -13,6 +13,7 @@ from auth_core import (
     verify_password,
 )
 from rbac import normalize_role
+from services.admin_activity_service import start_user_session
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +54,21 @@ def build_auth_router(conn_factory: Callable[[], Any]) -> APIRouter:
 
         token = make_access_token(uname, role, full_name or uname)
         refresh_token = make_refresh_token(uname)
+        session_id = ""
+        try:
+            session_id = start_user_session(
+                conn_factory,
+                request=request,
+                username=uname,
+                full_name=full_name or uname,
+                role=role,
+            )
+        except Exception:
+            logger.exception("[AUTH] Falha ao registrar sessao de auditoria para %s", uname)
         return {
             "access_token": token,
             "refresh_token": refresh_token,
+            "session_id": session_id,
             "token_type": "bearer",
             "expires_in": JWT_EXPIRE * 3600,
             "role": role,

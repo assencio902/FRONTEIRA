@@ -34,6 +34,7 @@ from auth_core import (
 )
 from api.abordagens_router import build_abordagens_router
 from api.alarmes_router import build_alarmes_router
+from api.admin_activity_router import build_admin_activity_router
 from api.auth_router import build_auth_router
 from api.alvos_router import build_alvos_router
 from api.camera_router import build_camera_router
@@ -301,6 +302,59 @@ def _init_db():
                     "INSERT INTO users (username, password_hash, full_name, role) VALUES (%s, %s, %s, %s)",
                     (ADMIN_BOOTSTRAP_USER, hash_password(ADMIN_BOOTSTRAP_PASSWORD), "Administrador", "admin")
                 )
+
+            # Auditoria administrativa de acessos e presenca online
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admin_user_sessions (
+                    id SERIAL PRIMARY KEY,
+                    session_id TEXT UNIQUE NOT NULL,
+                    username TEXT NOT NULL,
+                    full_name TEXT DEFAULT '',
+                    role TEXT DEFAULT 'visualizador',
+                    login_at TIMESTAMPTZ DEFAULT NOW(),
+                    last_seen_at TIMESTAMPTZ DEFAULT NOW(),
+                    logout_at TIMESTAMPTZ,
+                    last_page_key TEXT,
+                    last_page_label TEXT,
+                    last_page_path TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    is_online BOOLEAN DEFAULT TRUE
+                );
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS admin_user_activity_log (
+                    id BIGSERIAL PRIMARY KEY,
+                    session_id TEXT,
+                    username TEXT NOT NULL,
+                    full_name TEXT DEFAULT '',
+                    role TEXT DEFAULT 'visualizador',
+                    activity_type TEXT NOT NULL,
+                    page_key TEXT,
+                    page_label TEXT,
+                    page_path TEXT,
+                    details JSONB DEFAULT '{}'::jsonb,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                """
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_admin_user_sessions_online ON admin_user_sessions(is_online, last_seen_at DESC);"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_admin_user_sessions_username ON admin_user_sessions(username, last_seen_at DESC);"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_admin_user_activity_user_time ON admin_user_activity_log(username, created_at DESC);"
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_admin_user_activity_type_time ON admin_user_activity_log(activity_type, created_at DESC);"
+            )
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS vehicle_list_items (
@@ -1006,6 +1060,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 
 app.include_router(build_auth_router(_conn))
+app.include_router(build_admin_activity_router(_conn))
 app.include_router(build_camera_router(_conn, get_camera_row))
 app.include_router(
     build_pessoas_router(

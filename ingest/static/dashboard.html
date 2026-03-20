@@ -32,47 +32,47 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:        #052e16;
-      --sidebar:   #064e24;
-      --card:      #0a5c2a;
-      --card2:     #086325;
-      --border:    #1a9448;
-      --accent:    #facc15;
-      --accent2:   #fbbf24;
-      --text:      #ffffff;
-      --muted:     #d4f5df;
-      --danger:    #ff6b6b;
-      --success:   #6ee7a0;
-      --warning:   #facc15;
-      --sidebar-text: #ffffff;
-      --menu-hover-bg: rgba(255,255,255,.07);
-      --menu-hover-text: #facc15;
-      --menu-active-bg: rgba(250,204,21,.1);
-      --menu-active-text: #facc15;
-      --table-head-bg: rgba(0,0,0,.035);
-      --table-row-hover: rgba(250,204,21,.1);
+      --bg:        #171d14;
+      --sidebar:   #26301f;
+      --card:      #35422b;
+      --card2:     #2b3623;
+      --border:    #5a6b47;
+      --accent:    #c4a64a;
+      --accent2:   #dbc483;
+      --text:      #f1ecd9;
+      --muted:     #c7c0a4;
+      --danger:    #d47460;
+      --success:   #8fa96d;
+      --warning:   #c4a64a;
+      --sidebar-text: #f1ecd9;
+      --menu-hover-bg: rgba(196,166,74,.08);
+      --menu-hover-text: #f4eedc;
+      --menu-active-bg: rgba(196,166,74,.16);
+      --menu-active-text: #f4eedc;
+      --table-head-bg: rgba(18,24,15,.45);
+      --table-row-hover: rgba(196,166,74,.08);
       --input-bg: var(--card2);
       --input-border: var(--border);
-      --input-focus-shadow: 0 0 0 3px rgba(250,204,21,.18);
+      --input-focus-shadow: 0 0 0 3px rgba(196,166,74,.18);
       --btn-secondary-bg: transparent;
-      --btn-secondary-border: #4ade80;
-      --btn-secondary-text: #ffffff;
-      --btn-secondary-hover-bg: rgba(250,204,21,.08);
-      --btn-primary-text: #ffffff;
-      --btn-success-text: #ffffff;
-      --btn-danger-text: #ffffff;
-      --btn-warning-text: #ffffff;
-      --pressed-text: #1f2937;
+      --btn-secondary-border: #788862;
+      --btn-secondary-text: #f1ecd9;
+      --btn-secondary-hover-bg: rgba(196,166,74,.08);
+      --btn-primary-text: #f1ecd9;
+      --btn-success-text: #f1ecd9;
+      --btn-danger-text: #f1ecd9;
+      --btn-warning-text: #f1ecd9;
+      --pressed-text: #1c2317;
       --icon-color: var(--accent2);
-      --icon-bg: rgba(250,204,21,.12);
-      --icon-border: rgba(250,204,21,.35);
-      --icon-shadow: 0 2px 8px rgba(0,0,0,.18);
-      --link: #93c5fd;
-      --link-hover: #bfdbfe;
-      --select-option-bg: #0a3d1f;
-      --select-option-hover: #1a9448;
-      --card-label-color: #d4f5df;
-      --special-card-label: #d4f5df;
+      --icon-bg: rgba(196,166,74,.12);
+      --icon-border: rgba(196,166,74,.28);
+      --icon-shadow: 0 2px 8px rgba(0,0,0,.24);
+      --link: #e4d7a7;
+      --link-hover: #f1e8c6;
+      --select-option-bg: #25301e;
+      --select-option-hover: #556847;
+      --card-label-color: #d7d0b4;
+      --special-card-label: #d7d0b4;
       --fs-base: 16px;
       --fs-secondary: 15px;
       --fs-card-title: 18px;
@@ -744,80 +744,6 @@
       }
     }
     #tab-painel .painel-shell { gap:14px; }
-    #tab-painel .painel-status-bar {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px 18px;
-      flex-wrap:wrap;
-      padding:14px 18px;
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.05), rgba(255,255,255,0) 58%),
-        radial-gradient(circle at top right, rgba(250,204,21,.12), transparent 36%),
-        var(--card);
-      box-shadow:0 12px 24px rgba(0,0,0,.12);
-    }
-    #tab-painel .painel-status-main {
-      min-width:260px;
-      flex:1 1 420px;
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    #tab-painel .painel-status-title {
-      color:var(--accent2);
-      font-size:11px;
-      font-weight:800;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-    #tab-painel .painel-status-copy {
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.45;
-    }
-    #tab-painel .painel-status-side {
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:10px;
-      flex-wrap:wrap;
-      flex:1 1 320px;
-    }
-    #tab-painel .painel-status-updated {
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      padding:8px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);
-      min-width:190px;
-    }
-    #tab-painel .painel-status-kicker {
-      color:var(--accent2);
-      font-size:10px;
-      font-weight:800;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-    #tab-painel .painel-status-value {
-      color:var(--text);
-      font-size:12px;
-      font-weight:700;
-      line-height:1.35;
-    }
-    #tab-painel .painel-pill-row.compact {
-      margin:0;
-      gap:6px;
-      justify-content:flex-end;
-    }
-    #tab-painel .painel-pill-row.compact .painel-pill {
-      padding:6px 10px;
-      font-size:11px;
-    }
     #tab-painel .painel-kpi-grid {
       gap:12px;
       margin-top:0;
@@ -902,7 +828,6 @@
     #tab-painel .chart-wrap {
       min-height:190px;
     }
-    :root[data-theme="branco"] #tab-painel .painel-status-bar,
     :root[data-theme="branco"] #tab-painel .painel-kpi-grid-primary .card,
     :root[data-theme="branco"] #tab-painel .painel-kpi-grid-secondary .card,
     :root[data-theme="branco"] #tab-painel .panel-chart-card {
@@ -914,24 +839,11 @@
       }
     }
     @media (max-width:900px) {
-      #tab-painel .painel-status-side {
-        justify-content:flex-start;
-      }
       #tab-painel .painel-kpi-grid-secondary {
         grid-template-columns:1fr;
       }
     }
     @media (max-width:640px) {
-      #tab-painel .painel-status-bar {
-        padding:12px 14px;
-      }
-      #tab-painel .painel-status-updated {
-        min-width:0;
-        width:100%;
-      }
-      #tab-painel .painel-pill-row.compact {
-        justify-content:flex-start;
-      }
       #tab-painel .painel-kpi-grid-primary {
         grid-template-columns:1fr;
       }
@@ -1265,32 +1177,32 @@
     .btn-logout { display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--muted); font-size:var(--fs-button); cursor:pointer; transition:all .15s; width:min(100%, 180px); line-height:var(--lh-tight); justify-content:center; font-weight:600; margin:0 auto; }
     .btn-logout:hover { background:rgba(255,107,107,.15); border-color:#ff6b6b; color:#ff6b6b; }
     :root[data-theme="verde"], :root:not([data-theme]) {
-      --green-btn-active-bg: #facc15;
-      --green-btn-active-border: #eab308;
-      --green-btn-active-text: #1f2937;
-      --green-btn-focus-ring: 0 0 0 3px rgba(250,204,21,.35);
-      --green-btn-hover-bg: rgba(250,204,21,.12);
-      --green-menu-active-bg: rgba(250,204,21,.2);
-      --green-text-primary: #ffffff;
-      --green-text-secondary: rgba(255,255,255,.88);
-      --green-menu-hover-text: #ffffff;
-      --green-menu-active-text: #ffffff;
-      --green-btn-primary-bg: #15803d;
-      --green-btn-primary-hover: #166534;
-      --green-btn-primary-border: rgba(255,255,255,.08);
-      --green-btn-success-bg: #16a34a;
-      --green-btn-success-hover: #15803d;
+      --green-btn-active-bg: #c4a64a;
+      --green-btn-active-border: #a48a3d;
+      --green-btn-active-text: #1c2317;
+      --green-btn-focus-ring: 0 0 0 3px rgba(196,166,74,.28);
+      --green-btn-hover-bg: rgba(196,166,74,.08);
+      --green-menu-active-bg: rgba(196,166,74,.16);
+      --green-text-primary: #f1ecd9;
+      --green-text-secondary: rgba(231,224,203,.82);
+      --green-menu-hover-text: #f4eedc;
+      --green-menu-active-text: #f4eedc;
+      --green-btn-primary-bg: #5b6f47;
+      --green-btn-primary-hover: #6b8056;
+      --green-btn-primary-border: rgba(241,236,217,.08);
+      --green-btn-success-bg: #728857;
+      --green-btn-success-hover: #64784b;
       --green-btn-outline-bg: rgba(255,255,255,.03);
-      --green-btn-outline-border: rgba(110,231,160,.28);
-      --green-btn-outline-text: #f0fdf4;
-      --green-btn-outline-hover-bg: rgba(250,204,21,.12);
-      --green-btn-outline-hover-border: rgba(250,204,21,.58);
-      --green-btn-outline-hover-text: #ffffff;
-      --green-btn-danger-bg: #dc2626;
-      --green-btn-danger-hover: #b91c1c;
-      --green-btn-warning-bg: #d97706;
-      --green-btn-warning-hover: #b45309;
-      --green-btn-shadow: 0 6px 14px rgba(0,0,0,.18);
+      --green-btn-outline-border: rgba(196,166,74,.22);
+      --green-btn-outline-text: #f1ecd9;
+      --green-btn-outline-hover-bg: rgba(196,166,74,.10);
+      --green-btn-outline-hover-border: rgba(216,196,131,.42);
+      --green-btn-outline-hover-text: #f7f2e4;
+      --green-btn-danger-bg: #b76356;
+      --green-btn-danger-hover: #9f5448;
+      --green-btn-warning-bg: #8d6e34;
+      --green-btn-warning-hover: #7a5f2d;
+      --green-btn-shadow: 0 6px 14px rgba(0,0,0,.24);
     }
     :root[data-theme="verde"] .btn,
     :root:not([data-theme]) .btn {
@@ -1426,6 +1338,8 @@
                 padding-bottom: 0;
                 align-items: stretch;
                 justify-content: center;
+                background: var(--sidebar);
+                box-shadow: none;
               }
     :root[data-theme="verde"] .topbar-title-group,
     :root:not([data-theme]) .topbar-title-group {
@@ -1441,7 +1355,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                min-height: 92px;
+                min-height: 115px;
                 height: 100%;
                 flex-wrap: nowrap;
                 white-space: nowrap;
@@ -1451,7 +1365,7 @@
     :root[data-theme="verde"] .brand-verde-title,
     :root:not([data-theme]) .brand-verde-title {
               display: block;
-              font-size: clamp(28px, 3.1vw, 50px);
+              font-size: clamp(35px, 3.875vw, 63px);
               font-weight: 900;
               letter-spacing: .04em;
               line-height: 1;
@@ -1459,17 +1373,17 @@
               color: transparent;
               background-image:
                 linear-gradient(90deg,
-                  #d8a90d 0%,
-                  #facc15 18%,
-                  #fff7bf 32%,
-                  #facc15 46%,
-                  #d8a90d 62%,
-                  #facc15 100%);
+                  #8a7636 0%,
+                  #c4a64a 18%,
+                  #efe3b2 34%,
+                  #d3b765 50%,
+                  #8a7636 68%,
+                  #c4a64a 100%);
               background-size: 220% 100%;
               background-position: 0% 50%;
               -webkit-background-clip: text;
               background-clip: text;
-              text-shadow: 0 1px 0 rgba(0,0,0,.24), 0 0 18px rgba(250,204,21,.14);
+              text-shadow: 0 1px 0 rgba(0,0,0,.28), 0 0 14px rgba(196,166,74,.10);
               white-space: nowrap;
               max-width: none;
               animation:
@@ -1508,12 +1422,11 @@
                 justify-content: center;
                 align-items: stretch;
                 width: 100%;
-                min-height: 92px;
+                min-height: 115px;
                 padding: 0 18px;
-                background:
-                linear-gradient(90deg, rgba(250,204,21,.06), rgba(250,204,21,.11), rgba(250,204,21,.06));
-                border-top: 1px solid rgba(250,204,21,.12);
-              border-bottom: 1px solid rgba(250,204,21,.12);
+                background: var(--sidebar);
+                border-top: none;
+              border-bottom: none;
             }
         :root[data-theme="verde"] .top-right.header-right,
         :root:not([data-theme]) .top-right.header-right {
@@ -1530,23 +1443,43 @@
       background: var(--green-btn-hover-bg);
       border-color: var(--green-btn-active-border);
     }
+    :root[data-theme="verde"] body,
+    :root:not([data-theme]) body {
+      background: var(--bg);
+    }
     :root[data-theme="verde"] #sidebar,
     :root:not([data-theme]) #sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid rgba(196,166,74,.12);
+      box-shadow: 8px 0 24px rgba(0,0,0,.22);
+    }
+    :root[data-theme="verde"] .card,
+    :root:not([data-theme]) .card,
+    :root[data-theme="verde"] .chart-card,
+    :root:not([data-theme]) .chart-card,
+    :root[data-theme="verde"] .table-wrap,
+    :root:not([data-theme]) .table-wrap,
+    :root[data-theme="verde"] .modal,
+    :root:not([data-theme]) .modal,
+    :root[data-theme="verde"] .list-card,
+    :root:not([data-theme]) .list-card,
+    :root[data-theme="verde"] #alerts-panel,
+    :root:not([data-theme]) #alerts-panel {
       background:
-        linear-gradient(180deg, rgba(6,78,36,.98) 0%, rgba(5,46,22,.98) 100%);
-      border-right: 1px solid rgba(250,204,21,.16);
-      box-shadow: 6px 0 24px rgba(0,0,0,.16);
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.05)),
+        var(--card);
+      border-color: rgba(196,166,74,.14);
     }
     :root[data-theme="verde"] .sidebar-logo,
     :root:not([data-theme]) .sidebar-logo {
       padding: 22px 14px 18px;
       margin-bottom: 10px;
-      border-bottom: 1px solid rgba(250,204,21,.12);
+      border-bottom: 1px solid rgba(196,166,74,.12);
       background: transparent;
     }
     :root[data-theme="verde"] .sidebar-logo img,
     :root:not([data-theme]) .sidebar-logo img {
-      max-height: 145px;
+      max-height: 228px;
       max-width: 100%;
       width: auto;
       height: auto;
@@ -1563,7 +1496,7 @@
     }
     :root[data-theme="verde"] .sidebar-section,
     :root:not([data-theme]) .sidebar-section {
-      color: rgba(250,204,21,.9);
+      color: rgba(219,196,131,.92);
       font-weight: 800;
       letter-spacing: .11em;
       font-size: 11px;
@@ -1579,17 +1512,17 @@
       height: 2px;
       margin-top: 6px;
       border-radius: 99px;
-      background: linear-gradient(90deg, rgba(250,204,21,.75), rgba(250,204,21,0));
+      background: linear-gradient(90deg, rgba(196,166,74,.72), rgba(196,166,74,0));
     }
     :root[data-theme="verde"] .nav-item,
     :root:not([data-theme]) .nav-item {
-      color: rgba(255,255,255,.96);
+      color: rgba(241,236,217,.94);
       font-weight: 600;
       border-left-width: 4px;
     }
     :root[data-theme="verde"] .nav-item svg,
     :root:not([data-theme]) .nav-item svg {
-      color: #facc15;
+      color: #dbc483;
       opacity: .95;
     }
     :root[data-theme="verde"] .nav-item:hover svg,
@@ -1616,20 +1549,20 @@
     :root:not([data-theme]) .user-info-bar .urole,
     :root[data-theme="verde"] .sidebar-footer,
     :root:not([data-theme]) .sidebar-footer {
-      color: rgba(212,245,223,.9);
+      color: rgba(199,192,164,.88);
     }
     :root[data-theme="verde"] .btn-logout,
     :root:not([data-theme]) .btn-logout {
       background: rgba(255,255,255,.04);
-      border-color: rgba(250,204,21,.18);
-      color: #fef3c7;
+      border-color: rgba(196,166,74,.16);
+      color: #efe7cd;
       box-shadow: 0 6px 16px rgba(0,0,0,.14);
     }
     :root[data-theme="verde"] .btn-logout:hover,
     :root:not([data-theme]) .btn-logout:hover {
-      background: rgba(250,204,21,.12);
-      border-color: rgba(250,204,21,.38);
-      color: #ffffff;
+      background: rgba(196,166,74,.12);
+      border-color: rgba(196,166,74,.34);
+      color: #f7f2e4;
       box-shadow: 0 8px 20px rgba(0,0,0,.18);
     }
     /* ---- Refinos visuais no tema verde para as abas revisadas ---- */
@@ -1645,23 +1578,23 @@
     :root[data-theme="verde"] #tab-alarmes .sub-tab:hover,
     :root:not([data-theme]) #tab-alarmes .sub-tab:hover {
       color: #ffffff;
-      background: rgba(250,204,21,.08);
+      background: rgba(196,166,74,.08);
     }
     :root[data-theme="verde"] #tab-cadastro .pessoas-sub-btn.active,
     :root:not([data-theme]) #tab-cadastro .pessoas-sub-btn.active,
     :root[data-theme="verde"] #tab-alarmes .sub-tab.active,
     :root:not([data-theme]) #tab-alarmes .sub-tab.active {
-      color: #facc15;
-      background: rgba(250,204,21,.12);
-      border-bottom-color: #facc15;
+      color: #dbc483;
+      background: rgba(196,166,74,.12);
+      border-bottom-color: #c4a64a;
       font-weight: 700;
     }
     :root[data-theme="verde"] #tab-cadastro .table-wrap,
     :root:not([data-theme]) #tab-cadastro .table-wrap,
     :root[data-theme="verde"] #tab-alarmes .table-wrap,
     :root:not([data-theme]) #tab-alarmes .table-wrap {
-      background: rgba(3, 36, 18, .45);
-      border: 1px solid rgba(110,231,160,.18);
+      background: rgba(20,26,18,.52);
+      border: 1px solid rgba(196,166,74,.16);
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 10px 28px rgba(0,0,0,.16);
@@ -1670,21 +1603,21 @@
     :root:not([data-theme]) #tab-cadastro table thead tr,
     :root[data-theme="verde"] #tab-alarmes table thead tr,
     :root:not([data-theme]) #tab-alarmes table thead tr {
-      background: rgba(6, 78, 36, .92);
-      border-bottom: 1px solid rgba(110,231,160,.18);
+      background: rgba(39,48,31,.92);
+      border-bottom: 1px solid rgba(196,166,74,.14);
     }
     :root[data-theme="verde"] #tab-cadastro table tbody td,
     :root:not([data-theme]) #tab-cadastro table tbody td,
     :root[data-theme="verde"] #tab-alarmes table tbody td,
     :root:not([data-theme]) #tab-alarmes table tbody td {
-      color: rgba(255,255,255,.92);
-      border-bottom: 1px solid rgba(110,231,160,.12);
+      color: rgba(241,236,217,.92);
+      border-bottom: 1px solid rgba(196,166,74,.08);
     }
     :root[data-theme="verde"] #tab-cadastro table tbody tr:hover,
     :root:not([data-theme]) #tab-cadastro table tbody tr:hover,
     :root[data-theme="verde"] #tab-alarmes table tbody tr:hover,
     :root:not([data-theme]) #tab-alarmes table tbody tr:hover {
-      background: rgba(250,204,21,.08);
+      background: rgba(196,166,74,.08);
     }
     :root[data-theme="verde"] #tab-cadastro input,
     :root:not([data-theme]) #tab-cadastro input,
@@ -2509,7 +2442,7 @@
     :root[data-theme="branco"] #sidebar .sidebar-logo img {
       display: block;
       max-width: 100%;
-      max-height: 135px;
+      max-height: 169px;
       width: auto;
       height: auto;
       object-fit: contain;
@@ -2813,24 +2746,6 @@
     <!-- ===== ABA PAINEL ===== -->
     <div id="tab-painel" class="tab-pane active">
       <div class="painel-shell">
-        <div class="painel-status-bar">
-          <div class="painel-status-main">
-            <div class="painel-status-title">Resumo operacional</div>
-            <div class="painel-status-copy" id="pn-status-text">Preparando indicadores operacionais para a equipe.</div>
-          </div>
-          <div class="painel-status-side">
-            <div class="painel-status-updated">
-              <span class="painel-status-kicker">Atualizado</span>
-              <span class="painel-status-value" id="pn-updated-at">Sincronizando painel...</span>
-            </div>
-            <div class="painel-pill-row compact">
-              <span class="painel-pill" id="pn-pill-cameras">C&acirc;meras: --</span>
-              <span class="painel-pill" id="pn-pill-monitorados">Monitorados: --</span>
-              <span class="painel-pill" id="pn-pill-alerts">Alertas: --</span>
-            </div>
-          </div>
-        </div>
-
         <div class="painel-kpi-grid painel-kpi-grid-primary">
           <div class="card">
             <div class="card-icon">&#128203;</div>
@@ -4699,6 +4614,83 @@
         </div>
       </div>
 
+      <div class="card" style="padding:18px;margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+          <div>
+            <div style="font-weight:700;font-size:.92rem">Monitoramento de acesso</div>
+            <div style="font-size:.78rem;color:var(--muted);margin-top:3px">Acompanhe logins, paginas acessadas e usuarios online em tempo real.</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="loadAdminActivity()" title="Atualizar monitoramento">&#8635; Atualizar acessos</button>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <div class="card" style="flex:1;min-width:150px;padding:14px 16px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Online agora</div>
+            <div id="ua-online-users" style="font-size:1.55rem;font-weight:800;color:var(--success)">—</div>
+          </div>
+          <div class="card" style="flex:1;min-width:150px;padding:14px 16px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Sessoes ativas</div>
+            <div id="ua-active-sessions" style="font-size:1.55rem;font-weight:800;color:var(--accent)">—</div>
+          </div>
+          <div class="card" style="flex:1;min-width:150px;padding:14px 16px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Logins hoje</div>
+            <div id="ua-logins-today" style="font-size:1.55rem;font-weight:800;color:#f59e0b">—</div>
+          </div>
+          <div class="card" style="flex:1;min-width:150px;padding:14px 16px">
+            <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Paginas hoje</div>
+            <div id="ua-pageviews-today" style="font-size:1.55rem;font-weight:800;color:#60a5fa">—</div>
+          </div>
+        </div>
+
+        <div id="users-activity-error" class="form-error" style="margin-bottom:12px"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
+              <div style="font-weight:700;font-size:.84rem">Usuarios online</div>
+              <div id="ua-last-activity" style="font-size:.72rem;color:var(--muted)">Sem atividade recente</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Perfil</th>
+                    <th>Ultima pagina</th>
+                    <th>Visto</th>
+                  </tr>
+                </thead>
+                <tbody id="users-online-tbody">
+                  <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Carregando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">
+              <div style="font-weight:700;font-size:.84rem">Trilha recente</div>
+              <div style="font-size:.72rem;color:var(--muted)">Ultimos 80 registros</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quando</th>
+                    <th>Usuario</th>
+                    <th>Acao</th>
+                    <th>Pagina</th>
+                    <th>IP</th>
+                  </tr>
+                </thead>
+                <tbody id="users-activity-tbody">
+                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Carregando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Busca -->
       <div style="margin-bottom:12px">
         <input id="users-search" type="text" placeholder="&#128269; Buscar por usu&#225;rio ou nome..." oninput="_filterUsersTable()" style="max-width:320px;background:var(--input-bg);border:1px solid var(--input-border);border-radius:7px;color:var(--text);padding:8px 12px;font-size:.85rem;outline:none;width:100%">
@@ -5674,46 +5666,6 @@ function _panelSetChartState(wrapId, badgeId, hasData, emptyTitle, emptyCopy, ba
   if (badge && badgeText) badge.textContent = badgeText;
 }
 
-function _panelSetUpdatedAt(date) {
-  var el = document.getElementById('pn-updated-at');
-  if (!el) return;
-  var d = date instanceof Date ? date : new Date();
-  el.textContent = d.toLocaleDateString('pt-BR') + ' - ' + d.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-}
-
-function _panelSetOverviewMeta(ov) {
-  var total = Number(ov.total_events || ov.total || 0);
-  var cameras = Number(ov.active_cameras || 0);
-  var monitored = Number(ov.monitored_plates || 0);
-  var alerts = Number(ov.alerts_today || ov.alerts || 0);
-  var pillCameras = document.getElementById('pn-pill-cameras');
-  var pillMonitorados = document.getElementById('pn-pill-monitorados');
-  var pillAlerts = document.getElementById('pn-pill-alerts');
-  var statusText = document.getElementById('pn-status-text');
-  if (pillCameras) pillCameras.textContent = 'Cameras: ' + cameras.toLocaleString('pt-BR');
-  if (pillMonitorados) pillMonitorados.textContent = 'Monitorados: ' + monitored.toLocaleString('pt-BR');
-  if (pillAlerts) {
-    pillAlerts.textContent = 'Alertas: ' + alerts.toLocaleString('pt-BR');
-    pillAlerts.classList.toggle('is-alert', alerts > 0);
-    pillAlerts.classList.toggle('is-ok', alerts === 0);
-  }
-  if (statusText) {
-    if (alerts > 0) {
-      statusText.textContent = alerts.toLocaleString('pt-BR') + ' alerta(s) hoje. Priorize a triagem.';
-    } else if (cameras > 0) {
-      statusText.textContent = cameras.toLocaleString('pt-BR') + ' camera(s) ativa(s) nas ultimas 24h e ' + total.toLocaleString('pt-BR') + ' evento(s) no acumulado.';
-    } else if (monitored > 0) {
-      statusText.textContent = 'Sem atividade recente. Ha ' + monitored.toLocaleString('pt-BR') + ' placa(s) monitorada(s) cadastrada(s).';
-    } else {
-      statusText.textContent = 'Painel sincronizado. Aguardando novas capturas.';
-    }
-  }
-}
-
 function _mkChart(id, type, labels, datasets, opts) {
   if (_pnCharts[id]) { _pnCharts[id].destroy(); }
   var ctx = document.getElementById(id);
@@ -5758,7 +5710,6 @@ function _mkDoughnut(id, labels, data) {
 }
 
 async function loadPainel() {
-  _panelSetUpdatedAt(new Date());
   try {
     var ov = await fetch('/api/stats/overview').then(function(r){ return r.json(); });
     document.getElementById('pn-total').textContent     = (ov.total_events    || ov.total || 0).toLocaleString('pt-BR');
@@ -5767,7 +5718,6 @@ async function loadPainel() {
     document.getElementById('pn-cameras').textContent   = (ov.active_cameras  || 0).toLocaleString('pt-BR');
     document.getElementById('pn-monitored').textContent = (ov.monitored_plates || 0).toLocaleString('pt-BR');
     document.getElementById('pn-alerts').textContent    = (ov.alerts_today    || ov.alerts || 0).toLocaleString('pt-BR');
-    _panelSetOverviewMeta(ov || {});
   } catch(e) { console.error('overview', e); }
 
   try {
@@ -5919,7 +5869,6 @@ async function loadPainel() {
       'Indisponivel'
     );
   }
-  _panelSetUpdatedAt(new Date());
 }
 
 // ===== ESTADO =====
@@ -6018,6 +5967,7 @@ function switchTab(name, el) {
   if (name === 'usuarios') loadUsers();
   if (name === 'alarmes')  loadAlarmes();
   if (name === 'config')   initConfigTab();
+  trackPageView(name, TAB_TITLES[name] || name, '/dashboard#' + name);
 }
 // garante acesso global mesmo em contextos de onclick attribute
 window.switchTab = switchTab;
@@ -6053,6 +6003,8 @@ function switchBatTab(name, el) {
     document.getElementById('bat-sub-alvos').classList.add('active');
     loadAlvos(); _loadAlvoCameras();
   }
+  var labels = { suspeitos: 'Batedor / Suspeitos', placas: 'Batedor / Placas', alvos: 'Batedor / Alvos' };
+  trackPageView('batedor:' + name, labels[name] || ('Batedor / ' + name), '/dashboard#batedor/' + name);
 }
 
 function refreshCurrent() {
@@ -12751,7 +12703,7 @@ function _resetGruposFilters() {
   loadGruposComboio(true);
 }
 
-var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname'];
+var _AUTH_KEYS = ['bpfron_token', 'bpfron_role', 'bpfron_user', 'bpfron_fullname', 'bpfron_session_id'];
 
 function _authMigrateLegacyStorage() {
   _AUTH_KEYS.forEach(function(key) {
@@ -12775,6 +12727,90 @@ function _authClearSession() {
   });
 }
 
+function _authEnsureSessionId() {
+  var sid = _authGet('bpfron_session_id');
+  if (sid) return sid;
+  sid = 'legacy-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  sessionStorage.setItem('bpfron_session_id', sid);
+  return sid;
+}
+
+var _presenceCurrentPage = { key: 'painel', label: 'Painel', path: '/dashboard#painel' };
+var _presenceHeartbeatId = null;
+var _presenceLastTrackStamp = '';
+var _presenceLastTrackAt = 0;
+
+function _presenceSetCurrentPage(pageKey, pageLabel, pagePath) {
+  _presenceCurrentPage = {
+    key: String(pageKey || 'painel').trim() || 'painel',
+    label: String(pageLabel || 'Painel').trim() || 'Painel',
+    path: String(pagePath || '/dashboard#painel').trim() || '/dashboard#painel'
+  };
+  return _presenceCurrentPage;
+}
+
+function _presencePayload(pageKey, pageLabel, pagePath) {
+  var page = _presenceSetCurrentPage(pageKey, pageLabel, pagePath);
+  return {
+    session_id: window._authSessionId || _authEnsureSessionId(),
+    page_key: page.key,
+    page_label: page.label,
+    page_path: page.path
+  };
+}
+
+async function _presencePost(url, payload, opts) {
+  if (!window._authToken) return null;
+  opts = opts || {};
+  try {
+    var resp = await fetch(url, Object.assign({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {})
+    }, opts));
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return await resp.json().catch(function(){ return {}; });
+  } catch (e) {
+    console.warn('[presence]', url, e.message);
+    return null;
+  }
+}
+
+async function trackPageView(pageKey, pageLabel, pagePath, force) {
+  var payload = _presencePayload(pageKey, pageLabel, pagePath);
+  var stamp = payload.page_key + '|' + payload.page_path;
+  var now = Date.now();
+  if (!force && stamp === _presenceLastTrackStamp && (now - _presenceLastTrackAt) < 1500) return;
+  _presenceLastTrackStamp = stamp;
+  _presenceLastTrackAt = now;
+  await _presencePost('/api/admin/activity/page-view', payload);
+}
+
+async function _presenceHeartbeat(force) {
+  if (!window._authToken) return;
+  var page = _presenceCurrentPage || { key: 'painel', label: 'Painel', path: '/dashboard#painel' };
+  if (!force && document.hidden) return;
+  await _presencePost('/api/admin/activity/heartbeat', _presencePayload(page.key, page.label, page.path));
+}
+
+function _startPresenceHeartbeat() {
+  if (_presenceHeartbeatId) clearInterval(_presenceHeartbeatId);
+  _presenceHeartbeat(true);
+  _presenceHeartbeatId = setInterval(function(){ _presenceHeartbeat(false); }, 45000);
+}
+
+async function _presenceLogout() {
+  var page = _presenceCurrentPage || { key: 'painel', label: 'Painel', path: '/dashboard#painel' };
+  await _presencePost('/api/admin/activity/logout', _presencePayload(page.key, page.label, page.path), { keepalive: true });
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) _presenceHeartbeat(true);
+});
+window.addEventListener('focus', function() {
+  _presenceHeartbeat(true);
+});
+
 // ===== AUTH =====
 (function(){
   _authMigrateLegacyStorage();
@@ -12787,6 +12823,7 @@ function _authClearSession() {
   if (window._authRole === 'viewer' || window._authRole === 'visualizacao') window._authRole = 'visualizador';
   window._authUser  = _authGet('bpfron_user');
   window._authName  = _authGet('bpfron_fullname');
+  window._authSessionId = _authEnsureSessionId();
   // Mostrar info do usuário
   var sbUser = document.getElementById('sb-username');
   var sbRole = document.getElementById('sb-role');
@@ -12922,7 +12959,10 @@ function _applyRoleBasedUI(root) {
     opts = opts || {};
     var token = window._authToken;
     if (token && typeof url === 'string' && url.startsWith('/api/')) {
-      opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + token });
+      opts.headers = Object.assign({}, opts.headers || {}, {
+        'Authorization': 'Bearer ' + token,
+        'X-BPFRON-Session': window._authSessionId || _authEnsureSessionId()
+      });
     }
     return origFetch.call(this, url, opts).then(function(resp) {
       if (resp.status === 401) {
@@ -12934,15 +12974,58 @@ function _applyRoleBasedUI(root) {
   };
 })();
 
-function doLogout() {
+async function doLogout() {
   if (!confirm('Deseja sair do sistema?')) return;
+  await _presenceLogout();
   _authClearSession();
   window.location.replace('/login');
 }
 
 // ===== CONFIGURA\u00c7\u00d5ES =====
 var _THEMES = {
-  verde: { '--bg':'#052e16','--sidebar':'#064e24','--card':'#0a5c2a','--card2':'#086325','--border':'#1a9448','--accent':'#facc15','--accent2':'#fbbf24','--text':'#ffffff','--muted':'#d4f5df','--success':'#6ee7a0','--danger':'#ff6b6b','--pressed-text':'#1f2937','--table-row-hover':'rgba(250,204,21,.1)' },
+  verde: {
+    '--bg':'#171d14',
+    '--sidebar':'#26301f',
+    '--card':'#35422b',
+    '--card2':'#2b3623',
+    '--border':'#5a6b47',
+    '--accent':'#c4a64a',
+    '--accent2':'#dbc483',
+    '--text':'#f1ecd9',
+    '--muted':'#c7c0a4',
+    '--success':'#8fa96d',
+    '--warning':'#c4a64a',
+    '--danger':'#d47460',
+    '--sidebar-text':'#f1ecd9',
+    '--menu-hover-bg':'rgba(196,166,74,.08)',
+    '--menu-hover-text':'#f4eedc',
+    '--menu-active-bg':'rgba(196,166,74,.16)',
+    '--menu-active-text':'#f4eedc',
+    '--table-head-bg':'rgba(18,24,15,.45)',
+    '--table-row-hover':'rgba(196,166,74,.08)',
+    '--input-bg':'#2b3623',
+    '--input-border':'#5a6b47',
+    '--input-focus-shadow':'0 0 0 3px rgba(196,166,74,.18)',
+    '--btn-secondary-bg':'transparent',
+    '--btn-secondary-border':'#788862',
+    '--btn-secondary-text':'#f1ecd9',
+    '--btn-secondary-hover-bg':'rgba(196,166,74,.08)',
+    '--btn-primary-text':'#f1ecd9',
+    '--btn-success-text':'#f1ecd9',
+    '--btn-danger-text':'#f1ecd9',
+    '--btn-warning-text':'#f1ecd9',
+    '--pressed-text':'#1c2317',
+    '--icon-color':'#dbc483',
+    '--icon-bg':'rgba(196,166,74,.12)',
+    '--icon-border':'rgba(196,166,74,.28)',
+    '--icon-shadow':'0 2px 8px rgba(0,0,0,.24)',
+    '--link':'#e4d7a7',
+    '--link-hover':'#f1e8c6',
+    '--select-option-bg':'#25301e',
+    '--select-option-hover':'#556847',
+    '--card-label-color':'#d7d0b4',
+    '--special-card-label':'#d7d0b4'
+  },
   branco: {
     '--bg':'#F8FAFC',
     '--sidebar':'#FFFFFF',
@@ -13109,6 +13192,129 @@ async function changeMyPassword() {
 
 // ===== USUARIOS =====
 var _usersCache = [];
+var _adminActivityOnlineCache = [];
+var _adminActivityRecentCache = [];
+
+function _fmtAdminTs(value, withSeconds) {
+  if (!value) return '\u2014';
+  var opts = { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' };
+  if (withSeconds) opts.second = '2-digit';
+  return new Date(value).toLocaleString('pt-BR', opts);
+}
+
+function _timeAgo(value) {
+  if (!value) return '\u2014';
+  var diff = Math.max(0, Date.now() - new Date(value).getTime());
+  var sec = Math.floor(diff / 1000);
+  if (sec < 60) return sec + 's';
+  var min = Math.floor(sec / 60);
+  if (min < 60) return min + ' min';
+  var hours = Math.floor(min / 60);
+  if (hours < 24) return hours + ' h';
+  return Math.floor(hours / 24) + ' d';
+}
+
+function _activityBadge(activityType, activityLabel) {
+  var kind = (activityType || '').toLowerCase();
+  var cls = kind === 'login' ? 'badge-green' : kind === 'logout' ? 'badge-red' : 'badge-yellow';
+  return '<span class="badge ' + cls + '">' + (activityLabel || activityType || 'Atividade') + '</span>';
+}
+
+function _renderOnlineUsers(items) {
+  var tbody = document.getElementById('users-online-tbody');
+  if (!tbody) return;
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Nenhum usuario online agora.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(function(item){
+    var name = item.full_name && item.full_name !== item.username
+      ? '<div style="font-weight:700;color:var(--accent)">' + item.full_name + '</div><div style="font-size:.72rem;color:var(--muted)">@' + item.username + '</div>'
+      : '<div style="font-weight:700;color:var(--accent)">' + item.username + '</div>';
+    var roleBadge = item.role === 'admin'
+      ? '<span class="badge badge-red">Admin</span>'
+      : item.role === 'operador'
+        ? '<span class="badge badge-green">Operador</span>'
+        : '<span class="badge">Visualizador</span>';
+    var pageText = item.last_page_label || item.last_page_key || '\u2014';
+    var sessionInfo = item.active_sessions > 1
+      ? '<div style="font-size:.7rem;color:var(--muted);margin-top:3px">' + item.active_sessions + ' sessoes</div>'
+      : '<div style="font-size:.7rem;color:var(--muted);margin-top:3px">' + (item.ip_address || 'IP oculto') + '</div>';
+    return '<tr>'
+      + '<td>' + name + '</td>'
+      + '<td>' + roleBadge + '</td>'
+      + '<td><div style="font-weight:600">' + pageText + '</div>' + sessionInfo + '</td>'
+      + '<td style="white-space:nowrap;color:var(--muted)">' + _timeAgo(item.last_seen_at) + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function _renderRecentActivity(items) {
+  var tbody = document.getElementById('users-activity-tbody');
+  if (!tbody) return;
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Nenhuma atividade registrada ainda.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(function(item){
+    var userText = item.full_name && item.full_name !== item.username
+      ? '<div style="font-weight:700;color:var(--accent)">' + item.full_name + '</div><div style="font-size:.72rem;color:var(--muted)">@' + item.username + '</div>'
+      : '<span style="font-weight:700;color:var(--accent)">' + item.username + '</span>';
+    var pageText = item.page_label || item.page_key || '\u2014';
+    return '<tr>'
+      + '<td style="white-space:nowrap;color:var(--muted)">' + _fmtAdminTs(item.created_at, true) + '</td>'
+      + '<td>' + userText + '</td>'
+      + '<td>' + _activityBadge(item.activity_type, item.activity_label) + '</td>'
+      + '<td>' + pageText + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + (item.ip_address || '\u2014') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+async function loadAdminActivity() {
+  if ((window._authRole || '') !== 'admin') return;
+  var err = document.getElementById('users-activity-error');
+  var onlineBody = document.getElementById('users-online-tbody');
+  var recentBody = document.getElementById('users-activity-tbody');
+  if (err) err.textContent = '';
+  if (onlineBody && !onlineBody.children.length) {
+    onlineBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Carregando...</td></tr>';
+  }
+  if (recentBody && !recentBody.children.length) {
+    recentBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px"><span class="spinner"></span> Carregando...</td></tr>';
+  }
+  try {
+    var responses = await Promise.all([
+      fetch('/api/admin/activity/overview'),
+      fetch('/api/admin/activity/online'),
+      fetch('/api/admin/activity/recent?limit=80')
+    ]);
+    responses.forEach(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    });
+    var overview = await responses[0].json();
+    var online = await responses[1].json();
+    var recent = await responses[2].json();
+
+    _adminActivityOnlineCache = online.items || [];
+    _adminActivityRecentCache = recent.items || [];
+
+    document.getElementById('ua-online-users').textContent = (overview.online_users || 0).toLocaleString('pt-BR');
+    document.getElementById('ua-active-sessions').textContent = (overview.active_sessions || 0).toLocaleString('pt-BR');
+    document.getElementById('ua-logins-today').textContent = (overview.logins_today || 0).toLocaleString('pt-BR');
+    document.getElementById('ua-pageviews-today').textContent = (overview.page_views_today || 0).toLocaleString('pt-BR');
+    document.getElementById('ua-last-activity').textContent = overview.last_activity_at
+      ? 'Ultima atividade ' + _fmtAdminTs(overview.last_activity_at, true)
+      : 'Sem atividade recente';
+
+    _renderOnlineUsers(_adminActivityOnlineCache);
+    _renderRecentActivity(_adminActivityRecentCache);
+  } catch (e) {
+    if (err) err.textContent = 'Erro ao carregar monitoramento de acesso: ' + e.message;
+    if (onlineBody) onlineBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger);padding:24px">Falha ao carregar usuarios online.</td></tr>';
+    if (recentBody) recentBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Falha ao carregar trilha recente.</td></tr>';
+  }
+}
 
 async function loadUsers() {
   var tbody = document.getElementById('users-tbody');
@@ -13127,6 +13333,7 @@ async function loadUsers() {
     document.getElementById('uc-admins').textContent    = _usersCache.filter(function(u){ return u.role==='admin'; }).length;
     document.getElementById('uc-operators').textContent = _usersCache.filter(function(u){ return u.role==='operador' || u.role==='operator'; }).length;
     document.getElementById('uc-inactive').textContent  = _usersCache.filter(function(u){ return !u.ativa; }).length;
+    await loadAdminActivity();
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar usu\u00e1rios: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
@@ -13284,6 +13491,8 @@ function _switchAlarmSub(name, el) {
   document.getElementById('alarm-sub-config').style.display = (name === 'config') ? '' : 'none';
   document.getElementById('alarm-sub-historico').style.display = (name === 'historico') ? '' : 'none';
   if (name === 'historico') _loadHistorico();
+  var labels = { config: 'Alarmes / Configuracao', historico: 'Alarmes / Historico' };
+  trackPageView('alarmes:' + name, labels[name] || ('Alarmes / ' + name), '/dashboard#alarmes/' + name);
 }
 
 async function loadAlarmes() {
@@ -13597,6 +13806,9 @@ function _renderHistTable(items) {
   // Carrega câmeras primeiro para o filtro ficar pronto antes dos eventos
   await loadCameras().catch(function(){});
   await loadPainel();
+  _presenceSetCurrentPage('painel', 'Painel', '/dashboard#painel');
+  _startPresenceHeartbeat();
+  await trackPageView('painel', 'Painel', '/dashboard#painel', true);
   // Monitoramento automático sem dependência de controles no topo.
   _startBgAlarm();
   if (!_realtimeInterval) {
@@ -13620,6 +13832,12 @@ function switchPessoasSubTab(nome, el) {
   if (nome === 'pesquisar')         _cadMostrarHint();
   if (nome === 'lista-abordagens')  abListaCarregar();
   if (nome === 'abordagem')         abIniciarForm();
+  var labels = {
+    pesquisar: 'Cadastro / Pessoas',
+    abordagem: 'Cadastro / Nova Abordagem',
+    'lista-abordagens': 'Cadastro / Historico de Abordagens'
+  };
+  trackPageView('cadastro:' + nome, labels[nome] || ('Cadastro / ' + nome), '/dashboard#cadastro/' + nome);
 }
 
 // =============================================================================
