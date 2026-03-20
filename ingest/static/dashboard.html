@@ -98,11 +98,13 @@
       --purple:    #c4b5fd;
       --radius:    10px;
       --sidebar-w: 230px;
+      --sidebar-logo-max-w: calc(var(--sidebar-w) - 4px);
+      --sidebar-logo-max-h: calc(var(--sidebar-w) * 1.42);
     }
     body { font-family: system-ui,-apple-system,sans-serif; font-size:var(--fs-base); line-height:var(--lh-base); font-weight:var(--fw-body); background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
     #sidebar { width:var(--sidebar-w); background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; padding:20px 0 16px; z-index:100; }
-    .sidebar-logo { padding:16px 12px 18px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; }
-    .sidebar-logo img { width:100%; height:auto; max-height:220px; object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
+    .sidebar-logo { padding:16px 12px 18px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; overflow:visible; }
+    .sidebar-logo img { width:min(calc(100% + 20px), var(--sidebar-logo-max-w)); max-width:var(--sidebar-logo-max-w); height:auto; max-height:var(--sidebar-logo-max-h); object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
     .sidebar-logo-text { font-size:1.4rem; font-weight:var(--fw-system-name); letter-spacing:.18em; color:var(--accent); text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
     .topbar-title-group { display:flex; align-items:baseline; gap:14px; }
     .topbar-subtitle { font-size:14px; font-weight:700; color:var(--accent2); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; line-height:var(--lh-tight); }
@@ -1561,7 +1563,7 @@
     :root[data-theme="verde"] .brand-verde-title,
     :root:not([data-theme]) .brand-verde-title {
               display: block;
-              font-size: clamp(35px, 3.875vw, 63px);
+              font-size: clamp(42px, 4.45vw, 74px);
               font-weight: 900;
               letter-spacing: .04em;
               line-height: 1;
@@ -1675,12 +1677,12 @@
     }
     :root[data-theme="verde"] .sidebar-logo img,
     :root:not([data-theme]) .sidebar-logo img {
-      max-height: 228px;
-      max-width: 100%;
-      width: auto;
+      max-height: var(--sidebar-logo-max-h);
+      max-width: var(--sidebar-logo-max-w);
+      width: min(calc(100% + 20px), var(--sidebar-logo-max-w));
       height: auto;
       object-fit: contain;
-      transform: scale(1.08);
+      transform: scale(1.12);
       transform-origin: center;
       filter: drop-shadow(0 10px 18px rgba(0,0,0,.22)) saturate(1.08) contrast(1.04);
       mix-blend-mode: normal;
@@ -2637,9 +2639,9 @@
     :root[data-theme="branco"] .sidebar-logo img,
     :root[data-theme="branco"] #sidebar .sidebar-logo img {
       display: block;
-      max-width: 100%;
-      max-height: 169px;
-      width: auto;
+      max-width: calc(var(--sidebar-logo-max-w) * 0.92);
+      max-height: calc(var(--sidebar-logo-max-h) * 0.80);
+      width: min(100%, calc(var(--sidebar-logo-max-w) * 0.92));
       height: auto;
       object-fit: contain;
       transform: scale(1.33);
@@ -2751,6 +2753,193 @@
       background: #eff6ff;
       border-color: #bfdbfe;
       box-shadow: 0 8px 20px rgba(30, 58, 138, 0.24);
+    }
+    @media (max-width: 1440px), (max-height: 820px) {
+      :root {
+        --sidebar-w: 206px;
+        --sidebar-logo-max-h: calc(var(--sidebar-w) * 1.22);
+        --fs-base: 14px;
+        --fs-secondary: 14px;
+        --fs-card-title: 16px;
+        --fs-page-title: 22px;
+        --fs-subtitle: 18px;
+        --fs-menu: 14px;
+        --fs-button: 14px;
+        --fs-input: 14px;
+        --fs-table: 14px;
+        --fs-table-head: 13px;
+        --fs-label: 13px;
+      }
+      #sidebar {
+        padding: 14px 0 10px;
+      }
+      .sidebar-logo {
+        padding: 14px 12px 14px;
+        margin-bottom: 6px;
+      }
+      .sidebar-logo img {
+        max-height: var(--sidebar-logo-max-h);
+      }
+      .sidebar-section {
+        padding: 12px 14px 6px;
+        font-size: 10px;
+      }
+      .nav-item {
+        gap: 10px;
+        padding: 10px 14px;
+      }
+      .nav-item svg {
+        width: 16px;
+        height: 16px;
+      }
+      #topbar {
+        padding: 10px 20px;
+      }
+      #content {
+        padding: 20px 22px;
+      }
+      .btn {
+        height: 34px;
+        padding: 8px 14px;
+      }
+      .btn-sm {
+        height: 30px;
+        padding: 6px 10px;
+      }
+      .btn-xs {
+        height: 28px;
+        padding: 5px 9px;
+      }
+      .toolbar {
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .toolbar input,
+      .toolbar select {
+        height: 34px;
+        padding: 8px 12px;
+      }
+      .cards-row {
+        gap: 12px;
+        margin-bottom: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+      .card {
+        padding: 14px 16px;
+      }
+      .card-icon {
+        width: 34px;
+        height: 34px;
+        margin-left: 10px;
+      }
+      .card-label {
+        font-size: 13px;
+        margin-bottom: 8px;
+      }
+      .card-value {
+        font-size: 1.55rem;
+      }
+      .mapa-main {
+        height: min(64vh, 620px);
+        min-height: 460px;
+      }
+      :root[data-theme="verde"] #topbar,
+      :root:not([data-theme]) #topbar,
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        min-height: 76px;
+      }
+      :root[data-theme="verde"] .topbar-title-group,
+      :root:not([data-theme]) .topbar-title-group {
+        min-height: 76px;
+      }
+      :root[data-theme="verde"] .topbar-subtitle,
+      :root:not([data-theme]) .topbar-subtitle {
+        min-height: 86px;
+        padding: 0 14px;
+      }
+      :root[data-theme="verde"] .topbar-subtitle .topo-texto,
+      :root:not([data-theme]) .topbar-subtitle .topo-texto {
+        min-height: 86px;
+      }
+      :root[data-theme="verde"] .brand-verde-title,
+      :root:not([data-theme]) .brand-verde-title {
+        font-size: clamp(33px, 3.35vw, 56px);
+      }
+      :root[data-theme="verde"] .sidebar-logo img,
+      :root:not([data-theme]) .sidebar-logo img {
+        max-height: var(--sidebar-logo-max-h);
+        transform: scale(1);
+      }
+      :root[data-theme="branco"] .sidebar-logo,
+      :root[data-theme="branco"] #sidebar .sidebar-logo {
+        padding: 16px 10px 14px;
+        min-height: 120px;
+      }
+      :root[data-theme="branco"] .sidebar-header img,
+      :root[data-theme="branco"] .sidebar .logo img,
+      :root[data-theme="branco"] .sidebar-brand img,
+      :root[data-theme="branco"] .sidebar-logo img,
+      :root[data-theme="branco"] #sidebar .sidebar-logo img {
+        max-height: calc(var(--sidebar-logo-max-h) * 0.80);
+        transform: scale(1.12);
+      }
+    }
+    @media (max-width: 1366px), (max-height: 760px) {
+      :root {
+        --sidebar-w: 196px;
+        --sidebar-logo-max-h: calc(var(--sidebar-w) * 1.14);
+        --fs-base: 13px;
+        --fs-secondary: 13px;
+        --fs-page-title: 20px;
+        --fs-subtitle: 17px;
+        --fs-menu: 13px;
+        --fs-button: 13px;
+        --fs-input: 13px;
+        --fs-table: 13px;
+        --fs-table-head: 12px;
+        --fs-label: 12px;
+      }
+      #content {
+        padding: 16px 18px;
+      }
+      .sidebar-logo img {
+        max-height: var(--sidebar-logo-max-h);
+      }
+      .cards-row {
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      }
+      .card {
+        padding: 12px 14px;
+      }
+      .card-value {
+        font-size: 1.4rem;
+      }
+      .mapa-main {
+        height: min(58vh, 560px);
+        min-height: 400px;
+      }
+      :root[data-theme="verde"] #topbar,
+      :root:not([data-theme]) #topbar,
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        min-height: 68px;
+      }
+      :root[data-theme="verde"] .topbar-title-group,
+      :root:not([data-theme]) .topbar-title-group {
+        min-height: 68px;
+      }
+      :root[data-theme="verde"] .topbar-subtitle,
+      :root:not([data-theme]) .topbar-subtitle,
+      :root[data-theme="verde"] .topbar-subtitle .topo-texto,
+      :root:not([data-theme]) .topbar-subtitle .topo-texto {
+        min-height: 74px;
+      }
+      :root[data-theme="verde"] .brand-verde-title,
+      :root:not([data-theme]) .brand-verde-title {
+        font-size: clamp(28px, 3vw, 48px);
+      }
     }
     .nav-admin-only { display:none; }
     .traj-num-label { background:transparent !important; border:none !important; box-shadow:none !important; color:#000 !important; font-weight:800 !important; font-size:.7rem !important; padding:0 !important; }
@@ -2904,7 +3093,7 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
     Produtividade
   </div>
-  <div class="nav-item" onclick="switchTab('cameras',this)">
+  <div class="nav-item nav-admin-only" data-menu="cameras" onclick="switchTab('cameras',this)">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
     C&#226;meras
   </div>
@@ -3122,7 +3311,7 @@
     </div>
 
     <!-- ===== ABA PRODUTIVIDADE ===== -->
-    <div id="tab-produtividade" class="tab-pane">
+    <div id="tab-produtividade" class="tab-pane" data-perm="admin-only">
       <div class="prod-shell">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div>
@@ -3179,9 +3368,12 @@
                 <div class="prod-summary-copy">Esses valores alimentam o card do painel principal e s&atilde;o atualizados a cada novo lan&ccedil;amento salvo.</div>
               </div>
               <div class="painel-prod-actions">
+                <button class="btn btn-outline btn-sm" type="button" id="prod-summary-reset-btn" onclick="openProdutividadeResetModal()">&#128465; Zerar</button>
                 <div class="painel-prod-meta" id="prod-summary-meta">Aguardando atualiza&ccedil;&atilde;o.</div>
               </div>
             </div>
+            <div class="form-error" id="prod-summary-error"></div>
+            <div class="prod-success" id="prod-summary-ok"></div>
             <div class="painel-prod-grid">
               <div class="painel-prod-item">
                 <span class="painel-prod-label">Armas apreendidas</span>
@@ -3715,7 +3907,7 @@
     </div>
 
     <!-- ===== ABA CAMERAS ===== -->
-    <div id="tab-cameras" class="tab-pane">
+    <div id="tab-cameras" class="tab-pane" data-perm="admin-only">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-weight:700;font-size:.97rem">&#128247; C&#226;meras Cadastradas</div>
@@ -5511,6 +5703,40 @@
   </div>
 </div>
 
+<!-- MODAL: CONFIRMAR RESET DA PRODUTIVIDADE -->
+<div class="modal-overlay" id="prod-reset-modal">
+  <div class="modal modal-sm" style="max-width:460px">
+    <div class="modal-header">
+      <h2>&#128274; Confirmar Reset</h2>
+      <button class="modal-close" onclick="closeProdutividadeResetModal()">&times;</button>
+    </div>
+    <div>
+      <div style="font-size:.88rem;line-height:1.6;color:var(--text);margin-bottom:12px">
+        Esta a&ccedil;&atilde;o vai zerar apenas <strong>armas apreendidas</strong>,
+        <strong>drogas apreendidas</strong> e <strong>ve&iacute;culos recuperados</strong>.
+        Os totais de <strong>pessoas</strong> e <strong>ve&iacute;culos abordados</strong>
+        continuar&atilde;o autom&aacute;ticos.
+      </div>
+      <label style="display:block;font-size:.82rem;color:var(--muted);margin-bottom:8px">
+        Digite sua senha para confirmar:
+        <input
+          type="password"
+          id="prod-reset-password"
+          autocomplete="current-password"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.9rem;width:100%;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter')confirmProdutividadeReset()">
+      </label>
+      <div id="prod-reset-error" style="color:#f87171;font-size:.82rem;min-height:18px;margin-bottom:12px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="closeProdutividadeResetModal()">Cancelar</button>
+        <button class="btn btn-danger btn-sm" id="prod-reset-ok-btn" onclick="confirmProdutividadeReset()">
+          &#128465; Confirmar Reset
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: USUARIO -->
 <div class="modal-overlay" id="user-modal">
   <div class="modal modal-sm">
@@ -6179,6 +6405,42 @@ function resetProdutividadeForm() {
   }
 }
 
+function resetProdutividadeSummaryFeedback() {
+  var errorEl = document.getElementById('prod-summary-error');
+  var okEl = document.getElementById('prod-summary-ok');
+  if (errorEl) errorEl.textContent = '';
+  if (okEl) {
+    okEl.textContent = '';
+    okEl.style.display = 'none';
+  }
+}
+
+function openProdutividadeResetModal() {
+  if ((window._authRole || '') !== 'admin') return;
+  var pwdEl = document.getElementById('prod-reset-password');
+  var errorEl = document.getElementById('prod-reset-error');
+  var btn = document.getElementById('prod-reset-ok-btn');
+  if (pwdEl) pwdEl.value = '';
+  if (errorEl) errorEl.textContent = '';
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '&#128465; Confirmar Reset';
+  }
+  openModal('prod-reset-modal');
+  setTimeout(function() {
+    var el = document.getElementById('prod-reset-password');
+    if (el) el.focus();
+  }, 80);
+}
+
+function closeProdutividadeResetModal() {
+  var pwdEl = document.getElementById('prod-reset-password');
+  var errorEl = document.getElementById('prod-reset-error');
+  if (pwdEl) pwdEl.value = '';
+  if (errorEl) errorEl.textContent = '';
+  closeModal('prod-reset-modal');
+}
+
 function switchProdutividadeSub(name, el) {
   var target = el || document.querySelector('#prod-sub-tabs .sub-tab[data-prod="' + name + '"]');
   document.querySelectorAll('#prod-sub-tabs .sub-tab').forEach(function(tab) {
@@ -6201,6 +6463,7 @@ async function loadProdutividadeTab(resetForm, preferredSub) {
   if (!_painelProdutividadeCache) await loadPainelProdutividade();
   else _setProdutividadeTab(_painelProdutividadeCache);
   if (resetForm !== false) resetProdutividadeForm();
+  if (resetForm !== false) resetProdutividadeSummaryFeedback();
   var activeTabEl = document.querySelector('#prod-sub-tabs .sub-tab.active');
   var activeSub = preferredSub || ((resetForm === false && activeTabEl) ? activeTabEl.getAttribute('data-prod') : '') || 'lancamentos';
   switchProdutividadeSub(activeSub);
@@ -6275,6 +6538,72 @@ async function saveProdutividadeLancamento() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '&#128190; Somar ao acumulado';
+  }
+}
+
+async function confirmProdutividadeReset() {
+  if ((window._authRole || '') !== 'admin') return;
+
+  var pwdEl = document.getElementById('prod-reset-password');
+  var senha = (pwdEl ? pwdEl.value : '').trim();
+  var modalErrorEl = document.getElementById('prod-reset-error');
+  var modalBtn = document.getElementById('prod-reset-ok-btn');
+  var errorEl = document.getElementById('prod-summary-error');
+  var okEl = document.getElementById('prod-summary-ok');
+  var btn = document.getElementById('prod-summary-reset-btn');
+  if (!senha) {
+    if (modalErrorEl) modalErrorEl.textContent = 'Digite sua senha para confirmar.';
+    if (pwdEl) pwdEl.focus();
+    return;
+  }
+  if (modalErrorEl) modalErrorEl.textContent = '';
+  if (errorEl) errorEl.textContent = '';
+  if (okEl) {
+    okEl.textContent = '';
+    okEl.style.display = 'none';
+  }
+
+  if (modalBtn) {
+    modalBtn.disabled = true;
+    modalBtn.textContent = 'Confirmando...';
+  }
+  btn.disabled = true;
+  btn.textContent = 'Zerando...';
+  try {
+    var resp = await fetch('/api/produtividade', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        modo: 'zerar',
+        senha_confirmacao: senha
+      })
+    });
+    if (pwdEl) pwdEl.value = '';
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function(){ return {}; });
+      throw new Error(errData.detail || ('HTTP ' + resp.status));
+    }
+    _painelProdutividadeCache = await resp.json();
+    _setPainelProdutividade(_painelProdutividadeCache);
+    _setProdutividadeTab(_painelProdutividadeCache);
+    closeProdutividadeResetModal();
+    if (okEl) {
+      okEl.textContent = 'Totais zerados com sucesso. Pessoas e veiculos abordados permaneceram automaticos.';
+      okEl.style.display = 'block';
+    }
+  } catch(e) {
+    console.error('reset produtividade acumulado', e);
+    if (pwdEl) pwdEl.value = '';
+    if (modalErrorEl) modalErrorEl.textContent = e.message;
+    if (pwdEl) pwdEl.focus();
+    if (errorEl) errorEl.textContent = 'Erro: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#128465; Zerar';
+    if (modalBtn) {
+      modalBtn.disabled = false;
+      modalBtn.innerHTML = '&#128465; Confirmar Reset';
+    }
   }
 }
 
@@ -6561,6 +6890,14 @@ var _painelProdutividadeCache = null;
 
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
+  var role = window._authRole || 'visualizador';
+  if (role !== 'admin' && (name === 'produtividade' || name === 'cameras')) {
+    var painelNav = document.querySelector('#sidebar .nav-item[onclick="switchTab(\'painel\',this)"]');
+    if (name !== 'painel' && painelNav) {
+      switchTab('painel', painelNav);
+    }
+    return;
+  }
   document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   var tabEl = document.getElementById('tab-' + name);
@@ -13836,7 +14173,13 @@ function _timeAgo(value) {
 
 function _activityBadge(activityType, activityLabel) {
   var kind = (activityType || '').toLowerCase();
-  var cls = kind === 'login' ? 'badge-green' : kind === 'logout' ? 'badge-red' : 'badge-yellow';
+  var cls = kind === 'login'
+    ? 'badge-green'
+    : (kind === 'logout' || kind === 'produtividade_reset_negado')
+      ? 'badge-red'
+      : kind === 'produtividade_reset'
+        ? 'badge-green'
+        : 'badge-yellow';
   return '<span class="badge ' + cls + '">' + (activityLabel || activityType || 'Atividade') + '</span>';
 }
 

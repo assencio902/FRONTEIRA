@@ -7,20 +7,22 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --green-dark:  #021a0d;
-      --green-deep:  #042b14;
-      --green-mid:   #064e24;
-      --green-light: #0a7a36;
-      --gold:        #facc15;
-      --gold-dark:   #d4a003;
-      --text:        #ffffff;
-      --muted:       #b6e8c8;
-      --danger:      #ff6b6b;
+      --bg:          #171d14;
+      --sidebar:     #26301f;
+      --card:        #35422b;
+      --card2:       #2b3623;
+      --border:      #5a6b47;
+      --accent:      #c4a64a;
+      --accent2:     #dbc483;
+      --text:        #f1ecd9;
+      --muted:       #c7c0a4;
+      --danger:      #d47460;
+      --pressed:     #1c2317;
       --radius:      14px;
     }
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: var(--green-dark);
+      background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -33,16 +35,17 @@
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(ellipse 70% 60% at 20% 50%, rgba(6,78,36,.75) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 80% at 80% 50%, rgba(4,43,20,.9) 0%, transparent 70%),
-        linear-gradient(135deg, #021a0d 0%, #042b14 40%, #064e24 100%);
+        radial-gradient(ellipse 72% 58% at 18% 18%, rgba(219,196,131,.10) 0%, transparent 62%),
+        radial-gradient(ellipse 58% 72% at 82% 22%, rgba(53,66,43,.62) 0%, transparent 66%),
+        radial-gradient(ellipse 60% 64% at 50% 100%, rgba(38,48,31,.88) 0%, transparent 72%),
+        linear-gradient(145deg, #131810 0%, var(--bg) 34%, #21291a 100%);
       z-index: 0;
     }
     .bg-dots {
       position: fixed;
       inset: 0;
       background-image:
-        radial-gradient(circle, rgba(250,204,21,.06) 1px, transparent 1px);
+        radial-gradient(circle, rgba(219,196,131,.08) 1px, transparent 1px);
       background-size: 36px 36px;
       z-index: 0;
     }
@@ -52,7 +55,7 @@
       top: 0; bottom: 0;
       left: 52%;
       width: 1px;
-      background: linear-gradient(to bottom, transparent, rgba(250,204,21,.15) 30%, rgba(250,204,21,.15) 70%, transparent);
+      background: linear-gradient(to bottom, transparent, rgba(196,166,74,.10) 20%, rgba(219,196,131,.22) 50%, rgba(196,166,74,.10) 80%, transparent);
       z-index: 0;
     }
 
@@ -66,8 +69,8 @@
       justify-content: center;
       width: 100%;
       min-height: 100vh;
-      padding: 40px 20px 60px;
-      gap: 0;
+      padding: 28px 20px 38px;
+      gap: 16px;
     }
 
     /* ── Painel branding (topo) ── */
@@ -75,16 +78,32 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 18px;
-      margin-bottom: 32px;
+      width: 100%;
+      max-width: 380px;
+      gap: 28px;
+      margin-bottom: 0;
+      transform: translateY(4px);
+      margin-inline: auto;
+    }
+    .brand-lockup {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
     }
     .logo-ring {
       position: relative;
-      width: 260px;
-      height: 260px;
+      width: 340px;
+      height: 340px;
       display: flex;
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      transform: translateY(26px) scale(.82);
+      animation:
+        crest-arrive 3.1s cubic-bezier(.19,.89,.32,1.1) .05s both,
+        crest-float 6.2s ease-in-out 4.3s infinite;
     }
     /* Anel pulsante externo */
     .logo-ring::before {
@@ -92,16 +111,16 @@
       position: absolute;
       inset: -8px;
       border-radius: 50%;
-      border: 2px solid rgba(250,204,21,.4);
-      animation: pulse-ring 2.8s ease-in-out infinite;
+      border: 2px solid rgba(196,166,74,.34);
+      animation: pulse-ring 3.2s ease-in-out 3.7s infinite;
     }
     .logo-ring::after {
       content: '';
       position: absolute;
       inset: -20px;
       border-radius: 50%;
-      border: 1px solid rgba(250,204,21,.15);
-      animation: pulse-ring 2.8s ease-in-out infinite .9s;
+      border: 1px solid rgba(219,196,131,.14);
+      animation: pulse-ring 3.2s ease-in-out 4.2s infinite;
     }
     @keyframes pulse-ring {
       0%, 100% { opacity: .12; transform: scale(1); }
@@ -109,10 +128,12 @@
     }
     /* Círculo verde de fundo (igual ao sidebar) */
     .logo-bg {
-      width: 260px;
-      height: 260px;
+      width: 340px;
+      height: 340px;
       border-radius: 50%;
-      background: #064e24;
+      background:
+        radial-gradient(circle at 32% 30%, rgba(219,196,131,.10), transparent 46%),
+        linear-gradient(180deg, rgba(53,66,43,.96) 0%, rgba(38,48,31,.98) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -120,23 +141,86 @@
       position: relative;
       isolation: isolate;
       box-shadow:
-        0 0 0 3px rgba(250,204,21,.45),
+        0 0 0 3px rgba(196,166,74,.30),
         0 8px 40px rgba(0,0,0,.6);
+      transform: scale(.84);
+      animation: crest-core-reveal 2.3s cubic-bezier(.17,.84,.34,1.06) both;
+    }
+    .logo-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 28% 28%, rgba(219,196,131,.16), transparent 32%),
+        radial-gradient(circle at 72% 72%, rgba(255,170,86,.10), transparent 28%);
+      filter: blur(8px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1;
+      animation:
+        crest-ember-intro 2.5s ease-out 1.6s both,
+        crest-ember-flicker 5.4s ease-in-out 4.3s infinite;
+    }
+    .logo-bg::after {
+      content: '';
+      position: absolute;
+      inset: 14%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255,234,170,.42) 0%, rgba(255,204,99,.20) 28%, rgba(255,146,54,.12) 46%, transparent 70%);
+      mix-blend-mode: screen;
+      filter: blur(20px) saturate(1.18);
+      opacity: 0;
+      transform: scale(.72);
+      animation:
+        crest-halo-intro 2.5s cubic-bezier(.2,.76,.28,1) 1.8s both,
+        crest-halo-loop 5.4s ease-in-out 4.4s infinite;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .logo-intro {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        radial-gradient(circle at 50% 44%, rgba(0,0,0,0) 34%, rgba(0,0,0,.08) 68%, rgba(0,0,0,.24) 100%),
+        linear-gradient(180deg, rgba(0,0,0,.03) 0%, rgba(0,0,0,.18) 100%),
+        url('/static/login-onca-intro.png');
+      background-repeat: no-repeat;
+      background-size: auto, auto, cover;
+      background-position: center, center, center;
+      box-shadow: inset 0 0 40px rgba(0,0,0,.28);
+      filter: saturate(1.05) contrast(1.08) brightness(.58);
+      transform: scale(.96);
+      z-index: 5;
+      animation: jaguar-intro 4.9s cubic-bezier(.22,.68,.18,1) both;
     }
     .logo-bg img {
-      width: 196px;
-      height: 196px;
+      width: 252px;
+      height: 252px;
       object-fit: contain;
-      mix-blend-mode: multiply;
-      filter: contrast(1.15) saturate(1.1);
+      mix-blend-mode: normal;
+      opacity: 0;
+      filter: blur(16px) brightness(.62) contrast(1.06) saturate(1.4);
+      position: relative;
+      z-index: 4;
+      transform-origin: center;
+      transform: scale(.88);
+      animation:
+        crest-materialize 3.2s cubic-bezier(.22,.70,.22,1) 2.05s both,
+        crest-breath 6.2s ease-in-out 5.5s infinite;
     }
     .brand-title {
-      font-size: 2.6rem;
+      width: 100%;
+      font-size: 3.1rem;
       font-weight: 900;
-      letter-spacing: .22em;
-      color: var(--gold);
-      text-shadow: 0 0 28px rgba(250,204,21,.6), 0 2px 0 rgba(0,0,0,.6);
+      letter-spacing: .16em;
+      color: var(--accent);
+      text-shadow: 0 0 24px rgba(196,166,74,.28), 0 2px 0 rgba(0,0,0,.6);
       text-align: center;
+      padding-left: .16em;
     }
     .brand-sub {
       font-size: .82rem;
@@ -149,12 +233,13 @@
     .brand-divider {
       width: 60px;
       height: 2px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
       border-radius: 2px;
+      margin-inline: auto;
     }
     .brand-slogan {
       font-size: .72rem;
-      color: rgba(182,232,200,.55);
+      color: rgba(199,192,164,.62);
       letter-spacing: .06em;
       text-align: center;
       text-transform: uppercase;
@@ -163,48 +248,53 @@
 
     /* ── Painel direito (formulário) ── */
     .right-panel {
-      flex: .9;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 32px 32px 48px;
+      width: 100%;
+      max-width: 380px;
+      padding: 0;
     }
     .login-box {
       width: 100%;
-      max-width: 380px;
+      max-width: none;
     }
     .login-header {
-      margin-bottom: 28px;
+      margin-bottom: 26px;
       text-align: center;
     }
     .login-header h1 {
       font-size: 1.1rem;
       font-weight: 800;
       letter-spacing: .1em;
-      color: var(--muted);
+      color: var(--accent2);
       text-transform: uppercase;
     }
     .login-header p {
       font-size: .74rem;
-      color: rgba(182,232,200,.5);
+      color: rgba(199,192,164,.72);
       margin-top: 5px;
       letter-spacing: .04em;
     }
     .login-header .header-bar {
       width: 40px;
       height: 3px;
-      background: var(--gold);
+      background: var(--accent);
       border-radius: 3px;
       margin: 10px auto 0;
     }
     .card {
-      background: rgba(10,60,28,.6);
-      border: 1px solid rgba(250,204,21,.18);
+      background:
+        linear-gradient(180deg, rgba(53,66,43,.88) 0%, rgba(38,48,31,.92) 100%);
+      border: 1px solid rgba(90,107,71,.92);
       border-radius: var(--radius);
       padding: 34px 30px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
       backdrop-filter: blur(12px);
-      box-shadow: 0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.03);
+      box-shadow: 0 24px 60px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.03);
     }
     .form-group {
       display: flex;
@@ -215,7 +305,7 @@
     label {
       font-size: .72rem;
       font-weight: 700;
-      color: var(--muted);
+      color: var(--accent2);
       text-transform: uppercase;
       letter-spacing: .09em;
     }
@@ -228,12 +318,13 @@
       top: 50%;
       transform: translateY(-50%);
       font-size: .95rem;
-      opacity: .5;
+      opacity: .72;
+      color: var(--accent2);
       pointer-events: none;
     }
     input {
-      background: rgba(0,0,0,.3);
-      border: 1px solid rgba(250,204,21,.2);
+      background: rgba(43,54,35,.92);
+      border: 1px solid rgba(90,107,71,.88);
       border-radius: 8px;
       color: var(--text);
       padding: 11px 13px 11px 36px;
@@ -242,10 +333,10 @@
       transition: border-color .2s, box-shadow .2s;
       width: 100%;
     }
-    input::placeholder { color: rgba(255,255,255,.28); }
+    input::placeholder { color: rgba(199,192,164,.46); }
     input:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(250,204,21,.12);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,166,74,.16);
     }
     .btn {
       display: block;
@@ -263,13 +354,13 @@
     }
     .btn:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 24px rgba(250,204,21,.3);
+      box-shadow: 0 10px 24px rgba(196,166,74,.24);
     }
     .btn:active:not(:disabled) { transform: translateY(0); }
     .btn-primary {
-      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-      color: #021a0d;
-      box-shadow: 0 4px 16px rgba(250,204,21,.25);
+      background: linear-gradient(135deg, var(--accent2) 0%, var(--accent) 100%);
+      color: var(--pressed);
+      box-shadow: 0 4px 16px rgba(196,166,74,.22);
     }
     .btn:disabled { opacity: .55; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
     .error-msg {
@@ -283,14 +374,154 @@
     .spin {
       display: inline-block;
       width: 14px; height: 14px;
-      border: 2px solid rgba(2,26,13,.3);
-      border-top-color: #021a0d;
+      border: 2px solid rgba(28,35,23,.26);
+      border-top-color: var(--pressed);
       border-radius: 50%;
       animation: spin .7s linear infinite;
       vertical-align: middle;
       margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes crest-arrive {
+      0% { opacity: 0; transform: translateY(26px) scale(.82); }
+      42% { opacity: .82; }
+      72% { opacity: 1; transform: translateY(-8px) scale(1.03); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes crest-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes crest-core-reveal {
+      0% {
+        transform: scale(.84);
+        box-shadow:
+          0 0 0 0 rgba(196,166,74,0),
+          0 0 0 rgba(0,0,0,0);
+      }
+      44% {
+        transform: scale(.92);
+        box-shadow:
+          0 0 0 2px rgba(196,166,74,.18),
+          0 14px 38px rgba(0,0,0,.52);
+      }
+      72% {
+        transform: scale(1.06);
+        box-shadow:
+          0 0 0 4px rgba(219,196,131,.34),
+          0 0 52px rgba(255,138,46,.26),
+          0 22px 54px rgba(0,0,0,.52);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow:
+          0 0 0 3px rgba(196,166,74,.30),
+          0 8px 40px rgba(0,0,0,.6);
+      }
+    }
+    @keyframes crest-breath {
+      0%, 100% { transform: scale(1); filter: contrast(1.15) saturate(1.1) drop-shadow(0 8px 18px rgba(0,0,0,.22)); }
+      50% { transform: scale(1.028); filter: contrast(1.18) saturate(1.16) drop-shadow(0 12px 24px rgba(196,166,74,.16)); }
+    }
+    @keyframes crest-materialize {
+      0% {
+        opacity: 0;
+        transform: scale(.88);
+        filter: blur(22px) brightness(.22) contrast(.96) saturate(1.04);
+      }
+      30% {
+        opacity: .06;
+        transform: scale(.91);
+        filter: blur(17px) brightness(.34) contrast(1) saturate(1.10);
+      }
+      56% {
+        opacity: .30;
+        transform: scale(.95);
+        filter: blur(10px) brightness(.54) contrast(1.06) saturate(1.14);
+      }
+      80% {
+        opacity: .74;
+        transform: scale(1.01);
+        filter: blur(3px) brightness(.84) contrast(1.10) saturate(1.14) drop-shadow(0 0 12px rgba(255,176,76,.10));
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: contrast(1.15) saturate(1.1) drop-shadow(0 8px 18px rgba(0,0,0,.22));
+      }
+    }
+    @keyframes crest-ember-intro {
+      0% { opacity: 0; transform: scale(.9); }
+      52% { opacity: .18; }
+      100% { opacity: .52; transform: scale(1); }
+    }
+    @keyframes crest-ember-flicker {
+      0%, 100% { opacity: .52; transform: scale(1); }
+      18% { opacity: .62; }
+      42% { opacity: .38; transform: scale(1.03); }
+      64% { opacity: .58; }
+      82% { opacity: .46; transform: scale(.99); }
+    }
+    @keyframes jaguar-intro {
+      0% {
+        opacity: 0;
+        transform: scale(.86);
+        filter: saturate(.94) contrast(1) brightness(.18) blur(10px);
+      }
+      14% {
+        opacity: .84;
+        transform: scale(1.04);
+        filter: saturate(1.14) contrast(1.18) brightness(.62) blur(.6px);
+      }
+      28% {
+        opacity: 1;
+        transform: scale(1.01);
+        filter: saturate(1.10) contrast(1.14) brightness(.70) blur(0);
+      }
+      56% {
+        opacity: .96;
+        transform: scale(1);
+        filter: saturate(1.04) contrast(1.08) brightness(.64) blur(.2px);
+      }
+      76% {
+        opacity: .58;
+        transform: scale(1.01);
+        filter: saturate(.98) contrast(1.02) brightness(.46) blur(1.6px);
+      }
+      90% {
+        opacity: .18;
+        transform: scale(1);
+        filter: saturate(.92) contrast(.98) brightness(.32) blur(3px);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(.99);
+        filter: saturate(.88) contrast(.94) brightness(.22) blur(4px);
+      }
+    }
+    @keyframes crest-halo-intro {
+      0% {
+        opacity: 0;
+        transform: scale(.72);
+      }
+      60% {
+        opacity: .40;
+      }
+      100% {
+        opacity: .30;
+        transform: scale(1);
+      }
+    }
+    @keyframes crest-halo-loop {
+      0%, 100% {
+        opacity: .28;
+        transform: scale(1);
+      }
+      50% {
+        opacity: .42;
+        transform: scale(1.08);
+      }
+    }
 
     /* ── Footer ── */
     .page-footer {
@@ -299,18 +530,45 @@
       left: 0; right: 0;
       text-align: center;
       font-size: .66rem;
-      color: rgba(182,232,200,.3);
+      color: rgba(199,192,164,.36);
       letter-spacing: .06em;
       z-index: 2;
     }
 
     /* ── Responsivo mobile ── */
     @media (max-width: 500px) {
-      .logo-ring { width: 180px; height: 180px; }
-      .logo-bg { width: 180px; height: 180px; }
-      .logo-bg img { width: 136px; height: 136px; }
-      .brand-title { font-size: 1.8rem; }
+      .page { padding: 22px 16px 28px; gap: 12px; }
+      .left-panel { transform: translateY(4px); }
+      .left-panel { gap: 22px; margin-bottom: 0; }
+      .brand-lockup { gap: 8px; }
+      .logo-ring { width: 240px; height: 240px; }
+      .logo-intro { inset: 0; }
+      .logo-bg { width: 240px; height: 240px; }
+      .logo-bg img { width: 178px; height: 178px; }
+      .card { min-height: 332px; padding: 28px 22px; }
+      .brand-title { font-size: 2.1rem; margin-top: 4px; }
       .bg-line { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .logo-ring,
+      .logo-ring::before,
+      .logo-ring::after,
+      .logo-intro,
+      .logo-bg::before,
+      .logo-bg img,
+      .logo-bg::after {
+        animation: none !important;
+      }
+      .logo-ring { opacity: 1; transform: none; }
+      .logo-bg { transform: none; }
+      .logo-intro { opacity: 0; }
+      .logo-bg::before { opacity: .36; }
+      .logo-bg::after { opacity: .28; transform: scale(1); }
+      .logo-bg img {
+        opacity: 1;
+        transform: scale(1);
+        filter: contrast(1.15) saturate(1.1) drop-shadow(0 8px 18px rgba(0,0,0,.22));
+      }
     }
   </style>
 </head>
@@ -323,22 +581,25 @@
     <div class="left-panel">
       <div class="logo-ring">
         <div class="logo-bg">
+          <span class="logo-intro" aria-hidden="true"></span>
           <img src="/static/logo-bpfron.png.png" alt="BPFRON" onerror="this.style.display='none'">
         </div>
       </div>
-      <div class="brand-title">BPFRON</div>
-      <div class="brand-divider"></div>
+      <div class="brand-lockup">
+        <div class="brand-title">BPFRON</div>
+        <div class="brand-divider"></div>
+      </div>
     </div>
 
     <!-- Formulário -->
     <div class="right-panel">
       <div class="login-box">
-        <div class="login-header">
-          <h1>Acesso ao Sistema</h1>
-          <p>Identifique-se para continuar</p>
-          <div class="header-bar"></div>
-        </div>
         <div class="card">
+          <div class="login-header">
+            <h1>Acesso ao Sistema</h1>
+            <p>Identifique-se para continuar</p>
+            <div class="header-bar"></div>
+          </div>
           <div class="form-group">
             <label for="username">Usuário</label>
             <div class="input-wrap">

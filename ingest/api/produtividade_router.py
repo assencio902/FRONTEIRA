@@ -2,7 +2,9 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, HTTPException, Request
 
+from auth_core import verify_password
 from rbac import assert_admin, require_auth
+from services.admin_activity_service import track_user_activity
 
 
 def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
@@ -10,6 +12,32 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
 
     def _safe_display_name(user: dict[str, Any]) -> str:
         return str(user.get("name") or user.get("sub") or "").strip()
+
+    def _session_id(request: Request) -> str:
+        return str(request.headers.get("X-BPFRON-Session") or "").strip()
+
+    def _track_reset_activity(
+        request: Request,
+        user: dict[str, Any],
+        activity_type: str,
+        details: dict[str, Any],
+    ) -> None:
+        username = str(user.get("sub") or "").strip()
+        if not username:
+            return
+        track_user_activity(
+            conn_factory,
+            request=request,
+            username=username,
+            full_name=_safe_display_name(user) or username,
+            role=str(user.get("role") or "").strip(),
+            session_id=_session_id(request),
+            activity_type=activity_type,
+            page_key="produtividade:reset",
+            page_label="Produtividade / Zerar acumulado",
+            page_path="/dashboard#produtividade/resumo",
+            details=details,
+        )
 
     def _coerce_int(value: Any, field_name: str) -> int:
         try:
@@ -91,6 +119,8 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
         data = await _safe_json(request)
         user = require_auth(request)
         modo = str(data.get("modo") or "substituir").strip().lower()
+        modos_reset = {"zerar", "resetar", "limpar"}
+        modos_incremento = {"incrementar", "somar", "adicionar", "acumular"}
         drogas_kg_input = data.get("drogas_apreendidas_kg", data.get("peso_kg", None))
         if drogas_kg_input in (None, "") and data.get("drogas_toneladas", None) not in (None, ""):
             drogas_kg_input = _coerce_float(data.get("drogas_toneladas", 0), "drogas_toneladas") * 1000.0
@@ -100,11 +130,87 @@ def build_produtividade_router(conn_factory: Callable[[], Any]) -> APIRouter:
             "veiculos_recuperados": _coerce_int(data.get("veiculos_recuperados", 0), "veiculos_recuperados"),
             "updated_by": _safe_display_name(user),
         }
+        is_reset_request = (
+            modo in modos_reset
+            or (
+                modo not in modos_incremento
+                and payload["armas_apreendidas"] == 0
+                and payload["drogas_apreendidas_kg"] == 0
+                and payload["veiculos_recuperados"] == 0
+            )
+        )
+
+        if is_reset_request:
+            senha_conf = str(data.get("senha_confirmacao") or data.get("current_password") or "").strip()
+            if not senha_conf:
+                _track_reset_activity(
+                    request,
+                    user,
+                    "produtividade_reset_negado",
+                    {
+                        "result": "denied",
+                        "reason": "missing_password",
+                        "scope": "painel_produtividade",
+                    },
+                )
+                raise HTTPException(status_code=422, detail="Digite sua senha para confirmar o reset.")
+
+            username = str(user.get("sub") or "").strip()
+            with conn_factory() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT password_hash FROM users WHERE username=%s AND ativa=TRUE LIMIT 1",
+                        (username,),
+                    )
+                    row = cur.fetchone()
+            if not row or not verify_password(senha_conf, row[0]):
+                _track_reset_activity(
+                    request,
+                    user,
+                    "produtividade_reset_negado",
+                    {
+                        "result": "denied",
+                        "reason": "invalid_password",
+                        "scope": "painel_produtividade",
+                    },
+                )
+                raise HTTPException(status_code=403, detail="Senha incorreta. Reset nao autorizado.")
 
         with conn_factory() as conn:
             with conn.cursor() as cur:
                 _ensure_singleton(cur)
-                if modo in {"incrementar", "somar", "adicionar", "acumular"}:
+                if is_reset_request:
+                    cur.execute(
+                        """
+                        UPDATE painel_produtividade
+                        SET armas_apreendidas = 0,
+                            drogas_apreendidas_kg = 0,
+                            peso_kg = 0,
+                            drogas_toneladas = 0,
+                            veiculos_recuperados = 0,
+                            updated_at = NOW(),
+                            updated_by = %s
+                        WHERE id = 1
+                        """,
+                        (payload["updated_by"],),
+                    )
+                    response_payload = _fetch_payload(cur)
+                    _track_reset_activity(
+                        request,
+                        user,
+                        "produtividade_reset",
+                        {
+                            "result": "success",
+                            "scope": "painel_produtividade",
+                            "fields_reset": [
+                                "armas_apreendidas",
+                                "drogas_apreendidas_kg",
+                                "veiculos_recuperados",
+                            ],
+                        },
+                    )
+                    return response_payload
+                elif modo in modos_incremento:
                     cur.execute(
                         """
                         UPDATE painel_produtividade

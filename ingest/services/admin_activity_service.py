@@ -49,6 +49,8 @@ def _activity_type_label(activity_type: str | None) -> str:
         "login": "Login",
         "page_view": "Pagina",
         "logout": "Logout",
+        "produtividade_reset": "Reset Produtividade",
+        "produtividade_reset_negado": "Reset Negado",
     }
     return mapping.get(str(activity_type or "").strip().lower(), "Atividade")
 
@@ -285,6 +287,60 @@ def track_user_page(
                 ip_address=ip_address,
                 user_agent=user_agent,
                 details={"kind": "spa_navigation"},
+            )
+
+    return sid
+
+
+def track_user_activity(
+    conn_factory: Callable[[], Any],
+    *,
+    request: Request,
+    username: str,
+    full_name: str,
+    role: str,
+    session_id: str,
+    activity_type: str,
+    page_key: str = "",
+    page_label: str = "",
+    page_path: str = "",
+    details: Optional[dict[str, Any]] = None,
+) -> str:
+    sid = _clip_text(session_id, 120) or ("legacy-" + uuid.uuid4().hex)
+    safe_role = normalize_role(role)
+    safe_page_key = _page_key(page_key)
+    safe_page_label = _page_label(page_label)
+    safe_page_path = _page_path(page_path)
+    ip_address = _client_ip(request)
+    user_agent = _user_agent(request)
+
+    with conn_factory() as conn:
+        with conn.cursor() as cur:
+            _upsert_session(
+                cur,
+                session_id=sid,
+                username=username,
+                full_name=full_name,
+                role=safe_role,
+                page_key=safe_page_key,
+                page_label=safe_page_label,
+                page_path=safe_page_path,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+            _insert_activity(
+                cur,
+                session_id=sid,
+                username=username,
+                full_name=full_name,
+                role=safe_role,
+                activity_type=activity_type,
+                page_key=safe_page_key,
+                page_label=safe_page_label,
+                page_path=safe_page_path,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                details=details or {},
             )
 
     return sid
