@@ -429,6 +429,8 @@
     #traj-viewer-bar .tvb-plate { font-family:monospace; font-size:1.1rem; font-weight:900; color:#f87171; letter-spacing:.1em; }
     #traj-viewer-bar .tvb-info  { font-size:.8rem; color:var(--muted); }
     #traj-viewer-bar .tvb-esc   { font-size:.74rem; color:#64748b; margin-left:auto; }
+    #traj-viewer-bar .tvb-back  { background:#2563eb; color:#fff; border:none; border-radius:6px;
+      padding:5px 14px; font-size:.82rem; font-weight:700; cursor:pointer; }
     #traj-viewer-bar .tvb-close { background:#ef4444; color:#fff; border:none; border-radius:6px;
       padding:5px 14px; font-size:.82rem; font-weight:700; cursor:pointer; }
     .modal { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; max-width:820px; width:96%; max-height:92vh; overflow-y:auto; box-shadow:0 12px 48px rgba(0,0,0,.25); }
@@ -454,7 +456,11 @@
     .list-card-name { font-weight:700; font-size:15px; line-height:var(--lh-tight); }
     .list-card-desc { font-size:13px; color:var(--muted); margin-top:6px; min-height:16px; }
     .list-card-count { font-size:13px; color:var(--muted); margin-top:12px; font-weight:500; }
-    .list-card-actions { position:absolute; top:14px; right:14px; display:flex; gap:6px; opacity:0; transition:opacity .15s; }
+    .action-cell { text-align:center; }
+    .action-buttons { display:flex; flex-wrap:wrap; gap:4px; align-items:center; justify-content:center; }
+    .action-buttons.end { justify-content:flex-end; }
+    .action-buttons .btn { white-space:nowrap; }
+    .list-card-actions { position:static; display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; opacity:1; transition:none; margin:0 0 12px; }
     .list-card:hover .list-card-actions { opacity:1; }
     .empty-state { text-align:center; padding:60px 24px; color:var(--muted); font-size:14px; }
     .empty-state .icon { font-size:2.6rem; margin-bottom:14px; }
@@ -751,6 +757,94 @@
       --green-text-secondary: rgba(255,255,255,.88);
       --green-menu-hover-text: #ffffff;
       --green-menu-active-text: #ffffff;
+      --green-btn-primary-bg: #15803d;
+      --green-btn-primary-hover: #166534;
+      --green-btn-primary-border: rgba(255,255,255,.08);
+      --green-btn-success-bg: #16a34a;
+      --green-btn-success-hover: #15803d;
+      --green-btn-outline-bg: rgba(255,255,255,.03);
+      --green-btn-outline-border: rgba(110,231,160,.28);
+      --green-btn-outline-text: #f0fdf4;
+      --green-btn-outline-hover-bg: rgba(250,204,21,.12);
+      --green-btn-outline-hover-border: rgba(250,204,21,.58);
+      --green-btn-outline-hover-text: #ffffff;
+      --green-btn-danger-bg: #dc2626;
+      --green-btn-danger-hover: #b91c1c;
+      --green-btn-warning-bg: #d97706;
+      --green-btn-warning-hover: #b45309;
+      --green-btn-shadow: 0 6px 14px rgba(0,0,0,.18);
+    }
+    :root[data-theme="verde"] .btn,
+    :root:not([data-theme]) .btn {
+      border: 1px solid transparent;
+      box-shadow: var(--green-btn-shadow);
+    }
+    :root[data-theme="verde"] .btn-primary,
+    :root:not([data-theme]) .btn-primary {
+      background: var(--green-btn-primary-bg);
+      border-color: var(--green-btn-primary-border);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-primary:hover:not(:disabled),
+    :root:not([data-theme]) .btn-primary:hover:not(:disabled) {
+      background: var(--green-btn-primary-hover);
+      border-color: rgba(250,204,21,.45);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    :root[data-theme="verde"] .btn-success,
+    :root:not([data-theme]) .btn-success {
+      background: var(--green-btn-success-bg);
+      border-color: rgba(255,255,255,.08);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-success:hover:not(:disabled),
+    :root:not([data-theme]) .btn-success:hover:not(:disabled) {
+      background: var(--green-btn-success-hover);
+      border-color: rgba(250,204,21,.4);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-danger,
+    :root:not([data-theme]) .btn-danger {
+      background: var(--green-btn-danger-bg);
+      border-color: rgba(255,255,255,.08);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-danger:hover:not(:disabled),
+    :root:not([data-theme]) .btn-danger:hover:not(:disabled) {
+      background: var(--green-btn-danger-hover);
+      border-color: rgba(255,255,255,.14);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-warning,
+    :root:not([data-theme]) .btn-warning {
+      background: var(--green-btn-warning-bg);
+      border-color: rgba(255,255,255,.08);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-warning:hover:not(:disabled),
+    :root:not([data-theme]) .btn-warning:hover:not(:disabled) {
+      background: var(--green-btn-warning-hover);
+      border-color: rgba(255,255,255,.14);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-secondary,
+    :root:not([data-theme]) .btn-secondary {
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.16);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-secondary:hover:not(:disabled),
+    :root:not([data-theme]) .btn-secondary:hover:not(:disabled) {
+      background: rgba(255,255,255,.16);
+      border-color: rgba(250,204,21,.35);
+      color: #ffffff;
+    }
+    :root[data-theme="verde"] .btn-outline,
+    :root:not([data-theme]) .btn-outline {
+      background: var(--green-btn-outline-bg);
+      border-color: var(--green-btn-outline-border);
+      color: var(--green-btn-outline-text);
     }
     :root[data-theme="verde"] .btn:hover:not(:disabled),
     :root:not([data-theme]) .btn:hover:not(:disabled),
@@ -774,9 +868,9 @@
     }
     :root[data-theme="verde"] .btn-outline:hover:not(:disabled),
     :root:not([data-theme]) .btn-outline:hover:not(:disabled) {
-      background: var(--green-btn-hover-bg);
-      border-color: var(--green-btn-active-border);
-      color: var(--green-btn-active-text);
+      background: var(--green-btn-outline-hover-bg);
+      border-color: var(--green-btn-outline-hover-border);
+      color: var(--green-btn-outline-hover-text);
     }
     :root[data-theme="verde"] .nav-item:hover,
     :root:not([data-theme]) .nav-item:hover,
@@ -807,9 +901,75 @@
     :root:not([data-theme]) .nav-item {
       color: var(--green-text-primary);
     }
-    :root[data-theme="verde"] .topbar-subtitle,
-    :root:not([data-theme]) .topbar-subtitle,
-    :root[data-theme="verde"] .card-label,
+    :root[data-theme="verde"] #topbar,
+    :root:not([data-theme]) #topbar {
+                min-height: 116px;
+                padding-top: 0;
+                padding-bottom: 0;
+                align-items: stretch;
+                justify-content: center;
+              }
+    :root[data-theme="verde"] .topbar-title-group,
+    :root:not([data-theme]) .topbar-title-group {
+                align-items: stretch;
+                min-height: 116px;
+                flex: 1 1 auto;
+                min-width: 0;
+                justify-content: center;
+                width: 100%;
+              }
+    :root[data-theme="verde"] .topbar-subtitle .topo-texto,
+    :root:not([data-theme]) .topbar-subtitle .topo-texto {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 116px;
+                height: 100%;
+                flex-wrap: nowrap;
+                white-space: nowrap;
+                min-width: 0;
+                width: 100%;
+            }
+    :root[data-theme="verde"] .brand-verde-title,
+    :root:not([data-theme]) .brand-verde-title {
+              display: block;
+              font-size: clamp(34px, 3.8vw, 64px);
+              font-weight: 900;
+              letter-spacing: .04em;
+              line-height: 1;
+              text-transform: uppercase;
+              color: transparent;
+              background-image:
+                linear-gradient(90deg,
+                  #d8a90d 0%,
+                  #facc15 18%,
+                  #fff7bf 32%,
+                  #facc15 46%,
+                  #d8a90d 62%,
+                  #facc15 100%);
+              background-size: 220% 100%;
+              background-position: 0% 50%;
+              -webkit-background-clip: text;
+              background-clip: text;
+              text-shadow: 0 1px 0 rgba(0,0,0,.24), 0 0 18px rgba(250,204,21,.14);
+              white-space: nowrap;
+              max-width: none;
+              animation:
+                pmroTopbarFade .6s ease-out,
+                bpfronHeaderGlow 4.8s ease-in-out infinite,
+                bpfronHeaderSweep 5.6s linear infinite;
+              transform-origin: left center;
+              flex: 0 1 auto;
+            }
+    :root[data-theme="verde"] .pmro-main,
+    :root:not([data-theme]) .pmro-main,
+    :root[data-theme="verde"] .pmro-sub,
+    :root:not([data-theme]) .pmro-sub {
+      display: none;
+    }
+      :root[data-theme="verde"] .topbar-subtitle,
+      :root:not([data-theme]) .topbar-subtitle,
+      :root[data-theme="verde"] .card-label,
     :root:not([data-theme]) .card-label,
     :root[data-theme="verde"] .card-sub,
     :root:not([data-theme]) .card-sub,
@@ -817,10 +977,36 @@
     :root:not([data-theme]) .toolbar label,
     :root[data-theme="verde"] .pagination span,
     :root:not([data-theme]) .pagination span,
-    :root[data-theme="verde"] .status-line,
-    :root:not([data-theme]) .status-line {
-      color: var(--green-text-secondary);
-    }
+      :root[data-theme="verde"] .status-line,
+      :root:not([data-theme]) .status-line {
+        color: var(--green-text-secondary);
+      }
+        :root[data-theme="verde"] .topbar-subtitle,
+        :root:not([data-theme]) .topbar-subtitle {
+              flex: 1 1 auto;
+              min-width: 0;
+              overflow: hidden;
+              display: flex;
+                justify-content: center;
+                align-items: stretch;
+                width: 100%;
+                min-height: 116px;
+                padding: 0 24px;
+                background:
+                linear-gradient(90deg, rgba(250,204,21,.06), rgba(250,204,21,.11), rgba(250,204,21,.06));
+                border-top: 1px solid rgba(250,204,21,.12);
+              border-bottom: 1px solid rgba(250,204,21,.12);
+            }
+        :root[data-theme="verde"] .top-right.header-right,
+        :root:not([data-theme]) .top-right.header-right {
+            display: none;
+          }
+        :root[data-theme="verde"] .top-right .topo-pattern img,
+        :root:not([data-theme]) .top-right .topo-pattern img {
+            max-width: 180px;
+            width: 100%;
+            height: auto;
+          }
     :root[data-theme="verde"] #ev-limit-select:hover,
     :root:not([data-theme]) #ev-limit-select:hover {
       background: var(--green-btn-hover-bg);
@@ -1026,6 +1212,121 @@
     :root:not([data-theme]) #tab-alarmes #alc-inativos {
       text-shadow: 0 1px 0 rgba(0,0,0,.18);
     }
+    :root[data-theme="verde"] #tab-batedor .sub-tabs .sub-tab.active,
+    :root:not([data-theme]) #tab-batedor .sub-tabs .sub-tab.active {
+      font-size:20px;
+      font-weight:700;
+      color:#facc15;
+      line-height:1.2;
+      text-shadow:0 1px 0 rgba(0,0,0,.18);
+    }
+    :root[data-theme="verde"] #tab-batedor #alvo-dv-titulo,
+    :root:not([data-theme]) #tab-batedor #alvo-dv-titulo {
+      font-size:20px;
+      font-weight:700;
+      color:#facc15;
+      line-height:1.2;
+      text-shadow:0 1px 0 rgba(0,0,0,.18);
+    }
+    :root[data-theme="verde"] #tab-batedor .status-line,
+    :root:not([data-theme]) #tab-batedor .status-line,
+    :root[data-theme="verde"] #tab-batedor #cgs-page-info,
+    :root:not([data-theme]) #tab-batedor #cgs-page-info,
+    :root[data-theme="verde"] #tab-batedor #cen-page-info,
+    :root:not([data-theme]) #tab-batedor #cen-page-info,
+    :root[data-theme="verde"] #tab-batedor .card-sub,
+    :root:not([data-theme]) #tab-batedor .card-sub {
+      font-size:12px;
+      font-weight:500;
+      color:rgba(212,245,223,.9);
+      line-height:1.35;
+    }
+    :root[data-theme="verde"] #tab-batedor table thead th,
+    :root:not([data-theme]) #tab-batedor table thead th {
+      font-size:12px;
+      font-weight:700;
+      color:#facc15;
+      line-height:1.3;
+    }
+    :root[data-theme="verde"] #tab-batedor table tbody td,
+    :root:not([data-theme]) #tab-batedor table tbody td {
+      font-size:13px;
+      font-weight:500;
+      color:rgba(255,255,255,.94);
+      line-height:1.4;
+    }
+    :root[data-theme="verde"] #tab-batedor .btn,
+    :root:not([data-theme]) #tab-batedor .btn {
+      font-size:15px;
+      font-weight:600;
+      line-height:1.25;
+    }
+    :root[data-theme="verde"] #tab-batedor .btn-sm,
+    :root:not([data-theme]) #tab-batedor .btn-sm,
+    :root[data-theme="verde"] #tab-batedor .btn-xs,
+    :root:not([data-theme]) #tab-batedor .btn-xs,
+    :root[data-theme="verde"] #tab-batedor .cen-btn-apply,
+    :root:not([data-theme]) #tab-batedor .cen-btn-apply,
+    :root[data-theme="verde"] #tab-batedor .cen-btn-clear,
+    :root:not([data-theme]) #tab-batedor .cen-btn-clear,
+    :root[data-theme="verde"] #traj-viewer-bar .tvb-back,
+    :root:not([data-theme]) #traj-viewer-bar .tvb-back,
+    :root[data-theme="verde"] #traj-viewer-bar .tvb-close,
+    :root:not([data-theme]) #traj-viewer-bar .tvb-close {
+      font-size:14px;
+      font-weight:700;
+      line-height:1.25;
+    }
+    :root[data-theme="verde"] #tab-batedor .cen-lbl,
+    :root:not([data-theme]) #tab-batedor .cen-lbl,
+    :root[data-theme="verde"] #tab-batedor .toolbar label,
+    :root:not([data-theme]) #tab-batedor .toolbar label {
+      font-size:12px;
+      font-weight:500;
+      color:rgba(212,245,223,.9);
+      line-height:1.35;
+    }
+    :root[data-theme="verde"] #tab-batedor input[type="text"],
+    :root:not([data-theme]) #tab-batedor input[type="text"],
+    :root[data-theme="verde"] #tab-batedor input[type="date"],
+    :root:not([data-theme]) #tab-batedor input[type="date"],
+    :root[data-theme="verde"] #tab-batedor input[type="datetime-local"],
+    :root:not([data-theme]) #tab-batedor input[type="datetime-local"],
+    :root[data-theme="verde"] #tab-batedor input[type="number"],
+    :root:not([data-theme]) #tab-batedor input[type="number"],
+    :root[data-theme="verde"] #tab-batedor select,
+    :root:not([data-theme]) #tab-batedor select,
+    :root[data-theme="verde"] #tab-batedor textarea,
+    :root:not([data-theme]) #tab-batedor textarea,
+    :root[data-theme="verde"] #tab-batedor .cen-ctl,
+    :root:not([data-theme]) #tab-batedor .cen-ctl {
+      font-size:13px;
+      font-weight:500;
+      color:#ffffff;
+      line-height:1.35;
+    }
+    :root[data-theme="verde"] #tab-batedor [class*="badge"],
+    :root:not([data-theme]) #tab-batedor [class*="badge"] {
+      font-size:12px;
+      font-weight:600;
+      line-height:1.2;
+    }
+    :root[data-theme="verde"] #tab-cadastro #cad-tbody td.cad-acoes,
+    :root:not([data-theme]) #tab-cadastro #cad-tbody td.cad-acoes,
+    :root[data-theme="verde"] #tab-veiculos #list-detail-tbody td.veh-acoes,
+    :root:not([data-theme]) #tab-veiculos #list-detail-tbody td.veh-acoes {
+      text-align:center;
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      justify-content:center;
+    }
+    :root[data-theme="verde"] #tab-cadastro #cad-tbody td.cad-acoes .btn,
+    :root:not([data-theme]) #tab-cadastro #cad-tbody td.cad-acoes .btn,
+    :root[data-theme="verde"] #tab-veiculos #list-detail-tbody td.veh-acoes .btn,
+    :root:not([data-theme]) #tab-veiculos #list-detail-tbody td.veh-acoes .btn {
+      white-space:nowrap;
+    }
     :root[data-theme="branco"] {
       --pmro-azul-principal: #1e3a8a;
       --pmro-azul-secundario: #2563eb;
@@ -1092,6 +1393,9 @@
         0 0 10px rgba(59, 130, 246, 0.20);
       animation: none;
     }
+    :root[data-theme="branco"] .brand-verde-title {
+      display: none;
+    }
     :root[data-theme="branco"] .topbar-subtitle .topo-texto {
       flex: 1 1 auto;
       min-width: 0;
@@ -1108,6 +1412,7 @@
     }
     :root[data-theme="branco"] .topbar-subtitle .pmro-main,
     :root[data-theme="branco"] .topbar-subtitle .brand-title {
+      display: block;
       font-family: 'Bahnschrift SemiBold Condensed', Bahnschrift, 'Arial Black', Arial, sans-serif;
       font-size: clamp(32px, 4vw, 72px);
       font-weight: 700;
@@ -1125,6 +1430,7 @@
     }
     :root[data-theme="branco"] .topbar-subtitle .pmro-sub,
     :root[data-theme="branco"] .topbar-subtitle .brand-subtitle {
+      display: block;
       font-family: 'Orbitron', sans-serif;
       font-size: clamp(12px, 1.4vw, 28px);
       font-weight: 500;
@@ -1369,8 +1675,8 @@
       }
     }
     @keyframes pmroSloganGlow {
-      0% {
-        opacity: 0.56;
+        0% {
+          opacity: 0.56;
         background-position: 0% 50%;
         text-shadow:
           0 0 2px rgba(30, 64, 175, 0.12),
@@ -1394,11 +1700,36 @@
       100% {
         opacity: 0.62;
         background-position: 100% 50%;
-        text-shadow:
-          0 0 3px rgba(47, 111, 255, 0.18),
-          0 0 8px rgba(59, 130, 246, 0.08);
+          text-shadow:
+            0 0 3px rgba(47, 111, 255, 0.18),
+            0 0 8px rgba(59, 130, 246, 0.08);
+        }
       }
-    }
+      @keyframes bpfronHeaderGlow {
+        0%, 100% {
+          transform: translateY(0);
+          text-shadow:
+            0 1px 0 rgba(0,0,0,.24),
+            0 0 10px rgba(250,204,21,.14);
+          filter: saturate(1);
+        }
+        50% {
+          transform: translateY(-1px);
+          text-shadow:
+            0 1px 0 rgba(0,0,0,.24),
+            0 0 16px rgba(250,204,21,.28),
+            0 0 28px rgba(253,224,71,.18);
+          filter: saturate(1.08);
+        }
+      }
+      @keyframes bpfronHeaderSweep {
+        0% {
+          background-position: -220% 50%;
+        }
+        100% {
+          background-position: 220% 50%;
+        }
+      }
     :root[data-theme="branco"] .card {
       background: var(--pmro-card);
       border: 1px solid var(--pmro-borda);
@@ -1894,7 +2225,7 @@
 <!-- SIDEBAR -->
 <nav id="sidebar">
   <div class="sidebar-logo">
-    <img id="sidebar-theme-logo" src="/static/logo.png" alt="Logo do sistema" onerror="this.style.display='none'">
+    <img id="sidebar-theme-logo" src="/static/logo-bpfron.png.png" alt="Logo do sistema" onerror="this.style.display='none'">
   </div>
   <div class="sidebar-section">Operacional</div>
   <div class="nav-item active" onclick="switchTab('painel',this)">
@@ -1954,7 +2285,7 @@
   <div id="topbar" class="top-header">
     <div class="topbar-title-group brand-area">
       <h1 id="topbar-title" style="display:none">Painel</h1>
-      <span class="topbar-subtitle topo-faixa-institucional brand-title"><span class="topo-texto"><span class="pmro-main">PM RO</span><span class="pmro-sub brand-subtitle">servindo e protegendo</span></span></span>
+      <span class="topbar-subtitle topo-faixa-institucional brand-title"><span class="topo-texto"><span class="brand-verde-title">BATALH&Atilde;O DE POL&Iacute;CIA DE FRONTEIRAS E DIVISAS</span><span class="pmro-main">PM RO</span><span class="pmro-sub brand-subtitle">servindo e protegendo</span></span></span>
     </div>
     <div class="top-right header-right"><span class="topo-pattern"><img src="/static/pmro-pattern.svg" alt="Padrão institucional"></span></div>
   </div>
@@ -2166,12 +2497,12 @@
           <div class="cen-tb">
             <label class="cen-lbl">Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
-                <option value="1h" selected>1 hora</option>
+                <option value="1h">1 hora</option>
                 <option value="2h">2 horas</option>
                 <option value="3h">3 horas</option>
                 <option value="6h">6 horas</option>
                 <option value="12h">12 horas</option>
-                <option value="24h">24 horas</option>
+                <option value="24h" selected>24 horas</option>
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
             </label>
@@ -2211,7 +2542,7 @@
             </label>
             <span id="cgs-leader-opts" style="display:none;align-items:center;gap:8px">
               <label class="cen-lbl">&#127942; L&iacute;der &gt;=
-                <input id="cgs-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" class="cen-ctl cen-ctl-narrow">%
+                <input id="cgs-leader-ratio" type="number" min="50" max="100" step="5" value="70" class="cen-ctl cen-ctl-narrow">%
               </label>
               <label id="cgs-payload-label" class="cen-lbl" style="display:none">&#128230; Payload 1&ordm; &le;
                 <input id="cgs-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
@@ -2334,7 +2665,7 @@
           </label>
           <span id="cen-leader-opts" style="display:none;align-items:center;gap:8px">
             <label class="cen-lbl">&#127942; L&iacute;der &gt;=
-              <input id="cen-leader-ratio" type="number" min="0.5" max="1" step="0.05" value="0.70" class="cen-ctl cen-ctl-narrow">%
+              <input id="cen-leader-ratio" type="number" min="50" max="100" step="5" value="70" class="cen-ctl cen-ctl-narrow">%
             </label>
             <label id="cen-payload-label" class="cen-lbl" style="display:none">&#128230; Payload 1&ordm; &le;
               <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
@@ -2561,13 +2892,13 @@
               <th>camera_id</th>
               <th style="cursor:pointer;user-select:none" onclick="_setCamSort('nome')"  title="Ordenar por Nome">Nome</th>
               <th style="cursor:pointer;user-select:none" onclick="_setCamSort('ip')"    title="Ordenar por IP">IP</th>
-              <th>Criticidade</th><th>Peso</th><th>Ativa</th>
+              <th>Integração</th><th>Criticidade</th><th>Peso</th><th>Ativa</th>
               <th style="cursor:pointer;user-select:none" onclick="_setCamSort('status')" title="Ordenar por Status">&#218;ltimo Evento</th>
               <th>Hoje</th><th>Total</th><th>Dire&ccedil;&atilde;o</th><th>A&#231;&#245;es</th>
             </tr>
           </thead>
           <tbody id="cameras-tbody">
-            <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
+            <tr><td colspan="13" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Carregando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2905,6 +3236,22 @@
             </div>
           </div>
 
+          <div class="ab-row-1">
+            <div class="ab-field">
+              <span class="ab-req"></span>
+              <span class="ab-lbl">Imagem do abordado</span>
+              <input type="file" id="ab-imagem" accept="image/*" class="ab-ctrl" onchange="abPreviewImagem(this)">
+              <div id="ab-imagem-preview-wrap" style="display:none;margin-top:10px">
+                <img id="ab-imagem-preview" src="" alt="Prévia do abordado"
+                     style="max-width:180px;max-height:180px;border-radius:12px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"
+                     onclick="if(this.src){openImageUrl(this.src,'Imagem do abordado')}">
+                <div style="margin-top:8px">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="abRemoverImagem()">Remover imagem</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Resultado de pesquisa / aviso cadastro existente -->
           <div id="ab-pessoa-resultado" style="margin-bottom:6px"></div>
           <div id="ab-cadastro-existente-wrap" style="display:none;margin-bottom:10px;padding:12px 14px;border:1px solid var(--accent);border-radius:var(--radius);background:rgba(16,185,129,.07)">
@@ -3037,6 +3384,21 @@
                 <input type="text" id="ab-cor" maxlength="40" placeholder="Ex: Prata" class="ab-ctrl">
               </div>
             </div>
+            <div class="ab-row-1">
+              <div class="ab-field">
+                <span class="ab-req"></span>
+                <span class="ab-lbl">Imagem do veículo</span>
+                <input type="file" id="ab-veiculo-imagem" accept="image/*" class="ab-ctrl" onchange="abPreviewVeiculoImagem(this)">
+                <div id="ab-veiculo-imagem-preview-wrap" style="display:none;margin-top:10px">
+                  <img id="ab-veiculo-imagem-preview" src="" alt="Prévia do veículo"
+                       style="max-width:180px;max-height:180px;border-radius:12px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"
+                       onclick="if(this.src){openImageUrl(this.src,'Imagem do veículo')}">
+                  <div style="margin-top:8px">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="abRemoverVeiculoImagem()">Remover imagem</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div id="ab-veiculo-info" style="font-size:.78rem;margin-top:4px;display:none"></div>
             <div class="ab-row-1" style="margin-top:8px">
               <div class="ab-field" style="max-width:280px">
@@ -3131,6 +3493,11 @@
 
         <div id="abl-paginacao" style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap"></div>
       </div>
+
+      <!-- SUB-ABA: RELATORIO DA PESSOA -->
+      <div id="pessoas-sub-relatorio" class="pessoas-sub-pane" style="display:none">
+        <div id="relatorio-content" style="min-height:180px"></div>
+      </div>
     </div><!-- /tab-cadastro -->
 
 <!-- Modal: Confirmar Exclusão de Pessoa -->
@@ -3179,6 +3546,24 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0">
       <button class="btn btn-outline btn-sm" id="ab-det-rel-btn" style="display:none">&#128202; Ver relat&oacute;rio completo</button>
       <button class="btn btn-outline btn-sm" onclick="closeModal('ab-det-modal')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Visualizar cadastro de pessoa -->
+<div class="modal-overlay" id="cad-view-modal" onclick="if(event.target===this)closeModal('cad-view-modal')">
+  <div class="modal" style="max-width:760px;width:97%;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <h2 id="cad-view-titulo">&#128100; Dados da Pessoa</h2>
+      <button class="modal-close" onclick="closeModal('cad-view-modal')">&times;</button>
+    </div>
+    <div id="cad-view-body" style="overflow-y:auto;flex:1;font-size:.87rem;line-height:1.7;padding-bottom:4px">
+      <div style="text-align:center;padding:20px"><span class="spinner"></span> Carregando...</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0">
+      <button class="btn btn-outline btn-sm" id="cad-view-nova-ab-btn">&#10133; Nova abordagem</button>
+      <button class="btn btn-outline btn-sm" id="cad-view-edit-btn">&#9998; Editar cadastro</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('cad-view-modal')">Fechar</button>
     </div>
   </div>
 </div>
@@ -3466,6 +3851,22 @@
             <input type="text" id="cad-ab-cor" maxlength="40" placeholder="Ex: Branca"
               style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
           </label>
+        </div>
+        <div style="margin-top:10px">
+          <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;max-width:280px">
+            Imagem do veículo
+            <input type="file" id="cad-ab-veiculo-foto" accept="image/*"
+              style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"
+              onchange="cadAbPreviewVeiculoImagem(this)">
+          </label>
+          <div id="cad-ab-veiculo-foto-wrap" style="display:none;margin-top:8px">
+            <img id="cad-ab-veiculo-foto-preview" src="" alt="Prévia do veículo"
+              style="width:96px;height:96px;border-radius:10px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"
+              onclick="if(this.src){openImageUrl(this.src,'Foto do veículo')}">
+            <div style="margin-top:6px">
+              <button type="button" class="btn btn-outline btn-sm" onclick="cadAbRemoverVeiculoImagem()">Remover imagem</button>
+            </div>
+          </div>
         </div>
         <div style="margin-top:10px">
           <label style="display:flex;flex-direction:column;gap:4px;font-size:.82rem;max-width:260px">
@@ -4064,6 +4465,31 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="vehicle-target-modal" onclick="if(event.target===this)closeModal('vehicle-target-modal')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h2>Cadastrar Como Alvo</h2>
+      <button class="modal-close" onclick="closeModal('vehicle-target-modal')">&times;</button>
+    </div>
+    <div style="font-size:.84rem;color:var(--muted);margin-bottom:12px">
+      Escolha a lista de monitoramento para lançar a placa e confirmar o cadastro.
+    </div>
+    <div class="form-group">
+      <label>Placa</label>
+      <input type="text" id="vehicle-target-plate" readonly>
+    </div>
+    <div class="form-group">
+      <label>Lista de destino</label>
+      <select id="vehicle-target-list"></select>
+    </div>
+    <div class="form-error" id="vehicle-target-error"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('vehicle-target-modal')">Cancelar</button>
+      <button class="btn btn-success btn-sm" onclick="_confirmVehicleTargetChoice()">Continuar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ADICIONAR/EDITAR C\u00c2MERA -->
 <div class="modal-overlay" id="camera-modal" onclick="if(event.target===this)closeModal('camera-modal')">
   <div class="modal modal-sm">
@@ -4110,19 +4536,11 @@
     </div>
     <div class="form-group">
       <label>Modo de Integra&ccedil;&atilde;o</label>
-      <select id="cam-modo-integracao" onchange="_camModoChange()">
+      <select id="cam-modo-integracao" onchange="_camModoChange()" disabled>
         <option value="push">Push (c&acirc;mera envia eventos)</option>
-        <option value="listen">Listen / HTTP (servidor consulta c&acirc;mera)</option>
       </select>
-    </div>
-    <div id="cam-listen-creds" style="display:none">
-      <div class="form-group">
-        <label>Usu&aacute;rio da c&acirc;mera</label>
-        <input type="text" id="cam-usuario" placeholder="Ex: admin" autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label>Senha da c&acirc;mera</label>
-        <input type="password" id="cam-senha" placeholder="Senha" autocomplete="new-password">
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">
+        Modo fixo deste ambiente: Push.
       </div>
     </div>
     <div class="form-group">
@@ -4771,6 +5189,20 @@ function formatConfidencePercent(value) {
   return Math.round(Math.max(0, Math.min(100, n)));
 }
 
+function percentInputToRatio(value, fallback) {
+  var n = parseFloat(value);
+  if (isNaN(n)) return fallback;
+  if (n > 1) n = n / 100;
+  return Math.max(0, Math.min(1, n));
+}
+
+function ratioToPercentInput(value, fallback) {
+  var n = parseFloat(value);
+  if (isNaN(n)) return fallback;
+  if (n > 0 && n <= 1) n = n * 100;
+  return String(Math.round(Math.max(0, Math.min(100, n))));
+}
+
 function fmtConf(c) {
   if (c == null || c === '') return '-';
   var n = parseFloat(c);
@@ -4875,8 +5307,8 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     // fecha o viewer de trajetória temporária primeiro
-    if (_trajViewerPrevTab !== null) { _fecharMapaOverlay(); return; }
-    ['img-modal','detail-modal','list-modal','vehicle-modal','camera-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal'].forEach(closeModal);
+    if (_trajViewerPrevTab !== null) { _fecharMapaOverlay(true); return; }
+    ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal'].forEach(closeModal);
   }
 });
 
@@ -5001,6 +5433,41 @@ function openImage(evId, plate) {
   openModal('img-modal');
 }
 
+function openImageUrl(url, title) {
+  var imageUrl = normalizeImageUrl(url);
+  if (!imageUrl) return;
+  var img = document.getElementById('img-modal-img');
+  var err = document.getElementById('img-modal-error');
+  document.getElementById('img-modal-evnum').textContent = 'Imagem';
+  document.getElementById('img-modal-plate-title').textContent = title || 'Visualizacao';
+  img.style.display = 'block';
+  err.style.display = 'none';
+  img.src = imageUrl + (imageUrl.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+  document.getElementById('img-modal-cam').textContent = '-';
+  document.getElementById('img-modal-date').textContent = '-';
+  document.getElementById('img-modal-time').textContent = '-';
+  document.getElementById('img-modal-list').textContent = '-';
+  document.getElementById('img-modal-priority').textContent = '-';
+  document.getElementById('img-modal-alert-status').textContent = '-';
+  document.getElementById('img-modal-conf-badge').style.display = 'none';
+  document.getElementById('img-modal-dir-badge').style.display = 'none';
+  document.getElementById('img-modal-camdata').style.display = 'none';
+  document.getElementById('img-modal-camdata-body').innerHTML = '';
+  document.getElementById('img-modal-yolo').style.display = 'none';
+  document.getElementById('img-modal-yolo-body').innerHTML = '';
+  openModal('img-modal');
+}
+
+function normalizeImageUrl(path) {
+  if (!path) return '';
+  path = String(path).trim();
+  if (!path) return '';
+  if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0 || path.indexOf('/') === 0) {
+    return path;
+  }
+  return '/uploads/' + path.replace(/^\.?\//, '');
+}
+
 // ===== PLACAS MONITORADAS =====
 async function loadMonPlates() {
   try {
@@ -5044,6 +5511,8 @@ function listBadgesHtml(plate) {
 }
 
 // ===== EVENTOS =====
+var _eventCache = {};
+
 async function loadEvents(newOffset) {
   if (newOffset !== undefined) { evOffset = newOffset; _evTableReady = false; }
   document.getElementById('events-status').innerHTML = '<span class="spinner"></span>';
@@ -5058,6 +5527,8 @@ async function loadEvents(newOffset) {
     var data = await r.json();
     evTotal = data.total || 0;
     var items = data.items || [];
+    _eventCache = {};
+    items.forEach(function(ev) { _eventCache[ev.id] = ev; });
     var newIds = new Set();
     if (evOffset === 0 && lastMaxId > 0) {
       items.forEach(function(ev){ if (ev.id > lastMaxId) newIds.add(ev.id); });
@@ -5146,6 +5617,10 @@ function _buildEvRowHtml(ev, isNew) {
     : dir === 'DECRESCENTE'
       ? '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8595; DECRESCENTE</span>'
       : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
+  var acaoEvento = ev.plate
+    ? 'openEventReport(' + ev.id + ')'
+    : 'openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')';
+  var tituloAcaoEvento = ev.plate ? 'Abrir relatório da placa' : 'Abrir imagem do evento';
   return '<tr class="' + (isNew ? 'row-new' : '') + '" data-ev-id="' + ev.id + '">'
     + '<td style="color:var(--muted);font-size:.74rem">' + ev.id + '</td>'
     + '<td>' + thumb + '</td>'
@@ -5155,7 +5630,7 @@ function _buildEvRowHtml(ev, isNew) {
     + '<td style="white-space:nowrap">' + dirCell + '</td>'
     + '<td>' + fmtConf(ev.confidence) + '</td>'
     + '<td style="min-width:90px">' + _yoloBadge(ev) + '</td>'
-    + '<td><button class="btn btn-outline btn-xs" onclick="openImage(' + ev.id + ',\'' + (ev.plate||'').replace(/'/g,"\\'") + '\')">🔍</button></td>'
+    + '<td><button class="btn btn-outline btn-xs" onclick="' + acaoEvento + '" title="' + tituloAcaoEvento + '">&#128269; Relatório</button></td>'
     + '</tr>';
 }
 
@@ -5480,19 +5955,195 @@ function _cgsWindowChange() {
 
 function _cgsReset() {
   var el;
-  el = document.getElementById('cgs-window');      if (el) { el.value = '1h'; _cgsWindowChange(); }
+  el = document.getElementById('cgs-window');      if (el) { el.value = '24h'; _cgsWindowChange(); }
   el = document.getElementById('cgs-gsizes');      if (el) el.value = '2';
   el = document.getElementById('cgs-min-cameras'); if (el) el.value = '2';
   el = document.getElementById('cgs-cowin');       if (el) el.value = '300';
   el = document.getElementById('cgs-risco');       if (el) el.value = '';
   var om = document.getElementById('cgs-ordermode'); if (om) { om.value = 'any'; _cgsOrderModeChange(); }
-  var lr = document.getElementById('cgs-leader-ratio'); if (lr) lr.value = '0.70';
+  var lr = document.getElementById('cgs-leader-ratio'); if (lr) lr.value = '70';
   var pm = document.getElementById('cgs-payload-max');  if (pm) pm.value = '0';
 }
 
 function _cgsApplyFilter() {
   _cgsPage = 0;
   _cgsRenderPage();
+}
+
+function _resolveTrajectoryCameraPoint(item, plate) {
+  var cams = window._camsData || [];
+  var eventKeys = [
+    String(item.camera_id || '').trim().toLowerCase(),
+    String(item.cam_nome || '').trim().toLowerCase(),
+    String(item.camera || '').trim().toLowerCase(),
+    String(item.channel_name || '').trim().toLowerCase()
+  ].filter(Boolean);
+  var cam = cams.find(function(c) {
+    var keys = [
+      String(c.camera_id || '').trim().toLowerCase(),
+      String(c.ip || '').trim().toLowerCase(),
+      String(c.nome || '').trim().toLowerCase()
+    ].filter(Boolean);
+    return eventKeys.some(function(k) { return keys.indexOf(k) >= 0; });
+  });
+  if (!cam || cam.latitude == null || cam.longitude == null) return null;
+  return {
+    camera_id: item.camera_id || cam.camera_id || cam.ip || '',
+    ts: item.occurred_at || item.ts || '',
+    plate: plate,
+    cam_nome: item.cam_nome || item.camera || item.channel_name || cam.nome || cam.camera_id || '',
+    lat: Number(cam.latitude),
+    lng: Number(cam.longitude)
+  };
+}
+
+async function openEventReport(eventId) {
+  var ev = _eventCache[eventId];
+  if (!ev || !ev.plate) {
+    if (ev && ev.id) openImage(ev.id, ev.plate || '');
+    return;
+  }
+
+  var plate = String(ev.plate || '').trim().toUpperCase();
+  var tsBase = ev.ts || ev.occurred_at;
+  var eventDate = tsBase ? new Date(tsBase) : new Date();
+  if (isNaN(eventDate.getTime())) eventDate = new Date();
+  var dayStart = new Date(eventDate);
+  dayStart.setHours(0, 0, 0, 0);
+  var dayEnd = new Date(eventDate);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  _reportHistory = [];
+  _reportCurrentPlate = null;
+  _reportCurrentOpts = null;
+  _detailModalReturnFn = function() { openEventReport(eventId); };
+  document.getElementById('detail-modal-plate').innerHTML = '&#128203; Relat&oacute;rio do Evento &mdash; ' + plate;
+  document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Carregando passagens do dia...</p>';
+  var _mb = document.getElementById('detail-modal-map-btn');
+  if (_mb) _mb.style.display = 'none';
+  openModal('detail-modal');
+
+  try {
+    var rangeStart = _toLocalDTInput(dayStart);
+    var rangeEnd = _toLocalDTInput(dayEnd);
+    var responses = await Promise.all([
+      fetch('/api/events?limit=200&plate=' + encodeURIComponent(plate)
+        + '&dt_from=' + encodeURIComponent(dayStart.toISOString())
+        + '&dt_to=' + encodeURIComponent(dayEnd.toISOString())),
+      fetch('/api/vehicles/' + encodeURIComponent(plate) + '/trajectory'
+        + '?start=' + encodeURIComponent(rangeStart)
+        + '&end=' + encodeURIComponent(rangeEnd)
+        + '&dedupe_seconds=5')
+    ]);
+    var resp = responses[0];
+    var trajResp = responses[1];
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var d = await resp.json();
+    var events = (d.items || []).slice().sort(function(a, b) {
+      return new Date(b.occurred_at || b.ts || 0).getTime() - new Date(a.occurred_at || a.ts || 0).getTime();
+    });
+    var camerasSeen = {};
+    var confSum = 0;
+    var confCount = 0;
+    events.forEach(function(item) {
+      var camKey = item.camera_id || item.cam_nome || item.channel_name || '';
+      if (camKey) camerasSeen[camKey] = true;
+      var confNum = Number(item.confidence);
+      if (confNum > 0) {
+        confSum += confNum;
+        confCount += 1;
+      }
+    });
+    var currentCam = ev.cam_nome || ev.channel_name || ev.camera_id || '-';
+    var currentDir = ev.direcao === 'CRESCENTE'
+      ? '<span class="badge badge-info" style="font-size:.7rem">&#8593; CRESCENTE</span>'
+      : ev.direcao === 'DECRESCENTE'
+        ? '<span class="badge badge-warning" style="font-size:.7rem">&#8595; DECRESCENTE</span>'
+        : '<span style="color:var(--muted)">—</span>';
+    var avgConf = confCount > 0
+      ? formatConfidencePercent(confSum / confCount) + '%'
+      : '—';
+    var currentThumb = (ev.image || ev.image_path || ev.thumb)
+      ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=112&h=78" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\\'") + '\')" style="width:112px;height:78px;border-radius:8px;object-fit:cover;cursor:pointer;border:1px solid rgba(255,255,255,.08)">'
+      : '<div class="thumb-none" style="width:112px;height:78px">sem foto</div>';
+
+    var topHtml = '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;margin-bottom:14px;padding:14px 16px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px">'
+      + '<div>'
+      + '<div style="font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Ocorrência atual</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">'
+      + '<div><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Placa</div><div style="font-size:1.05rem;font-weight:800;color:#fff;font-family:monospace">' + plate + '</div></div>'
+      + '<div><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Data/Hora</div><div style="font-size:.84rem;color:#fff">' + fmtTs(tsBase) + '</div></div>'
+      + '<div><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Câmera</div><div style="font-size:.84rem;color:#fff">' + currentCam + '</div></div>'
+      + '<div><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Direção</div><div style="font-size:.84rem">' + currentDir + '</div></div>'
+      + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:flex-start;justify-content:flex-end">' + currentThumb + '</div>'
+      + '</div>';
+
+    var actionHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+      + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="verTrajetoriaNoMapa()">&#128663; Ver Trajet&oacute;ria no Mapa</button>'
+      + '<button class="btn btn-sm" style="background:rgba(139,92,246,.78);color:#fff;font-weight:700" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\\'") + '\')">&#127919; Cadastrar como Alvo</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="openAlvoDetail(\'' + plate.replace(/'/g,"\\'") + '\',\'\')">&#128269; Procurar Companheiro</button>'
+      + '</div>';
+
+    var summaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px">'
+      + '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Passagens no dia</div><div style="font-size:1.25rem;font-weight:800;color:#fff">' + events.length + '</div></div>'
+      + '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Câmeras distintas</div><div style="font-size:1.25rem;font-weight:800;color:#fff">' + Object.keys(camerasSeen).length + '</div></div>'
+      + '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Conf. média</div><div style="font-size:1.25rem;font-weight:800;color:#fff">' + avgConf + '</div></div>'
+      + '</div>';
+
+    var passRows = events.map(function(item) {
+      _imgMeta[item.id] = {
+        camName: item.camera_name || item.camera_id || '',
+        ts: item.occurred_at || item.ts || '',
+        confidence: item.confidence != null ? item.confidence : null
+      };
+      var conf = item.confidence > 0 ? formatConfidencePercent(item.confidence) + '%' : '-';
+      var thumb = item.image_path
+        ? '<img class="thumb" src="/api/events/' + item.id + '/thumbnail?w=96&h=64" loading="lazy" onclick="openImage(' + item.id + ',\'' + plate.replace(/'/g,"\\'") + '\')" style="border-radius:6px;cursor:pointer">'
+        : '<div class="thumb-none">-</div>';
+      return '<tr>'
+        + '<td>' + thumb + '</td>'
+        + '<td style="white-space:nowrap;font-size:.79rem">' + fmtTs(item.occurred_at || item.ts) + '</td>'
+        + '<td style="font-size:.79rem">' + (item.cam_nome || item.camera || item.channel_name || item.camera_id || '-') + '</td>'
+        + '<td>' + _dirCell(item.direcao) + '</td>'
+        + '<td style="text-align:center;font-weight:700">' + conf + '</td>'
+        + '</tr>';
+    }).join('');
+
+    var eventsHtml = '<h3 style="font-size:.95rem;font-weight:800;margin:14px 0 8px;color:#fff">&#128247; Últimas passagens do veículo no dia</h3>'
+      + (events.length
+        ? '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>Data/Hora</th><th>Câmera</th><th>Direção</th><th>Conf.</th></tr></thead><tbody>' + passRows + '</tbody></table></div>'
+        : '<p style="color:var(--muted);font-size:.82rem">Nenhuma passagem encontrada para este veículo no dia do evento.</p>');
+
+    document.getElementById('detail-modal-body').innerHTML = topHtml + actionHtml + summaryHtml + eventsHtml;
+    _mapaTrajetoria = null;
+    if (trajResp.ok) {
+      var trajData = await trajResp.json();
+      _mapaTrajetoria = {
+        plates: [plate],
+        points: (trajData.points || []).map(function(p) {
+          return {
+            lat: p.lat,
+            lng: p.lon,
+            ts: p.ts,
+            plate: plate,
+            camera_id: p.camera_id,
+            cam_nome: p.camera_name,
+            direcao: p.direction,
+            seq: 0
+          };
+        }),
+        stats: {
+          total_points: trajData.total_points || 0,
+          total_events: trajData.total_events || events.length,
+          cameras_without_gps: trajData.cameras_without_gps || []
+        }
+      };
+    }
+  } catch (e) {
+    document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro ao carregar relatório do evento: ' + e.message + '</p>';
+  }
 }
 
 function _cgsPageNav(delta) {
@@ -5506,7 +6157,7 @@ async function _cgsLoad(showSpinner) {
   if (showSpinner) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando grupos suspeitos&hellip;</td></tr>';
   }
-  var w = (document.getElementById('cgs-window') || {}).value || '1h';
+  var w = (document.getElementById('cgs-window') || {}).value || '24h';
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
     tsFrom = _toIso((document.getElementById('cgs-ts-from') || {}).value);
@@ -5518,7 +6169,7 @@ async function _cgsLoad(showSpinner) {
   var minCam    = (document.getElementById('cgs-min-cameras') || {}).value || '2';
   var cowin     = (document.getElementById('cgs-cowin')       || {}).value || '300';
   var orderMode = (document.getElementById('cgs-ordermode')   || {}).value || 'any';
-  var leaderR   = (document.getElementById('cgs-leader-ratio')|| {}).value || '0.70';
+  var leaderR   = percentInputToRatio((document.getElementById('cgs-leader-ratio')|| {}).value || '70', 0.70);
   var payloadM  = (document.getElementById('cgs-payload-max') || {}).value || '0';
   var url = '/api/central/grupos_suspeitos'
     + '?window=' + encodeURIComponent(w)
@@ -5655,8 +6306,10 @@ function _cgsRenderTable(items, total) {
     // Ações
     var safeId  = (g.id || '').replace(/'/g,"\\'");
     var safePls = JSON.stringify(g.plates).replace(/'/g,"\\'");
-    var ações = '<button class="btn btn-outline btn-xs" style="margin-right:4px" title="Detalhe do grupo" onclick="_cgsOpenDetalhe(\'' + safeId + '\')" >&#128269; Detalhe</button>'
-      + '<button class="btn btn-xs" style="background:rgba(239,68,68,.6);color:#fff" title="Relatório de comboio" onclick="openComboioReport(\'' + g.plates[0].replace(/'/g,"\\'") + '\',' + safePls.replace(/'/g,"\\'") + ',{window:(document.getElementById(\'cgs-window\')||{}).value||\'24h\'})">&#128663;&#128663; Comboio</button>';
+    var ações = '<div class="action-buttons">'
+      + '<button class="btn btn-outline btn-xs" title="Visualizar grupo" onclick="_cgsOpenDetalhe(\'' + safeId + '\')">&#128269; Visualizar</button>'
+      + '<button class="btn btn-xs" style="background:rgba(239,68,68,.6);color:#fff" title="Relatório de comboio" onclick="openComboioReport(\'' + g.plates[0].replace(/'/g,"\\'") + '\',' + safePls.replace(/'/g,"\\'") + ',{window:(document.getElementById(\'cgs-window\')||{}).value||\'24h\'})">&#128663;&#128663; Comboio</button>'
+      + '</div>';
 
     return '<tr style="' + rowStyle + '">'
       + '<td style="max-width:220px">' + placasHtml + '</td>'
@@ -5668,7 +6321,7 @@ function _cgsRenderTable(items, total) {
       + '<td>' + lastHtml + '</td>'
       + '<td style="font-size:.76rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + locs.join(', ') + '">' + locText + '</td>'
       + '<td style="text-align:center">' + _cgsRiscoBadge(g.risco) + '<br>' + scoreHtml + tcBadgesHtml + '</td>'
-      + '<td style="white-space:nowrap">' + ações + '</td>'
+      + '<td class="action-cell">' + ações + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -5686,7 +6339,7 @@ function _cgsOpenDetalhe(groupId) {
 
 function _cgsDetAbrir() {
   if (!_cgsCurrentGroup) return;
-  var w = (document.getElementById('cgs-window') || {}).value || '1h';
+  var w = (document.getElementById('cgs-window') || {}).value || '24h';
   openComboioReport(_cgsCurrentGroup.plates[0], _cgsCurrentGroup.plates, { window: w });
 }
 
@@ -6028,6 +6681,7 @@ function _relAbrirModal(titulo, html, mapaFn) {
   document.getElementById('rel-modal-body').innerHTML = html;
   var btnMapa = document.getElementById('rel-btn-mapa');
   if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
+  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
   _relInjectPrintStyle();
   openModal('rel-modal');
@@ -6073,7 +6727,7 @@ function _abrirRelatorioPlacaIndividual() {
     dadosHtml += _df('Total de passagens', String(d.summary.total_passes || events.length));
     dadosHtml += _df('C\u00e2meras', String(d.summary.cameras_count || '\u2014'));
     dadosHtml += _df('Parceiros', String(d.summary.partners_count || partners.length || '\u2014'));
-    if (d.summary.avg_confidence > 0) dadosHtml += _df('Conf. m\u00e9dia', Math.round(d.summary.avg_confidence * 100) + '%');
+    if (d.summary.avg_confidence > 0) dadosHtml += _df('Conf. m\u00e9dia', formatConfidencePercent(d.summary.avg_confidence) + '%');
     if (d.summary.dom_direction) dadosHtml += _df('Dir. dominante', d.summary.dom_direction);
   }
   if (d.is_alvo) {
@@ -6091,7 +6745,7 @@ function _abrirRelatorioPlacaIndividual() {
   // ── Seção 2: Linha do Tempo ───────────────────────────────────────────────
   var evRows = events.map(function(ev, i) {
     var dtFmt = ev.ts ? new Date(ev.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
-    var conf  = ev.confidence > 0 ? Math.round(ev.confidence * 100) + '%' : '\u2014';
+    var conf  = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
     var intervalo = '\u2014';
     if (i > 0 && events[i-1].ts && ev.ts) {
       var ms = Math.abs(new Date(ev.ts) - new Date(events[i-1].ts));
@@ -6443,12 +7097,11 @@ function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
   }
 
   // limpa camadas anteriores (trajetória individual, se houver)
-  _trajetoriaLayers.forEach(function(l) { if (l.setMap) l.setMap(null); });
-  _trajetoriaLayers = [];
+  _clearTrajectoryLayers();
   _mapaInfoWindows.forEach(function(iw) { iw.close(); });
   _mapaInfoWindows = [];
 
-  var ROTA_COLOR = '#f59e0b'; // âmbar para distinguir de trajetória individual
+  var ROTA_COLOR = _TRAJ_COLOR;
   var bounds = new google.maps.LatLngBounds();
 
   // ordena cronologicamente e numera
@@ -6458,7 +7111,7 @@ function _cgsDesenharRotaGrupo(g, points, noGpsCams) {
   if (points.length >= 2) {
     var path = points.map(function(p) { return {lat: p.lat, lng: p.lng}; });
     _trajetoriaLayers.push(new google.maps.Polyline({
-      path: path, strokeColor: '#000', strokeOpacity: 0.22, strokeWeight: 8,
+      path: path, strokeColor: _TRAJ_SHADOW, strokeOpacity: 0.22, strokeWeight: 8,
       map: _googleMap, zIndex: 1
     }));
     _trajetoriaLayers.push(new google.maps.Polyline({
@@ -6786,7 +7439,7 @@ async function loadCentral(showSpinner) {
   var gsizes    = (document.getElementById('cen-gsizes')     || {}).value || '2';
   var cowin     = (document.getElementById('cen-cowin')      || {}).value || '300';
   var orderMode = (document.getElementById('cen-ordermode')  || {}).value || 'any';
-  var leaderR   = (document.getElementById('cen-leader-ratio')|| {}).value || '0.70';
+  var leaderR   = percentInputToRatio((document.getElementById('cen-leader-ratio')|| {}).value || '70', 0.70);
   var payloadM  = (document.getElementById('cen-payload-max') || {}).value || '0';
 
   if (showSpinner) {
@@ -6968,10 +7621,10 @@ function renderCentral(items, total) {
       + '<td>' + alvoCell + '</td>'
       + '<td style="font-size:.78rem">' + fmtTs(item.first_seen) + '</td>'
       + '<td style="white-space:nowrap">' + fmtTs(item.last_seen)  + '</td>'
-      + '<td style="white-space:nowrap">'
-      + '<button class="btn btn-outline btn-xs" style="margin-right:4px" title="Hist&oacute;rico de eventos" onclick="openDetail(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128269;</button>'
+      + '<td class="action-cell"><div class="action-buttons">'
+      + '<button class="btn btn-outline btn-xs" title="Hist&oacute;rico de eventos" onclick="openDetail(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128269; Visualizar</button>'
       + '<button class="btn btn-xs" style="background:rgba(139,92,246,.5);color:#fff" title="Relat&oacute;rio de batedor" onclick="openBatedorReport(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128196; Relat&oacute;rio</button>'
-      + '</td>'
+      + '</div></td>'
       + '</tr>';
   }).join('');
 }
@@ -6979,6 +7632,47 @@ function renderCentral(items, total) {
 // ===== HISTORICO DE DRILL-DOWN DO RELATORIO =====
 var _reportHistory = [];
 var _reportCurrentPlate = null;
+var _reportCurrentOpts = null;
+
+function _normalizeReportOpts(opts) {
+  var out = Object.assign({}, opts || {});
+  if (!out.window && !out.ts_from && !out.ts_to) out.window = '2h';
+  return out;
+}
+
+function _reportWindowChange() {
+  var win = document.getElementById('report-filter-window');
+  var row = document.getElementById('report-filter-custom-row');
+  if (!win || !row) return;
+  row.style.display = win.value === 'custom' ? 'flex' : 'none';
+}
+
+function _applyReportPeriodFilter() {
+  if (!_reportCurrentPlate) return;
+  var current = _normalizeReportOpts(_reportCurrentOpts);
+  var winEl = document.getElementById('report-filter-window');
+  var fromEl = document.getElementById('report-filter-from');
+  var toEl = document.getElementById('report-filter-to');
+  var nextOpts = Object.assign({}, current);
+  var win = winEl ? (winEl.value || '2h') : '2h';
+  delete nextOpts.ts_from;
+  delete nextOpts.ts_to;
+  if (win === 'custom') {
+    var tsFrom = _toIso(fromEl ? fromEl.value : '');
+    var tsTo = _toIso(toEl ? toEl.value : '');
+    if (!tsFrom || !tsTo) {
+      alert('Informe o período personalizado.');
+      return;
+    }
+    nextOpts.window = 'custom';
+    nextOpts.ts_from = tsFrom;
+    nextOpts.ts_to = tsTo;
+  } else {
+    nextOpts.window = win;
+  }
+  _reportCurrentOpts = nextOpts;
+  openBatedorReport(_reportCurrentPlate, true, nextOpts);
+}
 
 async function openBatedorReport(plate, _fromHistory, opts) {
   plate = (plate || '').trim().toUpperCase();
@@ -6990,6 +7684,9 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     _reportHistory = [];
   }
   _reportCurrentPlate = plate;
+  _reportCurrentOpts = _normalizeReportOpts(opts);
+  _detailModalReturnFn = function() { openBatedorReport(plate, true, _reportCurrentOpts); };
+  opts = _reportCurrentOpts;
 
   var _filterDesc = '';
   if (opts && typeof opts === 'object') {
@@ -7040,47 +7737,93 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       backHtml = '<div style="margin-bottom:10px"><button class="btn btn-outline btn-sm" onclick="_reportGoBack()">&#8592; Voltar para ' + prevPlate + '</button></div>';
     }
 
+    var reportWindowValue = (opts && opts.window) ? opts.window : '2h';
+    var reportFromValue = (opts && opts.ts_from) ? _toLocalDTInput(new Date(opts.ts_from)) : '';
+    var reportToValue = (opts && opts.ts_to) ? _toLocalDTInput(new Date(opts.ts_to)) : '';
+    var reportFilterHtml = '<div style="margin-bottom:14px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+      + '<div style="font-size:.78rem;color:#f8fafc;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">&#128197; Filtro de período</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">'
+      + '<label style="display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--muted)">Período'
+      + '<select id="report-filter-window" class="cen-ctl" onchange="_reportWindowChange()" style="min-width:120px">'
+      + '<option value="1h"' + (reportWindowValue === '1h' ? ' selected' : '') + '>1 hora</option>'
+      + '<option value="2h"' + (reportWindowValue === '2h' ? ' selected' : '') + '>2 horas</option>'
+      + '<option value="6h"' + (reportWindowValue === '6h' ? ' selected' : '') + '>6 horas</option>'
+      + '<option value="12h"' + (reportWindowValue === '12h' ? ' selected' : '') + '>12 horas</option>'
+      + '<option value="24h"' + (reportWindowValue === '24h' ? ' selected' : '') + '>24 horas</option>'
+      + '<option value="7d"' + (reportWindowValue === '7d' ? ' selected' : '') + '>7 dias</option>'
+      + '<option value="30d"' + (reportWindowValue === '30d' ? ' selected' : '') + '>30 dias</option>'
+      + '<option value="custom"' + (reportWindowValue === 'custom' ? ' selected' : '') + '>Período personalizado</option>'
+      + '</select></label>'
+      + '<div id="report-filter-custom-row" style="display:' + (reportWindowValue === 'custom' ? 'flex' : 'none') + ';flex-wrap:wrap;gap:8px;align-items:end">'
+      + '<label style="display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--muted)">De'
+      + '<input type="datetime-local" id="report-filter-from" class="cen-ctl" value="' + reportFromValue + '"></label>'
+      + '<label style="display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--muted)">Até'
+      + '<input type="datetime-local" id="report-filter-to" class="cen-ctl" value="' + reportToValue + '"></label>'
+      + '</div>'
+      + '<button class="btn btn-outline btn-sm" onclick="_applyReportPeriodFilter()">Aplicar</button>'
+      + '</div></div>';
+
     // ---- 1: Header ----
     var levelColor = d.level === 'alerta' ? 'badge-danger' : d.level === 'suspeito' ? 'badge-warning' : 'badge-info';
     var sBadge = d.score >= 80 ? 'badge-danger' : d.score >= 40 ? 'badge-warning' : 'badge-info';
-    var headerHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;align-items:flex-start">'
-      + '<div style="background:var(--bg2);border-radius:10px;padding:12px 18px;text-align:center;min-width:90px">'
-      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Score</div>'
-      + '<span class="badge ' + sBadge + '" style="font-size:1.2rem;padding:5px 14px">' + d.score + '</span>'
-      + '<div style="margin-top:6px"><span class="badge ' + levelColor + '" style="font-size:.68rem;text-transform:uppercase">' + (d.level||'normal') + '</span></div>'
+    var avgConfLabel = (d.summary && d.summary.avg_confidence > 0) ? formatConfidencePercent(d.summary.avg_confidence) + '%' : '—';
+    var domDirLabel = d.summary && d.summary.dom_direction
+      ? (d.summary.dom_direction === 'CRESCENTE'
+          ? '<span class="badge badge-info" style="font-size:.7rem">\u2191 CRESCENTE</span>'
+          : '<span class="badge badge-warning" style="font-size:.7rem">\u2193 DECRESCENTE</span>')
+      : '<span style="color:var(--muted)">—</span>';
+    var headerHtml = '<div style="display:grid;grid-template-columns:minmax(120px,150px) minmax(280px,1fr)' + (d.is_alvo ? ' minmax(220px,260px)' : '') + ';gap:12px;margin-bottom:14px;align-items:stretch">'
+      + '<div style="background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 18px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:8px">'
+      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Score</div>'
+      + '<div style="font-size:2rem;font-weight:800;line-height:1;color:#fff">' + d.score + '</div>'
+      + '<div><span class="badge ' + sBadge + '" style="font-size:.74rem;padding:4px 10px;text-transform:uppercase">' + (d.level||'normal') + '</span></div>'
       + '</div>'
-      + '<div style="background:var(--bg2);border-radius:10px;padding:12px 18px;flex:1;min-width:200px">'
-      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Atividade</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:5px 8px;margin-bottom:7px">'
+      + '<div style="background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 18px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">'
+      + '<div>'
+      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Resumo operacional</div>'
+      + '<div style="font-size:1.05rem;font-weight:800;color:#fff;font-family:monospace;letter-spacing:.04em">' + plate + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:55%">'
       + (d.badges||[]).map(function(b){
           var cl = b==='ALVO'?'badge-danger':(b==='MULTI-C\u00c2MERA'||b==='COMBOIO')?'badge-warning':'badge-info';
-          return '<span class="badge ' + cl + '">' + b + '</span>';
+          return '<span class="badge ' + cl + '" style="font-size:.68rem">' + b + '</span>';
         }).join('')
       + '</div>'
-      + '<div style="font-size:.77rem;color:var(--muted)">'
-      + (d.summary ? d.summary.total_passes + ' passagens \u00b7 ' + d.summary.cameras_count + ' c\u00e2meras \u00b7 ' + d.summary.partners_count + ' parceiros'
-          + (d.summary.avg_confidence > 0 ? ' \u00b7 conf. m\u00e9d. ' + Math.round(d.summary.avg_confidence * 100) + '%' : '')
-          + (d.summary.dom_direction === 'CRESCENTE'   ? ' \u00b7 <span style="color:var(--accent);font-weight:700">\u2191 CRESCENTE</span>'   : '')
-          + (d.summary.dom_direction === 'DECRESCENTE' ? ' \u00b7 <span style="color:var(--accent);font-weight:700">\u2193 DECRESCENTE</span>' : '') : '')
-      + '</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">'
+      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Passagens</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.total_passes : ((d.events || []).length)) + '</div></div>'
+      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Câmeras</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.cameras_count : '—') + '</div></div>'
+      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Parceiros</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.partners_count : '—') + '</div></div>'
+      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Conf. média</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + avgConfLabel + '</div></div>'
+      + '</div>'
+      + '<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Direção predominante: ' + domDirLabel + '</div>'
+      + '</div>'
       + (d.is_alvo
-        ? '<div style="background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.45);border-radius:10px;padding:12px 18px;min-width:160px">'
-          + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">\uD83C\uDFAF Alvo Rastreado</div>'
-          + '<div style="color:#c4b5fd;font-weight:700;margin-bottom:2px">' + plate + '</div>'
-          + (d.alvo_descricao ? '<div style="font-size:.78rem;color:#ddd8fe">' + d.alvo_descricao + '</div>' : '')
-          + (d.alvo_list ? '<div style="font-size:.72rem;color:var(--muted)">Lista: ' + d.alvo_list + '</div>' : '')
+        ? '<div style="background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(139,92,246,.08));border:1px solid rgba(139,92,246,.4);border-radius:14px;padding:14px 18px">'
+          + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">\uD83C\uDFAF Alvo rastreado</div>'
+          + '<div style="color:#ddd6fe;font-weight:800;font-family:monospace;font-size:1rem;margin-bottom:6px">' + plate + '</div>'
+          + (d.alvo_descricao ? '<div style="font-size:.8rem;color:#ede9fe;margin-bottom:6px">' + d.alvo_descricao + '</div>' : '<div style="font-size:.8rem;color:#c4b5fd;margin-bottom:6px">Sem descrição registrada.</div>')
+          + (d.alvo_list ? '<div style="font-size:.74rem;color:#c4b5fd">Lista: ' + d.alvo_list + '</div>' : '')
           + '</div>'
         : '')
       + '</div>';
 
     // ---- 2: Acoes ----
-    var actionsHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+    var actionsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px">'
+      + '<div style="padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+      + '<div style="font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Ações principais</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
       + (!d.is_alvo
-        ? '<button class="btn btn-sm" style="background:rgba(139,92,246,.7);color:#fff" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\'") + '\')">\uD83C\uDFAF Cadastrar como Alvo</button>'
+        ? '<button class="btn btn-sm" style="background:rgba(139,92,246,.78);color:#fff;font-weight:700" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\'") + '\')">\uD83C\uDFAF Cadastrar como Alvo</button>'
         : '')
-      + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Detalhes do Score</button>'
-      + '<button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="promptTrajetoria()">&#128663; Trajetória no Mapa</button>'
-      + '<button class="btn btn-outline btn-sm" onclick="_abrirRelatorioPlacaIndividual()" style="font-size:.8rem">&#128196; Gerar Relat\u00f3rio</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="_abrirRelatorioPlacaIndividual()" style="font-size:.8rem;font-weight:700">&#128196; Exportar</button>'
+      + '</div></div>'
+      + '<div style="padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px">'
+      + '<div style="font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Ferramentas</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
+      + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Score</button>'
+      + '</div></div>'
       + '</div>';
 
     // ---- 3: Decisao Operacional ----
@@ -7091,8 +7834,8 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     var _escPlate = plate.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var _sc = d.score;
     var _lv = d.level || 'normal';
-    var decisionHtml = '<div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 16px">'
-      + '<div style="font-size:.8rem;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase">&#128203; Decis\u00e3o Operacional</div>'
+    var decisionHtml = '<div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border-radius:12px;padding:14px 16px">'
+      + '<div style="font-size:.8rem;color:#f8fafc;margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">&#128203; Decis\u00e3o Operacional</div>'
       + (lastDec
         ? '<div style="background:' + (decBg[lastDec.decision]||'rgba(100,100,100,.1)') + ';border:1px solid ' + (decBorder[lastDec.decision]||'rgba(120,120,120,.3)') + ';border-radius:7px;padding:8px 12px;margin-bottom:8px;font-size:.82rem">'
           + '<strong>' + (decLabels[lastDec.decision]||lastDec.decision) + '</strong>'
@@ -7144,7 +7887,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
               + '</tr>';
           }).join('')
         + '</tbody></table></div>'
-        + '<div style="margin-top:8px"><button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="openComboioReport(\'' + plate.replace(/'/g,"\\'") + '\',' + JSON.stringify(_groupForComboio).replace(/'/g,"\\'") + ')">&#128663;&#128663; Ver Relat\u00f3rio de Comboio Completo</button></div>';
+        + '<div style="margin-top:8px"><button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="openComboioReport(\'' + plate.replace(/'/g,"\\'") + '\',' + JSON.stringify(_groupForComboio).replace(/'/g,"\\'") + ')">&#128663;&#128663; Relat\u00f3rio do Comboio</button></div>';
     } else {
       partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro em comboio confirmado na janela de ' + w + '. <small style="color:var(--muted)">(Requer mesma c\u00e2mera \u00d72+ c\u00e2meras, trip \u22641h)</small></div>';
     }
@@ -7155,7 +7898,9 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     var evRows = events.map(function(ev) {
       var dtObj = ev.ts ? new Date(ev.ts) : null;
       var dtFmt = dtObj ? dtObj.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
-      var conf = ev.confidence > 0 ? Math.round(ev.confidence * 100) + '%' : '-';
+      var conf = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '-';
+      var confPct = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) : 0;
+      var confColor = confPct >= 85 ? '#4ade80' : confPct >= 60 ? '#facc15' : '#f87171';
       var thumb = ev.image_path
         ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=100&h=68" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\'") + '\')" style="border-radius:4px;cursor:pointer">'
         : '<div class="thumb-none">-</div>';
@@ -7164,10 +7909,10 @@ async function openBatedorReport(plate, _fromHistory, opts) {
         + '<td style="font-size:.79rem">' + (ev.camera_name||ev.camera_id||'-') + '</td>'
         + '<td>' + _dirCell(ev.direcao) + '</td>'
         + '<td style="font-size:.75rem;color:var(--muted)">' + (ev.vehicle_type||'-') + '</td>'
-        + '<td style="text-align:center;font-size:.75rem;color:var(--muted)">' + conf + '</td>'
+        + '<td style="text-align:center;font-size:.75rem"><span style="display:inline-block;min-width:52px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:' + confColor + ';font-weight:800">' + conf + '</span></td>'
         + '</tr>';
     }).join('');
-    var evHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px">&#128247; Passagens registradas (' + events.length + ')</h3>'
+    var evHtml = '<h3 style="font-size:.95rem;font-weight:800;margin:14px 0 8px;color:#fff">&#128247; Passagens registradas (' + events.length + ')</h3>'
       + (events.length
         ? '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>Data/Hora</th><th>C\u00e2mera</th><th>Dire\u00e7\u00e3o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + evRows + '</tbody></table></div>'
         : '<p style="color:var(--muted);font-size:.82rem">Nenhuma passagem no per\u00edodo.</p>');
@@ -7211,7 +7956,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     }
 
     document.getElementById('detail-modal-body').innerHTML =
-      backHtml + headerHtml + actionsHtml + decisionHtml + breakdownHtml + threatCenterHtml + partnersHtml + evHtml;
+      backHtml + reportFilterHtml + headerHtml + actionsHtml + decisionHtml + breakdownHtml + threatCenterHtml + partnersHtml + evHtml;
 
     _mapaTrajetoria = { plates: [plate], points: events.map(function(ev){
       return { camera_id: ev.camera_id, ts: ev.ts||'', plate: plate, cam_nome: ev.camera_name||ev.camera_id||'' };
@@ -7280,15 +8025,56 @@ function _toggleScoreBreakdown() {
   var p = document.getElementById('score-breakdown-panel');
   if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
 }
-function _addPlateAsAlvo(plate) {
-  var inp = document.getElementById('alvo-plate-input');
-  if (inp) inp.value = plate;
+async function _addPlateAsAlvo(plate) {
+  plate = String(plate || '').trim().toUpperCase();
+  if (!plate) return;
   closeModal('detail-modal');
-  var batTab = document.querySelector('.nav-item[onclick*="batedor"]');
-  if (batTab) switchTab('batedor', batTab);
-  var alvosBtn = document.querySelector('#bat-sub-tabs .sub-tab[data-bat="alvos"]');
-  if (alvosBtn) switchBatTab('alvos', alvosBtn);
-  setTimeout(function(){ var inp2=document.getElementById('alvo-plate-input'); if(inp2) inp2.focus(); }, 200);
+  var vehTab = document.querySelector('.nav-item[onclick*="veiculos"]');
+  if (vehTab) switchTab('veiculos', vehTab);
+  document.getElementById('view-list-detail').style.display = 'none';
+  document.getElementById('view-listas').style.display = 'block';
+  try {
+    if (!listsCache || !listsCache.length) {
+      await loadLists();
+    }
+    if (!listsCache || !listsCache.length) {
+      alert('Nenhuma lista de monitoramento cadastrada. Crie uma lista em Veículos para continuar.');
+      openListModal();
+      return;
+    }
+    document.getElementById('vehicle-target-plate').value = plate;
+    document.getElementById('vehicle-target-error').textContent = '';
+    var sel = document.getElementById('vehicle-target-list');
+    sel.innerHTML = listsCache.map(function(l){
+      return '<option value="' + l.id + '">' + (l.name || ('Lista #' + l.id)) + '</option>';
+    }).join('');
+    if (listsCache.length === 1) {
+      sel.value = String(listsCache[0].id);
+      _confirmVehicleTargetChoice();
+      return;
+    }
+    openModal('vehicle-target-modal');
+    setTimeout(function(){ sel.focus(); }, 80);
+  } catch (e) {
+    alert('Erro ao preparar cadastro em Veículos: ' + e.message);
+  }
+}
+
+function _confirmVehicleTargetChoice() {
+  var plate = (document.getElementById('vehicle-target-plate').value || '').trim().toUpperCase();
+  var listId = parseInt(document.getElementById('vehicle-target-list').value || '0', 10);
+  var errEl = document.getElementById('vehicle-target-error');
+  if (!plate) {
+    errEl.textContent = 'Placa não informada.';
+    return;
+  }
+  if (!listId) {
+    errEl.textContent = 'Escolha uma lista.';
+    return;
+  }
+  closeModal('vehicle-target-modal');
+  openListDetail(listId);
+  openAddVehicleModal({ plate: plate, isAlvo: true, listId: listId });
 }
 function _dirCell(dir) {
   if (dir === 'CRESCENTE')   return '<span style="color:var(--accent);font-size:.75rem;font-weight:700">&#8593; CRESCENTE</span>';
@@ -7800,9 +8586,9 @@ function renderLists(lists) {
       
       return '<div class="list-card" onclick="goToCadastro(' + l.id + ')">' +
         '<div class="list-card-actions">' +
-          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa">&#127919;</button>' +
-          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar nome">&#9998;</button>' +
-          '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>' +
+          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();importListToAlvos(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Enviar todas as placas para Alvos Rastreados" style="color:#a78bfa;border-color:rgba(167,139,250,.45)">&#127919; Alvos</button>' +
+          '<button class="btn btn-outline btn-xs" onclick="event.stopPropagation();openListModal(' + l.id + ')" title="Editar nome">&#9998; Editar</button>' +
+          '<button class="btn btn-danger btn-xs" onclick="event.stopPropagation();deleteList(' + l.id + ',\'' + l.name.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>' +
         '</div>' +
         '<div><span class="list-card-name" style="font-size:.94rem">' + (l.name || 'Lista sem nome') + '</span></div>' +
         '<div style="margin-top:10px">' +
@@ -7933,41 +8719,48 @@ function renderListVehicles(items) {
     var rowStyle = (!isTemaBranco && isAlvo) ? ' style="background:rgba(220,38,38,.055)"' : '';
     var alvoToggleBtn = isAlvo
       ? ''
-      : (isTemaBranco
-        ? '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919; Tornar alvo</button>'
-        : '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="white-space:nowrap;border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919;</button>');
-    var editarBtn = isTemaBranco
-      ? '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button>'
-      : '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998;</button>';
-    var excluirBtn = isTemaBranco
-      ? '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>'
-      : '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465;</button>';
-    var tdAcoesClass = isTemaBranco ? ' class="veh-acoes"' : '';
-    var tdAcoesStyle = isTemaBranco
-      ? 'text-align:center'
-      : 'text-align:center;white-space:nowrap;display:flex;flex-wrap:wrap;gap:4px;justify-content:center';
+      : '<button class="btn btn-outline btn-xs" onclick="toggleVehicleAlvo(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\',false)" title="Marcar como alvo" style="border-color:rgba(239,68,68,.4);color:#fca5a5">&#127919; Tornar Alvo</button>';
+    var visualizarBtn = '<button class="btn btn-outline btn-xs" onclick="openViewVehicleModal(' + v.id + ')" title="Visualizar">&#128269; Visualizar</button>';
+    var editarBtn = '<button class="btn btn-outline btn-xs" onclick="openEditVehicleModal(' + v.id + ')" title="Editar">&#9998; Editar</button>';
+    var excluirBtn = '<button class="btn btn-danger btn-xs" onclick="deleteVehicle(' + v.id + ',\'' + v.plate.replace(/'/g,"\\'") + '\')" title="Excluir">&#128465; Excluir</button>';
     return '<tr data-vid="' + v.id + '" data-plate="' + v.plate.replace(/"/g,'&quot;') + '" data-notes="' + (v.notes||'').replace(/"/g,'&quot;') + '" data-is-alvo="' + (isAlvo ? '1' : '0') + '"' + rowStyle + '>' +
       '<td style="color:var(--muted);font-size:.74rem">' + v.id + '</td>' +
       '<td><span style="font-size:.88rem;font-weight:700;letter-spacing:.04em">' + v.plate + '</span>' + plateBadge + '</td>' +
       '<td style="font-size:.79rem;color:var(--muted)">' + (v.notes||'-') + '</td>' +
       '<td style="text-align:center">' + (isAlvo ? '<span style="color:#fca5a5;font-size:.75rem">&#127919;</span>' : '<span style="color:var(--muted);font-size:.75rem">&mdash;</span>') + '</td>' +
       '<td style="font-size:.76rem;color:var(--muted)">' + fmtTs(v.created_at) + '</td>' +
-      '<td' + tdAcoesClass + ' style="' + tdAcoesStyle + '">' +
-        alvoToggleBtn + ' ' +
-        editarBtn + ' ' +
-        excluirBtn +
+      '<td class="action-cell">' +
+        '<div class="action-buttons">' +
+          alvoToggleBtn + ' ' +
+          visualizarBtn + ' ' +
+          editarBtn + ' ' +
+          excluirBtn +
+        '</div>' +
       '</td>' +
       '</tr>';
   }).join('');
 }
 
-function openAddVehicleModal() {
+function setVehicleModalReadOnly(readOnly) {
+  var plate = document.getElementById('veh-plate');
+  var notes = document.getElementById('veh-notes');
+  var alvo = document.getElementById('veh-is-alvo');
+  var saveBtn = document.getElementById('veh-save-btn');
+  if (plate) plate.disabled = !!readOnly;
+  if (notes) notes.disabled = !!readOnly;
+  if (alvo) alvo.disabled = !!readOnly;
+  if (saveBtn) saveBtn.style.display = readOnly ? 'none' : '';
+}
+
+function openAddVehicleModal(opts) {
+  opts = opts || {};
   _editVehicleId = null;
-  document.getElementById('veh-plate').value = '';
-  document.getElementById('veh-notes').value = '';
-  document.getElementById('veh-is-alvo').checked = false;
+  setVehicleModalReadOnly(false);
+  document.getElementById('veh-plate').value = (opts.plate || '').toUpperCase();
+  document.getElementById('veh-notes').value = opts.notes || '';
+  document.getElementById('veh-is-alvo').checked = !!opts.isAlvo;
   document.getElementById('veh-form-error').textContent = '';
-  document.getElementById('veh-list-id').value = _currentDetailListId || '';
+  document.getElementById('veh-list-id').value = opts.listId || _currentDetailListId || '';
   document.getElementById('veh-modal-title').textContent = 'Cadastrar Placa';
   document.getElementById('veh-save-btn').textContent = 'Cadastrar';
   openModal('vehicle-modal');
@@ -8017,6 +8810,7 @@ async function openEditVehicleModal(vehicleId) {
   if (!vehicleData) return;
   
   _editVehicleId = vehicleId;
+  setVehicleModalReadOnly(false);
   document.getElementById('veh-plate').value = vehicleData.plate;
   document.getElementById('veh-notes').value = vehicleData.notes;
   document.getElementById('veh-is-alvo').checked = vehicleData.is_alvo;
@@ -8026,6 +8820,33 @@ async function openEditVehicleModal(vehicleId) {
   document.getElementById('veh-save-btn').textContent = 'Salvar';
   openModal('vehicle-modal');
   setTimeout(function(){ document.getElementById('veh-plate').focus(); }, 80);
+}
+
+async function openViewVehicleModal(vehicleId) {
+  var rows = document.querySelectorAll('#list-detail-tbody tr[data-vid]');
+  var vehicleData = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (parseInt(rows[i].getAttribute('data-vid')) === vehicleId) {
+      vehicleData = {
+        id: vehicleId,
+        plate: rows[i].getAttribute('data-plate') || '',
+        notes: rows[i].getAttribute('data-notes') || '',
+        is_alvo: rows[i].getAttribute('data-is-alvo') === '1'
+      };
+      break;
+    }
+  }
+  if (!vehicleData) return;
+
+  _editVehicleId = null;
+  setVehicleModalReadOnly(true);
+  document.getElementById('veh-plate').value = vehicleData.plate;
+  document.getElementById('veh-notes').value = vehicleData.notes;
+  document.getElementById('veh-is-alvo').checked = vehicleData.is_alvo;
+  document.getElementById('veh-form-error').textContent = '';
+  document.getElementById('veh-list-id').value = _currentDetailListId || '';
+  document.getElementById('veh-modal-title').textContent = 'Visualizar Placa';
+  openModal('vehicle-modal');
 }
 
 async function saveVehicle() {
@@ -8191,7 +9012,7 @@ function _restoreAlvoRepFilters() {
       'alvo-rep-window':      f.window   || '',
       'alvo-rep-camera':      f.camera_id || '',
       'alvo-rep-direction':   f.direction || '',
-      'alvo-rep-confidence':  f.min_confidence ? String(f.min_confidence) : '',
+      'alvo-rep-confidence':  f.min_confidence ? ratioToPercentInput(f.min_confidence, '') : '',
       'alvo-rep-min-cameras': f.min_cameras    ? String(f.min_cameras)   : '',
       'alvo-rep-vtype':       f.vehicle_type   || '',
       'alvo-rep-vcolor':      f.vehicle_color  || ''
@@ -8238,7 +9059,7 @@ function _resetCenFilters() {
   var om = document.getElementById('cen-ordermode');
   if (om) { om.value = 'any'; cenOrderModeChange(); }
   var lr = document.getElementById('cen-leader-ratio');
-  if (lr) lr.value = '0.70';
+  if (lr) lr.value = '70';
   var pm = document.getElementById('cen-payload-max');
   if (pm) pm.value = '0';
   var risco = document.getElementById('cen-risco');
@@ -8267,7 +9088,7 @@ function _getAlvoRepFilters() {
     ts_to:          tsTo,
     camera_id:      camEl   ? (camEl.value   || null) : null,
     direction:      dirEl   ? (dirEl.value   || null) : null,
-    min_confidence: confEl  ? (parseFloat(confEl.value)  || 0) : 0,
+    min_confidence: confEl  ? percentInputToRatio(confEl.value, 0) : 0,
     min_cameras:    minCEl  ? (parseInt(minCEl.value, 10) || 0) : 0,
     vehicle_type:   vtypeEl ? (vtypeEl.value  || null) : null,
     vehicle_color:  vcolorEl? (vcolorEl.value || null) : null,
@@ -8346,12 +9167,12 @@ async function loadAlvos() {
         }
       })();
       // Botões de ação por perfil
-      var btnVer    = '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;,&#39;' + desde + '&#39;)" title="Ver detalhes do alvo" style="margin-right:4px">&#128269; Ver</button>';
+      var btnVer    = '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;,&#39;' + desde + '&#39;)" title="Visualizar alvo">&#128269; Visualizar</button>';
       var btnEditar = (_role === 'admin' || _role === 'operador')
-        ? '<button class="btn btn-outline btn-xs" onclick="alvoEditar(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" title="Editar alvo" style="margin-right:4px">&#9998; Editar</button>'
+        ? '<button class="btn btn-outline btn-xs" onclick="alvoEditar(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" title="Editar alvo">&#9998; Editar</button>'
         : '';
       var btnApagar = (_role === 'admin')
-        ? '<button class="btn btn-outline btn-xs" onclick="alvoApagar(' + a.id + ',&#39;' + a.plate + '&#39;)" title="Apagar alvo" style="color:var(--danger)">&#128465; Apagar</button>'
+        ? '<button class="btn btn-danger btn-xs" onclick="alvoApagar(' + a.id + ',&#39;' + a.plate + '&#39;)" title="Excluir alvo">&#128465; Excluir</button>'
         : '';
       var descTxt   = (a.descricao || '').trim();
       var descTitle = descTxt.replace(/"/g, '&quot;');
@@ -8363,7 +9184,7 @@ async function loadAlvos() {
         + '<td style="color:var(--muted);max-width:260px">' + descCell + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
         + '<td style="white-space:nowrap;font-size:.78rem">' + lastSeen + '</td>'
-        + '<td style="white-space:nowrap">' + btnVer + btnEditar + btnApagar + '</td>'
+        + '<td class="action-cell"><div class="action-buttons">' + btnVer + btnEditar + btnApagar + '</div></td>'
         + '</tr>';
     }).join('');
   } catch(e) {
@@ -8381,6 +9202,7 @@ function _fmtDelta(s) {
 
 async function openAlvoDetail(plate, descricao) {
   // Abre modal e mostra spinner
+  _detailModalReturnFn = function() { openAlvoDetail(plate, descricao || ''); };
   document.getElementById('detail-modal-plate').innerHTML =
     '&#127919; Alvo: <span style="color:#f87171">' + plate + '</span>'
     + ' <label style="font-size:.72rem;color:var(--muted);margin-left:18px">Janela co-detecção: <input id="alvo-co-window" type="number" min="1" max="1000" value="' + _alvoCoWindow + '" style="width:62px;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:.75rem" onchange="var v=Math.max(1,Math.min(1000,parseInt(this.value)||300));this.value=v;_alvoCoWindow=v;openAlvoDetail(\'' + plate.replace(/'/g,"\\'") + '\',\'' + (descricao||'').replace(/'/g,"\\'") + '\')">s</label>';
@@ -8624,11 +9446,9 @@ async function _alvoDvLoadPassagens(id) {
       var dir   = ev.direcao
         ? '<span style="font-size:.75rem;font-weight:700;color:var(--accent)">' + ev.direcao + '</span>'
         : '<span style="color:var(--muted)">&mdash;</span>';
-      var img   = ev.image_path
-        ? '<img src="/uploads/' + ev.image_path + '" style="height:38px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
-        : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
-      var acoes = ev.image_path
-        ? '<button class="btn btn-outline btn-xs" onclick="window.open(\'/uploads/' + ev.image_path + '\',\'_blank\')" title="Ver imagem original">&#128247; Imagem</button>'
+      var imageUrl = normalizeImageUrl(ev.image_path);
+      var img   = imageUrl
+        ? '<img src="' + imageUrl + '" style="height:38px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="openImageUrl(\'' + imageUrl + '\',\'Passagem do alvo\')" onerror="this.style.display=\'none\'" loading="lazy">'
         : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
       return '<tr>'
         + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + ts + '</td>'
@@ -8636,7 +9456,6 @@ async function _alvoDvLoadPassagens(id) {
         + '<td style="font-size:.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + cam + '">' + cam + '</td>'
         + '<td>' + dir + '</td>'
         + '<td style="text-align:center">' + img + '</td>'
-        + '<td style="text-align:center">' + acoes + '</td>'
         + '</tr>';
     }).join('');
     el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
@@ -8647,7 +9466,6 @@ async function _alvoDvLoadPassagens(id) {
       + '<th>C&acirc;mera</th>'
       + '<th>Dire&ccedil;&atilde;o</th>'
       + '<th style="text-align:center">Imagem</th>'
-      + '<th style="text-align:center">A&ccedil;&otilde;es</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</div>';
   } catch(e) {
@@ -8952,8 +9770,9 @@ function _alvoDvVerRota() {
     }
     var dotColor = isFirst ? '#22c55e' : isLast ? '#ef4444' : locChange ? '#f59e0b' : 'var(--primary)';
     var dirBadge = dir ? ' <span style="font-size:.7rem;font-weight:700;color:var(--accent);background:rgba(250,204,21,.12);padding:1px 7px;border-radius:99px;border:1px solid rgba(250,204,21,.25)">' + dir + '</span>' : '';
-    var imgThumb = ev.image_path
-      ? '<img src="/uploads/' + ev.image_path + '" style="height:30px;border-radius:4px;border:1px solid var(--border);cursor:pointer;vertical-align:middle;margin-left:4px" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy" title="Ver imagem">'
+    var imgThumbUrl = normalizeImageUrl(ev.image_path);
+    var imgThumb = imgThumbUrl
+      ? '<img src="' + imgThumbUrl + '" style="height:30px;border-radius:4px;border:1px solid var(--border);cursor:pointer;vertical-align:middle;margin-left:4px" onclick="openImageUrl(\'' + imgThumbUrl.replace(/'/g,"\\'") + '\',\'Imagem da passagem\')" onerror="this.style.display=\'none\'" loading="lazy" title="Ver imagem">'
       : '';
     var locBanner = locChange
       ? '<div style="font-size:.7rem;color:#f59e0b;font-weight:600;margin-bottom:3px">&#128205; Nova localidade</div>'
@@ -9012,7 +9831,7 @@ async function _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel) {
     if (sf) sf.value = tsFrom;
     if (ef) ef.value = tsTo;
     // Abre overlay e renderiza pelo pipeline can\u00f4nico
-    _abrirMapaOverlay(plate, infoLabel || ((data.total_points || data.points.length) + ' passagem(ns)'));
+    _abrirMapaOverlay(plate, infoLabel || ((data.total_points || data.points.length) + ' passagem(ns)'), _relModalReturnFn, 'Voltar ao Relatório');
     setTimeout(function() { renderVehicleTrajectory(data); }, 400);
   } catch(e) {
     alert('Erro ao carregar trajet\u00f3ria: ' + e.message);
@@ -9221,7 +10040,7 @@ async function _alvoDvLoadCompanions(id, plate) {
       var localStr = ev0 ? (ev0.camera || ev0.camera_id || '&mdash;') : '&mdash;';
       // ações
       var btnDetalhe = alvo
-        ? '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + alvo.id + ',\''+alvo.plate+'\',\''+((alvo.descricao||'').replace(/\'/g,"\'\'"))+'\')">&#128269; Ver</button> '
+        ? '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + alvo.id + ',\''+alvo.plate+'\',\''+((alvo.descricao||'').replace(/\'/g,"\'\'"))+'\')">&#128269; Visualizar</button> '
         : '';
       var safeComp = c.companion.replace(/'/g,"\\'");
       var btnBuscar = '<button class="btn btn-outline btn-xs" onclick="_alvoCompSearch(\''+safeComp+'\')" title="Buscar esta placa no Batedor">&#128301; Batedor</button>';
@@ -9231,7 +10050,7 @@ async function _alvoDvLoadCompanions(id, plate) {
         + '<td style="text-align:center">' + roleBadge + '<br><span style="font-size:.72rem;color:var(--muted);white-space:nowrap">' + c.cameras_together + ' c&acirc;m.</span></td>'
         + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + lastTog + '</td>'
         + '<td style="font-size:.75rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + localStr + '">' + localStr + '</td>'
-        + '<td style="white-space:nowrap">' + btnDetalhe + btnBuscar + '</td>'
+        + '<td class="action-cell"><div class="action-buttons">' + btnDetalhe + btnBuscar + '</div></td>'
         + '</tr>';
     }).join('');
 
@@ -9343,8 +10162,9 @@ function _alvoDvRenderHistorico(d, rangeVal, janela, mincam) {
     var conf = ev.confidence
       ? '<span style="color:' + cc + ';font-weight:700">' + pct + '%</span>'
       : '<span style="color:var(--muted)">&mdash;</span>';
-    var img  = ev.image_path
-      ? '<img src="/uploads/' + ev.image_path + '" style="height:44px;border-radius:5px;cursor:pointer;border:1px solid var(--border)" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
+    var imgUrl = normalizeImageUrl(ev.image_path);
+    var img  = imgUrl
+      ? '<img src="' + imgUrl + '" style="height:44px;border-radius:5px;cursor:pointer;border:1px solid var(--border)" onclick="window.open(this.src,\'_blank\')" onerror="this.style.display=\'none\'" loading="lazy">'
       : '<span style="color:var(--muted);font-size:.75rem">sem imagem</span>';
     html += '<tr>'
       + '<td style="white-space:nowrap;font-size:.82rem">' + ts + '</td>'
@@ -9681,7 +10501,7 @@ function _renderCameras() {
   var tbody = document.getElementById('cameras-tbody');
   if (!tbody) return;
   if (!_cameraRows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:32px">Nenhuma c\u00e2mera cadastrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:32px">Nenhuma c\u00e2mera cadastrada.</td></tr>';
     return;
   }
   var sorted = _cameraRows.slice().sort(function(a, b) {
@@ -9713,29 +10533,49 @@ function _renderCameras() {
     var critBadge  = c.criticidade === 'CRITICA' ? 'badge-red' : 'badge-green';
     var encoded    = encodeURIComponent(JSON.stringify(c));
     var statusDot  = _cameraStatusDot(c.last_seen);
+    var modo       = 'push';
+    var modoBadge  = '<span class="badge" style="background:rgba(34,197,94,.14);color:#bbf7d0;border:1px solid rgba(34,197,94,.28)">Push</span>';
     var lastSeenFmt = c.last_seen
       ? new Date(c.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '<span style="color:var(--muted)">Nunca</span>';
+    var lastPostFmt = c.last_event_at
+      ? new Date(c.last_event_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : null;
     var todayBadge = c.events_today > 0
       ? '<span class="badge badge-green">' + c.events_today + '</span>'
       : '<span style="color:var(--muted)">0</span>';
     var totalFmt = c.total_events > 0 ? c.total_events.toLocaleString('pt-BR') : '<span style="color:var(--muted)">0</span>';
+    var pushDiag = '';
+    if (modo === 'push') {
+      if (!c.last_event_at) {
+        pushDiag = '<div style="font-size:.72rem;color:#fca5a5;margin-top:3px">sem POST observado</div>';
+      } else {
+        var sameIp = !!(c.ip && c.last_event_camera_ip && c.ip === c.last_event_camera_ip);
+        var sameId = !!(c.camera_id && c.last_event_camera_id && c.camera_id === c.last_event_camera_id);
+        var pushColor = (sameIp || sameId) ? 'var(--muted)' : '#fca5a5';
+        pushDiag = '<div style="font-size:.72rem;color:' + pushColor + ';margin-top:3px">últ. POST: '
+          + _camEsc(c.last_event_camera_ip || c.last_event_camera_id || '?') + '</div>';
+      }
+    }
     return '<tr>'
       + '<td style="color:var(--muted)">'  + c.id + '</td>'
       + '<td style="color:var(--muted);font-size:.82rem">'  + _camEsc(c.camera_id || '\u2014') + '</td>'
-      + '<td style="font-weight:600">'     + statusDot + _camEsc(c.nome) + '</td>'
+      + '<td style="font-weight:600">'     + statusDot + _camEsc(c.nome) + pushDiag + '</td>'
       + '<td style="font-family:monospace;font-size:.82rem">' + _camEsc(c.ip || '\u2014') + '</td>'
+      + '<td style="text-align:center">' + modoBadge + '</td>'
       + '<td><span class="badge ' + critBadge + '">' + _camEsc(c.criticidade || 'NORMAL') + '</span></td>'
       + '<td>' + parseFloat(c.peso_score != null ? c.peso_score : 1.0).toFixed(1) + '</td>'
       + '<td>' + (c.ativa ? '<span class="badge badge-green">Sim</span>' : '<span class="badge badge-red">N\u00e3o</span>') + '</td>'
-      + '<td style="font-size:.8rem;white-space:nowrap">' + lastSeenFmt + '</td>'
+      + '<td style="font-size:.8rem;white-space:nowrap">' + lastSeenFmt
+      + (modo === 'push' && lastPostFmt ? '<div style="font-size:.71rem;color:var(--muted);margin-top:3px">push: ' + lastPostFmt + '</div>' : '')
+      + '</td>'
       + '<td style="text-align:center">' + todayBadge + '</td>'
       + '<td style="text-align:center;font-size:.82rem">' + totalFmt + '</td>'
       + '<td style="text-align:center;font-size:.82rem">' + (c.direcao === 'CRESCENTE' ? '<span style="color:var(--accent);font-weight:700">&#8593; CRESCENTE</span>' : c.direcao === 'DECRESCENTE' ? '<span style="color:var(--accent);font-weight:700">&#8595; DECRESCENTE</span>' : '<span style="color:var(--muted)">&#8212;</span>') + '</td>'
-      + '<td style="white-space:nowrap">'
-      +   '<button class="btn btn-outline btn-xs" onclick="editCamera(decodeURIComponent(\'' + encoded + '\'))">Editar</button> '
-      +   '<button class="btn btn-danger btn-xs" onclick="deleteCamera(' + c.id + ',\'' + _camEsc(c.nome).replace(/'/g,'\x27') + '\')">Excluir</button>'
-      + '</td>'
+      + '<td class="action-cell"><div class="action-buttons">'
+      +   '<button class="btn btn-outline btn-xs" onclick="editCamera(decodeURIComponent(\'' + encoded + '\'))">&#9998; Editar</button>'
+      +   '<button class="btn btn-danger btn-xs" onclick="deleteCamera(' + c.id + ',\'' + _camEsc(c.nome).replace(/'/g,'\x27') + '\')">&#128465; Excluir</button>'
+      + '</div></td>'
       + '</tr>';
   }).join('');
 }
@@ -9745,7 +10585,7 @@ async function loadCameras() {
   var err   = document.getElementById('cameras-error');
   var btn   = document.getElementById('btn-refresh-cameras');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:28px"><span class="spinner"></span> Carregando...</td></tr>';
   if (err) err.textContent = '';
   if (btn) { btn.disabled = true; btn.textContent = '\u29D7 Atualizando...'; }
   try {
@@ -9763,7 +10603,7 @@ async function loadCameras() {
     populateEvCameraFilter(); // atualiza filtro de eventos com todas as câmeras
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar c\u00e2meras: ' + e.message;
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '\u21bb Atualizar'; }
   }
@@ -9792,9 +10632,8 @@ function _cameraStatusPriority(lastSeenIso) {
 }
 
 function _camModoChange() {
-  var modo   = document.getElementById('cam-modo-integracao').value;
-  var creds  = document.getElementById('cam-listen-creds');
-  creds.style.display = (modo === 'listen') ? '' : 'none';
+  var field = document.getElementById('cam-modo-integracao');
+  if (field) field.value = 'push';
 }
 
 function openCameraModal(cam) {
@@ -9816,8 +10655,6 @@ function openCameraModal(cam) {
   document.getElementById('cam-longitude').value   = cam ? (cam.longitude != null ? cam.longitude : '') : '';
   document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
   document.getElementById('cam-modo-integracao').value = cam ? (cam.modo_integracao || 'push') : 'push';
-  document.getElementById('cam-usuario').value     = cam ? (cam.usuario || '') : '';
-  document.getElementById('cam-senha').value       = '';
   _camModoChange();
   document.getElementById('camera-form-error').textContent = '';
 
@@ -9845,13 +10682,30 @@ function openCameraModal(cam) {
     var lastFmt = cam.last_seen
       ? new Date(cam.last_seen).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})
       : null;
+    var modo = cam.modo_integracao || 'push';
+    var diagParts = [];
+    if (modo === 'push') {
+      if (!cam.last_event_at) {
+        diagParts.push('Push sem POST observado ainda');
+      } else {
+        var pushFmt = new Date(cam.last_event_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var origem  = cam.last_event_camera_ip || cam.last_event_camera_id || '?';
+        var sameIp  = !!(cam.ip && cam.last_event_camera_ip && cam.ip === cam.last_event_camera_ip);
+        var sameId  = !!(cam.camera_id && cam.last_event_camera_id && cam.camera_id === cam.last_event_camera_id);
+        diagParts.push('Último POST: ' + pushFmt);
+        diagParts.push('Origem vista: ' + origem + ((sameIp || sameId) ? '' : ' (verificar casamento)'));
+      }
+    }
     bar.style.background = bg;
     bar.style.display    = 'flex';
     bar.innerHTML =
       '<span style="font-size:1rem">' + dot + '</span>' +
       '<strong>' + label + '</strong>' +
       (lastFmt ? '<span style="color:var(--muted);font-size:.79rem">| último: ' + lastFmt + '</span>' : '') +
-      '<span style="margin-left:auto;font-size:.79rem;color:var(--muted)">' + evHoje + ' &nbsp;·&nbsp; ' + evTotal + '</span>';
+      '<span style="margin-left:auto;font-size:.79rem;color:var(--muted)">' + evHoje + ' &nbsp;·&nbsp; ' + evTotal + '</span>' +
+      (diagParts.length
+        ? '<div style="flex-basis:100%;font-size:.76rem;color:var(--muted);padding-top:4px;border-top:1px dashed rgba(255,255,255,.12)">' + diagParts.join(' &nbsp;·&nbsp; ') + '</div>'
+        : '');
   } else {
     bar.style.display = 'none';
     bar.innerHTML = '';
@@ -9877,19 +10731,13 @@ async function saveCamera() {
   var lngRaw      = document.getElementById('cam-longitude').value.trim();
   var latitude    = latRaw  !== '' ? parseFloat(latRaw)  : null;
   var longitude   = lngRaw  !== '' ? parseFloat(lngRaw) : null;
-  var modo        = document.getElementById('cam-modo-integracao').value;
-  var usuario     = document.getElementById('cam-usuario').value.trim();
-  var senha       = document.getElementById('cam-senha').value;
   var errEl       = document.getElementById('camera-form-error');
   errEl.textContent = '';
   if (!cameraId) { errEl.textContent = 'ID / Nome da câmera é obrigatório.'; return; }
   if (peso_score <= 0) { errEl.textContent = 'Peso Score deve ser maior que 0.'; return; }
-  if (modo === 'listen' && !usuario) { errEl.textContent = 'Usuário é obrigatório no modo Listen.'; return; }
-  if (modo === 'listen' && !_cameraEditId && !senha) { errEl.textContent = 'Senha é obrigatória no modo Listen.'; return; }
   if (latRaw !== '' && (isNaN(latitude)  || latitude  < -90  || latitude  > 90))  { errEl.textContent = 'Latitude inválida (-90 a 90).';   return; }
   if (lngRaw !== '' && (isNaN(longitude) || longitude < -180 || longitude > 180)) { errEl.textContent = 'Longitude inválida (-180 a 180).'; return; }
-  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude, modo_integracao: modo, usuario: usuario || null };
-  if (senha) body.senha = senha;
+  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude, modo_integracao: 'push' };
   try {
     var url    = _cameraEditId ? '/api/cameras/' + _cameraEditId : '/api/cameras';
     var method = _cameraEditId ? 'PUT' : 'POST';
@@ -9927,6 +10775,9 @@ async function deleteCamera(id, nome) {
 // ===== MAPA DE CÂMERAS (Google Maps) =====
 var _googleMap        = null;
 var _trajViewerPrevTab = null; // null = viewer fechado; string = aba anterior
+var _trajViewerReturn  = null; // { reopen: fn, label: string }
+var _detailModalReturnFn = null;
+var _relModalReturnFn    = null;
 var _mapaMarkers      = [];
 var _mapaInfoWindows  = [];
 var _mapaTrajetoria   = null;  // {plates:[], points:[{camera_id,ts,plate,cam_nome}]}
@@ -9936,6 +10787,17 @@ var _mapaHeatLayer    = null;
 var _mapaHeatActive   = false;
 var _mapaAutoTimer    = null;
 var _mapaCacheItems   = [];   // cache da última lista de câmeras com GPS
+var _TRAJ_COLOR       = '#ff0000';
+var _TRAJ_GAP_COLOR   = '#ff0000';
+var _TRAJ_SHADOW      = '#000000';
+
+function _clearTrajectoryLayers() {
+  _trajetoriaLayers.forEach(function(l) {
+    if (l && l.setMap) l.setMap(null);
+    if (l && l.remove) l.remove();
+  });
+  _trajetoriaLayers = [];
+}
 
 // --- Filtrar eventos por câmera a partir do mapa ---
 function _filtrarEventosPorCamera(cameraId) {
@@ -10052,12 +10914,25 @@ function _toggleMapaAutoRefresh() {
 }
 
 // ── Viewer temporário de trajetória (overlay sobre aba atual) ────────────
-function _abrirMapaOverlay(plate, infoLabel) {
+function _setTrajViewerReturn(reopenFn, label) {
+  _trajViewerReturn = (typeof reopenFn === 'function')
+    ? { reopen: reopenFn, label: label || 'Voltar ao Relatório' }
+    : null;
+}
+
+function _abrirMapaOverlay(plate, infoLabel, reopenFn, label) {
   _trajViewerPrevTab = currentTab;
+  if (typeof reopenFn === 'function') _setTrajViewerReturn(reopenFn, label);
+  else _trajViewerReturn = null;
   var bar = document.getElementById('traj-viewer-bar');
   if (bar) {
     document.getElementById('tvb-plate').textContent = plate || '';
     document.getElementById('tvb-info').textContent  = infoLabel || '';
+    var backBtn = document.getElementById('tvb-back');
+    if (backBtn) {
+      backBtn.style.display = (_trajViewerReturn && typeof _trajViewerReturn.reopen === 'function') ? '' : 'none';
+      backBtn.textContent = (_trajViewerReturn && _trajViewerReturn.label) || 'Voltar ao Relatório';
+    }
     bar.classList.add('open');
     // empurra o conteúdo para baixo
     var wrap = document.getElementById('main-wrap') || document.querySelector('.main-wrap') || document.querySelector('main') || document.body;
@@ -10067,9 +10942,16 @@ function _abrirMapaOverlay(plate, infoLabel) {
   if (mapaNav) switchTab('mapa', mapaNav);
 }
 
-function _fecharMapaOverlay() {
+function _voltarRelatorioDoMapa() {
+  _fecharMapaOverlay(true);
+}
+
+function _fecharMapaOverlay(restoreContext) {
+  restoreContext = !!restoreContext;
   var prevTab = _trajViewerPrevTab;
+  var returnCtx = _trajViewerReturn;
   _trajViewerPrevTab = null;
+  _trajViewerReturn = null;
   // esconde a barra
   var bar = document.getElementById('traj-viewer-bar');
   if (bar) bar.classList.remove('open');
@@ -10078,9 +10960,12 @@ function _fecharMapaOverlay() {
   // limpa trajetória do mapa
   _limparTrajetoria();
   // volta para a aba anterior
-  if (prevTab && prevTab !== 'mapa') {
+  if (restoreContext && prevTab && prevTab !== 'mapa') {
     var prevNav = document.querySelector('.nav-item[onclick*="' + prevTab + '"]');
     if (prevNav) switchTab(prevTab, prevNav);
+  }
+  if (restoreContext && returnCtx && typeof returnCtx.reopen === 'function') {
+    setTimeout(function() { returnCtx.reopen(); }, prevTab && prevTab !== 'mapa' ? 220 : 120);
   }
 }
 
@@ -10110,6 +10995,37 @@ function promptTrajetoriaMapa() {
   var defBtn = document.querySelector('#traj-picker-modal .btn-outline[onclick*="traj-custom-row"]');
   if (defBtn) defBtn.style.display = '';
   openModal('traj-picker-modal');
+}
+
+function _setMapaTrajetoriaFromApiData(data, fallbackPlate) {
+  var plate = (fallbackPlate || data.plate || '').toUpperCase();
+  var rawPoints = (data && data.points) ? data.points : [];
+  _mapaTrajetoria = {
+    plates: plate ? [plate] : [],
+    points: rawPoints.map(function(p) {
+      return {
+        lat: p.lat,
+        lng: p.lng != null ? p.lng : p.lon,
+        ts: p.ts,
+        plate: plate,
+        camera_id: p.camera_id,
+        cam_nome: p.camera_name || p.cam_nome || p.camera || p.camera_id,
+        direcao: p.direction || p.direcao,
+        confidence: p.confidence,
+        vehicle_type: p.vehicle_type,
+        vehicle_color: p.vehicle_color,
+        seq: 0
+      };
+    }).filter(function(p) {
+      return p.lat != null && p.lng != null;
+    }),
+    stats: {
+      total_points: data.total_points || rawPoints.length || 0,
+      total_events: data.total_events || rawPoints.length || 0,
+      cameras_without_gps: data.cameras_without_gps || []
+    }
+  };
+  return _mapaTrajetoria;
 }
 
 async function _loadTrajetoria(windowKey) {
@@ -10162,32 +11078,11 @@ async function _loadTrajetoria(windowKey) {
       return;
     }
 
-    // Pontos já vêm com lat/lon enriquecidos do backend
-    _mapaTrajetoria = {
-      plates: [plate],
-      points: data.points.map(function(p) {
-        return {
-          lat: p.lat,
-          lng: p.lon,
-          ts: p.ts,
-          plate: plate,
-          camera_id: p.camera_id,
-          cam_nome: p.camera_name,
-          direcao: p.direction,
-          seq: 0  // será preenchido em _plotarTrajetoria
-        };
-      }),
-      stats: {
-        total_points: data.total_points,
-        total_events: data.total_events,
-        cameras_without_gps: data.cameras_without_gps || []
-      }
-    };
+    _setMapaTrajetoriaFromApiData(data, plate);
 
     closeModal('traj-picker-modal');
     closeModal('detail-modal');
-    var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
-    if (mapaNav) switchTab('mapa', mapaNav);
+    _abrirMapaOverlay(plate, (data.total_points || data.points.length) + ' passagem(ns)', _mapaTrajMode ? null : _detailModalReturnFn, 'Voltar ao Relatório');
     setTimeout(_plotarTrajetoria, 400);
   } catch(e) {
     st.textContent = 'Erro: ' + e.message;
@@ -10196,9 +11091,11 @@ async function _loadTrajetoria(windowKey) {
 
 function verTrajetoriaNoMapa() {
   if (!_mapaTrajetoria) return;
+  var plate = ((_mapaTrajetoria.plates || [])[0] || '').toUpperCase();
+  var infoLabel = ((_mapaTrajetoria.stats && _mapaTrajetoria.stats.total_points) || (_mapaTrajetoria.points || []).length || 0) + ' passagem(ns)';
   closeModal('detail-modal');
-  var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
-  if (mapaNav) switchTab('mapa', mapaNav);
+  _abrirMapaOverlay(plate, infoLabel, _detailModalReturnFn, 'Voltar ao Relatório');
+  setTimeout(_plotarTrajetoria, 400);
 }
 
 // ── Segmentação inteligente: quebra pontos em trechos ────────────────────
@@ -10248,16 +11145,8 @@ var _SEGMENT_COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#06b6d4','#4ade8
 
 function _plotarTrajetoria() {
   // Limpa camadas anteriores
-  _trajetoriaLayers.forEach(function(l) {
-    if (l.setMap) l.setMap(null);
-    if (l.remove) l.remove();
-  });
-  _trajetoriaLayers = [];
+  _clearTrajectoryLayers();
   if (!_mapaTrajetoria || !_mapaTrajetoria.points.length) return;
-
-  var COLORS = ['#ef4444','#f97316','#a855f7','#3b82f6','#facc15','#06b6d4','#4ade80'];
-  var colorMap = {};
-  (_mapaTrajetoria.plates || []).forEach(function(p, i) { colorMap[p] = COLORS[i % COLORS.length]; });
 
   // Ordena cronologicamente antes de desenhar (garante sequência correta mesmo se o backend divergir)
   var points = _mapaTrajetoria.points.slice().sort(function(a, b) {
@@ -10293,7 +11182,6 @@ function _plotarTrajetoria() {
   var totalTrechos  = 0;
 
   Object.keys(byPlate).forEach(function(plate) {
-    var baseColor = colorMap[plate] || '#facc15';
     var pts       = byPlate[plate];
     if (!pts.length) return;
 
@@ -10302,7 +11190,7 @@ function _plotarTrajetoria() {
     totalTrechos += segments.length;
 
     segments.forEach(function(seg, segIdx) {
-      var segColor = '#ef4444'; // rota sempre vermelha
+      var segColor = _TRAJ_COLOR; // rota sempre vermelha
 
       // ── Polyline por trecho (segmento-a-segmento) ───────────────
       if (seg.length >= 2) {
@@ -10310,7 +11198,7 @@ function _plotarTrajetoria() {
         var shadowPath = seg.map(function(p) { return {lat: p.lat, lng: p.lng}; });
         var shadow = new google.maps.Polyline({
           path: shadowPath,
-          strokeColor: '#000',
+          strokeColor: _TRAJ_SHADOW,
           strokeOpacity: 0.12,
           strokeWeight: 8,
           map: _googleMap,
@@ -10318,25 +11206,27 @@ function _plotarTrajetoria() {
         });
         _trajetoriaLayers.push(shadow);
 
-        // Linha principal do trecho — tracejada vermelha
+        // Linha principal do trecho — vermelha e bem visível
         var mainPath = seg.map(function(p) { return {lat: p.lat, lng: p.lng}; });
         var line = new google.maps.Polyline({
           path: mainPath,
           strokeColor: segColor,
-          strokeOpacity: 0,
-          strokeWeight: 4,
+          strokeOpacity: 0.95,
+          strokeWeight: 5,
           map: _googleMap,
           zIndex: 2,
           icons: [{
             icon: {
-              path: 'M 0,-1 0,1',
+              path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
               strokeOpacity: 1,
               strokeColor: segColor,
-              strokeWeight: 3,
-              scale: 6
+              fillColor: segColor,
+              fillOpacity: 1,
+              strokeWeight: 2,
+              scale: 3
             },
-            offset: '0',
-            repeat: '20px'
+            offset: '50%',
+            repeat: '120px'
           }]
         });
         _trajetoriaLayers.push(line);
@@ -10388,28 +11278,10 @@ function _plotarTrajetoria() {
           ang = bearing(seg[pIdx - 1], p);
         }
 
-        // SVG de carrinho top-view, aponta para cima (norte) quando ang=0
-        // O carrinho é rotacionado pelo transform no <g>
-        var carSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">'
-          + '<g transform="rotate(' + ang + ',18,18)">'
-          // sombra
-          + '<ellipse cx="18" cy="20" rx="8" ry="4" fill="rgba(0,0,0,0.3)"/>'
-          // carroceria
-          + '<rect x="11" y="8" width="14" height="20" rx="4" ry="4" fill="' + segColor + '" stroke="#fff" stroke-width="2"/>'
-          // teto/cabine
-          + '<rect x="13" y="11" width="10" height="8" rx="2" ry="2" fill="rgba(255,255,255,0.25)"/>'
-          // faróis dianteiros (frente = topo)
-          + '<rect x="12" y="8" width="4" height="3" rx="1" fill="#fff" opacity="0.9"/>'
-          + '<rect x="20" y="8" width="4" height="3" rx="1" fill="#fff" opacity="0.9"/>'
-          // lanternas traseiras (fundo = base)
-          + '<rect x="12" y="25" width="4" height="3" rx="1" fill="#fca5a5" opacity="0.9"/>'
-          + '<rect x="20" y="25" width="4" height="3" rx="1" fill="#fca5a5" opacity="0.9"/>'
-          // rodas
-          + '<rect x="9"  y="11" width="3" height="5" rx="1" fill="#374151"/>'
-          + '<rect x="24" y="11" width="3" height="5" rx="1" fill="#374151"/>'
-          + '<rect x="9"  y="20" width="3" height="5" rx="1" fill="#374151"/>'
-          + '<rect x="24" y="20" width="3" height="5" rx="1" fill="#374151"/>'
-          + '</g>'
+        var pointLabel = String(p.seq);
+        var pointSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">'
+          + '<circle cx="17" cy="17" r="12" fill="' + segColor + '" stroke="#ffffff" stroke-width="3"/>'
+          + '<text x="17" y="21" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#ffffff">' + pointLabel + '</text>'
           + '</svg>';
 
         var popupContent = '<div style="font-family:system-ui;min-width:220px">'
@@ -10427,11 +11299,12 @@ function _plotarTrajetoria() {
           position: {lat: p.lat, lng: p.lng},
           map: _googleMap,
           icon: {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(carSvg),
-            scaledSize: new google.maps.Size(36, 36),
-            anchor: new google.maps.Point(18, 18)
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(pointSvg),
+            scaledSize: new google.maps.Size(34, 34),
+            anchor: new google.maps.Point(17, 17)
           },
-          zIndex: 30
+          title: 'Passagem #' + p.seq,
+          zIndex: 40
         });
 
         mk.addListener('click', function() {
@@ -10501,9 +11374,9 @@ function _plotarTrajetoria() {
             {lat: seg[seg.length-1].lat, lng: seg[seg.length-1].lng},
             {lat: nextSeg[0].lat, lng: nextSeg[0].lng}
           ],
-          strokeColor: '#94a3b8',
-          strokeOpacity: 0.5,
-          strokeWeight: 2,
+          strokeColor: _TRAJ_GAP_COLOR,
+          strokeOpacity: 0.42,
+          strokeWeight: 3,
           map: _googleMap,
           zIndex: 1,
           icons: [{
@@ -10549,11 +11422,7 @@ function _plotarTrajetoria() {
 
 function _limparTrajetoria() {
   _mapaTrajetoria = null;
-  _trajetoriaLayers.forEach(function(l) {
-    if (l.setMap) l.setMap(null);
-    if (l.remove) l.remove();
-  });
-  _trajetoriaLayers = [];
+  _clearTrajectoryLayers();
   var noGps = document.getElementById('map-no-gps');
   if (noGps) noGps.innerHTML = '';
   loadMapa();
@@ -10849,203 +11718,13 @@ function renderVehicleTrajectory(data) {
   }
 
   _vehicleTrajData = data;
-
-  var plate = data.plate;
-  // Normaliza lon → lng (backend usa 'lon', Google Maps espera 'lng')
-  var points = data.points.map(function(p) { return Object.assign({}, p, { lng: p.lon }); });
-  // Ordena cronologicamente antes de indexar e desenhar
-  points.sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
-
-  // Guarda dados para limpeza posterior
   if (!_googleMap) return;
-
-  // Remove camadas anteriores de trajetória
-  _trajetoriaLayers.forEach(function(l) {
-    if (l.setMap) l.setMap(null);
-    if (l.remove) l.remove();
-  });
-  _trajetoriaLayers = [];
-
-  // Cores
-  var COLORS = ['#ef4444', '#f97316', '#a855f7', '#3b82f6', '#facc15', '#06b6d4', '#4ade80'];
-  var mainColor = COLORS[0];
-
-  // Coleta bounds para zoom
-  var bounds = new google.maps.LatLngBounds();
-  var ptsToProcess = points.filter(function(p) {
-    return p.lat != null && p.lng != null;
-  });
-
-  if (!ptsToProcess.length) {
+  var trajData = _setMapaTrajetoriaFromApiData(data, data.plate);
+  if (!trajData.points || !trajData.points.length) {
     document.getElementById('traj-map-status').innerHTML = '⚠️ Nenhum ponto com GPS';
     return;
   }
-
-  ptsToProcess.forEach(function(p, idx) {
-    p._index = idx + 1; // numeração começa de 1
-    bounds.extend(new google.maps.LatLng(p.lat, p.lng));
-  });
-
-  // Desenha polyline ligando os pontos
-  if (ptsToProcess.length >= 2) {
-    // Sombra
-    var shadowPath = ptsToProcess.map(function(p) { return {lat: p.lat, lng: p.lng}; });
-    var shadow = new google.maps.Polyline({
-      path: shadowPath,
-      strokeColor: '#000',
-      strokeOpacity: 0.25,
-      strokeWeight: 7,
-      map: _googleMap,
-      zIndex: 1
-    });
-    _trajetoriaLayers.push(shadow);
-
-    // Linha principal
-    var mainPath = ptsToProcess.map(function(p) { return {lat: p.lat, lng: p.lng}; });
-    var line = new google.maps.Polyline({
-      path: mainPath,
-      strokeColor: mainColor,
-      strokeOpacity: 0.9,
-      strokeWeight: 4,
-      map: _googleMap,
-      zIndex: 2
-    });
-    _trajetoriaLayers.push(line);
-
-    // Setas direcionais
-    function bearing(p1, p2) {
-      var dLng = (p2.lng - p1.lng) * Math.PI / 180;
-      var lat1 = p1.lat * Math.PI / 180;
-      var lat2 = p2.lat * Math.PI / 180;
-      var y = Math.sin(dLng) * Math.cos(lat2);
-      var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
-      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-    }
-
-    for (var i = 0; i < ptsToProcess.length - 1; i++) {
-      var p1 = ptsToProcess[i];
-      var p2 = ptsToProcess[i + 1];
-      if (p1.lat === p2.lat && p1.lng === p2.lng) continue;
-      var midLat = (p1.lat + p2.lat) / 2;
-      var midLng = (p1.lng + p2.lng) / 2;
-      var ang = bearing(p1, p2);
-      
-      var arrowSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">'
-        + '<circle cx="10" cy="10" r="9" fill="' + mainColor + '" fill-opacity=".85" stroke="#fff" stroke-width="1.2"/>'
-        + '<polygon points="10,3 13.5,14 10,11 6.5,14" fill="#fff" transform="rotate(' + ang + ',10,10)"/>'
-        + '</svg>';
-      
-      var arrow = new google.maps.Marker({
-        position: {lat: midLat, lng: midLng},
-        map: _googleMap,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(arrowSvg),
-          scaledSize: new google.maps.Size(20, 20),
-          anchor: new google.maps.Point(10, 10)
-        },
-        zIndex: 10
-      });
-      _trajetoriaLayers.push(arrow);
-    }
-  }
-
-  // Marcadores numerados
-  ptsToProcess.forEach(function(p) {
-    var dt = new Date(p.ts);
-    var fmt = dt.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: '2-digit'})
-            + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
-
-    var circleHtml = '<div style="background:' + mainColor + ';color:#fff;font-weight:900;font-size:.7rem;'
-      + 'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;'
-      + 'border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)">' + p._index + '</div>';
-    
-    var markerContent = '<div style="font-family:system-ui;min-width:240px">'
-      + '<div style="font-weight:900;font-size:.95rem;color:' + mainColor + ';margin-bottom:8px;letter-spacing:.05em">' + plate + '</div>'
-      + '<div style="font-size:.82rem;line-height:1.9;color:#ccc">'
-      + '<b style="color:#64748b">Evento #' + p._index + '</b> de ' + ptsToProcess.length + '<br>'
-      + '<b style="color:#64748b">Data/Hora:</b> ' + fmt + '<br>'
-      + '<b style="color:#64748b">Câmera:</b> ' + (p.camera_name || p.camera_id) + '<br>'
-      + '<b style="color:#64748b">Direção:</b> ' + (p.direction || '—') + '<br>'
-      + '<b style="color:#64748b">Confiança:</b> ' + (p.confidence ? (p.confidence * 100).toFixed(0) + '%' : '—') + '<br>'
-      + (p.vehicle_type ? '<b style="color:#64748b">Tipo:</b> ' + p.vehicle_type + '<br>' : '')
-      + (p.vehicle_color ? '<b style="color:#64748b">Cor:</b> ' + p.vehicle_color + '<br>' : '')
-      + '</div>'
-      + '</div>';
-
-    var infoWindow = new google.maps.InfoWindow({
-      content: markerContent
-    });
-
-    var mk = new google.maps.Marker({
-      position: {lat: p.lat, lng: p.lng},
-      map: _googleMap,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(circleHtml),
-        scaledSize: new google.maps.Size(28, 28),
-        anchor: new google.maps.Point(14, 14)
-      },
-      zIndex: 20
-    });
-    
-    mk.addListener('click', function() {
-      _mapaInfoWindows.forEach(function(iw) { iw.close(); });
-      infoWindow.open(_googleMap, mk);
-    });
-    
-    _trajetoriaLayers.push(mk);
-    _mapaInfoWindows.push(infoWindow);
-  });
-
-  // Marcadores de início e fim
-  if (ptsToProcess.length >= 1) {
-    var mStart = new google.maps.Marker({
-      position: {lat: ptsToProcess[0].lat, lng: ptsToProcess[0].lng},
-      map: _googleMap,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
-        ),
-        scaledSize: new google.maps.Size(1, 1),
-        anchor: new google.maps.Point(24, 8)
-      },
-      label: {
-        text: '▶ INÍCIO',
-        color: '#fff',
-        fontSize: '11px',
-        fontWeight: 'bold'
-      },
-      zIndex: 50
-    });
-    _trajetoriaLayers.push(mStart);
-  }
-
-  if (ptsToProcess.length >= 2) {
-    var mEnd = new google.maps.Marker({
-      position: {lat: ptsToProcess[ptsToProcess.length - 1].lat, lng: ptsToProcess[ptsToProcess.length - 1].lng},
-      map: _googleMap,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="none"/></svg>'
-        ),
-        scaledSize: new google.maps.Size(1, 1),
-        anchor: new google.maps.Point(24, 8)
-      },
-      label: {
-        text: '■ FIM',
-        color: '#fff',
-        fontSize: '11px',
-        fontWeight: 'bold'
-      },
-      zIndex: 50
-    });
-    _trajetoriaLayers.push(mEnd);
-  }
-
-  // Ajusta zoom para caber toda a rota
-  if (!bounds.isEmpty()) {
-    _googleMap.fitBounds(bounds, {top: 70, right: 70, bottom: 70, left: 70});
-    if (_googleMap.getZoom() > 14) _googleMap.setZoom(14);
-  }
+  _plotarTrajetoria();
 
   // Mostra câmeras sem GPS se houver
   var noGpsContainer = document.getElementById('traj-no-gps-container');
@@ -11058,8 +11737,8 @@ function renderVehicleTrajectory(data) {
   }
 
   // Status final
-  var totalEvents = data.total_events || 0;
-  var totalPoints = data.total_points || 0;
+  var totalEvents = (trajData.stats && trajData.stats.total_events) || data.total_events || 0;
+  var totalPoints = (trajData.stats && trajData.stats.total_points) || data.total_points || 0;
   var statusMsg = '✓ ' + totalPoints + ' ponto(s) com GPS';
   if (totalEvents > totalPoints) {
     statusMsg += ' (+ ' + (totalEvents - totalPoints) + ' sem coordenadas)';
@@ -11069,11 +11748,7 @@ function renderVehicleTrajectory(data) {
 
 function clearVehicleTrajectory() {
   // Remove camadas de trajetória do mapa
-  _trajetoriaLayers.forEach(function(l) {
-    if (l && l.setMap) l.setMap(null);
-    if (l && l.remove) l.remove();
-  });
-  _trajetoriaLayers = [];
+  _clearTrajectoryLayers();
   
   // Limpa dados
   _vehicleTrajData = null;
@@ -11225,9 +11900,9 @@ function renderGruposComboio(groups) {
       + '<div>' + firstSeen + '</div>'
       + '<div style="color:var(--muted)">' + lastSeen + '</div>'
       + '</td>'
-      + '<td style="white-space:nowrap">'
-      + '<button class="btn btn-outline btn-xs" onclick="openGrupoDetail(' + idx + ',' + JSON.stringify(g).replace(/'/g, "&#39;") + ')">&#128269; Ver</button>'
-      + '</td>'
+      + '<td class="action-cell"><div class="action-buttons">'
+      + '<button class="btn btn-outline btn-xs" onclick="openGrupoDetail(' + idx + ',' + JSON.stringify(g).replace(/'/g, "&#39;") + ')">&#128269; Visualizar</button>'
+      + '</div></td>'
       + '</tr>';
   }).join('');
 }
@@ -11552,9 +12227,10 @@ var _THEMES = {
 };
 
 var _ALLOWED_THEMES = { verde: true, branco: true };
+var _DEFAULT_THEME_LOGO = '/static/logo-bpfron.png.png';
 var _THEME_LOGOS = {
-  verde: '/static/logo-bpfron.png.png',
-  branco: '/static/logo.png'
+  verde: _DEFAULT_THEME_LOGO,
+  branco: _DEFAULT_THEME_LOGO
 };
 
 function normalizeThemeName(name) {
@@ -11724,11 +12400,13 @@ function _renderUsersTable(items) {
           ? '<span class="badge badge-green">&#9679; Ativo</span>'
           : '<span class="badge badge-red">&#9679; Inativo</span>') + '</td>'
       + '<td style="font-size:.78rem;color:var(--muted)">' + dt + '</td>'
-      + '<td style="text-align:center;white-space:nowrap">'
+      + '<td class="action-cell">'
       + (isMainAdmin
           ? '<span style="color:var(--muted);font-size:.72rem">admin principal</span>'
-          : '<button class="btn btn-outline btn-xs" onclick="openUserModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">&#9998; Editar</button> '
-            + '<button class="btn btn-danger btn-xs" onclick="deleteUser(' + u.id + ',\'' + u.username + '\')" title="Excluir">&#128465; Excluir</button>')
+          : '<div class="action-buttons">'
+            + '<button class="btn btn-outline btn-xs" onclick="openUserModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">&#9998; Editar</button>'
+            + '<button class="btn btn-danger btn-xs" onclick="deleteUser(' + u.id + ',\'' + u.username + '\')" title="Excluir">&#128465; Excluir</button>'
+            + '</div>')
       + '</td>'
       + '</tr>';
   }).join('');
@@ -11912,13 +12590,13 @@ function _renderAlarmesTable(items) {
       + '<td>' + (a.ativo
         ? '<span class="badge badge-green">\u25CF Ativo</span>'
         : '<span class="badge badge-red">\u25CF Inativo</span>') + '</td>'
-      + '<td style="text-align:center;white-space:nowrap">'
-        + '<button class="btn btn-outline btn-xs" onclick="testAlarme(' + a.id + ')" title="Testar push">\u{1F514} Testar</button> '
+      + '<td class="action-cell"><div class="action-buttons">'
+        + '<button class="btn btn-outline btn-xs" onclick="testAlarme(' + a.id + ')" title="Testar push">\u{1F514} Testar</button>'
         + (isAdmin
-          ? '<button class="btn btn-outline btn-xs" onclick="openAlarmeModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">\u270E Editar</button> '
+          ? '<button class="btn btn-outline btn-xs" onclick="openAlarmeModal(decodeURIComponent(\'' + enc + '\'))" title="Editar">\u270E Editar</button>'
             + '<button class="btn btn-danger btn-xs" onclick="deleteAlarme(' + a.id + ')" title="Excluir">\u{1F5D1} Excluir</button>'
           : '')
-      + '</td>'
+      + '</div></td>'
       + '</tr>';
   }).join('');
 }
@@ -12244,28 +12922,16 @@ function renderCadResultado(pessoas) {
   tb.innerHTML = pessoas.map(function(p) {
     var dc = p.data_cadastro ? p.data_cadastro.substring(0,10) : '\u2014';
     var dn = p.data_nascimento ? p.data_nascimento.substring(0,10) : '\u2014';
-    var temaAtual = normalizeThemeName(document.documentElement.getAttribute('data-theme'));
-    var isTemaBranco = (temaAtual === 'branco');
     // Botões de ação baseados no perfil do usuário logado
     var role = window._authRole || 'visualizador';
-    var botoesAcao = '';
+    var botoesAcao = ' <button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269; Visualizar</button>';
     if (role === 'admin' || role === 'operador') {
-      botoesAcao += isTemaBranco
-        ? ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998; Editar</button>'
-        : ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998;</button>';
-    } else {
-      botoesAcao += isTemaBranco
-        ? ' <button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269; Visualizar</button>'
-        : ' <button class="btn btn-outline btn-xs" onclick="cadastroVisualizar(' + p.id + ')" title="Visualizar">&#128269;</button>';
+      botoesAcao += ' <button class="btn btn-outline btn-xs" onclick="cadastroEditar(' + p.id + ')" title="Editar">&#9998; Editar</button>';
     }
     if (role === 'admin') {
       // Botão excluir cadastro: somente admin
-      botoesAcao += isTemaBranco
-        ? ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465; Excluir</button>'
-        : ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465;</button>';
+      botoesAcao += ' <button class="btn btn-danger btn-xs" onclick="cadastroExcluir(' + p.id + ',this)" title="Excluir" data-nome="' + _esc(p.nome) + '">&#128465; Excluir</button>';
     }
-    var tdAcoesClass = isTemaBranco ? ' class="cad-acoes"' : '';
-    var tdAcoesStyle = isTemaBranco ? 'text-align:center' : 'text-align:center;white-space:nowrap';
     return '<tr>' +
       '<td style="color:var(--muted);font-size:.8rem">' + p.id + '</td>' +
       '<td style="font-weight:600">' + _esc(p.nome) + '</td>' +
@@ -12275,7 +12941,7 @@ function renderCadResultado(pessoas) {
       '<td style="font-size:.78rem">' + dn + '</td>' +
       '<td>' + _esc(p.contato || '\u2014') + '</td>' +
       '<td style="font-size:.78rem;color:var(--muted)">' + dc + '</td>' +
-      '<td' + tdAcoesClass + ' style="' + tdAcoesStyle + '">' + botoesAcao + '</td>' +
+      '<td class="cad-acoes">' + botoesAcao + '</td>' +
       '</tr>';
   }).join('');
 }
@@ -12585,6 +13251,15 @@ async function cadastroVisualizar(id) {
     }
 
     var html = '';
+    var fotoUrl = normalizeImageUrl(p.foto_path);
+    if (fotoUrl) {
+      html += '<div style="display:flex;justify-content:flex-end;margin:0 0 10px">'
+           +  '<img src="' + fotoUrl.replace(/"/g, '&quot;') + '" alt="Foto do abordado"'
+           +  ' style="width:108px;height:108px;border-radius:12px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+           +  ' onclick="openImageUrl(\'' + fotoUrl.replace(/'/g,"\\'") + '\',\'Foto do abordado\')"'
+           +  ' title="Clique para ampliar">'
+           +  '</div>';
+    }
 
     // 1. Identificação
     html += sec('\uD83D\uDC64', 'Identifica\u00e7\u00e3o');
@@ -12652,6 +13327,134 @@ function abIniciarForm() {
   }
 }
 
+function abPreviewImagem(input) {
+  var file = input && input.files ? input.files[0] : null;
+  var wrap = document.getElementById('ab-imagem-preview-wrap');
+  var img = document.getElementById('ab-imagem-preview');
+  if (!wrap || !img) return;
+  if (!file) {
+    wrap.style.display = 'none';
+    img.removeAttribute('src');
+    return;
+  }
+  if (!/^image\//i.test(file.type || '')) {
+    alert('Selecione um arquivo de imagem válido.');
+    abRemoverImagem();
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    img.src = e.target.result;
+    wrap.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function abRemoverImagem() {
+  var input = document.getElementById('ab-imagem');
+  var wrap = document.getElementById('ab-imagem-preview-wrap');
+  var img = document.getElementById('ab-imagem-preview');
+  if (input) input.value = '';
+  if (img) img.removeAttribute('src');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function abPreviewVeiculoImagem(input) {
+  var file = input && input.files ? input.files[0] : null;
+  var wrap = document.getElementById('ab-veiculo-imagem-preview-wrap');
+  var img = document.getElementById('ab-veiculo-imagem-preview');
+  if (!wrap || !img) return;
+  if (!file) {
+    wrap.style.display = 'none';
+    img.removeAttribute('src');
+    return;
+  }
+  if (!/^image\//i.test(file.type || '')) {
+    alert('Selecione um arquivo de imagem válido para o veículo.');
+    abRemoverVeiculoImagem();
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    img.src = e.target.result;
+    wrap.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function abRemoverVeiculoImagem() {
+  var input = document.getElementById('ab-veiculo-imagem');
+  var wrap = document.getElementById('ab-veiculo-imagem-preview-wrap');
+  var img = document.getElementById('ab-veiculo-imagem-preview');
+  if (input) input.value = '';
+  if (img) img.removeAttribute('src');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function cadAbPreviewVeiculoImagem(input) {
+  var file = input && input.files ? input.files[0] : null;
+  var wrap = document.getElementById('cad-ab-veiculo-foto-wrap');
+  var img = document.getElementById('cad-ab-veiculo-foto-preview');
+  if (!wrap || !img) return;
+  if (!file) {
+    wrap.style.display = 'none';
+    img.removeAttribute('src');
+    return;
+  }
+  if (!/^image\//i.test(file.type || '')) {
+    alert('Selecione um arquivo de imagem válido para o veículo.');
+    cadAbRemoverVeiculoImagem();
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    img.src = e.target.result;
+    wrap.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function cadAbRemoverVeiculoImagem() {
+  var input = document.getElementById('cad-ab-veiculo-foto');
+  var wrap = document.getElementById('cad-ab-veiculo-foto-wrap');
+  var img = document.getElementById('cad-ab-veiculo-foto-preview');
+  if (input) input.value = '';
+  if (img) img.removeAttribute('src');
+  if (wrap) wrap.style.display = 'none';
+}
+
+function cadAbOcPreviewImagem(idx, input) {
+  var file = input && input.files ? input.files[0] : null;
+  var wrap = document.getElementById('cad-ab-oc-foto-wrap-' + idx);
+  var img = document.getElementById('cad-ab-oc-foto-preview-' + idx);
+  if (!wrap || !img) return;
+  if (!file) {
+    wrap.style.display = 'none';
+    img.removeAttribute('src');
+    return;
+  }
+  if (!/^image\//i.test(file.type || '')) {
+    alert('Selecione um arquivo de imagem válido para o acompanhante.');
+    cadAbOcRemoverImagem(idx);
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    img.src = e.target.result;
+    wrap.style.display = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function cadAbOcRemoverImagem(idx) {
+  var input = document.getElementById('cad-ab-oc-foto-' + idx);
+  var wrap = document.getElementById('cad-ab-oc-foto-wrap-' + idx);
+  var img = document.getElementById('cad-ab-oc-foto-preview-' + idx);
+  if (input) input.value = '';
+  if (img) img.removeAttribute('src');
+  if (wrap) wrap.style.display = 'none';
+}
+
 function abLimpar() {
   ['ab-pessoa-id','ab-nome','ab-cpf','ab-rg','ab-contato','ab-profissao',
    'ab-pai','ab-mae','ab-rua','ab-numero','ab-bairro','ab-uf',
@@ -12664,11 +13467,13 @@ function abLimpar() {
   var va = document.getElementById('ab-vincular-alvo'); if(va) va.value = 'nao';
   var tv = document.getElementById('ab-tem-veiculo'); if(tv) tv.value = 'nao';
   var vw = document.getElementById('ab-veiculo-wrap'); if(vw) vw.style.display = 'none';
+  abRemoverVeiculoImagem();
   var pl = document.getElementById('ab-pessoas-list');
   if(pl) pl.innerHTML = '<div data-placeholder="1" style="color:var(--muted);font-size:.82rem;font-style:italic;padding:8px 0">Nenhum acompanhante adicionado.</div>';
   _abPessoaIdx = 0;
   var er = document.getElementById('ab-form-erro'); if(er) er.textContent = '';
   var ok = document.getElementById('ab-form-ok');   if(ok) ok.style.display = 'none';
+  abRemoverImagem();
   abIniciarForm();
 }
 
@@ -12710,6 +13515,7 @@ function abToggleVeiculo() {
     });
     var va = document.getElementById('ab-vincular-alvo'); if(va) va.value = 'nao';
     var vi = document.getElementById('ab-veiculo-info'); if(vi){ vi.style.display='none'; vi.textContent=''; }
+    abRemoverVeiculoImagem();
   }
 }
 
@@ -13096,7 +13902,22 @@ async function abSalvar() {
   });
 
   try {
-    var resp = await fetch('/api/abordagens', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    var fileInput = document.getElementById('ab-imagem');
+    var imageFile = fileInput && fileInput.files ? fileInput.files[0] : null;
+    var vehicleFileInput = document.getElementById('ab-veiculo-imagem');
+    var vehicleImageFile = vehicleFileInput && vehicleFileInput.files ? vehicleFileInput.files[0] : null;
+    var fetchOptions = { method:'POST' };
+    if (imageFile || vehicleImageFile) {
+      var formData = new FormData();
+      formData.append('payload', JSON.stringify(payload));
+      if (imageFile) formData.append('abordado_imagem', imageFile);
+      if (vehicleImageFile) formData.append('veiculo_imagem', vehicleImageFile);
+      fetchOptions.body = formData;
+    } else {
+      fetchOptions.headers = {'Content-Type':'application/json'};
+      fetchOptions.body = JSON.stringify(payload);
+    }
+    var resp = await fetch('/api/abordagens', fetchOptions);
     var data = await resp.json();
     if (!resp.ok) { if(erro) erro.textContent = data.detail||('Erro '+resp.status); return; }
     if(ok){ ok.textContent='\u2705 Abordagem #'+data.id+' registrada com sucesso!'; ok.style.display='block'; }
@@ -13148,7 +13969,7 @@ async function _abListaFetch() {
           : '\u2014';
         // Botão excluir abordagem: somente admin
         var btnExcluirAb = (window._authRole === 'admin')
-          ? ' <button class="btn btn-danger btn-xs" onclick="abExcluir('+ab.id+')" title="Excluir abordagem">&#128465;</button>'
+          ? ' <button class="btn btn-danger btn-xs" onclick="abExcluir('+ab.id+')" title="Excluir abordagem">&#128465; Excluir</button>'
           : '';
         return '<tr>'
           +'<td style="color:var(--muted);font-size:.8rem">'+ab.id+'</td>'
@@ -13158,10 +13979,10 @@ async function _abListaFetch() {
           +'<td>'+_esc(ab.tipo_motivo||'\u2014')+'</td>'
           +'<td style="font-family:monospace;font-size:.8rem">'+vei+'</td>'
           +'<td style="font-size:.8rem">'+nomes+'</td>'
-          +'<td style="text-align:center;white-space:nowrap">'
-          +'<button class="btn btn-outline btn-xs" onclick="abVerDetalhes('+ab.id+')" title="Ver detalhes">&#128269; Detalhes</button>'
+          +'<td class="action-cell"><div class="action-buttons">'
+          +'<button class="btn btn-outline btn-xs" onclick="abVerDetalhes('+ab.id+')" title="Visualizar abordagem">&#128269; Visualizar</button>'
           +btnExcluirAb
-          +'</td></tr>';
+          +'</div></td></tr>';
       }).join('');
     }
     if(st) st.textContent = _ablTotal + ' abordagem(ns) encontrada(s).';
@@ -13234,19 +14055,33 @@ async function abVerDetalhes(id) {
     if (ab.veiculo) {
       var v = ab.veiculo;
       html += sec('\uD83D\uDE97', 'Ve\u00edculo');
+      var vFotoUrl = normalizeImageUrl(v.foto_path);
+      html += '<div style="position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px' + (vFotoUrl ? ';padding-right:96px' : '') + ';margin-bottom:8px">';
+      if (vFotoUrl) {
+        html += '<img src="' + vFotoUrl.replace(/"/g, '&quot;') + '" alt="Foto do veículo"'
+          + ' style="position:absolute;top:10px;right:12px;width:72px;height:72px;border-radius:10px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+          + ' onclick="openImageUrl(\'' + vFotoUrl.replace(/'/g,"\\'") + '\',\'Foto do veículo\')">';
+      }
       html += row('Placa',  v.placa);
       html += row('Marca',  v.marca);
       html += row('Modelo', v.modelo);
       html += row('Cor',    v.cor);
       html += row('Ano',    v.ano);
       if (v.observacoes) html += row('Obs.', v.observacoes);
+      html += '</div>';
     }
 
     var pessoasPrincipal = null;
     if (Array.isArray(ab.pessoas) && ab.pessoas.length) {
       html += sec('\uD83D\uDC65', 'Pessoas (' + ab.pessoas.length + ')');
       ab.pessoas.forEach(function(p) {
-        html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px">';
+        var pFotoUrl = normalizeImageUrl(p.foto_path);
+        html += '<div style="position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px' + (pFotoUrl ? ';padding-right:92px' : '') + ';margin-bottom:8px">';
+        if (pFotoUrl) {
+          html += '<img src="' + pFotoUrl.replace(/"/g, '&quot;') + '" alt="Foto da pessoa"'
+            + ' style="position:absolute;top:10px;right:12px;width:72px;height:72px;border-radius:10px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+            + ' onclick="openImageUrl(\'' + pFotoUrl.replace(/'/g,"\\'") + '\',\'Foto da pessoa\')">';
+        }
         html += '<div style="font-weight:600;font-size:.87rem">' + _esc(p.nome || '\u2014') + '</div>';
         if (p.apelido)  html += '<div style="font-size:.78rem;color:var(--muted)">Vulgo: ' + _esc(p.apelido) + '</div>';
         if (p.papel)    html += '<div style="font-size:.78rem;color:var(--muted)">Papel: ' + _esc(p.papel) + '</div>';
@@ -13323,9 +14158,9 @@ async function pmCarregar() {
           + '<td style="font-family:monospace">' + _esc(p.cpf ? _fmtCpf(p.cpf) : '\u2014') + '</td>'
           + '<td>' + _esc(p.contato || '\u2014') + '</td>'
           + '<td style="font-size:.78rem">' + _esc(p.endereco || '\u2014') + '</td>'
-          + '<td style="text-align:center;white-space:nowrap">'
-          + '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.76rem" onclick="pmVerDetalhes(' + p.id + ')">&#128269; Ver</button>'
-          + '</td></tr>';
+          + '<td class="action-cell"><div class="action-buttons">'
+          + '<button class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:.76rem" onclick="pmVerDetalhes(' + p.id + ')">&#128269; Visualizar</button>'
+          + '</div></td></tr>';
       }).join('');
     }
     var pagAtual = Math.floor(_pmOffset / _pmLimit) + 1;
@@ -13400,6 +14235,7 @@ async function cadastroNovaAbordagem(pessoaId, nomePessoa) {
   document.getElementById('cad-ab-modelo').value = '';
   document.getElementById('cad-ab-cor').value = '';
   document.getElementById('cad-ab-veiculo-campos').style.display = 'none';
+  cadAbRemoverVeiculoImagem();
   document.getElementById('cad-ab-ocupantes-list').innerHTML = '';
   _cadAbOcupanteIdx = 0;
   _cadAbOcResultados = {};
@@ -13465,6 +14301,7 @@ function cadAbordagemToggleVeiculo() {
     document.getElementById('cad-ab-placa').value  = '';
     document.getElementById('cad-ab-modelo').value = '';
     document.getElementById('cad-ab-cor').value    = '';
+    cadAbRemoverVeiculoImagem();
     var va = document.getElementById('cad-ab-vincular-alvo'); if(va) va.value='nao';
     var lw = document.getElementById('cad-ab-alvo-lista-wrap'); if(lw) lw.style.display='none';
     var li = document.getElementById('cad-ab-alvo-lista-id'); if(li) li.value='';
@@ -13520,6 +14357,13 @@ function cadAbordagemAdicionarOcupante() {
       '</label>'+
       '<label style="'+lS+'">Nome da M\u00e3e'+
         '<input type="text" id="cad-ab-oc-mae-'+idx+'" placeholder="Nome da m\u00e3e" maxlength="120" style="'+iS+'">'+
+      '</label>'+
+      '<label style="'+lS+';grid-column:1/-1">Foto do acompanhante'+
+        '<input type="file" id="cad-ab-oc-foto-'+idx+'" accept="image/*" style="'+iS+'" onchange="cadAbOcPreviewImagem('+idx+', this)">'+
+        '<div id="cad-ab-oc-foto-wrap-'+idx+'" style="display:none;margin-top:8px">'+
+          '<img id="cad-ab-oc-foto-preview-'+idx+'" src="" alt="Prévia do acompanhante" style="width:92px;height:92px;border-radius:10px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)" onclick="if(this.src){openImageUrl(this.src,\'Foto do acompanhante\')}">'+
+          '<div style="margin-top:6px"><button type="button" class="btn btn-outline btn-sm" onclick="cadAbOcRemoverImagem('+idx+')">Remover imagem</button></div>'+
+        '</div>'+
       '</label>'+
       '<label style="'+lS+';grid-column:1/-1">Endere\u00e7o'+
         '<input type="text" id="cad-ab-oc-endereco-'+idx+'" placeholder="Endere\u00e7o completo" maxlength="200" style="'+iS+'">'+
@@ -13742,6 +14586,9 @@ async function cadAbordagemSalvar() {
       if (mae)     ocupante.nome_mae = mae;
       if (end)     ocupante.endereco = end;
     }
+    var fotoInput = document.getElementById('cad-ab-oc-foto-' + i);
+    var fotoFile = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+    if (fotoFile) ocupante.foto_upload_key = 'acompanhante_imagem_' + i;
     var hist = ((document.getElementById('cad-ab-oc-historico-' + i) || {}).value || '').trim();
     if (hist) ocupante.observacao_pessoal = hist;
     payload.pessoas.push(ocupante);
@@ -13751,10 +14598,20 @@ async function cadAbordagemSalvar() {
   salvarBtn.disabled = true;
 
   try {
+    var formData = new FormData();
+    formData.append('payload', JSON.stringify(payload));
+    var veiculoFotoInput = document.getElementById('cad-ab-veiculo-foto');
+    var veiculoFotoFile = veiculoFotoInput && veiculoFotoInput.files ? veiculoFotoInput.files[0] : null;
+    if (veiculoFotoFile) formData.append('veiculo_imagem', veiculoFotoFile);
+    listEl.querySelectorAll('div[id^="cad-ab-oc-"]').forEach(function(bloco) {
+      var i = bloco.id.replace('cad-ab-oc-', '');
+      var fotoInput = document.getElementById('cad-ab-oc-foto-' + i);
+      var fotoFile = fotoInput && fotoInput.files ? fotoInput.files[0] : null;
+      if (fotoFile) formData.append('acompanhante_imagem_' + i, fotoFile);
+    });
     var resp = await fetch('/api/abordagens', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: formData
     });
     var resData = await resp.json();
     if (resp.ok && resData.ok) {
@@ -13862,6 +14719,15 @@ function _renderRelatorio(data) {
   // ─── DADOS DA PESSOA ───
   html += '<div class="rel-header-card">';
   html += '<div class="rel-section-title" style="margin-top:0">&#128203; Dados Cadastrais</div>';
+  var relFotoUrl = normalizeImageUrl(p.foto_path);
+  if (relFotoUrl) {
+    html += '<div style="display:flex;justify-content:flex-end;margin:-4px 0 10px">';
+    html += '<img src="' + relFotoUrl.replace(/"/g, '&quot;') + '" alt="Foto do abordado"'
+      + ' style="width:108px;height:108px;border-radius:12px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+      + ' onclick="openImageUrl(\'' + relFotoUrl.replace(/'/g,"\\'") + '\',\'Foto do abordado\')"'
+      + ' title="Clique para ampliar">';
+    html += '</div>';
+  }
   html += '<div class="rel-dados-grid">';
   function relDado(lbl, val) {
     var v = (val != null && String(val).trim()) ? _esc(String(val)) : '<span style="color:var(--muted)">—</span>';
@@ -13924,10 +14790,17 @@ function _renderRelatorio(data) {
       if (v) {
         var placaLabel = v.placa || '—';
         var emLista = Array.isArray(v.listas) && v.listas.length > 0;
+        var vFotoUrl = normalizeImageUrl(v.foto_path);
         html += '<div style="margin-bottom:12px">';
         html += '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;'
           + 'color:var(--muted);margin-bottom:6px">&#128665; Veículo</div>';
-        html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start">';
+        html += '<div style="position:relative;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start'
+          + (vFotoUrl ? ';padding-right:110px' : '') + '">';
+        if (vFotoUrl) {
+          html += '<img src="' + vFotoUrl.replace(/"/g, '&quot;') + '" alt="Foto do veículo"'
+            + ' style="position:absolute;top:0;right:0;width:92px;height:92px;border-radius:12px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+            + ' onclick="openImageUrl(\'' + vFotoUrl.replace(/'/g,"\\'") + '\',\'Foto do veículo\')">';
+        }
         // placa + badges de lista
         html += '<div style="display:flex;flex-direction:column;gap:4px">';
         html += '<span class="plate-tag' + (emLista ? ' plate-alert' : '') + '" style="font-size:.88rem">'
@@ -13960,8 +14833,14 @@ function _renderRelatorio(data) {
           + 'color:var(--muted);margin-bottom:6px">&#128101; Pessoas nesta abordagem</div>';
         html += '<div style="display:flex;flex-direction:column;gap:6px">';
         pr.forEach(function(pes) {
-          html += '<div style="padding:8px 10px;background:rgba(0,0,0,.08);border-radius:6px;font-size:.82rem;'
-            + 'display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center">';
+          var pesFotoUrl = normalizeImageUrl(pes.foto_path);
+          html += '<div style="position:relative;padding:8px 10px;background:rgba(0,0,0,.08);border-radius:6px;font-size:.82rem;'
+            + 'display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center' + (pesFotoUrl ? ';padding-right:72px' : '') + '">';
+          if (pesFotoUrl) {
+            html += '<img src="' + pesFotoUrl.replace(/"/g, '&quot;') + '" alt="Foto do acompanhante"'
+              + ' style="position:absolute;top:8px;right:10px;width:54px;height:54px;border-radius:10px;border:1px solid var(--border);object-fit:cover;cursor:pointer;box-shadow:var(--shadow)"'
+              + ' onclick="openImageUrl(\'' + pesFotoUrl.replace(/'/g,"\\'") + '\',\'Foto do acompanhante\')">';
+          }
           html += '<span style="font-weight:600">' + _esc(pes.nome || '—') + '</span>';
           if (pes.apelido) html += '<span style="color:var(--muted)">(' + _esc(pes.apelido) + ')</span>';
           if (pes.cpf)     html += '<span style="color:var(--muted);font-size:.78rem">CPF: ' + _fmtCpf(pes.cpf) + '</span>';
@@ -14090,7 +14969,8 @@ function _renderRelatorio(data) {
   <span class="tvb-plate" id="tvb-plate"></span>
   <span class="tvb-info" id="tvb-info"></span>
   <span class="tvb-esc">Pressione <kbd style="background:rgba(255,255,255,.1);border:1px solid #444;border-radius:3px;padding:1px 6px;font-size:.78rem">ESC</kbd> para fechar</span>
-  <button class="tvb-close" onclick="_fecharMapaOverlay()">&#10005; Fechar</button>
+  <button class="tvb-back" id="tvb-back" style="display:none" onclick="_voltarRelatorioDoMapa()">&#8592; Voltar ao Relatório</button>
+  <button class="tvb-close" onclick="_fecharMapaOverlay(false)">&#10005; Fechar</button>
 </div>
 
 </body>
