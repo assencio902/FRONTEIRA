@@ -1077,6 +1077,67 @@
       padding:5px 14px; font-size:.82rem; font-weight:700; cursor:pointer; }
     #traj-viewer-bar .tvb-close { background:#ef4444; color:#fff; border:none; border-radius:6px;
       padding:5px 14px; font-size:.82rem; font-weight:700; cursor:pointer; }
+    #traj-map-modal { z-index:260; }
+    #traj-map-modal .modal {
+      width:min(96vw, 1780px);
+      max-width:min(96vw, 1780px);
+      max-height:94vh;
+      padding:20px 20px 18px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    #traj-map-modal .modal-header {
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:14px;
+      flex-shrink:0;
+      flex-wrap:wrap;
+    }
+    #traj-map-modal .modal-header h2 {
+      margin:0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      min-width:0;
+    }
+    #traj-map-modal .traj-map-modal-plate {
+      font-family:monospace;
+      font-size:1.05rem;
+      font-weight:900;
+      color:#f87171;
+      letter-spacing:.1em;
+    }
+    #traj-map-modal .traj-map-modal-info {
+      font-size:.8rem;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    #traj-map-modal .traj-map-modal-actions {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+      flex-wrap:wrap;
+    }
+    #traj-map-modal .traj-map-modal-hint {
+      font-size:.74rem;
+      color:#64748b;
+    }
+    #traj-map-modal-body {
+      flex:1;
+      min-height:0;
+      overflow-y:auto;
+      padding-right:4px;
+    }
+    #traj-map-modal-body #tab-mapa-content {
+      display:block;
+    }
+    #traj-map-modal-body #map-container {
+      height:min(60vh, 720px);
+      min-height:420px;
+    }
     .modal { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:26px; max-width:820px; width:96%; max-height:92vh; overflow-y:auto; box-shadow:0 12px 48px rgba(0,0,0,.25); }
     .modal-sm { max-width:460px; }
     .modal-wide { max-width:1200px; }
@@ -4163,6 +4224,7 @@
 
     <!-- ===== ABA MAPA ===== -->
     <div id="tab-mapa" class="tab-pane">
+      <div id="tab-mapa-content">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-weight:700;font-size:.97rem">&#127760; Mapa de C&#226;meras</div>
@@ -4242,6 +4304,7 @@
       </div>
       <!-- Câmeras sem GPS (mapa geral) -->
       <div id="map-no-gps" style="margin-top:16px"></div>
+      </div>
     </div><!-- /tab-mapa -->
 
     <!-- ===== ABA CADASTRO POLICIAL ===== -->
@@ -5673,6 +5736,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
+        <button onclick="_cgsCriarAlvo()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127919; Criar alvo</button>
         <button onclick="_cgsVerRotaNoMapa()" style="background:#15803d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127760; Ver rota no mapa</button>
         <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
       </div>
@@ -5711,6 +5775,27 @@
       <button class="modal-close" onclick="closeModal('comboio-modal')">&times;</button>
     </div>
     <div id="comboio-modal-body"><p style="color:var(--muted)">Carregando...</p></div>
+  </div>
+</div>
+
+<!-- MODAL TRAJETÓRIA NO MAPA -->
+<div class="modal-overlay" id="traj-map-modal" onclick="if(event.target===this)_fecharMapaOverlay(false)">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div style="min-width:0;flex:1">
+        <h2>
+          <span aria-hidden="true">&#127760;</span>
+          Rota no mapa
+          <span class="traj-map-modal-plate" id="traj-map-modal-plate"></span>
+        </h2>
+        <div class="traj-map-modal-info" id="traj-map-modal-info"></div>
+      </div>
+      <div class="traj-map-modal-actions">
+        <span class="traj-map-modal-hint">Pressione <kbd style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:1px 6px;font-size:.78rem">ESC</kbd> para fechar</span>
+        <button class="modal-close" onclick="_fecharMapaOverlay(false)">&times;</button>
+      </div>
+    </div>
+    <div id="traj-map-modal-body"></div>
   </div>
 </div>
 
@@ -7214,8 +7299,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
-    // fecha o viewer de trajetória temporária primeiro
-    if (_trajViewerPrevTab !== null) { _fecharMapaOverlay(true); return; }
+    if (document.getElementById('traj-map-modal').classList.contains('open')) { _fecharMapaOverlay(false); return; }
     ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal'].forEach(closeModal);
   }
 });
@@ -8257,6 +8341,39 @@ function _cgsOpenDetalhe(groupId) {
   openModal('cgs-detalhe-modal');
 }
 
+function _cgsCriarAlvo() {
+  var role = window._authRole || 'visualizador';
+  if (role !== 'admin' && role !== 'operador') {
+    alert('Seu perfil nao possui permissao para criar alvo.');
+    return;
+  }
+  var g = _cgsCurrentGroup;
+  if (!g || !g.plates || !g.plates.length) return;
+  var alvoMap = {};
+  (g.alvos || []).forEach(function(a) {
+    var plate = String((a && a.plate) || '').trim().toUpperCase();
+    if (plate) alvoMap[plate] = true;
+  });
+  var preferred = '';
+  var leader = String(g.leader || '').trim().toUpperCase();
+  if (leader && !alvoMap[leader]) preferred = leader;
+  if (!preferred) {
+    var nextPlate = g.plates.find(function(p) {
+      return !alvoMap[String(p || '').trim().toUpperCase()];
+    });
+    if (nextPlate) preferred = String(nextPlate).trim().toUpperCase();
+  }
+  if (!preferred && leader) preferred = leader;
+  if (!preferred) preferred = String(g.plates[0] || '').trim().toUpperCase();
+  if (!preferred) return;
+  if ((g.alvos || []).length >= g.plates.length) {
+    alert('Todas as placas deste grupo ja estao cadastradas como alvo.');
+    return;
+  }
+  closeModal('cgs-detalhe-modal');
+  _addPlateAsAlvo(preferred);
+}
+
 function _cgsBuildDetalhe(g) {
   // Título
   var titulo = document.getElementById('cgs-det-titulo');
@@ -8602,7 +8719,7 @@ function _relAbrirModal(titulo, html, mapaFn) {
 }
 
 function _relVerRotaMapa() {
-  if (typeof _relCurrentMapaFn === 'function') { closeModal('rel-modal'); _relCurrentMapaFn(); }
+  if (typeof _relCurrentMapaFn === 'function') { _relCurrentMapaFn(); }
 }
 
 // ── Relatório de Placa Individual ────────────────────────────────────────────
@@ -8770,7 +8887,6 @@ function _abrirRelatorioPlacaIndividual() {
   ], 'rel-print');
 
   _relAbrirModal(plate, _rpiHtml, function() {
-    closeModal('detail-modal');
     var rd = _batedorReportData;
     if (!rd) return;
     var evs = (rd.d && rd.d.events) || [];
@@ -9000,7 +9116,6 @@ async function _cgsVerRotaNoMapa() {
     : _toLocalDTInput(new Date(nowMs));
   var roleLabel = (g.leader && g.leader === plate) ? ' (l\u00edder)' : '';
   var infoLabel = 'Grupo \u2022 ' + plate + roleLabel + ' \u2022 ' + g.plates.length + ' ve\u00edculo(s)';
-  closeModal('cgs-detalhe-modal');
   _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel);
 }
 
@@ -11743,6 +11858,7 @@ async function _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel) {
     if (pf) pf.value = plate;
     if (sf) sf.value = tsFrom;
     if (ef) ef.value = tsTo;
+    _setMapaTrajetoriaFromApiData(data, plate);
     // Abre overlay e renderiza pelo pipeline can\u00f4nico
     _abrirMapaOverlay(plate, infoLabel || ((data.total_points || data.points.length) + ' passagem(ns)'), _relModalReturnFn, 'Voltar ao Relatório');
     setTimeout(function() { renderVehicleTrajectory(data); }, 400);
@@ -12687,8 +12803,9 @@ async function deleteCamera(id, nome) {
 
 // ===== MAPA DE CÂMERAS (Google Maps) =====
 var _googleMap        = null;
-var _trajViewerPrevTab = null; // null = viewer fechado; string = aba anterior
+var _trajViewerPrevTab = null; // compat: null = janela fechada
 var _trajViewerReturn  = null; // { reopen: fn, label: string }
+var _trajMapContentHome = null;
 var _detailModalReturnFn = null;
 var _relModalReturnFn    = null;
 var _mapaMarkers      = [];
@@ -12833,52 +12950,77 @@ function _setTrajViewerReturn(reopenFn, label) {
     : null;
 }
 
+function _moverMapaParaModal() {
+  var content = document.getElementById('tab-mapa-content');
+  var host = document.getElementById('tab-mapa');
+  var body = document.getElementById('traj-map-modal-body');
+  if (!content || !host || !body) return false;
+  _trajMapContentHome = host;
+  if (content.parentNode !== body) body.appendChild(content);
+  return true;
+}
+
+function _restaurarMapaDoModal() {
+  var content = document.getElementById('tab-mapa-content');
+  var host = _trajMapContentHome || document.getElementById('tab-mapa');
+  if (!content || !host) return;
+  if (content.parentNode !== host) host.appendChild(content);
+}
+
+async function _sincronizarMapaModal() {
+  try {
+    await loadMapa();
+    if (_checkGoogleMapsLoaded() && _googleMap && google.maps && google.maps.event) {
+      google.maps.event.trigger(_googleMap, 'resize');
+    }
+    if (_mapaTrajetoria && _mapaTrajetoria.points && _mapaTrajetoria.points.length) {
+      _plotarTrajetoria();
+    }
+  } catch (e) {
+    console.warn('[traj-map-modal]', e);
+  }
+}
+
 function _abrirMapaOverlay(plate, infoLabel, reopenFn, label) {
-  _trajViewerPrevTab = currentTab;
+  _trajViewerPrevTab = currentTab || '';
   if (typeof reopenFn === 'function') _setTrajViewerReturn(reopenFn, label);
   else _trajViewerReturn = null;
-  var bar = document.getElementById('traj-viewer-bar');
-  if (bar) {
-    document.getElementById('tvb-plate').textContent = plate || '';
-    document.getElementById('tvb-info').textContent  = infoLabel || '';
-    var backBtn = document.getElementById('tvb-back');
-    if (backBtn) {
-      backBtn.style.display = (_trajViewerReturn && typeof _trajViewerReturn.reopen === 'function') ? '' : 'none';
-      backBtn.textContent = (_trajViewerReturn && _trajViewerReturn.label) || 'Voltar ao Relatório';
-    }
-    bar.classList.add('open');
-    // empurra o conteúdo para baixo
-    var wrap = document.getElementById('main-wrap') || document.querySelector('.main-wrap') || document.querySelector('main') || document.body;
-    wrap.style.paddingTop = '48px';
-  }
-  var mapaNav = document.querySelector('.nav-item[onclick*="mapa"]');
-  if (mapaNav) switchTab('mapa', mapaNav);
+  if (!_moverMapaParaModal()) return;
+  var plateEl = document.getElementById('traj-map-modal-plate');
+  var infoEl = document.getElementById('traj-map-modal-info');
+  if (plateEl) plateEl.textContent = plate || '';
+  if (infoEl) infoEl.textContent = infoLabel || '';
+  openModal('traj-map-modal');
+  setTimeout(_sincronizarMapaModal, 180);
 }
 
 function _voltarRelatorioDoMapa() {
-  _fecharMapaOverlay(true);
+  _fecharMapaOverlay(false);
 }
 
 function _fecharMapaOverlay(restoreContext) {
   restoreContext = !!restoreContext;
-  var prevTab = _trajViewerPrevTab;
   var returnCtx = _trajViewerReturn;
   _trajViewerPrevTab = null;
   _trajViewerReturn = null;
-  // esconde a barra
-  var bar = document.getElementById('traj-viewer-bar');
-  if (bar) bar.classList.remove('open');
-  var wrap = document.getElementById('main-wrap') || document.querySelector('.main-wrap') || document.querySelector('main') || document.body;
-  wrap.style.paddingTop = '';
-  // limpa trajetória do mapa
-  _limparTrajetoria();
-  // volta para a aba anterior
-  if (restoreContext && prevTab && prevTab !== 'mapa') {
-    var prevNav = document.querySelector('.nav-item[onclick*="' + prevTab + '"]');
-    if (prevNav) switchTab(prevTab, prevNav);
+  closeModal('traj-map-modal');
+  _restaurarMapaDoModal();
+  _vehicleTrajData = null;
+  _mapaTrajetoria = null;
+  _clearTrajectoryLayers();
+  var noGps = document.getElementById('map-no-gps');
+  if (noGps) noGps.innerHTML = '';
+  var trajStatus = document.getElementById('traj-map-status');
+  if (trajStatus) trajStatus.innerHTML = '';
+  var noGpsContainer = document.getElementById('traj-no-gps-container');
+  if (noGpsContainer) noGpsContainer.style.display = 'none';
+  var noGpsList = document.getElementById('traj-no-gps-list');
+  if (noGpsList) noGpsList.textContent = '';
+  if (document.getElementById('tab-mapa') && document.getElementById('tab-mapa').classList.contains('active')) {
+    setTimeout(loadMapa, 80);
   }
   if (restoreContext && returnCtx && typeof returnCtx.reopen === 'function') {
-    setTimeout(function() { returnCtx.reopen(); }, prevTab && prevTab !== 'mapa' ? 220 : 120);
+    setTimeout(function() { returnCtx.reopen(); }, 120);
   }
 }
 
@@ -12994,7 +13136,6 @@ async function _loadTrajetoria(windowKey) {
     _setMapaTrajetoriaFromApiData(data, plate);
 
     closeModal('traj-picker-modal');
-    closeModal('detail-modal');
     _abrirMapaOverlay(plate, (data.total_points || data.points.length) + ' passagem(ns)', _mapaTrajMode ? null : _detailModalReturnFn, 'Voltar ao Relatório');
     setTimeout(_plotarTrajetoria, 400);
   } catch(e) {
@@ -13006,7 +13147,6 @@ function verTrajetoriaNoMapa() {
   if (!_mapaTrajetoria) return;
   var plate = ((_mapaTrajetoria.plates || [])[0] || '').toUpperCase();
   var infoLabel = ((_mapaTrajetoria.stats && _mapaTrajetoria.stats.total_points) || (_mapaTrajetoria.points || []).length || 0) + ' passagem(ns)';
-  closeModal('detail-modal');
   _abrirMapaOverlay(plate, infoLabel, _detailModalReturnFn, 'Voltar ao Relatório');
   setTimeout(_plotarTrajetoria, 400);
 }
@@ -13548,7 +13688,7 @@ function _toLocalDTInput(d) {
 
 function _trajSetPeriod(btn, val) {
   _trajActivePeriod = val;
-  document.querySelectorAll('#tab-mapa .traj-period-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.traj-period-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
   var now  = new Date();
   if (val !== 'custom') {
