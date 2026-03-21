@@ -3891,7 +3891,7 @@
               <thead><tr>
                 <th style="white-space:nowrap">Placas envolvidas</th>
                 <th>Padr&atilde;o</th>
-                <th style="text-align:center">Cooc.</th>
+                <th style="text-align:center">Dias juntos</th>
                 <th style="text-align:center">C&acirc;meras</th>
                 <th style="white-space:nowrap">&Uacute;ltima vez juntos</th>
                 <th>Localidades</th>
@@ -3917,10 +3917,10 @@
         <!-- ══════════════════════════════════════════════════════════════ -->
                 <div id="cen-view-placas" style="display:none">
           <div class="cards-row">
-            <div class="card"><div class="card-icon">&#128203;</div><div class="card-label card-label-special">Placas analisadas</div><div class="card-value" id="cen-total">&#8212;</div></div>
-            <div class="card"><div class="card-icon">&#9889;</div><div class="card-label card-label-special">M&uacute;ltiplos sinais</div><div class="card-value" id="cen-multi">&#8212;</div></div>
-            <div class="card"><div class="card-icon">&#128293;</div><div class="card-label card-label-special">Top score</div><div class="card-value" id="cen-top-score">&#8212;</div></div>
-            <div class="card"><div class="card-icon">&#127919;</div><div class="card-label card-label-special">Alvos na janela</div><div class="card-value" id="cen-alvos">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#128203;</div><div class="card-label card-label-special">Placas em aten&ccedil;&atilde;o</div><div class="card-value" id="cen-total">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#128663;</div><div class="card-label card-label-special">Com acompanhamento</div><div class="card-value" id="cen-multi">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label card-label-special">Top score individual</div><div class="card-value" id="cen-top-score">&#8212;</div></div>
+          <div class="card"><div class="card-icon">&#127919;</div><div class="card-label card-label-special">Alvos monitorados</div><div class="card-value" id="cen-alvos">&#8212;</div></div>
           </div>
           <div class="cen-tb">
           <!-- Placa -->
@@ -4017,17 +4017,15 @@
         <div class="table-wrap">
           <table><thead><tr>
             <th>Placa</th>
-            <th>Score Total</th>
-            <th>Sinais</th>
-            <th>&#128270; Suspeito</th>
-            <th>&#128663;&#128663; Comboio</th>
-            <th>&#128101; Grupos</th>
+            <th>Score</th>
+            <th>Indicadores</th>
+            <th>Atividade</th>
+            <th>Acompanhamento</th>
             <th>&#127919; Alvo</th>
-            <th>Primeiro visto</th>
             <th>&Uacute;ltimo visto</th>
             <th>A&#231;&otilde;es</th>
           </tr></thead>
-          <tbody id="central-tbody"><tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">Clique em <strong>&#10003; Aplicar</strong> para iniciar o monitoramento.</td></tr></tbody>
+          <tbody id="central-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em <strong>&#10003; Aplicar</strong> para iniciar o monitoramento.</td></tr></tbody>
           </table>
         </div>
         <div id="cen-pagination" style="display:none;align-items:center;gap:10px;padding:10px 0;justify-content:center;flex-wrap:wrap">
@@ -8312,13 +8310,12 @@ function _cgsRenderTable(items, total) {
       return '<div style="' + style + ';' + color + '">' + p + badge + '</div>';
     }).join('');
 
-    // Coocorrências: total de vezes vistos juntos por câmera
-    var cooc = g.cameras_confirmed ? g.cameras_confirmed.reduce(function(acc, c) {
-      return acc;
-    }, g.cameras_confirmed.length) : g.cameras_count;
-
     // Câmeras
     var camCount = g.cameras_count;
+    var diasJuntos = Number(g.distinct_days || 0);
+    var diasHtml = diasJuntos
+      ? '<span style="font-weight:700;font-size:.88rem;color:var(--accent2)">' + diasJuntos + '</span> <span style="font-size:.72rem;color:var(--muted)">dia(s)</span>'
+      : '<span style="color:var(--muted)">—</span>';
 
     // Localidades (nomes das câmeras, únicos, max 2)
     var locs = g.cameras_names || [];
@@ -8351,8 +8348,15 @@ function _cgsRenderTable(items, total) {
 
     return '<tr style="' + rowStyle + '">'
       + '<td style="max-width:220px">' + placasHtml + '</td>'
-      + '<td>' + _cgsPadraoBadge(g.padrao) + '</td>'
-      + '<td style="text-align:center;font-weight:700;font-size:.88rem">' + cooc + 'x</td>'
+      + '<td>'
+        + _cgsPadraoBadge(g.padrao)
+        + '<div style="font-size:.72rem;color:var(--muted);margin-top:4px">'
+        + (g.leader && g.leader_ratio >= 0.70
+            ? 'Líder: <span style="font-family:monospace;color:var(--text)">' + g.leader + '</span>'
+            : 'Sem líder fixo')
+        + '</div>'
+      + '</td>'
+      + '<td style="text-align:center">' + diasHtml + '</td>'
       + '<td style="text-align:center">'
         + '<span style="font-weight:700;font-size:.9rem;color:var(--accent2)">' + camCount + '</span> '
         + '<span style="font-size:.72rem;color:var(--muted)">c\u00e2m.</span></td>'
@@ -8578,9 +8582,12 @@ function _cgsBuildDetalhe(g) {
   }
 
   // ── 3. Linha do tempo de passagens conjuntas ──────────────────────────────
-  var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
-    return new Date(a.ts_min) - new Date(b.ts_min);
-  });
+var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
+  var ai = Number(a && a.timeline_index);
+  var bi = Number(b && b.timeline_index);
+  if (Number.isFinite(ai) && Number.isFinite(bi) && ai !== bi) return ai - bi;
+  return new Date(a.ts_min) - new Date(b.ts_min);
+});
 
   var timelineHtml;
   if (!camsCnf.length) {
@@ -8736,39 +8743,7 @@ function _relBuildExportHtmlDoc() {
 }
 
 async function _relSalvarNoPC() {
-  var html = _relBuildExportHtmlDoc();
-  if (!html) return;
-  var filename = 'Relatorio_' + (_relPdfTitleSlug || 'relatorio') + '.html';
-  if (window.showSaveFilePicker && window.isSecureContext) {
-    try {
-      var handle = await window.showSaveFilePicker({
-        suggestedName: filename,
-        types: [{
-          description: 'Relatório HTML',
-          accept: { 'text/html': ['.html'] }
-        }]
-      });
-      var writable = await handle.createWritable();
-      await writable.write(html);
-      await writable.close();
-      _flashMsg('✅ Relatório salvo no computador.', '#22c55e');
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return;
-      console.warn('[relatorio] showSaveFilePicker indisponível:', err);
-    }
-  }
-  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
-  _flashMsg('✅ Relatório baixado para o computador.', '#22c55e');
+  _relExportarPDF();
 }
 
 function _relExportarPDF() {
@@ -8835,57 +8810,197 @@ function _relVerRotaMapa() {
 function _abrirRelatorioPlacaIndividual() {
   var rd = _batedorReportData;
   if (!rd) return;
-  var plate    = rd.plate;
-  var d        = rd.d;
-  var events   = d.events || [];
-  var partners = d.convoy_partners || [];
-  var now      = new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var score    = d.score || 0;
-  var level    = d.level || 'normal';
-  var ricoColor = score >= 80 ? '#f87171' : score >= 40 ? '#fbbf24' : '#4ade80';
 
-  // ── KPIs ─────────────────────────────────────────────────────────────────
+  var plate = rd.plate;
+  var d = rd.d || {};
+  var events = (d.events || []).slice().sort(function(a, b) {
+    return new Date(a && a.ts ? a.ts : 0) - new Date(b && b.ts ? b.ts : 0);
+  });
+  var partners = (d.convoy_partners || []).slice().sort(function(a, b) {
+    return Number((b && b.cameras_together) || 0) - Number((a && a.cameras_together) || 0);
+  });
+  var summary = d.summary || {};
+  var now = new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var score = Number(d.score || 0);
+  var rawLevel = String(d.level || '').toUpperCase();
+  var level = rawLevel === 'ALTO' || rawLevel === 'CRITICO' || rawLevel === 'CRÍTICO'
+    ? 'ALTO'
+    : (rawLevel === 'MEDIO' || rawLevel === 'MÉDIO')
+      ? 'MÉDIO'
+      : (rawLevel === 'BAIXO' || rawLevel === 'NORMAL')
+        ? 'BAIXO'
+        : (score >= 75 ? 'ALTO' : score >= 35 ? 'MÉDIO' : 'BAIXO');
+  var riskColor = level === 'ALTO' ? '#dc2626' : (level === 'MÉDIO' ? '#d97706' : '#16a34a');
+  var lastEvent = events.length ? events[events.length - 1] : null;
+  var lastSeen = lastEvent && lastEvent.ts
+    ? new Date(lastEvent.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})
+    : '\u2014';
+  var cenItem = (_cenAllItems || []).find(function(it) { return it.plate === plate; });
+  var tc = cenItem && cenItem.threat_center ? cenItem.threat_center : null;
+
+  function _df(label, value) {
+    return '<div><div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">' + label + '</div>'
+      + '<div style="font-size:.88rem;font-weight:600;color:#111">' + (value != null ? value : '\u2014') + '</div></div>';
+  }
+  function _miniCard(label, value, color) {
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px">'
+      + '<div style="font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">' + label + '</div>'
+      + '<div style="font-size:1rem;font-weight:800;color:' + (color || '#111827') + '">' + value + '</div>'
+      + '</div>';
+  }
+  function _fmtTs(iso) {
+    return iso ? new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
+  }
+  function _decisionLabel(decision) {
+    var map = { confirmado: 'Suspeito confirmado', falso_positivo: 'Falso positivo', ignorar: 'Ignorado' };
+    return map[decision] || decision || '\u2014';
+  }
+  function _pill(text, bg, fg) {
+    return '<span style="display:inline-block;background:' + bg + ';color:' + fg + ';font-size:.72rem;font-weight:800;padding:5px 10px;border-radius:999px">' + text + '</span>';
+  }
+
+  var acao = (function() {
+    if (d.is_alvo) {
+      return {
+        titulo: 'Ação sugerida: monitoramento prioritário',
+        detalhe: 'A placa já está cadastrada como alvo. O relatório deve apoiar abordagem, monitoramento e validação dos parceiros recentes.',
+        bg: '#fef2f2',
+        border: '#fca5a5',
+        color: '#b91c1c'
+      };
+    }
+    if (partners.length >= 2 && score >= 75) {
+      return {
+        titulo: 'Ação sugerida: aprofundar vínculo com outros veículos',
+        detalhe: 'A placa tem score alto e circula acompanhada. Vale validar se o caso deve evoluir para análise relacional de grupo suspeito.',
+        bg: '#fff7ed',
+        border: '#fdba74',
+        color: '#c2410c'
+      };
+    }
+    if (partners.length > 0) {
+      return {
+        titulo: 'Ação sugerida: acompanhar parceiros confirmados',
+        detalhe: 'A placa apresenta acompanhamento em comboio. O foco operacional é verificar recorrência, liderança e contexto da rota.',
+        bg: '#fefce8',
+        border: '#fde68a',
+        color: '#a16207'
+      };
+    }
+    if (score >= 75) {
+      return {
+        titulo: 'Ação sugerida: abordagem prioritária',
+        detalhe: 'Os sinais da própria placa sustentam prioridade alta, mesmo sem grupo confirmado no período.',
+        bg: '#fef2f2',
+        border: '#fca5a5',
+        color: '#b91c1c'
+      };
+    }
+    if (score >= 35) {
+      return {
+        titulo: 'Ação sugerida: monitorar e consolidar histórico',
+        detalhe: 'Há sinais suficientes para manter atenção, mas a indicação principal ainda é complementar o contexto da placa.',
+        bg: '#fefce8',
+        border: '#fde68a',
+        color: '#a16207'
+      };
+    }
+    return {
+      titulo: 'Ação sugerida: monitoramento de rotina',
+      detalhe: 'Sem elementos fortes de confirmação no momento. O relatório serve como registro tático da movimentação da placa.',
+      bg: '#f0fdf4',
+      border: '#86efac',
+      color: '#166534'
+    };
+  })();
+
   var kpisHtml = _relEngine.buildKPIs([
-    { icon: '\uD83D\uDCCA', label: 'Score',      value: score + ' pts',                         color: ricoColor },
-    { icon: '\u26A0\uFE0F', label: 'N\u00edvel',  value: level.toUpperCase(),                    color: ricoColor },
-    { icon: '\uD83D\uDCCB', label: 'Passagens',   value: String(d.summary ? d.summary.total_passes : events.length) },
-    { icon: '\uD83D\uDCF7', label: 'C\u00e2meras', value: d.summary ? String(d.summary.cameras_count) : '\u2014' },
-    partners.length ? { icon: '\uD83D\uDC65', label: 'Parceiros', value: String(partners.length) } : null,
-    d.is_alvo ? { icon: '\uD83C\uDFAF', label: 'Status', value: 'ALVO', color: '#f87171' } : null
+    { icon: '\uD83D\uDCCA', label: 'Score individual', value: score + ' pts', color: riskColor },
+    { icon: '\u26A0\uFE0F', label: 'Risco', value: level, color: riskColor },
+    { icon: '\uD83D\uDCCB', label: 'Passagens', value: String(summary.total_passes || events.length) },
+    { icon: '\uD83D\uDCF7', label: 'Câmeras', value: summary.cameras_count != null ? String(summary.cameras_count) : '\u2014' },
+    { icon: '\uD83D\uDC65', label: 'Acompanhamento', value: partners.length ? String(partners.length) + ' parceiro(s)' : 'Nenhum' },
+    d.is_alvo ? { icon: '\uD83C\uDFAF', label: 'Status', value: 'ALVO', color: '#dc2626' } : null
   ]);
 
-  // ── Seção 1: Identificação & Atividade ────────────────────────────────────
-  function _df(l, v) {
-    return '<div><div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:2px">' + l + '</div>'
-      + '<div style="font-size:.88rem;font-weight:600;color:#111">' + (v != null ? v : '\u2014') + '</div></div>';
-  }
-  var dadosHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px">'
-    + _df('Placa', '<span style="font-family:monospace;color:#dc2626;font-weight:800">' + plate + '</span>')
-    + _df('Score', score + ' pts')
-    + _df('N\u00edvel', '<span style="font-weight:800;color:' + ricoColor + '">' + level.toUpperCase() + '</span>');
-  if (d.summary) {
-    dadosHtml += _df('Total de passagens', String(d.summary.total_passes || events.length));
-    dadosHtml += _df('C\u00e2meras', String(d.summary.cameras_count || '\u2014'));
-    dadosHtml += _df('Parceiros', String(d.summary.partners_count || partners.length || '\u2014'));
-    if (d.summary.avg_confidence > 0) dadosHtml += _df('Conf. m\u00e9dia', formatConfidencePercent(d.summary.avg_confidence) + '%');
-    if (d.summary.dom_direction) dadosHtml += _df('Dir. dominante', d.summary.dom_direction);
-  }
+  var dadosHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 20px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px">'
+    + _df('Placa', '<span style="font-family:monospace;color:#b91c1c;font-weight:800">' + plate + '</span>')
+    + _df('Score individual', score + ' pts')
+    + _df('Risco', '<span style="font-weight:800;color:' + riskColor + '">' + level + '</span>')
+    + _df('Último visto', lastSeen)
+    + _df('Total de passagens', String(summary.total_passes || events.length || '\u2014'))
+    + _df('Câmeras distintas', summary.cameras_count != null ? String(summary.cameras_count) : '\u2014')
+    + _df('Parceiros confirmados', String(summary.partners_count || partners.length || 0))
+    + _df('Direção dominante', summary.dom_direction || '\u2014')
+    + _df('Confiança média', summary.avg_confidence > 0 ? formatConfidencePercent(summary.avg_confidence) + '%' : '\u2014')
+    + _df('Tipo / Cor', [d.vehicle_type, d.vehicle_color].filter(Boolean).join(' / ') || '\u2014');
   if (d.is_alvo) {
-    dadosHtml += _df('Status', '<span style="color:#dc2626;font-weight:800">\uD83C\uDFAF ALVO RASTREADO</span>');
-    if (d.alvo_descricao) dadosHtml += _df('Descri\u00e7\u00e3o', d.alvo_descricao);
-    if (d.alvo_list) dadosHtml += _df('Lista', d.alvo_list);
+    dadosHtml += _df('Status operacional', '<span style="color:#b91c1c;font-weight:800">\uD83C\uDFAF Alvo rastreado</span>');
+    if (d.alvo_descricao) dadosHtml += _df('Descrição do alvo', d.alvo_descricao);
+    if (d.alvo_list) dadosHtml += _df('Lista vinculada', d.alvo_list);
   }
   dadosHtml += '</div>';
-  var badges = (d.badges || []).map(function(b) {
-    var cl = b === 'ALVO' ? '#dc2626' : (b.indexOf('MULTI') >= 0 || b === 'COMBOIO') ? '#d97706' : '#4f46e5';
-    return '<span style="display:inline-block;background:' + cl + ';color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px">' + b + '</span>';
-  }).join('');
-  if (badges) dadosHtml += '<div style="margin-top:8px">' + badges + '</div>';
+  dadosHtml += '<div style="margin-top:12px;padding:14px 16px;background:' + acao.bg + ';border:1px solid ' + acao.border + ';border-radius:10px">'
+    + '<div style="font-size:.82rem;font-weight:800;color:' + acao.color + ';margin-bottom:4px">' + acao.titulo + '</div>'
+    + '<div style="font-size:.82rem;color:#374151;line-height:1.45">' + acao.detalhe + '</div>'
+    + '</div>';
 
-  // ── Seção 2: Linha do Tempo ───────────────────────────────────────────────
+  if (cenItem && (cenItem.score_activity != null || cenItem.score_acompanhamento != null || cenItem.score_rota != null || cenItem.score_alvo != null)) {
+    dadosHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px">'
+      + _miniCard('Atividade da placa', String(cenItem.score_activity || 0) + ' pts', '#111827')
+      + _miniCard('Acompanhamento', String(cenItem.score_acompanhamento || 0) + ' pts', '#a16207')
+      + _miniCard('Rota', String(cenItem.score_rota || 0) + ' pts', '#1d4ed8')
+      + _miniCard('Alvo', String(cenItem.score_alvo || 0) + ' pts', '#b91c1c')
+      + '</div>';
+  }
+
+  var badges = (d.badges || []).map(function(b) {
+    var cl = b === 'ALVO' ? '#dc2626' : (b.indexOf('MULTI') >= 0 || b === 'COMBOIO') ? '#d97706' : '#2563eb';
+    return '<span style="display:inline-block;background:' + cl + ';color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px;margin-top:4px">' + b + '</span>';
+  }).join('');
+  if (badges) {
+    dadosHtml += '<div style="margin-top:10px"><div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">Indicadores ativos</div>' + badges + '</div>';
+  }
+
+  var partnerAlvos = partners.filter(function(p) { return !!p.is_alvo; }).length;
+  var partnerMaxCam = partners.length ? Math.max.apply(null, partners.map(function(p){ return Number(p.cameras_together || 0); })) : 0;
+  var spanVals = partners.map(function(p){ return Number(p.trip_span_sec || 0); }).filter(function(v){ return v > 0; });
+  var partnerMinSpan = spanVals.length ? Math.min.apply(null, spanVals) : 0;
+  var acompanhamentoStats = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">'
+    + _miniCard('Parceiros confirmados', String(partners.length), '#111827')
+    + _miniCard('Maior coocorrência', partnerMaxCam ? String(partnerMaxCam) + ' câm.' : '\u2014', '#1d4ed8')
+    + _miniCard('Melhor span', partnerMinSpan ? _relEngine.fmtSec(partnerMinSpan) : '\u2014', '#a16207')
+    + _miniCard('Alvos entre parceiros', String(partnerAlvos), partnerAlvos ? '#b91c1c' : '#111827')
+    + '</div>';
+
+  var partRows = partners.map(function(p) {
+    var tripMin = Math.round((p.trip_span_sec || 0) / 60);
+    var alvoMark = p.is_alvo ? ' ' + _pill('ALVO', '#dc2626', '#fff') : '';
+    var camNames = (p.cameras_detail || []).map(function(c){ return c.cam_nome || c.camera_id; }).join(', ');
+    return '<tr style="border-bottom:1px solid #e5e7eb">'
+      + '<td style="padding:6px 10px;font-size:.82rem;font-weight:700;font-family:monospace">' + p.plate + alvoMark + '</td>'
+      + '<td style="padding:6px 10px;text-align:center;font-weight:700;color:#1d4ed8">' + p.cameras_together + ' câm.</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem">' + (tripMin > 0 ? tripMin + ' min' : (p.trip_span_sec || 0) + 's') + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;white-space:nowrap">' + _fmtTs(p.last_seen) + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#6b7280;max-width:260px;overflow:hidden;text-overflow:ellipsis">' + (camNames || '\u2014') + '</td>'
+      + '</tr>';
+  }).join('');
+  var comboioHtml = partners.length
+    ? acompanhamentoStats
+      + '<div style="margin-bottom:10px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;font-size:.82rem;color:#374151;line-height:1.45">A placa está acompanhada por parceiros confirmados no recorte analisado. Esta seção mostra com quem ela circulou e em quais câmeras o vínculo ficou mais forte.</div>'
+      + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
+        + '<thead><tr style="background:#e5e7eb">'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Parceiro</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Câmeras juntos</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Span</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Último visto</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Câmeras</th>'
+        + '</tr></thead><tbody>' + partRows + '</tbody></table></div>'
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#6b7280">Nenhum parceiro em comboio confirmado no período. O foco deste relatório permanece na atividade da própria placa.</div>';
+
   var evRows = events.map(function(ev, i) {
     var dtFmt = ev.ts ? new Date(ev.ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '\u2014';
-    var conf  = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
+    var conf = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
     var intervalo = '\u2014';
     if (i > 0 && events[i-1].ts && ev.ts) {
       var ms = Math.abs(new Date(ev.ts) - new Date(events[i-1].ts));
@@ -8895,9 +9010,9 @@ function _abrirRelatorioPlacaIndividual() {
       + '<td style="padding:6px 10px;text-align:center;font-size:.75rem;color:#9ca3af">' + (i + 1) + '</td>'
       + '<td style="padding:6px 10px;font-size:.78rem;white-space:nowrap">' + dtFmt + '</td>'
       + '<td style="padding:6px 10px;font-size:.78rem">' + (ev.camera_name || ev.camera_id || '\u2014') + '</td>'
-      + '<td style="padding:6px 10px;font-size:.78rem;font-weight:700;color:#6366f1">' + (ev.direcao || '\u2014') + '</td>'
-      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af">' + conf + '</td>'
-      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af">' + intervalo + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;font-weight:700;color:#1d4ed8">' + (ev.direcao || '\u2014') + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#6b7280">' + conf + '</td>'
+      + '<td style="padding:6px 10px;font-size:.78rem;color:#6b7280">' + intervalo + '</td>'
       + '</tr>';
   }).join('');
   var timelineHtml = events.length
@@ -8905,97 +9020,96 @@ function _abrirRelatorioPlacaIndividual() {
         + '<thead><tr style="background:#e5e7eb">'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">#</th>'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Data / Hora</th>'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">C\u00e2mera</th>'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Dire\u00e7\u00e3o</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Câmera</th>'
+          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Direção</th>'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Conf.</th>'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Intervalo</th>'
         + '</tr></thead><tbody>' + evRows + '</tbody></table></div>'
-    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhuma passagem no per\u00edodo.</div>';
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#6b7280">Nenhuma passagem no período.</div>';
 
-  // ── Seção 3: Parceiros em Comboio ─────────────────────────────────────────
-  var partRows = partners.map(function(p) {
-    var tripMin  = Math.round((p.trip_span_sec || 0) / 60);
-    var alvoMark = p.is_alvo ? ' <span style="background:#dc2626;color:#fff;font-size:.62rem;padding:1px 6px;border-radius:99px">ALVO</span>' : '';
-    var camNames = (p.cameras_detail || []).map(function(c){ return c.cam_nome || c.camera_id; }).join(', ');
-    return '<tr style="border-bottom:1px solid #e5e7eb">'
-      + '<td style="padding:6px 10px;font-size:.82rem;font-weight:700;font-family:monospace">' + p.plate + alvoMark + '</td>'
-      + '<td style="padding:6px 10px;text-align:center;font-weight:700;color:#6366f1">' + p.cameras_together + ' c\u00e2m.</td>'
-      + '<td style="padding:6px 10px;font-size:.78rem">' + (tripMin > 0 ? tripMin + ' min' : (p.trip_span_sec || 0) + 's') + '</td>'
-      + '<td style="padding:6px 10px;font-size:.78rem;color:#9ca3af;max-width:200px;overflow:hidden;text-overflow:ellipsis">' + camNames + '</td>'
-      + '</tr>';
-  }).join('');
-  var comboioHtml = partners.length
-    ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
-        + '<thead><tr style="background:#e5e7eb">'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Parceiro</th>'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Cooc.</th>'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Trip span</th>'
-          + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">C\u00e2meras</th>'
-        + '</tr></thead><tbody>' + partRows + '</tbody></table></div>'
-    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum parceiro em comboio confirmado.</div>';
+  var lastDec = d.last_decision;
+  var decBg = { confirmado: '#fef2f2', falso_positivo: '#f0fdf4', ignorar: '#f8fafc' };
+  var decBorder = { confirmado: '#fca5a5', falso_positivo: '#86efac', ignorar: '#cbd5e1' };
+  var decisaoHtml = '<div style="margin-bottom:12px;padding:14px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:10px">'
+    + '<div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Parecer tático</div>'
+    + '<div style="font-size:.88rem;font-weight:800;color:' + acao.color + ';margin-bottom:4px">' + acao.titulo + '</div>'
+    + '<div style="font-size:.82rem;color:#374151;line-height:1.45">' + acao.detalhe + '</div>'
+    + '</div>';
+  decisaoHtml += lastDec
+    ? '<div style="margin-bottom:12px;padding:14px 16px;background:' + (decBg[lastDec.decision] || '#f8fafc') + ';border:1px solid ' + (decBorder[lastDec.decision] || '#cbd5e1') + ';border-radius:10px">'
+        + '<div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Última decisão operacional</div>'
+        + '<div style="font-size:.86rem;font-weight:800;color:#111827;margin-bottom:4px">' + _decisionLabel(lastDec.decision) + '</div>'
+        + '<div style="font-size:.8rem;color:#374151;line-height:1.45">'
+          + (lastDec.note ? lastDec.note + '<br>' : '')
+          + '<span style="color:#6b7280">Registrado por ' + (lastDec.operator || 'sistema') + ' em ' + _fmtTs(lastDec.created_at) + '.</span>'
+        + '</div>'
+      + '</div>'
+    : '<div style="margin-bottom:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;font-size:.82rem;color:#6b7280">Nenhuma decisão operacional registrada para esta placa até o momento.</div>';
 
-  // ── Seção 4: Análise Automática ───────────────────────────────────────────
-  var analiseHtml = '';
+  var scoreBreakdownHtml = '';
   if (d.score_breakdown && d.score_breakdown.length) {
     var sbRows = d.score_breakdown.map(function(b) {
       return '<tr style="border-bottom:1px solid #e5e7eb">'
         + '<td style="padding:6px 10px;font-size:.78rem">' + b.label + '</td>'
         + '<td style="padding:6px 10px;text-align:center;font-size:.78rem">' + b.value + '</td>'
-        + '<td style="padding:6px 10px;text-align:center;font-size:.78rem;color:#4f46e5">\u00d7' + b.multiplier + '</td>'
+        + '<td style="padding:6px 10px;text-align:center;font-size:.78rem;color:#1d4ed8">\u00d7' + b.multiplier + '</td>'
         + '<td style="padding:6px 10px;text-align:center;font-size:.78rem;font-weight:700">+' + b.points + '</td>'
-        + '<td style="padding:6px 10px;font-size:.75rem;color:#9ca3af">' + (b.reason || '') + '</td>'
+        + '<td style="padding:6px 10px;font-size:.75rem;color:#6b7280">' + (b.reason || '') + '</td>'
         + '</tr>';
     }).join('');
-    analiseHtml += '<div style="margin-bottom:12px;overflow-x:auto">'
+    scoreBreakdownHtml = '<div style="margin-bottom:12px;overflow-x:auto">'
       + '<table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
       + '<thead><tr style="background:#e5e7eb">'
         + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Fator</th>'
         + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Val.</th>'
         + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Mult.</th>'
         + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Pts</th>'
-        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Obs</th>'
+        + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Justificativa</th>'
       + '</tr></thead><tbody>' + sbRows
       + '<tr style="background:#e5e7eb;font-weight:700"><td colspan="3" style="padding:6px 10px;font-size:.78rem">TOTAL</td>'
         + '<td style="padding:6px 10px;font-size:.78rem;text-align:center">+' + score + '</td><td></td></tr>'
       + '</tbody></table></div>';
   }
-  var _cenItem = (_cenAllItems || []).find(function(it) { return it.plate === plate; });
-  if (_cenItem && _cenItem.threat_center) {
-    var _tc = _cenItem.threat_center;
-    var _rs = _tc.route_similarity || {};
-    var _tmBadges = (_tc.threat_badges || []).map(function(b) {
-      return '<span style="display:inline-block;background:#6d28d9;color:#ede9fe;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px">' + b + '</span>';
+
+  var centralHtml = '';
+  if (tc) {
+    var rs = tc.route_similarity || {};
+    var tcBadges = (tc.threat_badges || []).map(function(b) {
+      return '<span style="display:inline-block;background:#a16207;color:#fff7db;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:99px;margin-right:4px;margin-top:4px">' + b + '</span>';
     }).join('');
-    var _simPct = (_rs.similarity_ratio != null && _rs.similarity_ratio > 0) ? Math.round(_rs.similarity_ratio * 100) + '%' : '\u2014';
-    analiseHtml += (_tmBadges ? '<div style="margin-bottom:8px">' + _tmBadges + '</div>' : '')
-      + '<table style="width:100%;border-collapse:collapse;margin-top:4px"><tbody>'
-      + '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb;width:40%">Alvo vinculado (Central)</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + (_tc.matched_target ? '<strong style="color:#16a34a">\u2705 Sim</strong>' : '<span style="color:#9ca3af">\u2014 N\u00e3o</span>') + '</td></tr>'
-      + (_rs.matched || (_rs.similarity_ratio && _rs.similarity_ratio > 0) ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">Similaridade de rota</td><td style="padding:6px 10px;font-size:.82rem;font-weight:700;color:#7c3aed;border:1px solid #e5e7eb">' + _simPct + (_rs.best_alvo ? ' \u2014 similar a ' + _rs.best_alvo : '') + '</td></tr>' : '')
-      + (_rs.common_cameras && _rs.common_cameras.length ? '<tr><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">C\u00e2meras em comum</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + _rs.common_cameras.join(', ') + '</td></tr>' : '')
-      + '</tbody></table>';
-  }
-  if (!analiseHtml) {
-    analiseHtml = '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum breakdown dispon\u00edvel.</div>';
+    var simPct = (rs.similarity_ratio != null && rs.similarity_ratio > 0) ? Math.round(rs.similarity_ratio * 100) + '%' : '\u2014';
+    centralHtml = '<div style="padding:14px 16px;background:#fff;border:1px solid #e5e7eb;border-radius:10px">'
+      + '<div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Central de ameaça</div>'
+      + (tcBadges ? '<div style="margin-bottom:8px">' + tcBadges + '</div>' : '')
+      + '<table style="width:100%;border-collapse:collapse"><tbody>'
+      + '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb;width:40%">Alvo vinculado</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + (tc.matched_target ? '<strong style="color:#16a34a">\u2705 Sim</strong>' : '<span style="color:#6b7280">\u2014 Não</span>') + '</td></tr>'
+      + (rs.matched || (rs.similarity_ratio && rs.similarity_ratio > 0) ? '<tr style="border-bottom:1px solid #e5e7eb"><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">Similaridade de rota</td><td style="padding:6px 10px;font-size:.82rem;font-weight:700;color:#7c3aed;border:1px solid #e5e7eb">' + simPct + (rs.best_alvo ? ' \u2014 similar a ' + rs.best_alvo : '') + '</td></tr>' : '')
+      + (rs.common_cameras && rs.common_cameras.length ? '<tr><td style="padding:6px 10px;font-size:.75rem;font-weight:700;color:#6b7280;white-space:nowrap;background:#f9fafb;border:1px solid #e5e7eb">Câmeras em comum</td><td style="padding:6px 10px;font-size:.82rem;border:1px solid #e5e7eb">' + rs.common_cameras.join(', ') + '</td></tr>' : '')
+      + '</tbody></table>'
+      + '</div>';
   }
 
-  // ── render ────────────────────────────────────────────────────────────────
-  var _rpiHtml = _relEngine.render([
+  var analiseHtml = decisaoHtml
+    + (scoreBreakdownHtml || '<div style="margin-bottom:12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#6b7280">Nenhum breakdown de score disponível para esta placa.</div>')
+    + (centralHtml || '<div style="padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:.82rem;color:#6b7280">Nenhum vínculo adicional com alvo ou rota semelhante foi identificado na central.</div>');
+
+  var rpiHtml = _relEngine.render([
     _relEngine.buildHeader({
-      titulo: 'Relat\u00f3rio de Placa Individual',
+      titulo: 'Relatório de Placa Individual',
       subtitulo: 'Placa: <strong>' + plate + '</strong>',
-      risco: level.toUpperCase(),
+      risco: level,
       score: score,
       now: now
     }),
     kpisHtml,
-    _relEngine.section('1. Identifica\u00e7\u00e3o & Atividade', dadosHtml),
-    _relEngine.section('2. Linha do Tempo \u2014 Passagens (' + events.length + ')', timelineHtml),
-    _relEngine.section('3. Parceiros em Comboio (' + partners.length + ')', comboioHtml),
-    _relEngine.section('4. An\u00e1lise Autom\u00e1tica \u2014 Score Breakdown', analiseHtml),
+    _relEngine.section('1. Identificação & Avaliação Tática', dadosHtml),
+    _relEngine.section('2. Acompanhamento / Parceiros (' + partners.length + ')', comboioHtml),
+    _relEngine.section('3. Linha do Tempo — Passagens (' + events.length + ')', timelineHtml),
+    _relEngine.section('4. Decisão Operacional & Análise', analiseHtml),
     _relEngine.buildFooter(now)
   ], 'rel-print');
 
-  _relAbrirModal(plate, _rpiHtml, function() {
+  _relAbrirModal(plate, rpiHtml, function() {
     var rd = _batedorReportData;
     if (!rd) return;
     var evs = (rd.d && rd.d.events) || [];
@@ -9010,8 +9124,7 @@ function _abrirRelatorioPlacaIndividual() {
     _verRotaNaMapa(rd.plate, tsFrom, tsTo, evs.length + ' passagem(ns)');
   });
 }
-
-// ── Relatório do Grupo Suspeito ──────────────────────────────────────────────
+// -- Relat�rio do Grupo Suspeito ----------------------------------------------
 function _cgsGerarRelatorio() {
   var g = _cgsCurrentGroup;
   if (!g) return;
@@ -9027,115 +9140,152 @@ function _cgsGerarRelatorio() {
   var fmtSec = function(s) {
     if (!s) return dash;
     s = Math.round(s);
-    if (s < 60)   return s + 's';
-    if (s < 3600) { var m = Math.floor(s/60); return m + ' min' + (s%60 ? ' ' + (s%60) + 's' : ''); }
-    var h = Math.floor(s/3600), rm = Math.floor((s%3600)/60);
+    if (s < 60) return s + 's';
+    if (s < 3600) {
+      var m = Math.floor(s / 60);
+      return m + ' min' + (s % 60 ? ' ' + (s % 60) + 's' : '');
+    }
+    var h = Math.floor(s / 3600);
+    var rm = Math.floor((s % 3600) / 60);
     return h + 'h' + (rm ? ' ' + rm + 'min' : '');
-  };
-
-  var now = new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
-
-  // cabeçalho institucional
-  var hdr = '<div id="cgs-rel-print" style="color:#111">'  // wrapper print
-    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:20px">'
-      + '<div>'
-        + '<div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:#6b7280;font-weight:700;margin-bottom:2px">Sistema de Monitoramento de Fronteira</div>'
-        + '<div style="font-size:1.3rem;font-weight:800;color:#111">Relatório de Grupo Suspeito</div>'
-        + '<div style="font-size:.8rem;color:#374151;margin-top:4px">Placas: <strong>' + g.plates.join(' · ') + '</strong></div>'
-      + '</div>'
-      + '<div style="text-align:right">'
-        + '<div style="font-size:.68rem;color:#6b7280">Gerado em</div>'
-        + '<div style="font-size:.78rem;font-weight:700;color:#374151">' + now + '</div>'
-        + '<div style="margin-top:6px;display:inline-block;padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:800;background:' + (g.risco==='ALTO'?'#dc2626':g.risco==='MÉDIO'?'#d97706':'#6b7280') + ';color:#fff">' + g.risco + ' · ' + g.score + ' pts</div>'
-      + '</div>'
-    + '</div>';
-
-  // seção helper
-  var sec = function(title, body) {
-    return '<div style="margin-bottom:14px">'
-      + '<div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:#1d4ed8;border-bottom:1px solid #e5e7eb;padding-bottom:4px;margin-bottom:8px">' + title + '</div>'
-      + body
-    + '</div>';
   };
   var field = function(label, value) {
     return '<tr><td style="background:#f9fafb;font-weight:700;font-size:.76rem;color:#374151;white-space:nowrap;padding:6px 10px;width:38%;border:1px solid #e5e7eb">' + label + '</td>'
       + '<td style="font-size:.82rem;padding:6px 10px;border:1px solid #e5e7eb;color:#111">' + (value || dash) + '</td></tr>';
   };
+  var miniCard = function(label, value, color) {
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px">'
+      + '<div style="font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">' + label + '</div>'
+      + '<div style="font-size:1rem;font-weight:800;color:' + (color || '#111827') + '">' + value + '</div>'
+      + '</div>';
+  };
 
-  // 1. Placas
+  var now = new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var leaderRatio = Number(g.leader_ratio || 0);
+  var leaderStatus = g.leader
+    ? (leaderRatio >= 0.70 ? 'Liderança estável (' + Math.round(leaderRatio * 100) + '% das passagens em 1º)' : 'Sem liderança fixa (' + Math.round(leaderRatio * 100) + '% das passagens em 1º)')
+    : 'Sem líder definido';
+  var locStr = (g.cameras_names && g.cameras_names.length) ? g.cameras_names.join(', ') : dash;
+  var alvosStr = (g.alvos && g.alvos.length)
+    ? g.alvos.map(function(a){ return a.plate + (a.descricao ? ' — ' + a.descricao : ''); }).join('; ')
+    : dash;
+  var parecer = (function() {
+    if ((g.alvos && g.alvos.length) || (g.threat_center && g.threat_center.matched_target)) {
+      return {
+        titulo: 'Parecer: grupo com vínculo operacional prioritário',
+        detalhe: 'Há alvo cadastrado ou correspondência direta com alvo no grupo. O relatório deve sustentar monitoramento e pronta resposta.',
+        bg: '#fef2f2',
+        border: '#fca5a5',
+        color: '#b91c1c'
+      };
+    }
+    if (g.risco === 'ALTO' && leaderRatio >= 0.70 && Number(g.distinct_days || 0) >= 2) {
+      return {
+        titulo: 'Parecer: padrão consistente de atuação conjunta',
+        detalhe: 'O grupo aparece com risco alto, recorrência em dias diferentes e liderança repetida. O foco é validar batedor, ordem e rota.',
+        bg: '#fff7ed',
+        border: '#fdba74',
+        color: '#c2410c'
+      };
+    }
+    if (Number(g.distinct_days || 0) >= 2 || Number(g.cameras_count || 0) >= 3) {
+      return {
+        titulo: 'Parecer: grupo relacional relevante',
+        detalhe: 'O conjunto de veículos se repete em múltiplas câmeras ou dias. Vale manter observação sobre liderança, rota e reaproximações.',
+        bg: '#fefce8',
+        border: '#fde68a',
+        color: '#a16207'
+      };
+    }
+    return {
+      titulo: 'Parecer: grupo em observação',
+      detalhe: 'O vínculo está identificado, mas ainda depende de mais recorrência para consolidar padrão operacional.',
+      bg: '#f8fafc',
+      border: '#cbd5e1',
+      color: '#334155'
+    };
+  })();
+
   var placasRows = g.plates.map(function(p) {
-    var isAlvo   = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
+    var isAlvo = g.alvos && g.alvos.some(function(a){ return a.plate === p; });
     var isLeader = p === g.leader && g.leader_ratio >= 0.70;
     var role = isAlvo ? 'ALVO' : isLeader ? 'BATEDOR' : 'MEMBRO';
     var roleColor = isAlvo ? '#7c3aed' : isLeader ? '#dc2626' : '#374151';
     var descr = '';
     if (isAlvo && g.alvos) {
-      var a = g.alvos.find(function(x){ return x.plate === p; });
-      if (a && a.descricao) descr = a.descricao;
+      var alvoItem = g.alvos.find(function(x){ return x.plate === p; });
+      if (alvoItem && alvoItem.descricao) descr = alvoItem.descricao;
     }
     return '<tr>'
       + '<td style="font-family:monospace;font-size:.9rem;font-weight:800;padding:6px 10px;border:1px solid #e5e7eb">' + p + '</td>'
       + '<td style="padding:6px 10px;border:1px solid #e5e7eb"><span style="font-size:.7rem;font-weight:800;background:' + roleColor + ';color:#fff;padding:2px 8px;border-radius:99px">' + role + '</span></td>'
       + '<td style="font-size:.78rem;padding:6px 10px;border:1px solid #e5e7eb;color:#374151">' + (descr || dash) + '</td>'
-    + '</tr>';
+      + '</tr>';
   }).join('');
 
-  var placasTable = '<table style="width:100%;border-collapse:collapse">'
+  var placasTable = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px">'
+    + miniCard('Veículos no grupo', String(g.group_size || g.plates.length || 0), '#111827')
+    + miniCard('Alvos cadastrados', String((g.alvos || []).length), (g.alvos || []).length ? '#b91c1c' : '#111827')
+    + miniCard('Líder / batedor', g.leader || dash, g.leader ? '#b91c1c' : '#111827')
+    + miniCard('Dias juntos', g.distinct_days ? String(g.distinct_days) + ' d' : dash, '#1d4ed8')
+    + '</div>'
+    + '<table style="width:100%;border-collapse:collapse">'
     + '<thead><tr>'
       + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Placa</th>'
       + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Papel</th>'
       + '<th style="background:#f3f4f6;font-size:.7rem;text-transform:uppercase;padding:6px 10px;border:1px solid #e5e7eb;text-align:left">Cadastro</th>'
     + '</tr></thead>'
     + '<tbody>' + placasRows + '</tbody>'
-  + '</table>';
+    + '</table>';
 
-  // 2. Dados gerais
-  var locStr = (g.cameras_names && g.cameras_names.length) ? g.cameras_names.join(', ') : dash;
-  var alvosStr = (g.alvos && g.alvos.length)
-    ? g.alvos.map(function(a){ return a.plate + (a.descricao ? ' — ' + a.descricao : ''); }).join('; ')
-    : dash;
-
-  var dadosTable = '<table style="width:100%;border-collapse:collapse"><tbody>'
-    + field('Padrão detectado', g.padrao || dash)
-    + field('Risco', g.risco || dash)
-    + field('Score de ameaça', g.score != null ? String(g.score) + ' pts' : dash)
-    + field('Nº de veículos', g.group_size ? String(g.group_size) : dash)
-    + field('Coocorrências (câmeras)', g.cameras_count ? String(g.cameras_count) + 'x' : dash)
-    + field('Câmeras em comum', String(g.cameras_count || dash))
+  var avaliacaoTable = '<div style="margin-bottom:12px;padding:14px 16px;background:' + parecer.bg + ';border:1px solid ' + parecer.border + ';border-radius:10px">'
+    + '<div style="font-size:.82rem;font-weight:800;color:' + parecer.color + ';margin-bottom:4px">' + parecer.titulo + '</div>'
+    + '<div style="font-size:.82rem;color:#374151;line-height:1.45">' + parecer.detalhe + '</div>'
+    + '</div>'
+    + '<table style="width:100%;border-collapse:collapse"><tbody>'
+    + field('Padrão do grupo', g.padrao || dash)
+    + field('Risco relacional', g.risco || dash)
+    + field('Score do grupo', g.score != null ? String(g.score) + ' pts' : dash)
+    + field('Veículos envolvidos', g.group_size ? String(g.group_size) : dash)
+    + field('Câmeras em comum', g.cameras_count ? String(g.cameras_count) + 'x' : dash)
+    + field('Dias distintos juntos (90d)', g.distinct_days ? String(g.distinct_days) + ' dias' : dash)
+    + field('Líder / batedor', g.leader || dash)
+    + field('Consistência da liderança', leaderStatus)
     + field('Localidades', locStr)
     + field('Primeira vez juntos', fmtTs(g.first_seen))
     + field('Última vez juntos', fmtTs(g.last_seen))
     + field('Span da viagem', fmtSec(g.trip_span_sec))
-    + field('Dias distintos (90d)', g.distinct_days ? String(g.distinct_days) + ' dias' : dash)
-    + field('Veículo líder / Batedor', g.leader || dash)
-    + field('Alvos cadastrados', alvosStr)
-  + '</tbody></table>';
-
-  // 3. Breakdown do score
-  var scoreBody = (g.score_reason && g.score_reason.length)
-    ? '<ul style="margin:0;padding-left:18px">' + g.score_reason.map(function(r){ return '<li style="font-size:.78rem;color:#374151;padding:2px 0">' + r + '</li>'; }).join('') + '</ul>'
-    : '<span style="color:#6b7280;font-size:.78rem">' + dash + '</span>';
-
-  // 3b. Vínculos com Alvos — Fase 1 (threat_center)
-  var tcBody;
-  if (g.threat_center && g.threat_center.matched_target) {
-    var _tc = g.threat_center;
-    var _tcBadges = _tc.threat_badges.map(function(b) {
-      var isLider = b === 'LÍDER_É_ALVO';
-      return '<span style="font-size:.7rem;font-weight:800;background:' + (isLider ? '#dc2626' : '#a07a24') + ';color:' + (isLider ? '#fff' : '#fff7db') + ';padding:2px 8px;border-radius:99px">' + (isLider ? 'L\u00cdDER \u00c9 ALVO' : 'ALVO NO GRUPO') + '</span>';
-    }).join(' ');
-    tcBody = '<table style="width:100%;border-collapse:collapse"><tbody>'
-      + field('Badges ativados', _tcBadges)
-      + field('Tipo de correspondência', _tc.match_type || dash)
-      + field('Placas alvo correspondentes', _tc.matched_plates && _tc.matched_plates.length ? _tc.matched_plates.join(', ') : dash)
-      + field('Acréscimo de score', '+' + (_tc.score_delta || 0) + ' pts')
     + '</tbody></table>';
-  } else {
-    tcBody = '<div style="font-size:.78rem;color:#6b7280">Nenhum v\u00ednculo com alvos cadastrados identificado neste grupo.</div>';
-  }
 
-  // 4. Linha do tempo
-  var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
+  var tc = g.threat_center || {};
+  var tcBadges = (tc.threat_badges || []).map(function(b) {
+    var isLeader = b === 'LÍDER_É_ALVO';
+    return '<span style="font-size:.7rem;font-weight:800;background:' + (isLeader ? '#dc2626' : '#a07a24') + ';color:' + (isLeader ? '#fff' : '#fff7db') + ';padding:2px 8px;border-radius:99px">' + (isLeader ? 'LÍDER É ALVO' : 'ALVO NO GRUPO') + '</span>';
+  }).join(' ');
+  var rs = tc.route_similarity || {};
+  var simText = (rs.similarity_ratio != null && rs.similarity_ratio > 0)
+    ? Math.round(rs.similarity_ratio * 100) + '%' + (rs.best_alvo ? ' — similar a ' + rs.best_alvo : '')
+    : dash;
+  var tcBody = (tc.matched_target || (g.alvos && g.alvos.length))
+    ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px">'
+        + miniCard('Alvos no grupo', String((g.alvos || []).length), (g.alvos || []).length ? '#b91c1c' : '#111827')
+        + miniCard('Score extra por alvo', tc.score_delta ? '+' + tc.score_delta + ' pts' : '+0 pts', '#a16207')
+        + miniCard('Tipo de vínculo', tc.match_type || dash, '#1d4ed8')
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse"><tbody>'
+      + field('Alvos cadastrados no grupo', alvosStr)
+      + field('Badges ativados', tcBadges || dash)
+      + field('Tipo de correspondência', tc.match_type || dash)
+      + field('Placas alvo correspondentes', tc.matched_plates && tc.matched_plates.length ? tc.matched_plates.join(', ') : dash)
+      + field('Acréscimo de score', '+' + (tc.score_delta || 0) + ' pts')
+      + field('Similaridade de rota', simText)
+      + '</tbody></table>'
+    : '<div style="padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:.82rem;color:#6b7280">Nenhum vínculo com alvos cadastrados foi identificado neste grupo no recorte analisado.</div>';
+
+  var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a, b) {
+    var ai = Number(a && a.timeline_index);
+    var bi = Number(b && b.timeline_index);
+    if (Number.isFinite(ai) && Number.isFinite(bi) && ai !== bi) return ai - bi;
     return new Date(a.ts_min) - new Date(b.ts_min);
   });
 
@@ -9146,18 +9296,18 @@ function _cgsGerarRelatorio() {
     var tlRows = camsCnf.map(function(c, i) {
       var tsStr = c.ts_min ? new Date(c.ts_min).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}) : dash;
       var ordem = c.plate_order && c.plate_order.length
-        ? c.plate_order.map(function(p,idx){
+        ? c.plate_order.map(function(p, idx) {
             var isLeader = p === g.leader;
-            return (idx+1) + 'º ' + p + (isLeader ? ' [BATEDOR]' : '');
+            return (idx + 1) + 'º ' + p + (isLeader ? ' [BATEDOR]' : '');
           }).join(' → ')
         : dash;
       return '<tr>'
-        + '<td style="font-size:.76rem;font-weight:700;padding:6px 10px;border:1px solid #e5e7eb;text-align:center;color:#6b7280">' + (i+1) + '</td>'
+        + '<td style="font-size:.76rem;font-weight:700;padding:6px 10px;border:1px solid #e5e7eb;text-align:center;color:#6b7280">' + (i + 1) + '</td>'
         + '<td style="font-size:.8rem;font-weight:700;padding:6px 10px;border:1px solid #e5e7eb">' + (c.cam_nome || c.camera_id || dash) + '</td>'
         + '<td style="font-size:.78rem;padding:6px 10px;border:1px solid #e5e7eb;white-space:nowrap">' + tsStr + '</td>'
         + '<td style="font-size:.76rem;padding:6px 10px;border:1px solid #e5e7eb;white-space:nowrap">' + (c.span_sec ? fmtSec(c.span_sec) : '0s') + '</td>'
         + '<td style="font-size:.74rem;padding:6px 10px;border:1px solid #e5e7eb;color:#374151">' + ordem + '</td>'
-      + '</tr>';
+        + '</tr>';
     }).join('');
     timelineBody = '<table style="width:100%;border-collapse:collapse">'
       + '<thead><tr>'
@@ -9166,35 +9316,46 @@ function _cgsGerarRelatorio() {
         + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Horário</th>'
         + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Span</th>'
         + '<th style="background:#f3f4f6;font-size:.68rem;text-transform:uppercase;padding:5px 10px;border:1px solid #e5e7eb">Ordem das placas</th>'
-      + '</tr></thead>'
+        + '</tr></thead>'
       + '<tbody>' + tlRows + '</tbody>'
-    + '</table>';
+      + '</table>';
   }
 
-  // ── monta e abre o relatório unificado ──────────────────────────────────
-  var _cgsKpis = _relEngine.buildKPIs([
-    { icon: '\uD83D\uDD34', label: 'Risco',          value: g.risco || dash,                        color: _relEngine.riskColor(g.risco) },
-    { icon: '\uD83D\uDCCA', label: 'Score',           value: g.score != null ? g.score + ' pts' : dash },
-    { icon: '\uD83D\uDCF7', label: 'Cooc. c\u00e2meras',  value: g.cameras_count ? g.cameras_count + 'x' : dash },
-    { icon: '\uD83D\uDE97', label: 'Ve\u00edculos',         value: g.group_size ? String(g.group_size) : dash },
-    { icon: '\uD83D\uDCC5', label: 'Dias distintos',  value: g.distinct_days ? g.distinct_days + ' d' : dash },
-    { icon: '\u23F1',       label: 'Span da viagem',  value: g.trip_span_sec ? fmtSec(g.trip_span_sec) : dash },
-    g.leader ? { icon: '\uD83C\uDFAF', label: 'Batedor/L\u00edder', value: g.leader, color: '#dc2626' } : null
+  var kpisHtml = _relEngine.buildKPIs([
+    { icon: '\uD83D\uDD34', label: 'Risco do grupo', value: g.risco || dash, color: _relEngine.riskColor(g.risco) },
+    { icon: '\uD83D\uDCCA', label: 'Score relacional', value: g.score != null ? g.score + ' pts' : dash },
+    { icon: '\uD83D\uDCF7', label: 'Câmeras em comum', value: g.cameras_count ? g.cameras_count + 'x' : dash },
+    { icon: '\uD83D\uDE97', label: 'Veículos', value: g.group_size ? String(g.group_size) : dash },
+    { icon: '\uD83D\uDCC5', label: 'Dias juntos', value: g.distinct_days ? g.distinct_days + ' d' : dash },
+    { icon: '\u23F1', label: 'Span da viagem', value: g.trip_span_sec ? fmtSec(g.trip_span_sec) : dash },
+    g.leader ? { icon: '\uD83C\uDFAF', label: 'Líder / batedor', value: g.leader, color: '#dc2626' } : null
   ]);
-  var _cgsAnalise = scoreBody
-    + (g.threat_center && g.threat_center.matched_target ? '<div style="margin-top:10px">' + tcBody + '</div>' : '');
-  var _cgsHtml = _relEngine.render([
-    _relEngine.buildHeader({ titulo: 'Relat\u00f3rio de Grupo Suspeito', subtitulo: 'Placas: ' + g.plates.join(' \u00b7 '), risco: g.risco, score: g.score, now: now }),
-    _cgsKpis,
-    _relEngine.section('1. Placas Envolvidas', placasTable),
-    _relEngine.section('2. Dados Gerais do Grupo', dadosTable),
-    _relEngine.section('3. An\u00e1lise de Amea\u00e7a', _cgsAnalise),
-    _relEngine.section('4. Linha do Tempo \u2014 Passagens Conjuntas', timelineBody),
+
+  var scoreBody = (g.score_reason && g.score_reason.length)
+    ? '<div style="margin-bottom:12px;padding:14px 16px;background:' + parecer.bg + ';border:1px solid ' + parecer.border + ';border-radius:10px">'
+        + '<div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Parecer analítico</div>'
+        + '<div style="font-size:.88rem;font-weight:800;color:' + parecer.color + ';margin-bottom:6px">' + parecer.titulo + '</div>'
+        + '<div style="font-size:.82rem;color:#374151;line-height:1.45">' + parecer.detalhe + '</div>'
+      + '</div>'
+      + '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px">'
+        + '<div style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">Justificativa do score</div>'
+        + '<ul style="margin:0;padding-left:18px">' + g.score_reason.map(function(r){ return '<li style="font-size:.78rem;color:#374151;padding:2px 0">' + r + '</li>'; }).join('') + '</ul>'
+      + '</div>'
+    : '<div style="padding:14px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;font-size:.82rem;color:#6b7280">Nenhuma justificativa detalhada de score disponível para este grupo.</div>';
+
+  var cgsHtml = _relEngine.render([
+    _relEngine.buildHeader({ titulo: 'Relatório de Grupo Suspeito', subtitulo: 'Placas: ' + g.plates.join(' · '), risco: g.risco, score: g.score, now: now }),
+    kpisHtml,
+    _relEngine.section('1. Composição do Grupo', placasTable),
+    _relEngine.section('2. Avaliação Relacional do Grupo', avaliacaoTable),
+    _relEngine.section('3. Vínculo com Alvos / Central de Ameaça', tcBody),
+    _relEngine.section('4. Linha do Tempo — Passagens Conjuntas', timelineBody),
+    _relEngine.section('5. Parecer Analítico / Justificativa do Score', scoreBody),
     _relEngine.buildFooter(now)
   ], 'rel-print');
-  _relAbrirModal(g.plates.join(' + '), _cgsHtml, _cgsVerRotaNoMapa, _cgsVoltarAoDetalhe, 'Voltar');
-}
 
+  _relAbrirModal(g.plates.join(' + '), cgsHtml, _cgsVerRotaNoMapa, _cgsVoltarAoDetalhe, 'Voltar');
+}
 function _cgsExportarPDF() { _relExportarPDF(); } // compat: usa motor unificado
 
 // ── Rota do Grupo Suspeito no Mapa ───────────────────────────────────────
@@ -9598,7 +9759,7 @@ async function loadCentral(showSpinner) {
     _cenPage     = 0;
     // cards (sempre com dados brutos completos)
     document.getElementById('cen-total').textContent = all.length;
-    document.getElementById('cen-multi').textContent = all.filter(function(i){ return i.sinais >= 2; }).length || '-';
+    document.getElementById('cen-multi').textContent = all.filter(function(i){ return (i.companions_count || 0) > 0 || !!i.in_comboio; }).length || '-';
     document.getElementById('cen-alvos').textContent = all.filter(function(i){ return i.is_alvo; }).length || '-';
     _cenRenderPage();
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -9611,7 +9772,7 @@ async function loadCentral(showSpinner) {
     if (_cst) _cst.textContent = 'Erro: ' + e.message;
     if (showSpinner)
       document.getElementById('central-tbody').innerHTML =
-        '<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+        '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
     // para o live se der erro
     _cenLiveEnabled = false; _cenStopTimer();
     var btn = document.getElementById('btn-cen-live');
@@ -9653,12 +9814,12 @@ function _cenRenderPage() {
   if (total > _cenPageSize) {
     pg.style.display = 'flex';
     document.getElementById('cen-page-info').textContent =
-      'Página ' + (_cenPage + 1) + ' de ' + pages + ' · ' + total + ' ameaça(s)';
+      'Página ' + (_cenPage + 1) + ' de ' + pages + ' · ' + total + ' placa(s)';
     document.getElementById('cen-btn-prev').disabled = _cenPage === 0;
     document.getElementById('cen-btn-next').disabled = _cenPage >= pages - 1;
   } else if (total > 0) {
     pg.style.display = 'flex';
-    document.getElementById('cen-page-info').textContent = total + ' ameaça(s)';
+    document.getElementById('cen-page-info').textContent = total + ' placa(s)';
     document.getElementById('cen-btn-prev').disabled = true;
     document.getElementById('cen-btn-next').disabled = true;
   } else {
@@ -9673,8 +9834,8 @@ function cenPageNav(delta) {
 }
 
 function _cenScoreClass(s) {
-  if (s >= 100) return 'badge-red';
-  if (s >= 50)  return 'badge-yellow';
+  if (s >= 75) return 'badge-red';
+  if (s >= 35) return 'badge-yellow';
   return 'badge-green';
 }
 
@@ -9718,46 +9879,56 @@ function _grupoLinks(grupos) {
   }).join(' ');
 }
 
+function _cenAtividadeCell(item) {
+  var sc = item && item.in_suspeitos;
+  if (!sc) return '<span style="color:var(--muted)">Baixa atividade</span>';
+  return '<div style="display:flex;flex-direction:column;gap:2px">'
+    + '<span style="font-size:.78rem;font-weight:700;color:var(--text)">' + sc.passes + ' passagem(ns)</span>'
+    + '<span style="font-size:.74rem;color:var(--muted)">' + sc.cameras + ' câm. distintas</span>'
+    + '</div>';
+}
+
+function _cenAcompanhamentoCell(item) {
+  var groups = item && item.in_grupos ? item.in_grupos : [];
+  var top = groups.length ? groups[0] : null;
+  var count = Number(item && item.companions_count) || groups.length || 0;
+  if (!count && !item.in_comboio) return '<span style="color:var(--muted)">Sem acompanhamento</span>';
+  var html = '<div style="display:flex;flex-direction:column;gap:2px">';
+  html += '<span style="font-size:.78rem;font-weight:700;color:#86efac">' + count + ' parceiro(s)</span>';
+  if (top) {
+    html += '<span style="font-size:.74rem;color:var(--muted)">Mais forte: '
+      + '<span style="font-family:monospace;color:var(--text)">' + top.plate + '</span> · '
+      + top.cameras_together + ' câm.</span>';
+  } else if (item.in_comboio) {
+    html += '<span style="font-size:.74rem;color:var(--muted)">Comboio detectado em ' + item.in_comboio.cameras + ' câm.</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderCentral(items, total) {
   var tb = document.getElementById('central-tbody');
   var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
   if (!items.length) {
-    var emptyMsg = (total === 0 ? 'Nenhuma ameaça encontrada com os filtros atuais.' : 'Sem resultados nesta página.');
-    if (plateFl) emptyMsg = 'Parceiro não encontrado para a placa informada.';
-    tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px">'
+    var emptyMsg = (total === 0 ? 'Nenhuma placa em atenção encontrada com os filtros atuais.' : 'Sem resultados nesta página.');
+    if (plateFl) emptyMsg = 'Placa não encontrada com os filtros informados.';
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">'
       + emptyMsg
       + '</td></tr>';
     return;
   }
   tb.innerHTML = items.map(function(item) {
-    var sc = item.in_suspeitos;
-    var cc = item.in_comboio;
-    var hasPair = !!cc || ((item.in_grupos || []).length > 0);
-    var scCell = sc
-      ? '<span style="font-size:.78rem">&#10003; ' + sc.passes + 'x / ' + sc.cameras + '&#128247;</span>'
-      : '<span style="color:var(--muted)">&#8212;</span>';
-    var ccCell = '<span style="color:var(--muted)">&#8212;</span>';
-    if (cc) {
-      ccCell = '<span style="font-size:.78rem;cursor:pointer" onclick="_openComboioFromCentral(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#10003; ' + cc.cameras + ' c\u00e2m. <small>(' + (cc.trip_span_sec||0) + 's)</small></span>';
-    } else if (plateFl) {
-      var pares = (item.in_grupos || []).map(function(g){ return g.plate + ' (' + g.cameras_together + ' câm.)'; }).join(', ');
-      ccCell = pares
-        ? '<span style="font-size:.76rem;color:#86efac">Par: ' + pares + '</span>'
-        : '<span style="font-size:.76rem;color:#fca5a5">Parceiro não encontrado</span>';
-    }
     var alvoCell = item.is_alvo
       ? '<span class="badge cen-target-badge" title="' + (item.alvo_descricao||'') + '">&#127919; SIM</span>'
       : '<span style="color:var(--muted)">&#8212;</span>';
-    var rowStyle = item.sinais >= 3 ? 'background:rgba(239,68,68,.06)' : item.is_alvo ? 'background:rgba(196,166,74,.08)' : '';
+    var rowStyle = item.risk_level === 'ALTO' ? 'background:rgba(239,68,68,.06)' : item.is_alvo ? 'background:rgba(196,166,74,.08)' : '';
     return '<tr style="' + rowStyle + '">'
       + '<td>' + plateHtml(item.plate) + '</td>'
       + '<td><span class="badge ' + _cenScoreClass(item.score_total) + '">' + item.score_total + '</span></td>'
       + '<td style="white-space:nowrap">' + _sinaisBadges(item) + '</td>'
-      + '<td>' + scCell + '</td>'
-      + '<td>' + ccCell + '</td>'
-      + '<td style="font-size:.78rem">' + _grupoLinks(item.in_grupos) + '</td>'
+      + '<td>' + _cenAtividadeCell(item) + '</td>'
+      + '<td>' + _cenAcompanhamentoCell(item) + '</td>'
       + '<td>' + alvoCell + '</td>'
-      + '<td style="font-size:.78rem">' + fmtTs(item.first_seen) + '</td>'
       + '<td style="white-space:nowrap">' + fmtTs(item.last_seen)  + '</td>'
       + '<td class="action-cell"><div class="action-buttons">'
       + '<button class="btn btn-outline btn-xs" title="Hist&oacute;rico de eventos" onclick="openDetail(\'' + (item.plate||'').replace(/'/g,"\\'") + '\')">&#128269; Visualizar</button>'

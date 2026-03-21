@@ -2329,7 +2329,8 @@ def _detect_convoy_groups(
             e.camera_id,
             COALESCE(c.nome, e.camera_id)   AS cam_nome,
             e.plate,
-            COALESCE(e.occurred_at, e.ts)   AS event_time
+            COALESCE(e.occurred_at, e.ts)   AS event_time,
+            COALESCE(e.ts, e.occurred_at)   AS sort_time
         FROM lpr_events e
         LEFT JOIN cameras c ON c.id = (
             SELECT id FROM cameras
@@ -2343,15 +2344,15 @@ def _detect_convoy_groups(
           AND e.plate NOT IN ('', 'unknown', 'UNKNOWN')
           AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
           {prefix_sql} {allow_sql}
-        ORDER BY e.camera_id, COALESCE(e.occurred_at, e.ts)
+        ORDER BY e.camera_id, COALESCE(e.ts, e.occurred_at), e.id
         LIMIT {int(limit_events)}
     """, [t_from, t_to] + prefix_vals + allow_vals)
     rows = cur.fetchall()
 
     # ── 2. Agrupar por câmera ──────────────────────────────────────────────
     cam_events: dict = defaultdict(list)
-    for cam_id, cam_nome, plate, event_time in rows:
-        cam_events[cam_id].append((plate, event_time, cam_nome))
+    for cam_id, cam_nome, plate, event_time, sort_time in rows:
+        cam_events[cam_id].append((plate, event_time, sort_time, cam_nome))
 
     # ── 3. Formar clusters por câmera (janela deslizante) ──────────────────
     # Para cada câmera, encontra conjuntos de placas onde span <= window_s
@@ -2362,37 +2363,51 @@ def _detect_convoy_groups(
         n = len(events)
         if n < 2:
             continue
-        cam_nome = events[0][2]
+        cam_nome = events[0][3]
 
         # Janela deslizante: i=início, j avança enquanto span <= window_s
         i = 0
         while i < n:
             j = i + 1
-            while j < n and (events[j][1] - events[i][1]).total_seconds() <= window_s:
+            while j < n and (events[j][2] - events[i][2]).total_seconds() <= window_s:
                 j += 1
             # events[i..j-1] formam um cluster temporal
             # Extrair placas únicas e seus timestamps
             plate_times: dict = {}
             for k in range(i, j):
-                p, t, _ = events[k]
+                p, event_t, sort_t, _ = events[k]
                 if p not in plate_times:
-                    plate_times[p] = {"min": t, "max": t}
+                    plate_times[p] = {
+                        "event_min": event_t,
+                        "event_max": event_t,
+                        "sort_min": sort_t,
+                        "sort_max": sort_t,
+                    }
                 else:
-                    if t < plate_times[p]["min"]:
-                        plate_times[p]["min"] = t
-                    if t > plate_times[p]["max"]:
-                        plate_times[p]["max"] = t
+                    if event_t < plate_times[p]["event_min"]:
+                        plate_times[p]["event_min"] = event_t
+                    if event_t > plate_times[p]["event_max"]:
+                        plate_times[p]["event_max"] = event_t
+                    if sort_t < plate_times[p]["sort_min"]:
+                        plate_times[p]["sort_min"] = sort_t
+                    if sort_t > plate_times[p]["sort_max"]:
+                        plate_times[p]["sort_max"] = sort_t
 
             unique_plates = set(plate_times.keys())
             if len(unique_plates) >= 2:
-                all_ts = [t for k in range(i, j) for t in [events[k][1]]]
-                ts_min = min(all_ts)
-                ts_max = max(all_ts)
+                all_event_ts = [events[k][1] for k in range(i, j)]
+                all_sort_ts = [events[k][2] for k in range(i, j)]
+                ts_min = min(all_event_ts)
+                ts_max = max(all_event_ts)
+                sort_ts_min = min(all_sort_ts)
+                sort_ts_max = max(all_sort_ts)
                 cam_plate_sets[cam_id].append({
                     "plates": frozenset(unique_plates),
                     "ts_min": ts_min,
                     "ts_max": ts_max,
-                    "span_sec": (ts_max - ts_min).total_seconds(),
+                    "sort_ts_min": sort_ts_min,
+                    "sort_ts_max": sort_ts_max,
+                    "span_sec": (sort_ts_max - sort_ts_min).total_seconds(),
                     "cam_nome": cam_nome,
                     "plate_times": plate_times,
                 })
@@ -2416,22 +2431,27 @@ def _detect_convoy_groups(
                     # Verifica que TODOS os veículos do subset estão no cluster
                     # (já estão, pois vieram de all_plates)
                     # Calcula span apenas para o subset
-                    sub_times = []
+                    sub_event_times = []
+                    sub_sort_times = []
                     sub_plate_times = {}
                     for p in subset:
                         pt = cluster["plate_times"][p]
-                        sub_times.append(pt["min"])
-                        sub_times.append(pt["max"])
+                        sub_event_times.append(pt["event_min"])
+                        sub_event_times.append(pt["event_max"])
+                        sub_sort_times.append(pt["sort_min"])
+                        sub_sort_times.append(pt["sort_max"])
                         sub_plate_times[p] = pt
-                    sub_ts_min = min(sub_times)
-                    sub_ts_max = max(sub_times)
-                    sub_span = (sub_ts_max - sub_ts_min).total_seconds()
+                    sub_ts_min = min(sub_event_times)
+                    sub_ts_max = max(sub_event_times)
+                    sub_sort_ts_min = min(sub_sort_times)
+                    sub_sort_ts_max = max(sub_sort_times)
+                    sub_span = (sub_sort_ts_max - sub_sort_ts_min).total_seconds()
                     if sub_span > window_s:
                         continue
-                    # Ordena por primeiro timestamp
-                    plate_order = sorted(subset, key=lambda p: sub_plate_times[p]["min"])
-                    # Timestamp representativo do grupo nesta câmera = min(ts)
-                    ts_rep = sub_ts_min
+                    # Usa a sequência de ingestão para manter a ordem estável
+                    # mesmo quando uma câmera está com o relógio incorreto.
+                    plate_order = sorted(subset, key=lambda p: (sub_plate_times[p]["sort_min"], p))
+                    ts_rep = sub_sort_ts_min
                     group_cameras[subset_key].append({
                         "camera_id": cam_id,
                         "cam_nome": cluster["cam_nome"],
@@ -2472,7 +2492,7 @@ def _detect_convoy_groups(
         global_last = max(c["ts_max"] for c in cam_list)
         camera_names = [c["cam_nome"] for c in sorted_cams]
         cameras_confirmed = []
-        for c in sorted_cams:
+        for idx, c in enumerate(sorted_cams, start=1):
             cameras_confirmed.append({
                 "camera_id": c["camera_id"],
                 "cam_nome": c["cam_nome"],
@@ -2480,6 +2500,7 @@ def _detect_convoy_groups(
                 "ts_max": c["ts_max"].isoformat(),
                 "span_sec": c["span_sec"],
                 "plate_order": c["plate_order"],
+                "timeline_index": idx,
             })
 
         result.append({

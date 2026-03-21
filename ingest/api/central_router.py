@@ -656,25 +656,15 @@ def build_central_router(
 
         items = []
         for plate, item in intel.items():
+            companions_count = len(item["in_grupos"])
             sinais = sum(
                 [
                     1 if item["in_suspeitos"] else 0,
                     1 if item["in_comboio"] else 0,
-                    1 if item["in_grupos"] else 0,
+                    1 if companions_count else 0,
                     1 if item["is_alvo"] else 0,
                 ]
             )
-            s_score = (item["in_suspeitos"] or {}).get("score", 0)
-            c_score = (item["in_comboio"] or {}).get("score", 0)
-            g_score = max((group["score"] for group in item["in_grupos"]), default=0)
-            a_bonus = 50 if item["is_alvo"] else 0
-
-            score_total = int(s_score + c_score * 1.5 + g_score * 1.2 + a_bonus)
-            if sinais >= 3:
-                score_total = int(score_total * 1.5)
-            elif sinais >= 2:
-                score_total = int(score_total * 1.2)
-
             tc_plates = [plate] + [group["plate"] for group in item["in_grupos"]]
             threat_center = compute_threat_center_phase1_fn(tc_plates, alvo_map, leader=None)
             threat_center_2 = compute_threat_center_phase2_route_similarity_fn(
@@ -684,25 +674,56 @@ def build_central_router(
             )
             threat_center = merge_threat_center_phases_fn(threat_center, threat_center_2)
 
+            score_activity = int((item["in_suspeitos"] or {}).get("score", 0))
+            score_acompanhamento = 0
+            if item["in_comboio"]:
+                score_acompanhamento += min(int((item["in_comboio"] or {}).get("cameras", 0)), 5) * 4
+            if companions_count:
+                score_acompanhamento += min(companions_count, 4) * 3
+                if companions_count >= 2:
+                    score_acompanhamento += 6
+            if item["in_suspeitos"] and item["in_comboio"]:
+                score_acompanhamento += 10
+
+            route_similarity = (threat_center or {}).get("route_similarity") or {}
+            score_rota = 0
+            if route_similarity.get("matched"):
+                score_rota += 10
+            elif float(route_similarity.get("similarity_ratio") or 0) >= 0.5:
+                score_rota += 5
+
+            score_alvo = 35 if item["is_alvo"] else 0
+            if item["is_alvo"] and companions_count:
+                score_alvo += 10
+
+            score_total = int(score_activity + score_acompanhamento + score_rota + score_alvo)
+            risk_level = "ALTO" if score_total >= 75 else "MÉDIO" if score_total >= 35 else "BAIXO"
+
             items.append(
                 {
                     "plate": plate,
                     "score_total": score_total,
+                    "score_activity": score_activity,
+                    "score_acompanhamento": score_acompanhamento,
+                    "score_rota": score_rota,
+                    "score_alvo": score_alvo,
                     "sinais": sinais,
                     "in_suspeitos": item["in_suspeitos"],
                     "in_comboio": item["in_comboio"],
                     "in_grupos": sorted(item["in_grupos"], key=lambda group: group["cameras_together"], reverse=True)[:5],
+                    "companions_count": companions_count,
                     "is_alvo": item["is_alvo"],
                     "alvo_descricao": item["alvo_descricao"],
                     "first_seen": item["first_seen"].isoformat() if item["first_seen"] else None,
                     "last_seen": item["last_seen"].isoformat() if item["last_seen"] else None,
                     "vehicle_type": item.get("vehicle_type"),
                     "vehicle_color": item.get("vehicle_color"),
+                    "risk_level": risk_level,
                     "threat_center": threat_center,
                 }
             )
 
-        items.sort(key=lambda value: (value["sinais"], value["score_total"]), reverse=True)
+        items.sort(key=lambda value: (value["score_total"], value["score_activity"], value["sinais"]), reverse=True)
         logger_obj.info(
             "[batedor_central] resultado: %d itens (total=%d), window retornado=%s",
             len(items[:limit]),
