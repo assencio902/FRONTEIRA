@@ -5862,7 +5862,7 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2 id="veh-modal-title">Cadastrar Placa</h2>
-      <button class="modal-close" onclick="closeModal('vehicle-modal')">&times;</button>
+      <button class="modal-close" onclick="closeVehicleModal()">&times;</button>
     </div>
     <div class="form-group">
       <label>Placa *</label>
@@ -5881,7 +5881,7 @@
     </div>
     <div class="form-error" id="veh-form-error"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('vehicle-modal')">Cancelar</button>
+      <button class="btn btn-outline btn-sm" onclick="closeVehicleModal()">Cancelar</button>
       <button id="veh-save-btn" class="btn btn-success btn-sm" onclick="saveVehicle()">Cadastrar</button>
     </div>
   </div>
@@ -5891,7 +5891,7 @@
   <div class="modal modal-sm">
     <div class="modal-header">
       <h2>Cadastrar Como Alvo</h2>
-      <button class="modal-close" onclick="closeModal('vehicle-target-modal')">&times;</button>
+      <button class="modal-close" onclick="closeVehicleTargetModal()">&times;</button>
     </div>
     <div style="font-size:.84rem;color:var(--muted);margin-bottom:12px">
       Escolha a lista de monitoramento para lançar a placa e confirmar o cadastro.
@@ -5906,7 +5906,7 @@
     </div>
     <div class="form-error" id="vehicle-target-error"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-      <button class="btn btn-outline btn-sm" onclick="closeModal('vehicle-target-modal')">Cancelar</button>
+      <button class="btn btn-outline btn-sm" onclick="closeVehicleTargetModal()">Cancelar</button>
       <button class="btn btn-success btn-sm" onclick="_confirmVehicleTargetChoice()">Continuar</button>
     </div>
   </div>
@@ -7200,6 +7200,7 @@ function scoreClass(s) {
 var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 var _painelProdutividadeCache = null;
+var _vehicleTargetFlow = null;
 
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
@@ -7296,6 +7297,8 @@ function refreshCurrent() {
 // ===== MODAIS =====
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeVehicleModal() { closeModal('vehicle-modal'); _vehicleTargetFlow = null; }
+function closeVehicleTargetModal() { closeModal('vehicle-target-modal'); _vehicleTargetFlow = null; }
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
@@ -8370,6 +8373,18 @@ function _cgsCriarAlvo() {
     alert('Todas as placas deste grupo ja estao cadastradas como alvo.');
     return;
   }
+  var groupId = g.id;
+  _vehicleTargetFlow = {
+    message: '🎯 Alvo salvo com sucesso!',
+    restore: async function() {
+      var nav = document.querySelector('#sidebar .nav-item[onclick*="batedor"]');
+      if (nav) switchTab('batedor', nav);
+      var btn = document.getElementById('bat-subtab-suspeitos');
+      if (btn) switchBatTab('suspeitos', btn);
+      await _cgsLoad(true);
+      if (groupId) _cgsOpenDetalhe(groupId);
+    }
+  };
   closeModal('cgs-detalhe-modal');
   _addPlateAsAlvo(preferred);
 }
@@ -10879,6 +10894,7 @@ async function saveVehicle() {
   var notes  = document.getElementById('veh-notes').value.trim();
   var isAlvo = document.getElementById('veh-is-alvo').checked;
   var errEl  = document.getElementById('veh-form-error');
+  var targetFlow = _vehicleTargetFlow;
   if (!plate)  { errEl.textContent = 'Placa é obrigatória.'; return; }
   if (!listId) { errEl.textContent = 'Erro: lista não identificada.'; return; }
   errEl.textContent = '';
@@ -10905,6 +10921,7 @@ async function saveVehicle() {
     if (!r.ok) { throw new Error(responseData.detail || r.status); }
 
     closeModal('vehicle-modal');
+    _vehicleTargetFlow = null;
 
     // Limpa o formulário após salvar com sucesso
     _editVehicleId = null;
@@ -10930,7 +10947,14 @@ async function saveVehicle() {
     });
 
     // Feedback visual de sucesso
-    if (isAlvo) {
+    if (isAlvo && targetFlow && typeof targetFlow.restore === 'function') {
+      try {
+        await targetFlow.restore();
+      } catch (restoreErr) {
+        console.warn('[vehicle:save] restore alvo falhou:', restoreErr);
+      }
+      _flashMsg(targetFlow.message || ('🎯 ' + plate + ' salvo nos Alvos Rastreados!'), '#22c55e');
+    } else if (isAlvo) {
       _flashMsg('🎯 ' + plate + ' salvo nos Alvos Rastreados!', '#22c55e');
     } else {
       _flashMsg('✅ Veículo ' + plate + ' salvo com sucesso!', '#2563eb');
