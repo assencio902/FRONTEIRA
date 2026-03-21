@@ -5747,17 +5747,18 @@
 
 <!-- MODAL RELATÓRIO DO GRUPO SUSPEITO -->
 <!-- MODAL UNIFICADO DE RELATÓRIOS (Grupo Suspeito · Alvo Rastreado) -->
-<div class="modal-overlay" id="rel-modal" onclick="if(event.target===this)closeModal('rel-modal')">
+<div class="modal-overlay" id="rel-modal" onclick="if(event.target===this)closeRelModal(true)">
   <div class="modal modal-wide" style="max-width:940px;max-height:94vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2 style="margin:0;font-size:1rem;display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
         &#128196; Relat&oacute;rio &mdash; <span id="rel-modal-titulo" style="font-weight:800"></span>
       </h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        <button id="rel-btn-back" onclick="closeRelModal(true)" style="background:#1f2937;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#8592; Voltar</button>
         <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#128663; Ver rota</button>
-        <button onclick="_relExportarPDF()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128196; Exportar PDF</button>
+        <button onclick="_relSalvarNoPC()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128190; Salvar</button>
         <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
-        <button class="modal-close" onclick="closeModal('rel-modal')">&times;</button>
+        <button class="modal-close" onclick="closeRelModal(true)">&times;</button>
       </div>
     </div>
     <div id="rel-modal-body" style="overflow-y:auto;flex:1;padding:0 4px 8px"></div>
@@ -7330,6 +7331,7 @@ function closeVehicleTargetModal() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     if (document.getElementById('traj-map-modal').classList.contains('open')) { _fecharMapaOverlay(false); return; }
+    if (document.getElementById('rel-modal').classList.contains('open')) { closeRelModal(true); return; }
     if (document.getElementById('vehicle-modal').classList.contains('open')) { closeVehicleModal(); return; }
     if (document.getElementById('vehicle-target-modal').classList.contains('open')) { closeVehicleTargetModal(); return; }
     ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal'].forEach(closeModal);
@@ -8718,26 +8720,68 @@ var _relEngine = (function() {
            buildFooter:buildFooter, render:render };
 })();
 
-function _relExportarPDF() {
+function _relBuildExportHtmlDoc() {
   var body = document.getElementById('rel-modal-body');
-  if (!body) return;
-  var win = window.open('', '_blank', 'width=950,height=720');
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
-  win.document.write('<!DOCTYPE html><html lang="pt-br"><head>'
+  if (!body) return '';
+  return '<!DOCTYPE html><html lang="pt-br"><head>'
     + '<meta charset="utf-8"><title>Relatorio_' + _relPdfTitleSlug + '</title>'
     + '<style>*{box-sizing:border-box;margin:0;padding:0}'
     + 'body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13px;color:#111827;background:#fff;padding:24px 28px;line-height:1.5}'
     + 'table{width:100%;border-collapse:collapse}th,td{padding:7px 10px;font-size:12px}'
     + 'th{background:#f3f4f6;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#374151;text-align:left}'
-    + 'tr{border-bottom:1px solid #e5e7eb}.no-print{display:none}'
-    + '@page{size:A4 portrait;margin:14mm 12mm}@media print{body{padding:0}.no-print{display:none!important}}'
+    + 'tr{border-bottom:1px solid #e5e7eb}'
+    + '@page{size:A4 portrait;margin:14mm 12mm}@media print{body{padding:0}}'
     + '</style></head><body>'
-    + '<div style="text-align:right;margin-bottom:12px" class="no-print">'
-      + '<button onclick="window.print()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer">&#128438; Salvar como PDF / Imprimir</button>'
-      + '<button onclick="window.close()" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-left:8px">&#10005; Fechar</button>'
-    + '</div>'
-    + body.innerHTML + '</body></html>');
-  win.document.close(); win.focus();
+    + body.innerHTML + '</body></html>';
+}
+
+async function _relSalvarNoPC() {
+  var html = _relBuildExportHtmlDoc();
+  if (!html) return;
+  var filename = 'Relatorio_' + (_relPdfTitleSlug || 'relatorio') + '.html';
+  if (window.showSaveFilePicker && window.isSecureContext) {
+    try {
+      var handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: 'Relatório HTML',
+          accept: { 'text/html': ['.html'] }
+        }]
+      });
+      var writable = await handle.createWritable();
+      await writable.write(html);
+      await writable.close();
+      _flashMsg('✅ Relatório salvo no computador.', '#22c55e');
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+      console.warn('[relatorio] showSaveFilePicker indisponível:', err);
+    }
+  }
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+  _flashMsg('✅ Relatório baixado para o computador.', '#22c55e');
+}
+
+function _relExportarPDF() {
+  var html = _relBuildExportHtmlDoc();
+  if (!html) return;
+  var win = window.open('', '_blank', 'width=950,height=720');
+  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function() {
+    try { win.print(); } catch (e) {}
+  }, 250);
 }
 
 function _relInjectPrintStyle() {
@@ -8751,12 +8795,33 @@ function _relInjectPrintStyle() {
   document.head.appendChild(s);
 }
 
-function _relAbrirModal(titulo, html, mapaFn) {
+async function closeRelModal(restoreContext) {
+  var restoreFn = _relModalCloseRestoreFn;
+  _relModalCloseRestoreFn = null;
+  _relModalReturnFn = null;
+  _relCurrentMapaFn = null;
+  closeModal('rel-modal');
+  if (restoreContext && typeof restoreFn === 'function') {
+    try {
+      await restoreFn();
+    } catch (restoreErr) {
+      console.warn('[relatorio] retorno apos fechar falhou:', restoreErr);
+    }
+  }
+}
+
+function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel) {
   document.getElementById('rel-modal-titulo').textContent = titulo;
   document.getElementById('rel-modal-body').innerHTML = html;
   var btnMapa = document.getElementById('rel-btn-mapa');
   if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
-  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn); };
+  var btnBack = document.getElementById('rel-btn-back');
+  _relModalCloseRestoreFn = typeof restoreFn === 'function' ? restoreFn : null;
+  if (btnBack) {
+    btnBack.innerHTML = '&#8592; ' + (backLabel || 'Voltar');
+    btnBack.style.display = _relModalCloseRestoreFn ? 'flex' : 'none';
+  }
+  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
   _relInjectPrintStyle();
   openModal('rel-modal');
@@ -9127,7 +9192,7 @@ function _cgsGerarRelatorio() {
     _relEngine.section('4. Linha do Tempo \u2014 Passagens Conjuntas', timelineBody),
     _relEngine.buildFooter(now)
   ], 'rel-print');
-  _relAbrirModal(g.plates.join(' + '), _cgsHtml, _cgsVerRotaNoMapa);
+  _relAbrirModal(g.plates.join(' + '), _cgsHtml, _cgsVerRotaNoMapa, _cgsVoltarAoDetalhe, 'Voltar');
 }
 
 function _cgsExportarPDF() { _relExportarPDF(); } // compat: usa motor unificado
@@ -12857,6 +12922,7 @@ var _trajViewerReturn  = null; // { reopen: fn, label: string }
 var _trajMapContentHome = null;
 var _detailModalReturnFn = null;
 var _relModalReturnFn    = null;
+var _relModalCloseRestoreFn = null;
 var _mapaMarkers      = [];
 var _mapaInfoWindows  = [];
 var _mapaTrajetoria   = null;  // {plates:[], points:[{camera_id,ts,plate,cam_nome}]}
