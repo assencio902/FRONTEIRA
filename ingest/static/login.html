@@ -27,7 +27,8 @@
       min-height: 100vh;
       display: flex;
       align-items: stretch;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     /* ── Background animado ── */
@@ -548,6 +549,44 @@
       .card { min-height: 332px; padding: 28px 22px; }
       .brand-title { font-size: 2.1rem; margin-top: 4px; }
       .bg-line { display: none; }
+    }
+    @media (max-height: 820px) {
+      body {
+        align-items: flex-start;
+      }
+      .page {
+        min-height: auto;
+        justify-content: flex-start;
+        padding-top: 22px;
+        padding-bottom: 86px;
+      }
+      .left-panel {
+        gap: 18px;
+        transform: none;
+      }
+      .logo-ring {
+        width: 280px;
+        height: 280px;
+      }
+      .logo-bg {
+        width: 280px;
+        height: 280px;
+      }
+      .logo-bg img {
+        width: 206px;
+        height: 206px;
+      }
+      .brand-title {
+        font-size: 2.5rem;
+      }
+      .card {
+        min-height: 0;
+      }
+      .page-footer {
+        position: static;
+        margin-top: 14px;
+        padding-bottom: 10px;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
       .logo-ring,

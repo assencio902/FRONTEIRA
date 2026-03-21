@@ -1233,6 +1233,15 @@
     .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(250,204,21,.15); }
     .form-group input[type="color"] { padding:3px 6px; height:38px; cursor:pointer; }
     .form-error { color:var(--danger); font-size:12px; margin-top:4px; font-weight:500; }
+    .cfg-title { font-weight:700; font-size:.97rem; margin-bottom:20px; }
+    .cfg-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start; }
+    .cfg-card { padding:20px; }
+    .cfg-section-title { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:14px; font-weight:700; }
+    .cfg-note { font-size:.8rem; color:var(--muted); margin-bottom:14px; }
+    .cfg-note-compact { font-size:.78rem; color:var(--muted); margin-bottom:10px; }
+    .cfg-theme-list { display:flex; flex-direction:column; gap:8px; }
+    .cfg-theme-option { display:flex; align-items:center; gap:10px; cursor:pointer; padding:9px 13px; border-radius:8px; border:1px solid var(--border); transition:all .15s; }
+    .cfg-system-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
     .list-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(265px,1fr)); gap:16px; }
     .list-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; cursor:pointer; transition:all .15s; position:relative; }
     .list-card:hover { border-color:var(--accent); background:var(--card2); transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.15); }
@@ -3268,6 +3277,168 @@
       :root[data-theme="verde"] .brand-verde-title,
       :root:not([data-theme]) .brand-verde-title {
         font-size: clamp(28px, 3vw, 48px);
+      }
+    }
+    @media (max-width: 1366px), (max-height: 768px) {
+      :root {
+        --sidebar-w: 182px;
+        --sidebar-logo-max-h: calc(var(--sidebar-w) * 1.04);
+        --fs-base: 14px;
+        --fs-secondary: 13px;
+        --fs-card-title: 15px;
+        --fs-page-title: 18px;
+        --fs-subtitle: 16px;
+        --fs-menu: 13px;
+        --fs-button: 13px;
+        --fs-input: 13px;
+        --fs-table: 13px;
+        --fs-table-head: 12px;
+        --fs-label: 12px;
+      }
+      body {
+        line-height: 1.42;
+      }
+      #sidebar {
+        padding: 10px 0 8px;
+      }
+      .sidebar-logo {
+        padding: 10px 8px 10px;
+        margin-bottom: 4px;
+        gap: 6px;
+      }
+      .sidebar-section {
+        padding: 10px 12px 4px;
+        font-size: 9px;
+      }
+      .nav-item {
+        gap: 8px;
+        padding: 8px 12px;
+        margin: 1px 0;
+      }
+      .nav-item svg {
+        width: 15px;
+        height: 15px;
+      }
+      .user-info-bar {
+        padding: 8px 12px 6px;
+        gap: 6px;
+      }
+      .user-info-bar .uname {
+        font-size: 14px;
+      }
+      .user-info-bar .urole {
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .btn-logout {
+        width: min(100%, 150px);
+        padding: 8px 12px;
+      }
+      .sidebar-footer {
+        padding: 10px 12px;
+        font-size: 10px;
+      }
+      #topbar {
+        padding: 6px 14px;
+      }
+      #content {
+        padding: 12px 14px;
+      }
+      .btn {
+        height: 32px;
+        padding: 7px 12px;
+      }
+      .btn-sm {
+        height: 30px;
+        padding: 6px 10px;
+      }
+      .btn-xs {
+        height: 26px;
+        padding: 4px 8px;
+      }
+      .toolbar {
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .toolbar input,
+      .toolbar select {
+        height: 32px;
+        padding: 7px 10px;
+      }
+      .cards-row {
+        gap: 10px;
+        margin-bottom: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+      }
+      .card {
+        padding: 11px 12px;
+      }
+      .card-icon {
+        width: 30px;
+        height: 30px;
+        margin-left: 8px;
+      }
+      .card-label {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      .card-value {
+        font-size: 1.28rem;
+      }
+      .mapa-main {
+        height: min(54vh, 500px);
+        min-height: 360px;
+      }
+      :root[data-theme="verde"] #topbar,
+      :root:not([data-theme]) #topbar,
+      :root[data-theme="branco"] #topbar,
+      :root[data-theme="branco"] #topbar.top-header {
+        min-height: 58px;
+      }
+      :root[data-theme="verde"] .topbar-title-group,
+      :root:not([data-theme]) .topbar-title-group {
+        min-height: 58px;
+      }
+      :root[data-theme="verde"] .topbar-subtitle,
+      :root:not([data-theme]) .topbar-subtitle,
+      :root[data-theme="verde"] .topbar-subtitle .topo-texto,
+      :root:not([data-theme]) .topbar-subtitle .topo-texto {
+        min-height: 62px;
+      }
+      :root[data-theme="verde"] .brand-verde-title,
+      :root:not([data-theme]) .brand-verde-title {
+        font-size: clamp(24px, 2.8vw, 40px);
+      }
+      .cfg-title {
+        margin-bottom: 14px;
+        font-size: .92rem;
+      }
+      .cfg-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+      }
+      .cfg-card {
+        padding: 14px;
+      }
+      #tab-config .form-group {
+        gap: 5px;
+        margin-bottom: 12px;
+      }
+      #tab-config .form-group input,
+      #tab-config .form-group select,
+      #tab-config .form-group textarea {
+        min-height: 34px;
+        padding: 8px 10px;
+      }
+      #tab-config .cfg-section-title {
+        margin-bottom: 10px;
+      }
+      #tab-config .cfg-note {
+        margin-bottom: 10px;
+      }
+      .cfg-system-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
       }
     }
     .nav-admin-only { display:none; }
@@ -5572,13 +5743,13 @@
 
     <!-- ===== ABA CONFIGURA\u00c7\u00d5ES ===== -->
     <div id="tab-config" class="tab-pane">
-      <div style="font-weight:700;font-size:.97rem;margin-bottom:20px">&#9881;&#65039; Configura&#231;&#245;es</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px">
+      <div class="cfg-title">&#9881;&#65039; Configura&#231;&#245;es</div>
+      <div class="cfg-grid">
 
         <!-- MINHA CONTA -->
-        <div class="card" style="padding:20px">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128100; Minha Conta</div>
-          <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Usu&#225;rio: <strong id="cfg-me-username" style="color:var(--accent)"></strong></div>
+        <div class="card cfg-card">
+          <div class="cfg-section-title">&#128100; Minha Conta</div>
+          <div class="cfg-note">Usu&#225;rio: <strong id="cfg-me-username" style="color:var(--accent)"></strong></div>
           <div class="form-group">
             <label>Senha Atual</label>
             <input type="password" id="cfg-pw-current" placeholder="Digite sua senha atual" style="background:var(--input-bg)">
@@ -5597,15 +5768,15 @@
         </div>
 
         <!-- APAR\u00caNCIA -->
-        <div class="card" style="padding:20px">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#127912; Apar&#234;ncia</div>
-          <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Tema do sistema</div>
-          <div style="display:flex;flex-direction:column;gap:8px" id="cfg-theme-list">
-            <div data-theme="verde" onclick="applyTheme('verde')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+        <div class="card cfg-card">
+          <div class="cfg-section-title">&#127912; Apar&#234;ncia</div>
+          <div class="cfg-note-compact">Tema do sistema</div>
+          <div class="cfg-theme-list" id="cfg-theme-list">
+            <div data-theme="verde" onclick="applyTheme('verde')" class="cfg-theme-option">
               <span style="width:13px;height:13px;border-radius:50%;background:#4ade80;flex-shrink:0"></span>
               <span style="font-size:.85rem">Verde Escuro <span style="color:var(--muted);font-size:.72rem">(padr&#227;o)</span></span>
             </div>
-            <div data-theme="branco" onclick="applyTheme('branco')" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 13px;border-radius:8px;border:1px solid var(--border);transition:all .15s">
+            <div data-theme="branco" onclick="applyTheme('branco')" class="cfg-theme-option">
               <span style="width:13px;height:13px;border-radius:50%;background:#F8FAFC;border:1px solid #CBD5E1;flex-shrink:0"></span>
               <span style="font-size:.85rem">Branco</span>
             </div>
@@ -5613,8 +5784,8 @@
         </div>
 
         <!-- ATUALIZA\u00c7\u00c3O -->
-        <div class="card" style="padding:20px">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128260; Atualiza&#231;&#227;o Autom&#225;tica</div>
+        <div class="card cfg-card">
+          <div class="cfg-section-title">&#128260; Atualiza&#231;&#227;o Autom&#225;tica</div>
           <div class="form-group">
             <label>Intervalo de auto-refresh (aba Eventos)</label>
             <select id="cfg-refresh" onchange="saveRefreshSetting()">
@@ -5629,8 +5800,8 @@
         </div>
 
         <!-- ALERTAS -->
-        <div class="card" style="padding:20px">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">&#128276; Alertas &amp; Sons</div>
+        <div class="card cfg-card">
+          <div class="cfg-section-title">&#128276; Alertas &amp; Sons</div>
           <div class="form-group">
             <label>Som de alarme de placa monitorada</label>
             <select id="cfg-alarm-sound" onchange="saveCfgAlarmSound()">
@@ -5645,12 +5816,12 @@
         </div>
 
         <!-- SISTEMA (admin) -->
-        <div class="card" id="cfg-sistema" style="padding:20px;display:none;grid-column:1/-1">
-          <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;font-weight:700">
+        <div class="card cfg-card" id="cfg-sistema" style="display:none;grid-column:1/-1">
+          <div class="cfg-section-title">
             &#128295; Sistema
             <span style="font-size:.68rem;color:#f87171;background:rgba(248,113,113,.15);padding:1px 7px;border-radius:4px;margin-left:6px">Admin</span>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+          <div class="cfg-system-grid">
             <div>
               <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px">Vers&#227;o</div>
               <div style="font-weight:700;color:var(--accent)">Sistema v1.0</div>
