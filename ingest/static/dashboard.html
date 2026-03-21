@@ -107,6 +107,8 @@
     .sidebar-logo img { width:min(calc(100% + 20px), var(--sidebar-logo-max-w)); max-width:var(--sidebar-logo-max-w); height:auto; max-height:var(--sidebar-logo-max-h); object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
     .sidebar-logo-text { font-size:1.4rem; font-weight:var(--fw-system-name); letter-spacing:.18em; color:var(--accent); text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
     .topbar-title-group { display:flex; align-items:baseline; gap:14px; }
+    .topo-faixa-institucional { position:relative; overflow:hidden; isolation:isolate; }
+    .topo-faixa-institucional .topo-texto { position:relative; z-index:2; }
     .topbar-subtitle { font-size:14px; font-weight:700; color:var(--accent2); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; line-height:var(--lh-tight); }
     .sidebar-section { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--accent2); padding:16px 16px 8px; line-height:var(--lh-tight); font-weight:700; }
     .nav-item { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; border-left:4px solid transparent; color:var(--sidebar-text); font-size:var(--fs-menu); font-weight:500; transition:all .15s; user-select:none; line-height:var(--lh-tight); margin:2px 0; }
@@ -1790,9 +1792,17 @@
                 min-height: 92px;
                 padding-top: 0;
                 padding-bottom: 0;
+                padding-left: 0;
+                padding-right: 0;
                 align-items: stretch;
                 justify-content: center;
-                background: var(--sidebar);
+                background:
+                  linear-gradient(180deg, rgba(255,255,255,.02) 0%, rgba(0,0,0,.10) 100%),
+                  linear-gradient(45deg, rgba(188,174,121,.13) 25%, transparent 25%, transparent 75%, rgba(188,174,121,.13) 75%, rgba(188,174,121,.13) 100%),
+                  linear-gradient(45deg, rgba(69,85,52,.26) 25%, transparent 25%, transparent 75%, rgba(69,85,52,.26) 75%, rgba(69,85,52,.26) 100%),
+                  var(--sidebar);
+                background-size: 100% 100%, 26px 26px, 26px 26px, auto;
+                background-position: 0 0, 0 0, 13px 13px, 0 0;
                 box-shadow: none;
               }
     :root[data-theme="verde"] .topbar-title-group,
@@ -1878,9 +1888,44 @@
                 width: 100%;
                 min-height: 115px;
                 padding: 0 18px;
-                background: var(--sidebar);
+                background: transparent;
                 border-top: none;
               border-bottom: none;
+            }
+        :root[data-theme="verde"] .topo-faixa-institucional,
+        :root:not([data-theme]) .topo-faixa-institucional {
+              background: transparent;
+            }
+        :root[data-theme="verde"] .topo-faixa-institucional::before,
+        :root:not([data-theme]) .topo-faixa-institucional::before {
+              content:'';
+              position:absolute;
+              left:0;
+              right:0;
+              top:0;
+              bottom:0;
+              background-image:
+                linear-gradient(180deg, rgba(255,255,255,.015) 0%, rgba(17,24,12,.16) 100%),
+                linear-gradient(45deg, rgba(188,174,121,.14) 25%, transparent 25%, transparent 75%, rgba(188,174,121,.14) 75%, rgba(188,174,121,.14) 100%),
+                linear-gradient(45deg, rgba(69,85,52,.22) 25%, transparent 25%, transparent 75%, rgba(69,85,52,.22) 75%, rgba(69,85,52,.22) 100%);
+              background-size:100% 100%, 24px 24px, 24px 24px;
+              background-position:0 0, 0 0, 12px 12px;
+              opacity:.18;
+              pointer-events:none;
+              z-index:1;
+            }
+        :root[data-theme="verde"] .topo-faixa-institucional::after,
+        :root:not([data-theme]) .topo-faixa-institucional::after {
+              content:'';
+              position:absolute;
+              left:0;
+              right:0;
+              top:0;
+              bottom:0;
+              background:
+                linear-gradient(180deg, rgba(196,166,74,.02) 0%, rgba(196,166,74,0) 38%, rgba(0,0,0,0) 70%, rgba(0,0,0,.06) 100%);
+              pointer-events:none;
+              z-index:1;
             }
         :root[data-theme="verde"] .top-right.header-right,
         :root:not([data-theme]) .top-right.header-right {
@@ -1903,9 +1948,15 @@
     }
     :root[data-theme="verde"] #sidebar,
     :root:not([data-theme]) #sidebar {
-      background: var(--sidebar);
-      border-right: 1px solid rgba(196,166,74,.12);
-      box-shadow: 8px 0 24px rgba(0,0,0,.22);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02) 0%, rgba(0,0,0,.10) 100%),
+        linear-gradient(45deg, rgba(188,174,121,.13) 25%, transparent 25%, transparent 75%, rgba(188,174,121,.13) 75%, rgba(188,174,121,.13) 100%),
+        linear-gradient(45deg, rgba(69,85,52,.26) 25%, transparent 25%, transparent 75%, rgba(69,85,52,.26) 75%, rgba(69,85,52,.26) 100%),
+        var(--sidebar);
+      background-size: 100% 100%, 26px 26px, 26px 26px, auto;
+      background-position: 0 0, 0 0, 13px 13px, 0 0;
+      border-right: 1px solid rgba(196,166,74,.08);
+      box-shadow: 3px 0 10px rgba(0,0,0,.10);
     }
     :root[data-theme="verde"] .card,
     :root:not([data-theme]) .card,
@@ -5729,7 +5780,6 @@
   <div class="modal modal-wide" style="max-width:960px;max-height:94vh;display:flex;flex-direction:column">
     <div class="modal-header" style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-        <button onclick="closeModal('cgs-detalhe-modal')" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);padding:4px 10px;font-size:.8rem;cursor:pointer;white-space:nowrap">&#8592; Voltar</button>
         <h2 id="cgs-det-titulo" style="margin:0;font-size:1rem;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Detalhe do Grupo</h2>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
@@ -5752,7 +5802,6 @@
         &#128196; Relat&oacute;rio &mdash; <span id="rel-modal-titulo" style="font-weight:800"></span>
       </h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button id="rel-btn-back" onclick="closeRelModal(true)" style="background:#1f2937;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#8592; Voltar</button>
         <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#128663; Ver rota</button>
         <button onclick="_relSalvarNoPC()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128190; Salvar</button>
         <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
@@ -6612,7 +6661,7 @@ function _fmtProdNumber(value, maxDigits) {
 function _fmtProdDrogas(value) {
   var drogasKg = _prodNumber(value);
   if (drogasKg >= 1000) {
-    return _fmtProdNumber(drogasKg / 1000, 2) + ' t';
+    return _fmtProdNumber(drogasKg / 1000, 2) + ' T';
   }
   return _fmtProdNumber(drogasKg, 2) + ' kg';
 }
@@ -8790,12 +8839,7 @@ function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel) {
   document.getElementById('rel-modal-body').innerHTML = html;
   var btnMapa = document.getElementById('rel-btn-mapa');
   if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
-  var btnBack = document.getElementById('rel-btn-back');
   _relModalCloseRestoreFn = typeof restoreFn === 'function' ? restoreFn : null;
-  if (btnBack) {
-    btnBack.innerHTML = '&#8592; ' + (backLabel || 'Voltar');
-    btnBack.style.display = _relModalCloseRestoreFn ? 'flex' : 'none';
-  }
   _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
   _relInjectPrintStyle();
@@ -10010,10 +10054,10 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     if (_fparts.length) _filterDesc = ' <span style="font-size:.72rem;color:var(--accent2);font-weight:400">(\u00b7 ' + _fparts.join(' \u00b7 ') + ')</span>';
   }
 
-  document.getElementById('detail-modal-plate').innerHTML = '\uD83D\uDCCB Relat\u00F3rio \u2014 ' + plate + _filterDesc;
+  document.getElementById('detail-modal-plate').innerHTML = 'Placa ' + plate + _filterDesc;
   document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--muted)"><span class="spinner"></span> Analisando ' + plate + '...</p>';
   var _mb = document.getElementById('detail-modal-map-btn');
-  if (_mb) _mb.style.display = 'inline-flex';
+  if (_mb) _mb.style.display = 'none';
   openModal('detail-modal');
 
   var _url = '/api/vehicle/report?plate=' + encodeURIComponent(plate);
@@ -10038,18 +10082,11 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
 
-    // ---- 0: Botao Voltar ----
-    var backHtml = '';
-    if (_reportHistory.length > 0) {
-      var prevPlate = _reportHistory[_reportHistory.length - 1];
-      backHtml = '<div style="margin-bottom:10px"><button class="btn btn-outline btn-sm" onclick="_reportGoBack()">&#8592; Voltar para ' + prevPlate + '</button></div>';
-    }
-
     var reportWindowValue = (opts && opts.window) ? opts.window : '2h';
     var reportFromValue = (opts && opts.ts_from) ? _toLocalDTInput(new Date(opts.ts_from)) : '';
     var reportToValue = (opts && opts.ts_to) ? _toLocalDTInput(new Date(opts.ts_to)) : '';
     var reportFilterHtml = '<div style="margin-bottom:14px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
-      + '<div style="font-size:.78rem;color:#f8fafc;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">&#128197; Filtro de período</div>'
+      + '<div style="font-size:.76rem;color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">&#128197; Per\u00edodo da an\u00e1lise</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">'
       + '<label style="display:flex;flex-direction:column;gap:4px;font-size:.76rem;color:var(--muted)">Período'
       + '<select id="report-filter-window" class="cen-ctl" onchange="_reportWindowChange()" style="min-width:120px">'
@@ -10070,95 +10107,124 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       + '</div>'
       + '<button class="btn btn-outline btn-sm" onclick="_applyReportPeriodFilter()">Aplicar</button>'
       + '</div></div>';
-
-    // ---- 1: Header ----
-    var levelColor = d.level === 'alerta' ? 'badge-danger' : d.level === 'suspeito' ? 'badge-warning' : 'badge-info';
-    var sBadge = d.score >= 80 ? 'badge-danger' : d.score >= 40 ? 'badge-warning' : 'badge-info';
+    var _escPlate = plate.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var events = (d.events || []).slice();
+    var eventsChrono = events.slice().sort(function(a, b) {
+      return new Date(a && a.ts ? a.ts : 0) - new Date(b && b.ts ? b.ts : 0);
+    });
+    var firstEvent = eventsChrono.length ? eventsChrono[0] : null;
+    var lastEvent = eventsChrono.length ? eventsChrono[eventsChrono.length - 1] : null;
+    var partners = d.convoy_partners || [];
+    var totalPasses = d.summary ? d.summary.total_passes : events.length;
+    var camerasCount = d.summary ? d.summary.cameras_count : '—';
+    var partnersCount = d.summary ? d.summary.partners_count : partners.length;
     var avgConfLabel = (d.summary && d.summary.avg_confidence > 0) ? formatConfidencePercent(d.summary.avg_confidence) + '%' : '—';
     var domDirLabel = d.summary && d.summary.dom_direction
-      ? (d.summary.dom_direction === 'CRESCENTE'
-          ? '<span class="badge badge-info" style="font-size:.7rem">\u2191 CRESCENTE</span>'
-          : '<span class="badge badge-warning" style="font-size:.7rem">\u2193 DECRESCENTE</span>')
-      : '<span style="color:var(--muted)">—</span>';
-    var headerHtml = '<div style="display:grid;grid-template-columns:minmax(120px,150px) minmax(280px,1fr)' + (d.is_alvo ? ' minmax(220px,260px)' : '') + ';gap:12px;margin-bottom:14px;align-items:stretch">'
-      + '<div style="background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 18px;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:8px">'
-      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Score</div>'
-      + '<div style="font-size:2rem;font-weight:800;line-height:1;color:#fff">' + d.score + '</div>'
-      + '<div><span class="badge ' + sBadge + '" style="font-size:.74rem;padding:4px 10px;text-transform:uppercase">' + (d.level||'normal') + '</span></div>'
+      ? (d.summary.dom_direction === 'CRESCENTE' ? '\u2191 CRESCENTE' : '\u2193 DECRESCENTE')
+      : '—';
+    var riskLabel = d.level === 'alerta' ? 'ALTO' : d.level === 'suspeito' ? 'M\u00c9DIO' : 'NORMAL';
+    var riskValueColor = d.level === 'alerta' ? '#fca5a5' : d.level === 'suspeito' ? '#fcd34d' : '#86efac';
+    var riskBadgeBg = d.level === 'alerta' ? 'rgba(220,38,38,.22)' : d.level === 'suspeito' ? 'rgba(217,119,6,.22)' : 'rgba(34,197,94,.14)';
+    var riskBadgeBorder = d.level === 'alerta' ? 'rgba(239,68,68,.32)' : d.level === 'suspeito' ? 'rgba(245,158,11,.32)' : 'rgba(34,197,94,.22)';
+    var patternLabel = d.is_alvo ? 'ALVO RASTREADO' : (partners.length ? 'COMBOIO / ACOMPANHADO' : ((Number(camerasCount) || 0) > 1 ? 'MULTI-C\u00c2MERA' : 'MONITORAMENTO'));
+    var lastSeenLabel = lastEvent ? fmtTs(lastEvent.ts) : '—';
+    var headerBadgesHtml = (d.badges || []).map(function(b){
+      var bg = b === 'ALVO' ? 'rgba(220,38,38,.75)' : (b === 'MULTI-C\u00c2MERA' || b === 'COMBOIO') ? 'rgba(202,138,4,.6)' : 'rgba(59,130,246,.4)';
+      var color = b === 'ALVO' ? '#fff' : (b === 'MULTI-C\u00c2MERA' || b === 'COMBOIO') ? '#fff7db' : '#dbeafe';
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:' + bg + ';color:' + color + ';font-size:.68rem;font-weight:800">' + b + '</span>';
+    }).join('');
+    var historyBtnHtml = '';
+    if (_reportHistory.length > 0) {
+      var prevPlate = _reportHistory[_reportHistory.length - 1];
+      historyBtnHtml = '<button class="btn btn-outline btn-sm" onclick="_reportGoBack()" style="font-size:.8rem;font-weight:700">&#8592; Anterior: ' + prevPlate + '</button>';
+    }
+    function _plateMetricCard(label, value, sub, valueColor) {
+      return '<div style="border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.12)">'
+        + '<div style="font-size:.69rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">' + label + '</div>'
+        + '<div style="font-size:1.55rem;font-weight:800;color:' + (valueColor || '#fff') + ';line-height:1.1">' + value + '</div>'
+        + (sub ? '<div style="font-size:.78rem;color:var(--muted);margin-top:6px">' + sub + '</div>' : '')
+        + '</div>';
+    }
+    function _plateInfoCard(label, value, tone) {
+      return '<div style="border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.03)">'
+        + '<div style="font-size:.69rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">' + label + '</div>'
+        + '<div style="font-size:.95rem;font-weight:800;color:' + (tone || '#f8fafc') + '">' + value + '</div>'
+        + '</div>';
+    }
+    function _plateSection(title, body, accentColor, borderColor) {
+      return '<div style="margin-bottom:14px;border:1px solid ' + (borderColor || 'rgba(255,255,255,.08)') + ';background:rgba(255,255,255,.03);border-radius:14px;padding:14px 16px">'
+        + '<div style="font-size:.9rem;font-weight:800;margin-bottom:12px;color:' + (accentColor || 'var(--accent2)') + ';text-transform:uppercase;letter-spacing:.05em">' + title + '</div>'
+        + body
+        + '</div>';
+    }
+    var actionButtonsHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end">';
+    if (historyBtnHtml) actionButtonsHtml += historyBtnHtml;
+    if (!d.is_alvo) {
+      actionButtonsHtml += '<button class="btn btn-sm" style="background:#dc2626;color:#fff;font-weight:700" onclick="_addPlateAsAlvo(\'' + _escPlate + '\')">&#127919; Criar alvo</button>';
+    }
+    actionButtonsHtml += '<button class="btn btn-sm" style="background:#1d4ed8;color:#fff;font-weight:700" onclick="_abrirRelatorioPlacaIndividual()">&#128196; Gerar relat\u00f3rio</button>'
+      + '<button class="btn btn-sm" style="background:#15803d;color:#fff;font-weight:700" onclick="verTrajetoriaNoMapa()">&#127760; Ver rota no mapa</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()" style="font-size:.8rem;font-weight:700">&#128202; Ver score</button>'
+      + '</div>';
+    var headerHtml = '<div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 18px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02))">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">'
+      + '<div style="min-width:260px;flex:1">'
+      + '<div style="font-size:.72rem;color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">1. Identifica\u00e7\u00e3o &amp; avalia\u00e7\u00e3o t\u00e1tica</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+      + '<div style="font-size:1.5rem;font-weight:900;color:#fff;font-family:monospace;letter-spacing:.04em">' + plate + '</div>'
+      + '<span style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;background:' + riskBadgeBg + ';border:1px solid ' + riskBadgeBorder + ';color:' + riskValueColor + ';font-size:.75rem;font-weight:800">' + riskLabel + '</span>'
+      + headerBadgesHtml
       + '</div>'
-      + '<div style="background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 18px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">'
-      + '<div>'
-      + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Resumo operacional</div>'
-      + '<div style="font-size:1.05rem;font-weight:800;color:#fff;font-family:monospace;letter-spacing:.04em">' + plate + '</div>'
+      + '<div style="font-size:.84rem;color:var(--muted);line-height:1.5">Tela reorganizada para destacar o que a placa fez, com quem ela anda e qual decis\u00e3o operacional faz sentido agora.</div>'
       + '</div>'
-      + '<div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:55%">'
-      + (d.badges||[]).map(function(b){
-          var cl = b==='ALVO'?'badge-danger':(b==='MULTI-C\u00c2MERA'||b==='COMBOIO')?'badge-warning':'badge-info';
-          return '<span class="badge ' + cl + '" style="font-size:.68rem">' + b + '</span>';
-        }).join('')
+      + actionButtonsHtml
       + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px">'
+      + _plateMetricCard('Risco', riskLabel, d.is_alvo ? 'placa j\u00e1 cadastrada como alvo' : 'leitura operacional atual', riskValueColor)
+      + _plateMetricCard('Score', d.score, 'pontua\u00e7\u00e3o individual', '#fff')
+      + _plateMetricCard('Passagens', totalPasses, firstEvent ? 'desde ' + fmtTs(firstEvent.ts) : '', '#fff')
+      + _plateMetricCard('C\u00e2meras', camerasCount, 'locais distintos', '#fff')
+      + _plateMetricCard('Parceiros', partnersCount, partners.length ? 'h\u00e1 acompanhamento confirmado' : 'sem comboio confirmado', partners.length ? '#fca5a5' : '#fff')
+      + _plateMetricCard('Conf. m\u00e9dia', avgConfLabel, 'qualidade das leituras', '#fff')
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">'
-      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Passagens</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.total_passes : ((d.events || []).length)) + '</div></div>'
-      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Câmeras</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.cameras_count : '—') + '</div></div>'
-      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Parceiros</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + (d.summary ? d.summary.partners_count : '—') + '</div></div>'
-      + '<div style="background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 12px"><div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Conf. média</div><div style="font-size:1.05rem;font-weight:700;color:#fff">' + avgConfLabel + '</div></div>'
-      + '</div>'
-      + '<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Direção predominante: ' + domDirLabel + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px">'
+      + _plateInfoCard('Dire\u00e7\u00e3o predominante', domDirLabel, d.summary && d.summary.dom_direction === 'CRESCENTE' ? '#93c5fd' : d.summary && d.summary.dom_direction === 'DECRESCENTE' ? '#fcd34d' : '#f8fafc')
+      + _plateInfoCard('Padr\u00e3o observado', patternLabel, '#f8fafc')
+      + _plateInfoCard('\u00daltimo visto', lastSeenLabel, '#f8fafc')
       + '</div>'
       + (d.is_alvo
-        ? '<div style="background:linear-gradient(180deg,rgba(139,92,246,.18),rgba(139,92,246,.08));border:1px solid rgba(139,92,246,.4);border-radius:14px;padding:14px 18px">'
-          + '<div style="font-size:.69rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">\uD83C\uDFAF Alvo rastreado</div>'
-          + '<div style="color:#ddd6fe;font-weight:800;font-family:monospace;font-size:1rem;margin-bottom:6px">' + plate + '</div>'
-          + (d.alvo_descricao ? '<div style="font-size:.8rem;color:#ede9fe;margin-bottom:6px">' + d.alvo_descricao + '</div>' : '<div style="font-size:.8rem;color:#c4b5fd;margin-bottom:6px">Sem descrição registrada.</div>')
-          + (d.alvo_list ? '<div style="font-size:.74rem;color:#c4b5fd">Lista: ' + d.alvo_list + '</div>' : '')
+        ? '<div style="margin-top:12px;border:1px solid rgba(168,85,247,.38);background:rgba(124,58,237,.12);border-radius:12px;padding:12px 14px">'
+          + '<div style="font-size:.76rem;font-weight:800;color:#e9d5ff;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#127919; V\u00ednculo com alvo cadastrado</div>'
+          + '<div style="font-size:.92rem;font-weight:800;color:#fff;font-family:monospace;margin-bottom:5px">' + plate + '</div>'
+          + '<div style="font-size:.8rem;color:#ede9fe">' + (d.alvo_descricao || 'Sem descri\u00e7\u00e3o registrada para este alvo.') + '</div>'
+          + (d.alvo_list ? '<div style="font-size:.76rem;color:#d8b4fe;margin-top:6px">Lista: ' + d.alvo_list + '</div>' : '')
           + '</div>'
         : '')
       + '</div>';
 
-    // ---- 2: Acoes ----
-    var actionsHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px">'
-      + '<div style="padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
-      + '<div style="font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Ações principais</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
-      + (!d.is_alvo
-        ? '<button class="btn btn-sm" style="background:rgba(139,92,246,.78);color:#fff;font-weight:700" onclick="_addPlateAsAlvo(\'' + plate.replace(/'/g,"\'") + '\')">\uD83C\uDFAF Cadastrar como Alvo</button>'
-        : '')
-      + '<button class="btn btn-outline btn-sm" onclick="_abrirRelatorioPlacaIndividual()" style="font-size:.8rem;font-weight:700">&#128196; Exportar</button>'
-      + '</div></div>'
-      + '<div style="padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px">'
-      + '<div style="font-size:.72rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Ferramentas</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
-      + '<button class="btn btn-outline btn-sm" onclick="_toggleScoreBreakdown()">&#128202; Score</button>'
-      + '</div></div>'
-      + '</div>';
-
-    // ---- 3: Decisao Operacional ----
     var lastDec = d.last_decision;
     var decLabels = { confirmado: '&#9989; Suspeito confirmado', falso_positivo: '&#10060; Falso positivo', ignorar: '&#9197; Ignorado' };
     var decBg = { confirmado: 'rgba(220,38,38,.2)', falso_positivo: 'rgba(34,197,94,.1)', ignorar: 'rgba(100,100,100,.15)' };
     var decBorder = { confirmado: 'rgba(220,38,38,.5)', falso_positivo: 'rgba(34,197,94,.3)', ignorar: 'rgba(120,120,120,.3)' };
-    var _escPlate = plate.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var _sc = d.score;
     var _lv = d.level || 'normal';
-    var decisionHtml = '<div style="margin-bottom:14px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border-radius:12px;padding:14px 16px">'
-      + '<div style="font-size:.8rem;color:#f8fafc;margin-bottom:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em">&#128203; Decis\u00e3o Operacional</div>'
-      + (lastDec
-        ? '<div style="background:' + (decBg[lastDec.decision]||'rgba(100,100,100,.1)') + ';border:1px solid ' + (decBorder[lastDec.decision]||'rgba(120,120,120,.3)') + ';border-radius:7px;padding:8px 12px;margin-bottom:8px;font-size:.82rem">'
+    var decisionHtml = _plateSection('2. Decis\u00e3o operacional',
+      (lastDec
+        ? '<div style="background:' + (decBg[lastDec.decision]||'rgba(100,100,100,.1)') + ';border:1px solid ' + (decBorder[lastDec.decision]||'rgba(120,120,120,.3)') + ';border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem;line-height:1.5">'
           + '<strong>' + (decLabels[lastDec.decision]||lastDec.decision) + '</strong>'
           + (lastDec.note ? ' \u2014 ' + lastDec.note : '')
           + ' <span style="color:var(--muted);font-size:.72rem">por ' + (lastDec.operator||'sistema') + ' em ' + fmtTs(lastDec.created_at) + '</span></div>'
-        : '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Nenhuma decis\u00e3o registrada ainda.</div>')
-      + '<div style="display:flex;flex-wrap:wrap;gap:7px">'
+        : '<div style="margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:.82rem;color:var(--muted)">Nenhuma decis\u00e3o registrada para esta placa at\u00e9 o momento.</div>')
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
       + '<button class="btn btn-sm" style="background:rgba(220,38,38,.7);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'confirmado\')">&#9989; Confirmar suspeito</button>'
       + '<button class="btn btn-sm" style="background:rgba(34,197,94,.5);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'falso_positivo\')">&#10060; Falso positivo</button>'
       + '<button class="btn btn-outline btn-sm" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'ignorar\')">&#9197; Ignorar</button>'
-      + '</div></div>';
+      + '</div>',
+      'var(--accent2)'
+    );
 
-    // ---- 4: Score Breakdown ----
-    var breakdownHtml = '<div id="score-breakdown-panel" style="display:none;margin-bottom:14px">'
-      + '<h3 style="font-size:.88rem;font-weight:700;margin:0 0 8px;color:var(--accent2)">&#128202; Breakdown do Score</h3>'
+    var breakdownHtml = '<div id="score-breakdown-panel" style="display:none;margin:12px 0 14px">'
+      + '<div style="font-size:.84rem;font-weight:800;margin:0 0 8px;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em">&#128202; Composi\u00e7\u00e3o do score</div>'
       + '<div class="table-wrap"><table><thead><tr><th>Fator</th><th>Val.</th><th>Mult.</th><th>Pts</th><th>Obs</th></tr></thead><tbody>'
       + (d.score_breakdown||[]).map(function(b){
           return '<tr><td style="font-size:.8rem">' + b.label + '</td>'
@@ -10170,14 +10236,20 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       + '<tr style="font-weight:700;background:rgba(139,92,246,.1)"><td colspan="3">TOTAL</td><td>+' + d.score + '</td><td></td></tr>'
       + '</tbody></table></div></div>';
 
-    // ---- 5: Parceiros de Comboio ----
-    var partners = d.convoy_partners || [];
     var partnersHtml;
     if (partners.length) {
       var _allPartnerPlates = partners.map(function(p){ return p.plate; });
       var _groupForComboio = [plate].concat(_allPartnerPlates);
-      partnersHtml = '<h3 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#fca5a5">&#128663;&#128101; Parceiros em Comboio (' + partners.length + ')</h3>'
-        + '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:.76rem;color:#fca5a5">'
+      var maxPartnerCameras = partners.reduce(function(acc, p) { return Math.max(acc, Number(p.cameras_together || 0)); }, 0);
+      var maxPartnerSpan = partners.reduce(function(acc, p) { return Math.max(acc, Number(p.trip_span_sec || 0)); }, 0);
+      var maxPartnerSpanLabel = maxPartnerSpan >= 60 ? Math.round(maxPartnerSpan / 60) + ' min' : (maxPartnerSpan ? maxPartnerSpan + ' s' : '—');
+      partnersHtml = _plateSection('4. Parceiros confirmados',
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px">'
+        + _plateInfoCard('Parceiros confirmados', partners.length, '#fca5a5')
+        + _plateInfoCard('Maior cruzamento', maxPartnerCameras + ' c\u00e2m.', '#f8fafc')
+        + _plateInfoCard('Maior span', maxPartnerSpanLabel, '#f8fafc')
+        + '</div>'
+        + '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:.76rem;color:#fca5a5">'
         + '&#9888; S\u00f3 aparece quem passou <strong>junto na mesma c\u00e2mera</strong> (janela \u2264 300s) em <strong>\u22652 c\u00e2meras</strong> distintas, com viagem \u22641 hora.'
         + '</div>'
         + '<div class="table-wrap"><table><thead><tr><th>Parceiro</th><th>C\u00e2m. confirmadas</th><th>Trip span</th><th>\u00daltimo</th><th>C\u00e2meras</th><th>A\u00e7\u00f5es</th></tr></thead><tbody>'
@@ -10191,17 +10263,22 @@ async function openBatedorReport(plate, _fromHistory, opts) {
               + '<td style="text-align:center">' + (tripMin > 0 ? tripMin + ' min' : (p.trip_span_sec||0) + 's') + '</td>'
               + '<td style="font-size:.75rem">' + fmtTs(p.last_seen) + '</td>'
               + '<td style="font-size:.73rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="' + camNames + '">' + camNames + '</td>'
-              + '<td><button class="btn btn-xs" style="background:rgba(139,92,246,.45);color:#fff" onclick="openBatedorReport(\'' + p.plate.replace(/'/g,"\'") + '\')">\uD83D\uDCC4 Relat\u00f3rio</button></td>'
+              + '<td><button class="btn btn-xs" style="background:rgba(139,92,246,.45);color:#fff" onclick="openBatedorReport(\'' + p.plate.replace(/'/g,"\\'") + '\')">\uD83D\uDCC4 Relat\u00f3rio</button></td>'
               + '</tr>';
           }).join('')
         + '</tbody></table></div>'
-        + '<div style="margin-top:8px"><button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="openComboioReport(\'' + plate.replace(/'/g,"\\'") + '\',' + JSON.stringify(_groupForComboio).replace(/'/g,"\\'") + ')">&#128663;&#128663; Relat\u00f3rio do Comboio</button></div>';
+        + '<div style="margin-top:10px"><button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="openComboioReport(\'' + plate.replace(/'/g,"\\'") + '\',' + JSON.stringify(_groupForComboio).replace(/'/g,"\\'") + ')">&#128663;&#128663; Relat\u00f3rio do comboio</button></div>',
+        '#fca5a5',
+        'rgba(239,68,68,.18)'
+      );
     } else {
-      partnersHtml = '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-size:.82rem;color:#86efac;margin:8px 0">&#10003; Nenhum parceiro em comboio confirmado na janela de ' + w + '. <small style="color:var(--muted)">(Requer mesma c\u00e2mera \u00d72+ c\u00e2meras, trip \u22641h)</small></div>';
+      partnersHtml = _plateSection('4. Parceiros confirmados',
+        '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px 14px;font-size:.82rem;color:#86efac">&#10003; Nenhum parceiro em comboio confirmado na janela de ' + reportWindowValue + '. <small style="color:var(--muted)">(Requer mesma c\u00e2mera \u00d72+ c\u00e2meras, trip \u22641h)</small></div>',
+        '#86efac',
+        'rgba(34,197,94,.18)'
+      );
     }
 
-    // ---- 6: Passagens ----
-    var events = d.events || [];
     events.forEach(function(ev){ _imgMeta[ev.id] = { camName: ev.camera_name||ev.camera_id||'', ts: ev.ts||'' }; });
     var evRows = events.map(function(ev) {
       var dtObj = ev.ts ? new Date(ev.ts) : null;
@@ -10210,7 +10287,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       var confPct = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) : 0;
       var confColor = confPct >= 85 ? '#4ade80' : confPct >= 60 ? '#facc15' : '#f87171';
       var thumb = ev.image_path
-        ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=100&h=68" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\'") + '\')" style="border-radius:4px;cursor:pointer">'
+        ? '<img class="thumb" src="/api/events/' + ev.id + '/thumbnail?w=100&h=68" loading="lazy" onclick="openImage(' + ev.id + ',\'' + plate.replace(/'/g,"\\'") + '\')" style="border-radius:4px;cursor:pointer">'
         : '<div class="thumb-none">-</div>';
       return '<tr><td>' + thumb + '</td>'
         + '<td style="font-size:.78rem;white-space:nowrap">' + dtFmt + '</td>'
@@ -10220,12 +10297,19 @@ async function openBatedorReport(plate, _fromHistory, opts) {
         + '<td style="text-align:center;font-size:.75rem"><span style="display:inline-block;min-width:52px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:' + confColor + ';font-weight:800">' + conf + '</span></td>'
         + '</tr>';
     }).join('');
-    var evHtml = '<h3 style="font-size:.95rem;font-weight:800;margin:14px 0 8px;color:#fff">&#128247; Passagens registradas (' + events.length + ')</h3>'
+    var evSummaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px">'
+      + _plateInfoCard('Total no per\u00edodo', events.length, '#f8fafc')
+      + _plateInfoCard('Primeira passagem', firstEvent ? fmtTs(firstEvent.ts) : '—', '#f8fafc')
+      + _plateInfoCard('\u00daltima passagem', lastSeenLabel, '#f8fafc')
+      + '</div>';
+    var evHtml = _plateSection('5. Passagens registradas',
+      evSummaryHtml
       + (events.length
         ? '<div class="table-wrap"><table><thead><tr><th>Foto</th><th>Data/Hora</th><th>C\u00e2mera</th><th>Dire\u00e7\u00e3o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + evRows + '</tbody></table></div>'
-        : '<p style="color:var(--muted);font-size:.82rem">Nenhuma passagem no per\u00edodo.</p>');
+        : '<p style="color:var(--muted);font-size:.82rem">Nenhuma passagem no per\u00edodo.</p>'),
+      '#f8fafc'
+    );
 
-    // ---- Threat Center (Phase 1 + 2) — dados do _cenAllItems ----
     var threatCenterHtml = '';
     var _cenItem = (_cenAllItems || []).find(function(it){ return it.plate === plate; });
     if (_cenItem && _cenItem.threat_center) {
@@ -10233,9 +10317,6 @@ async function openBatedorReport(plate, _fromHistory, opts) {
       var _rs  = _tc.route_similarity || {};
       var _matchedLabel  = _tc.matched_target  ? '<span style="color:#c4b5fd;font-weight:700">&#9989; Sim</span>' : '<span style="color:var(--muted)">&#8212; Não</span>';
       var _routeLabel    = _rs.matched         ? '<span style="color:#d8b4fe;font-weight:700">&#9989; Sim</span>'  : '<span style="color:var(--muted)">&#8212; Não</span>';
-      var _simPct        = (_rs.similarity_ratio != null && _rs.similarity_ratio > 0)
-        ? '<div><span style="color:var(--muted)">Similaridade:</span> <span style="color:#d8b4fe;font-weight:700">' + Math.round(_rs.similarity_ratio * 100) + '%</span></div>'
-        : '';
       var _badgesHtml = (_tc.threat_badges && _tc.threat_badges.length)
         ? '<div style="margin-bottom:8px">' + _tc.threat_badges.map(function(b){ return '<span class="badge" style="background:rgba(139,92,246,.4);color:#ddd8fe;font-size:.72rem">' + b + '</span>'; }).join(' ') + '</div>'
         : '';
@@ -10246,31 +10327,43 @@ async function openBatedorReport(plate, _fromHistory, opts) {
         ? '<div style="font-size:.78rem;margin-bottom:4px"><span style="color:var(--muted)">Alvo mais similar:</span> <span style="color:#c4b5fd;font-weight:700">' + _rs.best_alvo + '</span></div>'
         : '';
       var _commonCams = (_rs.common_cameras && _rs.common_cameras.length)
-        ? '<div style="font-size:.76rem;margin-bottom:4px"><span style="color:var(--muted)">Câmeras em comum:</span> ' + _rs.common_cameras.join(', ') + '</div>'
+        ? '<div style="font-size:.76rem;margin-bottom:4px"><span style="color:var(--muted)">C\u00e2meras em comum:</span> ' + _rs.common_cameras.join(', ') + '</div>'
         : '';
       var _commonCities = (_rs.common_cities && _rs.common_cities.length)
         ? '<div style="font-size:.76rem"><span style="color:var(--muted)">Cidades em comum:</span> ' + _rs.common_cities.join(', ') + '</div>'
         : '';
-      threatCenterHtml = '<div style="margin-bottom:14px;border:1px solid rgba(139,92,246,.35);border-radius:10px;padding:12px 16px;background:rgba(139,92,246,.07)">'
-        + '<div style="font-size:.8rem;color:var(--accent2);margin-bottom:10px;font-weight:700;text-transform:uppercase">&#127919; Central de Ameaças — Phase 1 &amp; 2</div>'
+      var _tcParecer = _tc.matched_target
+        ? 'Parecer: a placa possui v\u00ednculo direto com alvo cadastrado ou correspond\u00eancia operacional relevante.'
+        : _rs.matched
+          ? 'Parecer: a placa n\u00e3o est\u00e1 cadastrada como alvo, mas repetiu rota compat\u00edvel com alvo monitorado.'
+          : 'Parecer: sem v\u00ednculo direto com alvo, mantendo monitoramento apenas pelo padr\u00e3o operacional.';
+      threatCenterHtml = _plateSection('3. Central de amea\u00e7as',
+        '<div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.22);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem;color:#ede9fe;line-height:1.5">' + _tcParecer + '</div>'
         + _badgesHtml
-        + '<div style="display:flex;flex-wrap:wrap;gap:8px 24px;font-size:.8rem;margin-bottom:8px">'
-        + '<div><span style="color:var(--muted)">Alvo cadastrado:</span> ' + _matchedLabel + '</div>'
-        + '<div><span style="color:var(--muted)">Rota parecida:</span> ' + _routeLabel + '</div>'
-        + _simPct
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px">'
+        + _plateInfoCard('Alvo cadastrado', _matchedLabel, '#ede9fe')
+        + _plateInfoCard('Rota parecida', _routeLabel, '#ede9fe')
+        + _plateInfoCard('Similaridade', (_rs.similarity_ratio != null && _rs.similarity_ratio > 0) ? (Math.round(_rs.similarity_ratio * 100) + '%') : '—', '#ede9fe')
         + '</div>'
-        + _matchPlates + _bestAlvo + _commonCams + _commonCities
-        + '</div>';
+        + _matchPlates + _bestAlvo + _commonCams + _commonCities,
+        'var(--accent2)',
+        'rgba(139,92,246,.35)'
+      );
+    } else {
+      threatCenterHtml = _plateSection('3. Central de amea\u00e7as',
+        '<div style="padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:.82rem;color:var(--muted)">Nenhum v\u00ednculo relevante com alvo ou rota similar foi identificado para esta placa no momento.</div>',
+        'var(--accent2)'
+      );
     }
 
     document.getElementById('detail-modal-body').innerHTML =
-      backHtml + reportFilterHtml + headerHtml + actionsHtml + decisionHtml + breakdownHtml + threatCenterHtml + partnersHtml + evHtml;
+      headerHtml + breakdownHtml + reportFilterHtml + decisionHtml + threatCenterHtml + partnersHtml + evHtml;
 
     _mapaTrajetoria = { plates: [plate], points: events.map(function(ev){
       return { camera_id: ev.camera_id, ts: ev.ts||'', plate: plate, cam_nome: ev.camera_name||ev.camera_id||'' };
     })};
     _batedorReportData = { plate: plate, d: d };
-    if (_mb) _mb.style.display = events.length ? '' : 'none';
+    if (_mb) _mb.style.display = 'none';
   } catch(e) {
     document.getElementById('detail-modal-body').innerHTML = '<p style="color:var(--danger)">Erro ao carregar relat\u00f3rio: ' + e.message + '</p>';
   }
