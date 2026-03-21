@@ -5735,8 +5735,8 @@
         <h2 id="cgs-det-titulo" style="margin:0;font-size:1rem;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Detalhe do Grupo</h2>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
         <button onclick="_cgsCriarAlvo()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127919; Criar alvo</button>
+        <button onclick="_cgsGerarRelatorio()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#128196; Gerar Relatório</button>
         <button onclick="_cgsVerRotaNoMapa()" style="background:#15803d;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer">&#127760; Ver rota no mapa</button>
         <button class="modal-close" onclick="closeModal('cgs-detalhe-modal')">&times;</button>
       </div>
@@ -10076,11 +10076,7 @@ async function _addPlateAsAlvo(plate) {
     sel.innerHTML = listsCache.map(function(l){
       return '<option value="' + l.id + '">' + (l.name || ('Lista #' + l.id)) + '</option>';
     }).join('');
-    if (listsCache.length === 1) {
-      sel.value = String(listsCache[0].id);
-      _confirmVehicleTargetChoice();
-      return;
-    }
+    if (listsCache.length) sel.value = String(listsCache[0].id);
     openModal('vehicle-target-modal');
     setTimeout(function(){ sel.focus(); }, 80);
   } catch (e) {
