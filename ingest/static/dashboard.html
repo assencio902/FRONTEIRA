@@ -7297,12 +7297,41 @@ function refreshCurrent() {
 // ===== MODAIS =====
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function closeVehicleModal() { closeModal('vehicle-modal'); _vehicleTargetFlow = null; }
-function closeVehicleTargetModal() { closeModal('vehicle-target-modal'); _vehicleTargetFlow = null; }
+async function _cancelVehicleTargetFlow() {
+  var targetFlow = _vehicleTargetFlow;
+  _vehicleTargetFlow = null;
+  closeModal('vehicle-target-modal');
+  closeModal('vehicle-modal');
+  if (targetFlow && typeof targetFlow.restore === 'function') {
+    try {
+      await targetFlow.restore();
+    } catch (restoreErr) {
+      console.warn('[vehicle:target] restore cancelado falhou:', restoreErr);
+    }
+  }
+}
+function closeVehicleModal() {
+  if (_vehicleTargetFlow && typeof _vehicleTargetFlow.restore === 'function') {
+    _cancelVehicleTargetFlow();
+    return;
+  }
+  closeModal('vehicle-modal');
+  _vehicleTargetFlow = null;
+}
+function closeVehicleTargetModal() {
+  if (_vehicleTargetFlow && typeof _vehicleTargetFlow.restore === 'function') {
+    _cancelVehicleTargetFlow();
+    return;
+  }
+  closeModal('vehicle-target-modal');
+  _vehicleTargetFlow = null;
+}
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     if (document.getElementById('traj-map-modal').classList.contains('open')) { _fecharMapaOverlay(false); return; }
+    if (document.getElementById('vehicle-modal').classList.contains('open')) { closeVehicleModal(); return; }
+    if (document.getElementById('vehicle-target-modal').classList.contains('open')) { closeVehicleTargetModal(); return; }
     ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal'].forEach(closeModal);
   }
 });
