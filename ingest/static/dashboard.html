@@ -4139,34 +4139,9 @@
         <!-- ══════════════════════════════════════════════════════════════ -->
         <div id="cen-view-placas" style="display:none">
           <div style="margin-bottom:14px;border:1px solid rgba(196,166,74,.18);border-radius:16px;padding:18px 20px;background:linear-gradient(180deg,rgba(196,166,74,.08),rgba(255,255,255,.02))">
-            <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
-              <div style="min-width:280px;flex:1">
-                <div style="font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">&#128269; Investigacao sob demanda</div>
-                <div style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:6px">Pesquise uma placa especifica e veja rota, passagens, parceiros e contexto operacional.</div>
-                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-                  <div style="font-size:.84rem;color:var(--muted);line-height:1.5;flex:1;min-width:260px">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
-                  <label class="cen-lbl" style="margin:0;min-width:190px;align-self:flex-start">
-                    Per&iacute;odo de an&aacute;lise:
-                    <select id="cen-single-window" onchange="_cenSingleWindowChange()" class="cen-ctl" style="min-width:190px">
-                      <option value="6h">6 horas</option>
-                      <option value="24h" selected>24 horas</option>
-                      <option value="7d">7 dias</option>
-                      <option value="30d">30 dias</option>
-                      <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-              <div style="min-width:220px;max-width:320px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.12)">
-                <div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#128161; Foco da analise</div>
-                <div style="display:flex;flex-direction:column;gap:5px;font-size:.8rem;color:var(--text)">
-                  <span>&#128506; Por onde a placa andou</span>
-                  <span>&#128101; Com quem ela circulou</span>
-                  <span>&#127919; Se ja existe vinculo operacional</span>
-                  <span>&#128196; Relatorio pronto para salvar ou imprimir</span>
-                </div>
-              </div>
-            </div>
+            <div style="font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">&#128269; Investigacao sob demanda</div>
+            <div style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:6px">Pesquise uma placa especifica e veja rota, passagens, parceiros e contexto operacional.</div>
+            <div style="font-size:.84rem;color:var(--muted);line-height:1.5;max-width:1100px">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
           </div>
 
           <div class="cards-row" style="margin-bottom:12px">
@@ -4202,6 +4177,15 @@
                 oninput="_cenSinglePlateInput(this)"
                 onkeydown="if(event.key==='Enter'){ _cenSingleSearchFromForm(); }"
                 class="cen-ctl cen-ctl-plate">
+            </label>
+            <label class="cen-lbl">Per&iacute;odo:
+              <select id="cen-single-window" onchange="_cenSingleWindowChange(this)" class="cen-ctl">
+                <option value="6h">6 horas</option>
+                <option value="24h" selected>24 horas</option>
+                <option value="7d">7 dias</option>
+                <option value="30d">30 dias</option>
+                <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
+              </select>
             </label>
             <label class="cen-lbl">Dire&ccedil;&atilde;o:
               <select id="cen-single-direction" class="cen-ctl">
@@ -5971,7 +5955,7 @@
         <button id="rel-btn-target" onclick="_relCriarAlvo()" style="background:#b91c1c;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127919; Criar alvo</button>
         <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127760; Ver mapa</button>
         <button onclick="_relSalvarNoPC()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128190; Salvar</button>
-        <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
+        <button id="rel-btn-print" onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
         <button class="modal-close" onclick="closeRelModal(true)">&times;</button>
       </div>
     </div>
@@ -7527,19 +7511,38 @@ async function _cancelVehicleTargetFlow() {
     }
   }
 }
-function closeVehicleModal() {
-  if (_vehicleTargetFlow && typeof _vehicleTargetFlow.restore === 'function') {
-    _cancelVehicleTargetFlow();
-    return;
+
+function _vehicleTargetFocusChooser() {
+  var sel = document.getElementById('vehicle-target-list');
+  if (sel) setTimeout(function(){ sel.focus(); }, 80);
+}
+
+function _vehicleTargetBackStep() {
+  var targetFlow = _vehicleTargetFlow;
+  if (!targetFlow || typeof targetFlow.restore !== 'function') return false;
+  if (targetFlow.stage === 'vehicle-form') {
+    targetFlow.stage = 'target-choice';
+    closeModal('vehicle-modal');
+    var vehErr = document.getElementById('veh-form-error');
+    if (vehErr) vehErr.textContent = '';
+    var targetErr = document.getElementById('vehicle-target-error');
+    if (targetErr) targetErr.textContent = '';
+    var sel = document.getElementById('vehicle-target-list');
+    if (sel && targetFlow.listId) sel.value = String(targetFlow.listId);
+    openModal('vehicle-target-modal');
+    _vehicleTargetFocusChooser();
+    return true;
   }
+  _cancelVehicleTargetFlow();
+  return true;
+}
+function closeVehicleModal() {
+  if (_vehicleTargetBackStep()) return;
   closeModal('vehicle-modal');
   _vehicleTargetFlow = null;
 }
 function closeVehicleTargetModal() {
-  if (_vehicleTargetFlow && typeof _vehicleTargetFlow.restore === 'function') {
-    _cancelVehicleTargetFlow();
-    return;
-  }
+  if (_vehicleTargetBackStep()) return;
   closeModal('vehicle-target-modal');
   _vehicleTargetFlow = null;
 }
@@ -8273,13 +8276,25 @@ function _cenSinglePlateInput(el) {
   if (el.value !== clean) el.value = clean;
 }
 
-function _cenSingleWindowChange() {
+function _cenSingleGetWindowValue() {
   var win = document.getElementById('cen-single-window');
+  return (win && win.value) || '24h';
+}
+
+function _cenSingleSetWindowControls(value) {
+  value = value || '24h';
+  var el = document.getElementById('cen-single-window');
+  if (el) el.value = value;
+}
+
+function _cenSingleWindowChange(sourceEl) {
+  var selected = (sourceEl && sourceEl.value) || _cenSingleGetWindowValue();
   var row = document.getElementById('cen-single-date-row');
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
-  if (!win || !row) return;
-  var isCustom = win.value === 'custom';
+  if (!row) return;
+  _cenSingleSetWindowControls(selected);
+  var isCustom = selected === 'custom';
   row.style.display = isCustom ? 'flex' : 'none';
   if (isCustom && fromEl && toEl && (!fromEl.value || !toEl.value)) {
     var now = new Date();
@@ -8298,7 +8313,11 @@ function _cenSingleApplyOptsToForm(opts, force) {
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   if (plateEl && (force || !plateEl.value) && _cenSingleState.plate) plateEl.value = _cenSingleState.plate;
-  if (winEl && (force || !winEl.value)) winEl.value = opts.window || '24h';
+  if (winEl && (force || !winEl.value)) {
+    _cenSingleSetWindowControls(opts.window || '24h');
+  } else {
+    _cenSingleSetWindowControls(_cenSingleGetWindowValue());
+  }
   if (dirEl && (force || !dirEl.value)) dirEl.value = opts.direction || '';
   if (confEl && (force || !confEl.value)) confEl.value = String(opts.min_confidence || 0);
   if (minCamEl && (force || !minCamEl.value)) minCamEl.value = String(opts.min_cameras != null ? opts.min_cameras : 2);
@@ -8438,14 +8457,13 @@ function _cenSingleBuildCentralUrl(plate, opts) {
 }
 
 function _cenSingleReadOpts() {
-  var winEl = document.getElementById('cen-single-window');
   var dirEl = document.getElementById('cen-single-direction');
   var confEl = document.getElementById('cen-single-confidence');
   var minCamEl = document.getElementById('cen-single-min-cameras');
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   var opts = _cenSingleDefaultOpts();
-  opts.window = winEl ? (winEl.value || '24h') : '24h';
+  opts.window = _cenSingleGetWindowValue();
   opts.direction = dirEl ? (dirEl.value || null) : null;
   opts.min_confidence = confEl ? (parseFloat(confEl.value || '0') || 0) : 0;
   opts.min_cameras = minCamEl ? (parseInt(minCamEl.value || '0', 10) || 0) : 0;
@@ -8774,9 +8792,40 @@ function _cenSingleOpenMap() {
   _verRotaNaMapa(_cenSingleState.plate, tsFrom, tsTo, events.length + ' passagem(ns)');
 }
 
+async function _cenSingleRestoreReportModal(plate) {
+  plate = String(plate || (_cenSingleState && _cenSingleState.plate) || '').trim().toUpperCase();
+  var nav = document.querySelector('#sidebar .nav-item[onclick*="batedor"]');
+  if (nav && typeof switchTab === 'function') switchTab('batedor', nav);
+  var subTab = document.getElementById('bat-subtab-placas');
+  if (subTab && typeof switchBatTab === 'function') switchBatTab('placas', subTab);
+  if ((!_batedorReportData || !_batedorReportData.d) && _cenSingleState && _cenSingleState.report) {
+    _batedorReportData = { plate: plate || _cenSingleState.plate || '', d: _cenSingleState.report };
+  }
+  if (_batedorReportData && _batedorReportData.d) {
+    _abrirRelatorioPlacaIndividual();
+    return;
+  }
+  if (plate) {
+    await _cenSingleSearch(plate, (_cenSingleState && _cenSingleState.opts) || _cenSingleDefaultOpts());
+  }
+}
+
+function _cenSingleStartTargetFlow(plate) {
+  plate = String(plate || (_cenSingleState && _cenSingleState.plate) || '').trim().toUpperCase();
+  if (!plate) return;
+  _vehicleTargetFlow = {
+    stage: 'target-choice',
+    message: '🎯 Alvo salvo com sucesso!',
+    restore: async function() {
+      await _cenSingleRestoreReportModal(plate);
+    }
+  };
+  _addPlateAsAlvo(plate);
+}
+
 function _cenSingleCreateTarget() {
   if (!_cenSingleState.report || _cenSingleState.report.is_alvo) return;
-  _addPlateAsAlvo(_cenSingleState.plate);
+  _cenSingleStartTargetFlow(_cenSingleState.plate);
 }
 
 function _cenSingleClear() {
@@ -9249,6 +9298,7 @@ function _cgsCriarAlvo() {
   }
   var groupId = g.id;
   _vehicleTargetFlow = {
+    stage: 'target-choice',
     message: '🎯 Alvo salvo com sucesso!',
     restore: async function() {
       var nav = document.querySelector('#sidebar .nav-item[onclick*="batedor"]');
@@ -9626,15 +9676,17 @@ async function closeRelModal(restoreContext) {
   }
 }
 
-function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn) {
+function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn, showPrintBtn) {
   document.getElementById('rel-modal-titulo').textContent = titulo;
   document.getElementById('rel-modal-body').innerHTML = html;
   var btnMapa = document.getElementById('rel-btn-mapa');
   var btnTarget = document.getElementById('rel-btn-target');
+  var btnPrint = document.getElementById('rel-btn-print');
   if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
   if (btnTarget) { _relCurrentCreateTargetFn = createTargetFn || null; btnTarget.style.display = createTargetFn ? 'flex' : 'none'; }
+  if (btnPrint) btnPrint.style.display = showPrintBtn === false ? 'none' : 'flex';
   _relModalCloseRestoreFn = typeof restoreFn === 'function' ? restoreFn : null;
-  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn); };
+  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn, showPrintBtn); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
   _relInjectPrintStyle();
   openModal('rel-modal');
@@ -9971,9 +10023,17 @@ function _abrirRelatorioPlacaIndividual() {
     null,
     null,
     d.is_alvo ? null : function() {
+      _vehicleTargetFlow = {
+        stage: 'target-choice',
+        message: '🎯 Alvo salvo com sucesso!',
+        restore: async function() {
+          await _cenSingleRestoreReportModal(plate);
+        }
+      };
       closeRelModal(false);
       _addPlateAsAlvo(plate);
-    }
+    },
+    false
   );
 }
 // -- Relat�rio do Grupo Suspeito ----------------------------------------------
@@ -11238,11 +11298,14 @@ function _toggleScoreBreakdown() {
 async function _addPlateAsAlvo(plate) {
   plate = String(plate || '').trim().toUpperCase();
   if (!plate) return;
+  var keepCurrentContext = !!(_vehicleTargetFlow && typeof _vehicleTargetFlow.restore === 'function');
   closeModal('detail-modal');
-  var vehTab = document.querySelector('.nav-item[onclick*="veiculos"]');
-  if (vehTab) switchTab('veiculos', vehTab);
-  document.getElementById('view-list-detail').style.display = 'none';
-  document.getElementById('view-listas').style.display = 'block';
+  if (!keepCurrentContext) {
+    var vehTab = document.querySelector('.nav-item[onclick*="veiculos"]');
+    if (vehTab) switchTab('veiculos', vehTab);
+    document.getElementById('view-list-detail').style.display = 'none';
+    document.getElementById('view-listas').style.display = 'block';
+  }
   try {
     if (!listsCache || !listsCache.length) {
       await loadLists();
@@ -11258,9 +11321,10 @@ async function _addPlateAsAlvo(plate) {
     sel.innerHTML = listsCache.map(function(l){
       return '<option value="' + l.id + '">' + (l.name || ('Lista #' + l.id)) + '</option>';
     }).join('');
-    if (listsCache.length) sel.value = String(listsCache[0].id);
+    if (_vehicleTargetFlow && _vehicleTargetFlow.listId) sel.value = String(_vehicleTargetFlow.listId);
+    else if (listsCache.length) sel.value = String(listsCache[0].id);
     openModal('vehicle-target-modal');
-    setTimeout(function(){ sel.focus(); }, 80);
+    _vehicleTargetFocusChooser();
   } catch (e) {
     alert('Erro ao preparar cadastro em Veículos: ' + e.message);
   }
@@ -11268,7 +11332,11 @@ async function _addPlateAsAlvo(plate) {
 
 function _confirmVehicleTargetChoice() {
   var plate = (document.getElementById('vehicle-target-plate').value || '').trim().toUpperCase();
-  var listId = parseInt(document.getElementById('vehicle-target-list').value || '0', 10);
+  var selEl = document.getElementById('vehicle-target-list');
+  var listId = parseInt(selEl.value || '0', 10);
+  var listName = selEl && selEl.options && selEl.selectedIndex >= 0
+    ? (selEl.options[selEl.selectedIndex].text || ('Lista #' + listId))
+    : ('Lista #' + listId);
   var errEl = document.getElementById('vehicle-target-error');
   if (!plate) {
     errEl.textContent = 'Placa não informada.';
@@ -11277,6 +11345,12 @@ function _confirmVehicleTargetChoice() {
   if (!listId) {
     errEl.textContent = 'Escolha uma lista.';
     return;
+  }
+  if (_vehicleTargetFlow) {
+    _vehicleTargetFlow.stage = 'vehicle-form';
+    _vehicleTargetFlow.listId = listId;
+    _vehicleTargetFlow.listName = listName;
+    _vehicleTargetFlow.message = '🎯 Alvo salvo na lista "' + listName + '"!';
   }
   closeModal('vehicle-target-modal');
   openListDetail(listId);
