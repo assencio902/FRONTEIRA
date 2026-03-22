@@ -4138,12 +4138,6 @@
         <!-- PAINEL: PLACAS INDIVIDUAIS (consulta aprofundada)             -->
         <!-- ══════════════════════════════════════════════════════════════ -->
         <div id="cen-view-placas" style="display:none">
-          <div style="margin-bottom:14px;border:1px solid rgba(196,166,74,.18);border-radius:16px;padding:18px 20px;background:linear-gradient(180deg,rgba(196,166,74,.08),rgba(255,255,255,.02))">
-            <div style="font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">&#128269; Investigacao sob demanda</div>
-            <div style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:6px">Pesquise uma placa especifica e veja rota, passagens, parceiros e contexto operacional.</div>
-            <div style="font-size:.84rem;color:var(--muted);line-height:1.5;max-width:1100px">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
-          </div>
-
           <div class="cards-row" style="margin-bottom:12px">
             <div class="card">
               <div class="card-icon">&#128663;</div>
@@ -9632,18 +9626,25 @@ function _relBuildExportHtmlDoc() {
     + body.innerHTML + '</body></html>';
 }
 
-async function _relSalvarNoPC() {
-  _relExportarPDF();
-}
-
-function _relExportarPDF() {
+function _relAbrirDocumentoExportado() {
   var html = _relBuildExportHtmlDoc();
-  if (!html) return;
+  if (!html) return null;
   var win = window.open('', '_blank', 'width=950,height=720');
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
+  if (!win) return null;
   win.document.write(html);
   win.document.close();
   win.focus();
+  return win;
+}
+
+async function _relSalvarNoPC() {
+  var win = _relAbrirDocumentoExportado();
+  if (!win) { alert('Permita pop-ups para abrir o relatório e salvar.'); }
+}
+
+function _relExportarPDF() {
+  var win = _relAbrirDocumentoExportado();
+  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
   setTimeout(function() {
     try { win.print(); } catch (e) {}
   }, 250);
