@@ -3441,6 +3441,41 @@
         gap: 12px;
       }
     }
+    @media (max-height: 720px) {
+      :root {
+        --sidebar-w: 176px;
+        --sidebar-logo-max-h: calc(var(--sidebar-w) * 0.96);
+        --fs-menu: 12px;
+      }
+      #sidebar {
+        padding: 8px 0 6px;
+      }
+      .sidebar-logo {
+        padding: 8px 8px 8px;
+        margin-bottom: 2px;
+        gap: 4px;
+      }
+      .sidebar-logo img {
+        max-height: var(--sidebar-logo-max-h);
+      }
+      .sidebar-section {
+        padding: 8px 10px 4px;
+        font-size: 9px;
+      }
+      .nav-item {
+        gap: 7px;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+      .nav-item svg {
+        width: 14px;
+        height: 14px;
+      }
+      .sidebar-footer {
+        padding: 8px 10px;
+        font-size: 10px;
+      }
+    }
     .nav-admin-only { display:none; }
     .traj-num-label { background:transparent !important; border:none !important; box-shadow:none !important; color:#000 !important; font-weight:800 !important; font-size:.7rem !important; padding:0 !important; }
     .traj-num-label::before { display:none !important; }
