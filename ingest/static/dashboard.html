@@ -102,7 +102,7 @@
       --sidebar-logo-max-h: calc(var(--sidebar-w) * 1.42);
     }
     body { font-family: system-ui,-apple-system,sans-serif; font-size:var(--fs-base); line-height:var(--lh-base); font-weight:var(--fw-body); background:var(--bg); color:var(--text); display:flex; min-height:100vh; }
-    #sidebar { width:var(--sidebar-w); background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; padding:20px 0 16px; z-index:100; }
+    #sidebar { width:var(--sidebar-w); background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; padding:20px 0 16px; z-index:100; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-gutter:stable; }
     .sidebar-logo { padding:16px 12px 18px; display:flex; flex-direction:column; align-items:center; gap:8px; border-bottom:1px solid var(--border); margin-bottom:8px; overflow:visible; }
     .sidebar-logo img { width:min(calc(100% + 20px), var(--sidebar-logo-max-w)); max-width:var(--sidebar-logo-max-w); height:auto; max-height:var(--sidebar-logo-max-h); object-fit:contain; display:block; mix-blend-mode:multiply; filter:contrast(1.1); }
     .sidebar-logo-text { font-size:1.4rem; font-weight:var(--fw-system-name); letter-spacing:.18em; color:var(--accent); text-align:center; line-height:1.3; text-shadow:0 0 10px rgba(250,204,21,.45); }
@@ -4003,10 +4003,10 @@
     <!-- ===== ABA BATEDOR ===== -->
     <div id="tab-batedor" class="tab-pane">
       <div class="sub-tabs" id="bat-sub-tabs">
-        <div class="sub-tab" data-bat="placas" onclick="switchBatTab('placas',this)" id="bat-subtab-placas">
+        <div class="sub-tab active" data-bat="placas" onclick="switchBatTab('placas',this)" id="bat-subtab-placas">
           &#128203; Placas Individuais
         </div>
-        <div class="sub-tab active" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
+        <div class="sub-tab" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
           &#128101; Grupos Suspeitos
         </div>
         <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)" id="bat-subtab-alvos">
@@ -7418,11 +7418,19 @@ function switchTab(name, el) {
   if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
-    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
-    if (!batName || batName === 'suspeitos') _cgsLoad(true);
-    else if (batName === 'placas')  { _cenSingleInit(); _cenSingleFocusPlateInput(); }
+    var batName = activeBat ? activeBat.getAttribute('data-bat') : 'placas';
+    if (!batName || batName === 'placas') {
+      var placasTab = document.getElementById('bat-subtab-placas');
+      if (placasTab) switchBatTab('placas', placasTab);
+      else { _cenSwitchView('placas'); _cenSingleInit(); _cenSingleFocusPlateInput(); }
+    }
+    else if (batName === 'suspeitos') _cgsLoad(true);
     else if (batName === 'alvos')   loadAlvos();
-    else _cgsLoad(true);
+    else {
+      var fallbackPlacasTab = document.getElementById('bat-subtab-placas');
+      if (fallbackPlacasTab) switchBatTab('placas', fallbackPlacasTab);
+      else { _cenSwitchView('placas'); _cenSingleInit(); _cenSingleFocusPlateInput(); }
+    }
   }
   if (name === 'veiculos') { loadLists(); }
   if (name === 'cameras')  loadCameras();
