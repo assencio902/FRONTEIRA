@@ -4194,8 +4194,8 @@
             <label class="cen-lbl">Per&iacute;odo:
               <select id="cen-single-window" onchange="_cenSingleWindowChange()" class="cen-ctl">
                 <option value="6h">6 horas</option>
-                <option value="24h">24 horas</option>
-                <option value="7d" selected>7 dias</option>
+                <option value="24h" selected>24 horas</option>
+                <option value="7d">7 dias</option>
                 <option value="30d">30 dias</option>
                 <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
               </select>
@@ -4243,12 +4243,6 @@
           </div>
 
           <div id="cen-single-statusline" class="status-line" style="margin-bottom:12px"></div>
-
-          <div id="cen-single-body" style="border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);padding:18px 20px">
-            <div style="text-align:center;color:var(--muted);padding:24px 10px">
-              Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a an&aacute;lise detalhada.
-            </div>
-          </div>
 
           <!-- elementos legados mantidos apenas por compatibilidade -->
           <input type="hidden" id="cen-interval" value="60">
@@ -8189,7 +8183,7 @@ function _cenSwitchView(view) {
 
 function _cenSingleDefaultOpts() {
   return {
-    window: '7d',
+    window: '24h',
     ts_from: null,
     ts_to: null,
     direction: null,
@@ -8300,7 +8294,7 @@ function _cenSingleApplyOptsToForm(opts, force) {
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   if (plateEl && (force || !plateEl.value) && _cenSingleState.plate) plateEl.value = _cenSingleState.plate;
-  if (winEl && (force || !winEl.value)) winEl.value = opts.window || '7d';
+  if (winEl && (force || !winEl.value)) winEl.value = opts.window || '24h';
   if (dirEl && (force || !dirEl.value)) dirEl.value = opts.direction || '';
   if (confEl && (force || !confEl.value)) confEl.value = String(opts.min_confidence || 0);
   if (minCamEl && (force || !minCamEl.value)) minCamEl.value = String(opts.min_cameras != null ? opts.min_cameras : 2);
@@ -8433,7 +8427,7 @@ function _cenSingleBuildCentralUrl(plate, opts) {
     url += '&ts_from=' + encodeURIComponent(opts.ts_from);
     url += '&ts_to=' + encodeURIComponent(opts.ts_to);
   } else {
-    url += '&window=' + encodeURIComponent(opts.window || '7d');
+    url += '&window=' + encodeURIComponent(opts.window || '24h');
   }
   if (opts.direction) url += '&direcao=' + encodeURIComponent(opts.direction);
   return url;
@@ -8447,7 +8441,7 @@ function _cenSingleReadOpts() {
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   var opts = _cenSingleDefaultOpts();
-  opts.window = winEl ? (winEl.value || '7d') : '7d';
+  opts.window = winEl ? (winEl.value || '24h') : '24h';
   opts.direction = dirEl ? (dirEl.value || null) : null;
   opts.min_confidence = confEl ? (parseFloat(confEl.value || '0') || 0) : 0;
   opts.min_cameras = minCamEl ? (parseInt(minCamEl.value || '0', 10) || 0) : 0;
