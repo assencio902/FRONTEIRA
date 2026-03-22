@@ -4135,126 +4135,130 @@
         </div><!-- /cen-view-grupos -->
 
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <!-- PAINEL: PLACAS INDIVIDUAIS (legado)                            -->
+        <!-- PAINEL: PLACAS INDIVIDUAIS (consulta aprofundada)             -->
         <!-- ══════════════════════════════════════════════════════════════ -->
-                <div id="cen-view-placas" style="display:none">
-          <div class="cards-row">
-          <div class="card"><div class="card-icon">&#128203;</div><div class="card-label card-label-special">Placas em aten&ccedil;&atilde;o</div><div class="card-value" id="cen-total">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128663;</div><div class="card-label card-label-special">Com acompanhamento</div><div class="card-value" id="cen-multi">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#128293;</div><div class="card-label card-label-special">Top score individual</div><div class="card-value" id="cen-top-score">&#8212;</div></div>
-          <div class="card"><div class="card-icon">&#127919;</div><div class="card-label card-label-special">Alvos monitorados</div><div class="card-value" id="cen-alvos">&#8212;</div></div>
+        <div id="cen-view-placas" style="display:none">
+          <div style="margin-bottom:14px;border:1px solid rgba(196,166,74,.18);border-radius:16px;padding:18px 20px;background:linear-gradient(180deg,rgba(196,166,74,.08),rgba(255,255,255,.02))">
+            <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap">
+              <div style="min-width:280px;flex:1">
+                <div style="font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">&#128269; Investigacao sob demanda</div>
+                <div style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:6px">Pesquise uma placa especifica e veja rota, passagens, parceiros e contexto operacional.</div>
+                <div style="font-size:.84rem;color:var(--muted);line-height:1.5">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
+              </div>
+              <div style="min-width:220px;max-width:320px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.12)">
+                <div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#128161; Foco da analise</div>
+                <div style="display:flex;flex-direction:column;gap:5px;font-size:.8rem;color:var(--text)">
+                  <span>&#128506; Por onde a placa andou</span>
+                  <span>&#128101; Com quem ela circulou</span>
+                  <span>&#127919; Se ja existe vinculo operacional</span>
+                  <span>&#128196; Relatorio pronto para salvar ou imprimir</span>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <div class="cards-row" style="margin-bottom:12px">
+            <div class="card">
+              <div class="card-icon">&#128663;</div>
+              <div class="card-label card-label-special">Placa analisada</div>
+              <div class="card-value" id="cen-single-card-plate">&#8212;</div>
+              <div class="card-sub" id="cen-single-card-plate-sub">Aguardando pesquisa</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">&#128293;</div>
+              <div class="card-label card-label-special">Score / risco</div>
+              <div class="card-value" id="cen-single-card-score">&#8212;</div>
+              <div class="card-sub" id="cen-single-card-score-sub">Sem an&aacute;lise carregada</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">&#128340;</div>
+              <div class="card-label card-label-special">&Uacute;ltimo visto</div>
+              <div class="card-value" id="cen-single-card-last" style="font-size:.92rem">&#8212;</div>
+              <div class="card-sub" id="cen-single-card-last-sub">Sem passagens no per&iacute;odo</div>
+            </div>
+            <div class="card">
+              <div class="card-icon">&#128101;</div>
+              <div class="card-label card-label-special">Parceiros confirmados</div>
+              <div class="card-value" id="cen-single-card-partners">&#8212;</div>
+              <div class="card-sub" id="cen-single-card-partners-sub">Nenhuma consulta em andamento</div>
+            </div>
+          </div>
+
           <div class="cen-tb">
-          <!-- Placa -->
-          <label class="cen-lbl">&#128269; Placa:
-            <input type="text" id="cen-filter-plate" placeholder="ABC1234"
-              maxlength="7"
-              oninput="_cenPlateInput(this)"
-              onkeydown="if(event.key==='Enter'&&this.value.trim())openBatedorReport(this.value.trim().toUpperCase())"
-              class="cen-ctl cen-ctl-plate">
-          </label>
-          <!-- Período -->
-          <label class="cen-lbl">Per&iacute;odo:
-            <select id="cen-window" onchange="cenWindowChange()" class="cen-ctl">
-              <option value="1h" selected>1 hora</option>
-              <option value="2h">2 horas</option>
-              <option value="3h">3 horas</option>
-              <option value="6h">6 horas</option>
-              <option value="12h">12 horas</option>
-              <option value="24h">24 horas</option>
-              <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-            </select>
-          </label>
-          <!-- Mín. câmeras -->
-          <span id="cen-filter-cameras"><label class="cen-lbl">M&iacute;n. c&acirc;meras:
-            <select id="cen-min-cameras" onchange="cenApplyFilter()" class="cen-ctl">
-              <option value="0">Todas</option>
-              <option value="1">&gt;= 1</option>
-              <option value="2" selected>&gt;= 2</option>
-              <option value="3">&gt;= 3</option>
-              <option value="4">&gt;= 4</option>
-              <option value="5">&gt;= 5</option>
-            </select>
-          </label></span>
-          <!-- Janela/câm -->
-          <label class="cen-lbl">&#9201; Janela/c&acirc;m:
-            <select id="cen-cowin" onchange="loadCentral(true)" class="cen-ctl">
-              <option value="60">1 min</option>
-              <option value="120">2 min</option>
-              <option value="300" selected>5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-              <option value="1800">30 min</option>
-              <option value="3600">1 hora</option>
-            </select>
-          </label>
-          <!-- Grupo -->
-          <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
-            <select id="cen-gsizes" onchange="cenGroupSizeChange()" class="cen-ctl"
-              title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">
-              <option value="2" selected>2 ve&iacute;culos juntos</option>
-              <option value="3+">3 ve&iacute;culos ou mais</option>
-            </select>
-          </label>
-          <!-- Modo -->
-          <label class="cen-lbl">&#128110; Modo:
-            <select id="cen-ordermode" onchange="cenOrderModeChange()" class="cen-ctl">
-              <option value="any" selected>Qualquer ordem</option>
-              <option value="leader_front">L&iacute;der na frente</option>
-            </select>
-          </label>
-          <span id="cen-leader-opts" style="display:none;align-items:center;gap:8px">
-            <label class="cen-lbl">&#127942; L&iacute;der &gt;=
-              <input id="cen-leader-ratio" type="number" min="50" max="100" step="5" value="70" class="cen-ctl cen-ctl-narrow">%
+            <label class="cen-lbl">&#128269; Placa:
+              <input type="text" id="cen-single-plate" placeholder="ABC1D23" maxlength="7"
+                oninput="_cenSinglePlateInput(this)"
+                onkeydown="if(event.key==='Enter'){ _cenSingleSearchFromForm(); }"
+                class="cen-ctl cen-ctl-plate">
             </label>
-            <label id="cen-payload-label" class="cen-lbl" style="display:none">&#128230; Payload 1&ordm; &le;
-              <input id="cen-payload-max" type="number" min="0" max="5" step="1" value="0" class="cen-ctl cen-ctl-xnarrow"> c&acirc;m.
+            <label class="cen-lbl">Per&iacute;odo:
+              <select id="cen-single-window" onchange="_cenSingleWindowChange()" class="cen-ctl">
+                <option value="6h">6 horas</option>
+                <option value="24h">24 horas</option>
+                <option value="7d" selected>7 dias</option>
+                <option value="30d">30 dias</option>
+                <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
+              </select>
             </label>
-          </span>
-          <!-- Risco -->
-          <label class="cen-lbl">&#128308; Risco:
-            <select id="cen-risco" onchange="cenApplyFilter()" class="cen-ctl">
-              <option value="">Todos</option>
-              <option value="ALTO">&#128293; Alto</option>
-              <option value="MÉDIO">&#9888; M&eacute;dio</option>
-              <option value="BAIXO">&#128994; Baixo</option>
-            </select>
-          </label>
-          <!-- Ações -->
-          <button class="cen-btn-apply cen-btn-search" onclick="loadCentral(true)">&#128269; Buscar</button>
-          <button class="cen-btn-clear" onclick="_resetCenFilters()">Limpar</button>
-          <!-- Período personalizado -->
-          <span class="date-range-row" id="cen-date-row">
-            <span class="cen-lbl">De</span>
-            <input type="datetime-local" id="cen-ts-from" class="cen-ctl">
-            <span class="cen-lbl">At&eacute;</span>
-            <input type="datetime-local" id="cen-ts-to" class="cen-ctl">
-            <button class="cen-btn-apply" onclick="loadCentral(true)">&#9654; Aplicar</button>
-          </span>
-          <!-- Campo oculto — lido por _cenScheduleNext/_resetCenFilters -->
+            <label class="cen-lbl">Dire&ccedil;&atilde;o:
+              <select id="cen-single-direction" class="cen-ctl">
+                <option value="">Todas</option>
+                <option value="CRESCENTE">&#8593; Crescente</option>
+                <option value="DECRESCENTE">&#8595; Decrescente</option>
+              </select>
+            </label>
+            <label class="cen-lbl">Confian&ccedil;a m&iacute;n.:
+              <select id="cen-single-confidence" class="cen-ctl">
+                <option value="0" selected>Todas</option>
+                <option value="0.60">&gt;= 60%</option>
+                <option value="0.70">&gt;= 70%</option>
+                <option value="0.80">&gt;= 80%</option>
+                <option value="0.90">&gt;= 90%</option>
+              </select>
+            </label>
+            <label class="cen-lbl">For&ccedil;a do parceiro:
+              <select id="cen-single-min-cameras" class="cen-ctl">
+                <option value="0">Qualquer</option>
+                <option value="1">&gt;= 1 c&acirc;m.</option>
+                <option value="2" selected>&gt;= 2 c&acirc;m.</option>
+                <option value="3">&gt;= 3 c&acirc;m.</option>
+                <option value="4">&gt;= 4 c&acirc;m.</option>
+              </select>
+            </label>
+            <button class="cen-btn-apply cen-btn-search" onclick="_cenSingleSearchFromForm()">&#128269; Pesquisar</button>
+            <button class="cen-btn-clear" onclick="_cenSingleClear()">Limpar</button>
+            <span class="date-range-row" id="cen-single-date-row" style="display:none">
+              <span class="cen-lbl">De</span>
+              <input type="datetime-local" id="cen-single-ts-from" class="cen-ctl">
+              <span class="cen-lbl">At&eacute;</span>
+              <input type="datetime-local" id="cen-single-ts-to" class="cen-ctl">
+            </span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px">
+            <div id="cen-single-recents-wrap" style="display:none;flex:1;min-width:260px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px">
+              <div style="font-size:.72rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#128339; Ultimas pesquisadas</div>
+              <div id="cen-single-recents" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+              <button class="btn btn-outline btn-sm" id="cen-single-btn-full" onclick="_cenSingleOpenFullAnalysis()" disabled>&#128269; An&aacute;lise completa</button>
+              <button class="btn btn-outline btn-sm" id="cen-single-btn-report" onclick="_cenSingleOpenPrintableReport()" disabled>&#128196; Gerar relat&oacute;rio</button>
+              <button class="btn btn-outline btn-sm" id="cen-single-btn-map" onclick="_cenSingleOpenMap()" disabled>&#127760; Ver rota no mapa</button>
+              <button class="btn btn-outline btn-sm" id="cen-single-btn-target" onclick="_cenSingleCreateTarget()" disabled>&#127919; Criar alvo</button>
+            </div>
+          </div>
+
+          <div id="cen-single-statusline" class="status-line" style="margin-bottom:12px"></div>
+
+          <div id="cen-single-body" style="border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);padding:18px 20px">
+            <div style="text-align:center;color:var(--muted);padding:24px 10px">
+              Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a investiga&ccedil;&atilde;o.
+            </div>
+          </div>
+
+          <!-- elementos legados mantidos apenas por compatibilidade -->
           <input type="hidden" id="cen-interval" value="60">
-          <!-- central-status: mantido no DOM para compatibilidade JS, não exibido visualmente -->
           <span id="central-status" style="display:none"></span>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>Placa</th>
-            <th>Score</th>
-            <th>Indicadores</th>
-            <th>Atividade</th>
-            <th>Acompanhamento</th>
-            <th>&#127919; Alvo</th>
-            <th>&Uacute;ltimo visto</th>
-            <th>A&#231;&otilde;es</th>
-          </tr></thead>
-          <tbody id="central-tbody"><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em <strong>&#10003; Aplicar</strong> para iniciar o monitoramento.</td></tr></tbody>
-          </table>
-        </div>
-        <div id="cen-pagination" style="display:none;align-items:center;gap:10px;padding:10px 0;justify-content:center;flex-wrap:wrap">
-          <button class="btn btn-outline btn-xs" id="cen-btn-prev" onclick="cenPageNav(-1)">&#8592; Anterior</button>
-          <span id="cen-page-info" style="font-size:.8rem;color:var(--muted)"></span>
-          <button class="btn btn-outline btn-xs" id="cen-btn-next" onclick="cenPageNav(1)">Pr&oacute;xima &#8594;</button>
-        </div>
         </div><!-- /cen-view-placas -->
       </div><!-- /bat-sub-central -->
 
@@ -7446,7 +7450,7 @@ function switchTab(name, el) {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
     var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
     if (!batName || batName === 'suspeitos') _cgsLoad(true);
-    else if (batName === 'placas')  loadCentral();
+    else if (batName === 'placas')  { _cenSingleInit(); _cenSingleFocusPlateInput(); }
     else if (batName === 'alvos')   loadAlvos();
     else _cgsLoad(true);
   }
@@ -7489,6 +7493,8 @@ function switchBatTab(name, el) {
   } else if (name === 'placas') {
     document.getElementById('bat-sub-central').classList.add('active');
     _cenSwitchView('placas');
+    _cenSingleInit();
+    _cenSingleFocusPlateInput();
   } else if (name === 'alvos') {
     document.getElementById('bat-sub-alvos').classList.add('active');
     loadAlvos(); _loadAlvoCameras();
@@ -7504,7 +7510,7 @@ function refreshCurrent() {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
     var batName = activeBat ? activeBat.getAttribute('data-bat') : 'suspeitos';
     if      (batName === 'suspeitos') _cgsLoad(true);
-    else if (batName === 'placas')    loadCentral();
+    else if (batName === 'placas')    _cenSingleRefreshCurrent();
     else if (batName === 'alvos')     loadAlvos();
     else _cgsLoad(true);
   }
@@ -8184,6 +8190,640 @@ function _cenSwitchView(view) {
     if (vPlacas) vPlacas.style.display = '';
     if (tPlacas) { tPlacas.style.background = 'var(--primary)'; tPlacas.style.color = '#fff'; }
     if (tGrupos) { tGrupos.style.background = 'var(--card)'; tGrupos.style.color = 'var(--muted)'; }
+  }
+}
+
+function _cenSingleDefaultOpts() {
+  return {
+    window: '7d',
+    ts_from: null,
+    ts_to: null,
+    direction: null,
+    min_confidence: 0,
+    min_cameras: 2,
+  };
+}
+
+function _cenSingleFocusPlateInput() {
+  var input = document.getElementById('cen-single-plate');
+  if (!input) return;
+  setTimeout(function() {
+    try { input.focus(); input.select(); } catch(e) {}
+  }, 80);
+}
+
+function _cenSingleLoadRecentSearches() {
+  try {
+    var raw = localStorage.getItem('cenSingleRecentSearches');
+    var parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      _cenSingleRecentSearches = parsed
+        .map(function(value) { return String(value || '').trim().toUpperCase(); })
+        .filter(Boolean)
+        .slice(0, 8);
+    }
+  } catch(e) {
+    _cenSingleRecentSearches = [];
+  }
+}
+
+function _cenSingleSaveRecentSearches() {
+  try {
+    localStorage.setItem('cenSingleRecentSearches', JSON.stringify(_cenSingleRecentSearches.slice(0, 8)));
+  } catch(e) {}
+}
+
+function _cenSinglePushRecent(plate) {
+  plate = String(plate || '').trim().toUpperCase();
+  if (!plate) return;
+  _cenSingleRecentSearches = [plate].concat(_cenSingleRecentSearches.filter(function(item) { return item !== plate; })).slice(0, 8);
+  _cenSingleSaveRecentSearches();
+  _cenSingleRenderRecentSearches();
+}
+
+function _cenSingleRenderRecentSearches() {
+  var wrap = document.getElementById('cen-single-recents-wrap');
+  var body = document.getElementById('cen-single-recents');
+  if (!wrap || !body) return;
+  if (!_cenSingleRecentSearches.length) {
+    wrap.style.display = 'none';
+    body.innerHTML = '';
+    return;
+  }
+  wrap.style.display = '';
+  body.innerHTML = _cenSingleRecentSearches.map(function(plate) {
+    return '<button class="btn btn-outline btn-xs" style="font-family:monospace;font-weight:700" onclick="_cenSingleUseRecent(\'' + plate.replace(/'/g, "\\'") + '\')">' + plate + '</button>';
+  }).join('');
+}
+
+function _cenSingleUseRecent(plate) {
+  var input = document.getElementById('cen-single-plate');
+  if (input) input.value = String(plate || '').trim().toUpperCase();
+  _cenSingleSearchFromForm();
+}
+
+function _cenSingleSetStatus(message, tone) {
+  var el = document.getElementById('cen-single-statusline');
+  if (!el) return;
+  el.innerHTML = message || '';
+  var colors = {
+    info: 'var(--muted)',
+    ok: '#86efac',
+    warn: '#fcd34d',
+    error: '#fca5a5',
+  };
+  el.style.color = colors[tone || 'info'] || 'var(--muted)';
+}
+
+function _cenSinglePlateInput(el) {
+  if (!el) return;
+  var clean = (el.value || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 7);
+  if (el.value !== clean) el.value = clean;
+}
+
+function _cenSingleWindowChange() {
+  var win = document.getElementById('cen-single-window');
+  var row = document.getElementById('cen-single-date-row');
+  var fromEl = document.getElementById('cen-single-ts-from');
+  var toEl = document.getElementById('cen-single-ts-to');
+  if (!win || !row) return;
+  var isCustom = win.value === 'custom';
+  row.style.display = isCustom ? 'flex' : 'none';
+  if (isCustom && fromEl && toEl && (!fromEl.value || !toEl.value)) {
+    var now = new Date();
+    fromEl.value = _toLocalDTInput(new Date(now.getTime() - 7 * 86400000));
+    toEl.value = _toLocalDTInput(now);
+  }
+}
+
+function _cenSingleApplyOptsToForm(opts, force) {
+  opts = opts || _cenSingleDefaultOpts();
+  var plateEl = document.getElementById('cen-single-plate');
+  var winEl = document.getElementById('cen-single-window');
+  var dirEl = document.getElementById('cen-single-direction');
+  var confEl = document.getElementById('cen-single-confidence');
+  var minCamEl = document.getElementById('cen-single-min-cameras');
+  var fromEl = document.getElementById('cen-single-ts-from');
+  var toEl = document.getElementById('cen-single-ts-to');
+  if (plateEl && (force || !plateEl.value) && _cenSingleState.plate) plateEl.value = _cenSingleState.plate;
+  if (winEl && (force || !winEl.value)) winEl.value = opts.window || '7d';
+  if (dirEl && (force || !dirEl.value)) dirEl.value = opts.direction || '';
+  if (confEl && (force || !confEl.value)) confEl.value = String(opts.min_confidence || 0);
+  if (minCamEl && (force || !minCamEl.value)) minCamEl.value = String(opts.min_cameras != null ? opts.min_cameras : 2);
+  if (fromEl && (force || !fromEl.value)) {
+    fromEl.value = opts.ts_from ? _toLocalDTInput(new Date(opts.ts_from)) : _toLocalDTInput(new Date(Date.now() - 7 * 86400000));
+  }
+  if (toEl && (force || !toEl.value)) {
+    toEl.value = opts.ts_to ? _toLocalDTInput(new Date(opts.ts_to)) : _toLocalDTInput(new Date());
+  }
+  _cenSingleWindowChange();
+}
+
+function _cenSingleResetSummaryCards() {
+  var values = {
+    'cen-single-card-plate': '&#8212;',
+    'cen-single-card-plate-sub': 'Aguardando pesquisa',
+    'cen-single-card-score': '&#8212;',
+    'cen-single-card-score-sub': 'Sem an&aacute;lise carregada',
+    'cen-single-card-last': '&#8212;',
+    'cen-single-card-last-sub': 'Sem passagens no per&iacute;odo',
+    'cen-single-card-partners': '&#8212;',
+    'cen-single-card-partners-sub': 'Nenhuma consulta em andamento',
+  };
+  Object.keys(values).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = values[id];
+  });
+}
+
+function _cenSingleRiskMeta(report) {
+  var raw = String((report && report.level) || '').toLowerCase();
+  if (raw === 'alerta') {
+    return { label: 'ALTO', color: '#fca5a5', bg: 'rgba(220,38,38,.18)', border: 'rgba(239,68,68,.35)' };
+  }
+  if (raw === 'suspeito') {
+    return { label: 'M&Eacute;DIO', color: '#fcd34d', bg: 'rgba(217,119,6,.18)', border: 'rgba(245,158,11,.35)' };
+  }
+  return { label: 'NORMAL', color: '#86efac', bg: 'rgba(34,197,94,.12)', border: 'rgba(34,197,94,.25)' };
+}
+
+function _cenSingleSyncSummaryCards(report, centralItem) {
+  if (!report) { _cenSingleResetSummaryCards(); return; }
+  var summary = report.summary || {};
+  var partners = report.convoy_partners || [];
+  var lastSeen = summary.last_seen ? fmtTs(summary.last_seen) : '&#8212;';
+  var risk = _cenSingleRiskMeta(report);
+  var statusSub = report.is_alvo
+    ? '&#127919; J&aacute; cadastrada como alvo'
+    : partners.length
+      ? 'Com ' + partners.length + ' parceiro(s) confirmado(s)'
+      : 'Sem parceiro confirmado no recorte';
+  var scoreText = String(report.score || 0) + ' pts';
+  var scoreSub = risk.label + ' &middot; ' + (summary.total_passes || 0) + ' passagem(ns)';
+  if (centralItem && centralItem.threat_center && centralItem.threat_center.matched_target) {
+    scoreSub += ' &middot; v&iacute;nculo com alvo';
+  }
+  var plateEl = document.getElementById('cen-single-card-plate');
+  var plateSubEl = document.getElementById('cen-single-card-plate-sub');
+  var scoreEl = document.getElementById('cen-single-card-score');
+  var scoreSubEl = document.getElementById('cen-single-card-score-sub');
+  var lastEl = document.getElementById('cen-single-card-last');
+  var lastSubEl = document.getElementById('cen-single-card-last-sub');
+  var partEl = document.getElementById('cen-single-card-partners');
+  var partSubEl = document.getElementById('cen-single-card-partners-sub');
+  if (plateEl) plateEl.textContent = report.plate || _cenSingleState.plate || '\u2014';
+  if (plateSubEl) plateSubEl.innerHTML = statusSub;
+  if (scoreEl) scoreEl.innerHTML = '<span style="color:' + risk.color + '">' + scoreText + '</span>';
+  if (scoreSubEl) scoreSubEl.innerHTML = scoreSub;
+  if (lastEl) lastEl.innerHTML = lastSeen;
+  if (lastSubEl) lastSubEl.innerHTML = summary.cameras_count ? summary.cameras_count + ' c&acirc;m. distintas' : 'Sem passagens no per&iacute;odo';
+  if (partEl) partEl.textContent = String(partners.length);
+  if (partSubEl) {
+    var partnerThreshold = (_cenSingleState.opts && _cenSingleState.opts.min_cameras) || 0;
+    partSubEl.innerHTML = partners.length
+      ? 'Filtro atual: ' + (partnerThreshold > 0 ? '&gt;= ' + String(partnerThreshold) + ' c&acirc;m.' : 'qualquer v&iacute;nculo')
+      : 'Nenhum parceiro confirmado';
+  }
+}
+
+function _cenSingleSyncActionButtons() {
+  var hasReport = !!(_cenSingleState && _cenSingleState.report);
+  var hasEvents = hasReport && (_cenSingleState.report.events || []).length > 0;
+  var isAlvo = hasReport && !!_cenSingleState.report.is_alvo;
+  var buttons = {
+    full: document.getElementById('cen-single-btn-full'),
+    report: document.getElementById('cen-single-btn-report'),
+    map: document.getElementById('cen-single-btn-map'),
+    target: document.getElementById('cen-single-btn-target'),
+  };
+  if (buttons.full) buttons.full.disabled = !hasReport;
+  if (buttons.report) buttons.report.disabled = !hasReport;
+  if (buttons.map) buttons.map.disabled = !hasEvents;
+  if (buttons.target) {
+    buttons.target.disabled = !hasReport || isAlvo;
+    buttons.target.innerHTML = isAlvo ? '&#127919; J&aacute; &eacute; alvo' : '&#127919; Criar alvo';
+  }
+}
+
+function _cenSingleRenderEmpty() {
+  var body = document.getElementById('cen-single-body');
+  if (!body) return;
+  body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 10px">'
+    + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a investiga&ccedil;&atilde;o.'
+    + '</div>';
+}
+
+function _cenSingleRenderLoading(plate) {
+  var body = document.getElementById('cen-single-body');
+  if (!body) return;
+  body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:28px 10px">'
+    + '<span class="spinner"></span><br><br>Analisando <strong style="font-family:monospace">' + plate + '</strong>&hellip;'
+    + '</div>';
+}
+
+function _cenSingleBuildReportUrl(plate, opts) {
+  var url = '/api/vehicle/report?plate=' + encodeURIComponent(plate);
+  if (opts.window && opts.window !== 'custom') url += '&window=' + encodeURIComponent(opts.window);
+  if (opts.ts_from) url += '&ts_from=' + encodeURIComponent(opts.ts_from);
+  if (opts.ts_to) url += '&ts_to=' + encodeURIComponent(opts.ts_to);
+  if (opts.direction) url += '&filter_direction=' + encodeURIComponent(opts.direction);
+  if (opts.min_confidence > 0) url += '&min_confidence=' + String(opts.min_confidence);
+  if (opts.min_cameras > 0) url += '&min_cameras=' + String(opts.min_cameras);
+  return url;
+}
+
+function _cenSingleBuildCentralUrl(plate, opts) {
+  var url = '/api/batedor/central?limit=25&plate_prefix=' + encodeURIComponent(plate);
+  if (opts.ts_from && opts.ts_to) {
+    url += '&window=1h';
+    url += '&ts_from=' + encodeURIComponent(opts.ts_from);
+    url += '&ts_to=' + encodeURIComponent(opts.ts_to);
+  } else {
+    url += '&window=' + encodeURIComponent(opts.window || '7d');
+  }
+  if (opts.direction) url += '&direcao=' + encodeURIComponent(opts.direction);
+  return url;
+}
+
+function _cenSingleReadOpts() {
+  var winEl = document.getElementById('cen-single-window');
+  var dirEl = document.getElementById('cen-single-direction');
+  var confEl = document.getElementById('cen-single-confidence');
+  var minCamEl = document.getElementById('cen-single-min-cameras');
+  var fromEl = document.getElementById('cen-single-ts-from');
+  var toEl = document.getElementById('cen-single-ts-to');
+  var opts = _cenSingleDefaultOpts();
+  opts.window = winEl ? (winEl.value || '7d') : '7d';
+  opts.direction = dirEl ? (dirEl.value || null) : null;
+  opts.min_confidence = confEl ? (parseFloat(confEl.value || '0') || 0) : 0;
+  opts.min_cameras = minCamEl ? (parseInt(minCamEl.value || '0', 10) || 0) : 0;
+  if (opts.window === 'custom') {
+    opts.ts_from = _toIso(fromEl ? fromEl.value : '');
+    opts.ts_to = _toIso(toEl ? toEl.value : '');
+    if (!opts.ts_from || !opts.ts_to) {
+      _cenSingleSetStatus('Informe o per&iacute;odo personalizado antes de pesquisar.', 'error');
+      return null;
+    }
+  } else {
+    opts.ts_from = null;
+    opts.ts_to = null;
+  }
+  return opts;
+}
+
+function _cenSingleHumanWindow(opts) {
+  if (!opts) return 'per&iacute;odo atual';
+  if (opts.window === 'custom' && opts.ts_from && opts.ts_to) return 'per&iacute;odo personalizado';
+  var labels = { '6h': '6 horas', '24h': '24 horas', '7d': '7 dias', '30d': '30 dias' };
+  return labels[opts.window] || opts.window || 'per&iacute;odo atual';
+}
+
+function _cenSingleSection(title, body, accentColor, borderColor) {
+  return '<div style="margin-bottom:14px;border:1px solid ' + (borderColor || 'rgba(255,255,255,.08)') + ';background:rgba(255,255,255,.03);border-radius:14px;padding:14px 16px">'
+    + '<div style="font-size:.88rem;font-weight:800;margin-bottom:12px;color:' + (accentColor || 'var(--accent2)') + ';text-transform:uppercase;letter-spacing:.05em">' + title + '</div>'
+    + body
+    + '</div>';
+}
+
+function _cenSingleMetric(label, value, sub, color) {
+  return '<div style="border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.12)">'
+    + '<div style="font-size:.68rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">' + label + '</div>'
+    + '<div style="font-size:1.2rem;font-weight:800;color:' + (color || '#fff') + '">' + value + '</div>'
+    + (sub ? '<div style="font-size:.76rem;color:var(--muted);margin-top:5px">' + sub + '</div>' : '')
+    + '</div>';
+}
+
+function _cenSingleBuildMapState(plate, events) {
+  _mapaTrajetoria = {
+    plates: [plate],
+    points: (events || []).map(function(ev) {
+      return {
+        camera_id: ev.camera_id,
+        ts: ev.ts || '',
+        plate: plate,
+        cam_nome: ev.camera_name || ev.camera_id || '',
+      };
+    }),
+  };
+}
+
+function _cenSingleRenderAnalysis(report, centralItem) {
+  var body = document.getElementById('cen-single-body');
+  if (!body || !report) return;
+  var summary = report.summary || {};
+  var eventsAsc = (report.events || []).slice().sort(function(a, b) {
+    return new Date(a && a.ts ? a.ts : 0) - new Date(b && b.ts ? b.ts : 0);
+  });
+  var eventsDesc = eventsAsc.slice().reverse();
+  var partners = (report.convoy_partners || []).slice().sort(function(a, b) {
+    return Number((b && b.cameras_together) || 0) - Number((a && a.cameras_together) || 0);
+  });
+  var risk = _cenSingleRiskMeta(report);
+  var firstEvent = eventsAsc.length ? eventsAsc[0] : null;
+  var lastEvent = eventsAsc.length ? eventsAsc[eventsAsc.length - 1] : null;
+  var vehicleType = (centralItem && centralItem.vehicle_type) || (lastEvent && lastEvent.vehicle_type) || '\u2014';
+  var vehicleColor = (centralItem && centralItem.vehicle_color) || '\u2014';
+  var cameraOrder = [];
+  var seenCamera = {};
+  eventsAsc.forEach(function(ev) {
+    var name = ev.camera_name || ev.camera_id || 'Sem c&acirc;mera';
+    if (!seenCamera[name]) {
+      seenCamera[name] = true;
+      cameraOrder.push(name);
+    }
+  });
+  var routeHtml = cameraOrder.length
+    ? cameraOrder.slice(0, 8).map(function(name, index) {
+        var arrow = index < Math.min(cameraOrder.length, 8) - 1 ? '<span style="color:var(--muted)">&nbsp;&#8594;&nbsp;</span>' : '';
+        return '<span style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:.77rem;color:#f8fafc">' + name + '</span>' + arrow;
+      }).join('')
+      + (cameraOrder.length > 8 ? '<span style="color:var(--muted);font-size:.76rem">&nbsp;+ ' + (cameraOrder.length - 8) + ' c&acirc;m.</span>' : '')
+    : '<span style="color:var(--muted)">Nenhuma c&acirc;mera no per&iacute;odo.</span>';
+  var actionNote = report.is_alvo
+    ? '<div style="margin-top:12px;padding:12px 14px;background:rgba(124,58,237,.12);border:1px solid rgba(168,85,247,.34);border-radius:12px;font-size:.82rem;color:#ede9fe;line-height:1.5">&#127919; Esta placa j&aacute; est&aacute; cadastrada como alvo. Use a investiga&ccedil;&atilde;o para refor&ccedil;ar monitoramento, conferir parceiros e consolidar rota.</div>'
+    : partners.length
+      ? '<div style="margin-top:12px;padding:12px 14px;background:rgba(217,119,6,.12);border:1px solid rgba(245,158,11,.30);border-radius:12px;font-size:.82rem;color:#fde68a;line-height:1.5">&#128101; H&aacute; acompanhamento confirmado no recorte. Vale validar recorr&ecirc;ncia, lideran&ccedil;a e reaproxima&ccedil;&otilde;es entre os parceiros abaixo.</div>'
+      : '<div style="margin-top:12px;padding:12px 14px;background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.24);border-radius:12px;font-size:.82rem;color:#bbf7d0;line-height:1.5">&#9989; N&atilde;o houve parceiro confirmado no filtro atual. A an&aacute;lise segue focada na rota e nas passagens da pr&oacute;pria placa.</div>';
+
+  var summaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px">'
+    + _cenSingleMetric('Risco', risk.label, report.is_alvo ? 'placa j&aacute; cadastrada como alvo' : 'avalia&ccedil;&atilde;o operacional', risk.color)
+    + _cenSingleMetric('Score', String(report.score || 0) + ' pts', 'pontua&ccedil;&atilde;o individual')
+    + _cenSingleMetric('Passagens', String(summary.total_passes || 0), firstEvent ? 'desde ' + fmtTs(firstEvent.ts) : 'nenhuma no per&iacute;odo')
+    + _cenSingleMetric('C&acirc;meras', String(summary.cameras_count || 0), 'locais distintos')
+    + _cenSingleMetric('Parceiros', String(partners.length), partners.length ? 'com filtro confirmado' : 'sem confirma&ccedil;&atilde;o')
+    + _cenSingleMetric('Conf. m&eacute;dia', summary.avg_confidence > 0 ? formatConfidencePercent(summary.avg_confidence) + '%' : '\u2014', 'leituras v&aacute;lidas')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">'
+      + _cenSingleMetric('Dire&ccedil;&atilde;o dominante', summary.dom_direction === 'CRESCENTE' ? '&#8593; CRESCENTE' : summary.dom_direction === 'DECRESCENTE' ? '&#8595; DECRESCENTE' : '\u2014', 'fluxo predominante')
+      + _cenSingleMetric('Tipo do ve&iacute;culo', vehicleType || '\u2014', 'detec&ccedil;&atilde;o mais recente')
+      + _cenSingleMetric('Cor', vehicleColor || '\u2014', 'enriquecimento da central')
+      + _cenSingleMetric('&Uacute;ltimo visto', lastEvent ? fmtTs(lastEvent.ts) : '\u2014', lastEvent ? (lastEvent.camera_name || lastEvent.camera_id || '') : 'sem passagens')
+    + '</div>'
+    + actionNote;
+
+  if (report.is_alvo && (report.alvo_descricao || report.alvo_list)) {
+    summaryHtml += '<div style="margin-top:12px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+      + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">&#127919; Cadastro operacional</div>'
+      + '<div style="font-size:.82rem;color:var(--text)">' + (report.alvo_descricao || 'Sem descri&ccedil;&atilde;o cadastrada.') + '</div>'
+      + (report.alvo_list ? '<div style="font-size:.76rem;color:var(--muted);margin-top:6px">Lista: ' + report.alvo_list + '</div>' : '')
+      + '</div>';
+  }
+
+  var trajectoryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px">'
+    + _cenSingleMetric('Primeira passagem', firstEvent ? fmtTs(firstEvent.ts) : '\u2014', firstEvent ? (firstEvent.camera_name || firstEvent.camera_id || '') : '')
+    + _cenSingleMetric('&Uacute;ltima passagem', lastEvent ? fmtTs(lastEvent.ts) : '\u2014', lastEvent ? (lastEvent.camera_name || lastEvent.camera_id || '') : '')
+    + _cenSingleMetric('Percurso resumido', cameraOrder.length ? String(cameraOrder.length) + ' c&acirc;m.' : '\u2014', cameraOrder.length ? 'ordem de apari&ccedil;&atilde;o' : 'sem rota')
+    + '</div>'
+    + '<div style="padding:12px 14px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:12px">'
+      + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">&#128506; Ordem de c&acirc;meras no per&iacute;odo</div>'
+      + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;line-height:1.8">' + routeHtml + '</div>'
+    + '</div>';
+
+  var eventRows = eventsDesc.slice(0, 12).map(function(ev, index) {
+    var conf = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
+    return '<tr>'
+      + '<td style="font-size:.74rem;color:var(--muted);text-align:center">' + (index + 1) + '</td>'
+      + '<td style="font-size:.78rem;white-space:nowrap">' + (ev.ts ? fmtTs(ev.ts) : '\u2014') + '</td>'
+      + '<td style="font-size:.78rem">' + (ev.camera_name || ev.camera_id || '\u2014') + '</td>'
+      + '<td style="font-size:.78rem;font-weight:700">' + (ev.direcao || '\u2014') + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted)">' + (ev.vehicle_type || '\u2014') + '</td>'
+      + '<td style="font-size:.78rem;color:var(--muted);text-align:center">' + conf + '</td>'
+      + '</tr>';
+  }).join('');
+  trajectoryHtml += eventsDesc.length
+    ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
+    : '<div style="padding:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--muted);font-size:.82rem">Nenhuma passagem encontrada para a placa no per&iacute;odo selecionado.</div>';
+
+  var partnersHtml = '';
+  if (partners.length) {
+    var partnerRows = partners.map(function(partner) {
+      var camNames = (partner.cameras_detail || []).map(function(item) { return item.cam_nome || item.camera_id; }).join(', ');
+      var spanLabel = partner.trip_span_sec >= 60 ? Math.round(partner.trip_span_sec / 60) + ' min' : (partner.trip_span_sec || 0) + ' s';
+      var alvoBadge = partner.is_alvo ? ' <span class="badge badge-danger" style="font-size:.64rem">ALVO</span>' : '';
+      return '<tr>'
+        + '<td>' + plateHtml(partner.plate) + alvoBadge + '</td>'
+        + '<td style="text-align:center;font-weight:700;color:var(--accent2)">' + String(partner.cameras_together || 0) + '</td>'
+        + '<td style="text-align:center;font-size:.78rem">' + spanLabel + '</td>'
+        + '<td style="font-size:.76rem;white-space:nowrap">' + (partner.last_seen ? fmtTs(partner.last_seen) : '\u2014') + '</td>'
+        + '<td style="font-size:.74rem;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis" title="' + camNames + '">' + (camNames || '\u2014') + '</td>'
+        + '<td><button class="btn btn-outline btn-xs" onclick="_cenSingleSearch(\'' + String(partner.plate || '').replace(/'/g, "\\'") + '\')">&#128269; Analisar</button></td>'
+        + '</tr>';
+    }).join('');
+    partnersHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px">'
+      + _cenSingleMetric('Parceiros confirmados', String(partners.length), 'mesma rota / per&iacute;odo')
+      + _cenSingleMetric('Maior coocorr&ecirc;ncia', String(Math.max.apply(null, partners.map(function(partner) { return Number(partner.cameras_together || 0); }))) + ' c&acirc;m.', 'melhor parceiro')
+      + _cenSingleMetric('Parceiros alvo', String(partners.filter(function(partner) { return !!partner.is_alvo; }).length), 'j&aacute; cadastrados')
+      + '</div>'
+      + '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.14);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.78rem;color:#fca5a5">&#9888; A lista abaixo mostra parceiros confirmados na mesma janela operacional, filtrados pela for&ccedil;a m&iacute;nima definida no topo.</div>'
+      + '<div class="table-wrap"><table><thead><tr><th>Parceiro</th><th>C&acirc;meras juntos</th><th>Span</th><th>&Uacute;ltimo visto</th><th>C&acirc;meras</th><th>A&ccedil;&atilde;o</th></tr></thead><tbody>' + partnerRows + '</tbody></table></div>';
+  } else {
+    partnersHtml = '<div style="padding:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.18);border-radius:10px;color:#bbf7d0;font-size:.82rem">&#9989; Nenhum parceiro confirmado com o filtro atual. Se quiser ampliar a busca, reduza a for&ccedil;a do parceiro ou aumente o per&iacute;odo.</div>';
+  }
+
+  var lastDecision = report.last_decision;
+  var decisionLabels = {
+    confirmado: '&#9989; Suspeito confirmado',
+    falso_positivo: '&#10060; Falso positivo',
+    ignorar: '&#9197; Ignorado',
+  };
+  var decisionHtml = lastDecision
+    ? '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px">'
+        + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Ultima decisao operacional</div>'
+        + '<div style="font-size:.88rem;font-weight:800;color:#fff;margin-bottom:4px">' + (decisionLabels[lastDecision.decision] || lastDecision.decision || '\u2014') + '</div>'
+        + '<div style="font-size:.8rem;color:var(--muted);line-height:1.5">'
+          + (lastDecision.note ? lastDecision.note + '<br>' : '')
+          + 'Registrado por ' + (lastDecision.operator || 'sistema') + ' em ' + (lastDecision.created_at ? fmtTs(lastDecision.created_at) : '\u2014') + '.'
+        + '</div>'
+      + '</div>'
+    : '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:var(--muted);font-size:.82rem">Nenhuma decisao operacional registrada para esta placa at&eacute; o momento.</div>';
+
+  var tc = centralItem && centralItem.threat_center ? centralItem.threat_center : null;
+  var threatHtml = '';
+  if (tc) {
+    var rs = tc.route_similarity || {};
+    var badges = (tc.threat_badges || []).map(function(badge) {
+      return '<span class="badge" style="background:rgba(139,92,246,.35);color:#ede9fe;font-size:.68rem">' + badge + '</span>';
+    }).join(' ');
+    threatHtml = '<div style="padding:12px 14px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.22);border-radius:12px">'
+      + '<div style="font-size:.74rem;font-weight:800;color:#ddd6fe;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Central de amea&ccedil;a</div>'
+      + (badges ? '<div style="margin-bottom:8px">' + badges + '</div>' : '')
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">'
+        + _cenSingleMetric('Alvo cadastrado', tc.matched_target ? '&#9989; Sim' : '&#8212; N&atilde;o', tc.match_type || '', '#ede9fe')
+        + _cenSingleMetric('Rota semelhante', rs.matched ? '&#9989; Sim' : '&#8212; N&atilde;o', rs.best_alvo ? 'mais parecida com ' + rs.best_alvo : '', '#ede9fe')
+        + _cenSingleMetric('Similaridade', rs.similarity_ratio ? Math.round(rs.similarity_ratio * 100) + '%' : '\u2014', rs.common_cameras && rs.common_cameras.length ? rs.common_cameras.length + ' c&acirc;m. em comum' : '')
+      + '</div>'
+      + ((rs.common_cameras && rs.common_cameras.length) ? '<div style="font-size:.78rem;color:var(--muted);margin-top:10px">C&acirc;meras em comum: ' + rs.common_cameras.join(', ') + '</div>' : '')
+      + ((rs.common_cities && rs.common_cities.length) ? '<div style="font-size:.78rem;color:var(--muted);margin-top:4px">Cidades em comum: ' + rs.common_cities.join(', ') + '</div>' : '')
+      + '</div>';
+  } else {
+    threatHtml = '<div style="padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;color:var(--muted);font-size:.82rem">Nenhum v&iacute;nculo adicional com alvo ou rota semelhante foi identificado na central para este recorte.</div>';
+  }
+
+  if (centralItem) {
+    threatHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px">'
+      + _cenSingleMetric('Score atividade', String(centralItem.score_activity || 0) + ' pts', 'movimenta&ccedil;&atilde;o da placa')
+      + _cenSingleMetric('Score acompanhamento', String(centralItem.score_acompanhamento || 0) + ' pts', 'grupo / parceiros')
+      + _cenSingleMetric('Score rota', String(centralItem.score_rota || 0) + ' pts', 'semelhan&ccedil;a operacional')
+      + _cenSingleMetric('Score alvo', String(centralItem.score_alvo || 0) + ' pts', 'cadastro direto')
+      + '</div>';
+  }
+
+  body.innerHTML = _cenSingleSection('1. Resumo t&aacute;tico da placa', summaryHtml, risk.color, risk.border)
+    + _cenSingleSection('2. Trajet&oacute;ria no per&iacute;odo', trajectoryHtml, 'var(--accent2)')
+    + _cenSingleSection('3. Companheiros / comboio (' + partners.length + ')', partnersHtml, '#fca5a5', 'rgba(239,68,68,.18)')
+    + _cenSingleSection('4. Decis&atilde;o e v&iacute;nculo operacional', decisionHtml + threatHtml, 'var(--accent2)');
+}
+
+function _cenSingleInit() {
+  var plateEl = document.getElementById('cen-single-plate');
+  if (!plateEl) return;
+  var opts = _cenSingleState.opts || _cenSingleDefaultOpts();
+  _cenSingleApplyOptsToForm(opts, !_cenSingleInitDone);
+  _cenSingleLoadRecentSearches();
+  _cenSingleRenderRecentSearches();
+  if (_cenSingleState.plate && !plateEl.value) plateEl.value = _cenSingleState.plate;
+  if (_cenSingleState.report) {
+    _cenSingleSyncSummaryCards(_cenSingleState.report, _cenSingleState.centralItem);
+    _cenSingleSyncActionButtons();
+    _cenSingleRenderAnalysis(_cenSingleState.report, _cenSingleState.centralItem);
+  } else {
+    _cenSingleResetSummaryCards();
+    _cenSingleSyncActionButtons();
+    _cenSingleRenderEmpty();
+    _cenSingleSetStatus('Informe a placa e o per&iacute;odo desejado para iniciar a investiga&ccedil;&atilde;o.', 'info');
+  }
+  _cenSingleInitDone = true;
+}
+
+async function _cenSingleSearchFromForm() {
+  var plateEl = document.getElementById('cen-single-plate');
+  if (!plateEl) return;
+  var plate = (plateEl.value || '').trim().toUpperCase();
+  if (!plate) {
+    _cenSingleSetStatus('Informe uma placa para pesquisar.', 'error');
+    _cenSingleFocusPlateInput();
+    return;
+  }
+  var opts = _cenSingleReadOpts();
+  if (!opts) return;
+  await _cenSingleSearch(plate, opts);
+}
+
+async function _cenSingleSearch(plate, opts) {
+  plate = String(plate || '').replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 7);
+  if (!plate) {
+    _cenSingleSetStatus('Placa inv&aacute;lida para pesquisa.', 'error');
+    return;
+  }
+  var plateEl = document.getElementById('cen-single-plate');
+  if (plateEl) plateEl.value = plate;
+  opts = opts || _cenSingleReadOpts() || _cenSingleDefaultOpts();
+  _cenSingleState.plate = plate;
+  _cenSingleState.opts = Object.assign({}, opts);
+  _cenSingleRenderLoading(plate);
+  _cenSingleResetSummaryCards();
+  _cenSingleSyncActionButtons();
+  _cenSingleSetStatus('Analisando a placa ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
+  try {
+    var responses = await Promise.all([
+      fetch(_cenSingleBuildReportUrl(plate, opts)),
+      fetch(_cenSingleBuildCentralUrl(plate, opts)).catch(function() { return null; }),
+    ]);
+    var reportResp = responses[0];
+    var centralResp = responses[1];
+    if (!reportResp || !reportResp.ok) {
+      var errPayload = await reportResp.json().catch(function() { return { detail: 'HTTP ' + (reportResp ? reportResp.status : '?') }; });
+      throw new Error(errPayload.detail || ('HTTP ' + reportResp.status));
+    }
+    var report = await reportResp.json();
+    var centralItem = null;
+    if (centralResp && centralResp.ok) {
+      var centralPayload = await centralResp.json().catch(function() { return { items: [] }; });
+      centralItem = (centralPayload.items || []).find(function(item) { return item.plate === plate; }) || null;
+    }
+    _cenSingleState.report = report;
+    _cenSingleState.centralItem = centralItem;
+    _batedorReportData = { plate: plate, d: report };
+    _reportCurrentPlate = plate;
+    _reportCurrentOpts = _normalizeReportOpts(opts);
+    if (centralItem) _cenAllItems = [centralItem];
+    _cenSingleBuildMapState(plate, report.events || []);
+    _cenSinglePushRecent(plate);
+    _cenSingleSyncSummaryCards(report, centralItem);
+    _cenSingleSyncActionButtons();
+    _cenSingleRenderAnalysis(report, centralItem);
+    if ((report.events || []).length) {
+      _cenSingleSetStatus('An&aacute;lise atualizada para ' + plate + ': ' + String((report.summary || {}).total_passes || report.events.length || 0) + ' passagem(ns) e ' + String((report.convoy_partners || []).length) + ' parceiro(s) confirmado(s).', 'ok');
+    } else {
+      _cenSingleSetStatus('A placa ' + plate + ' n&atilde;o teve passagens no per&iacute;odo selecionado.', 'warn');
+    }
+  } catch(e) {
+    _cenSingleState.report = null;
+    _cenSingleState.centralItem = null;
+    _cenSingleResetSummaryCards();
+    _cenSingleSyncActionButtons();
+    var body = document.getElementById('cen-single-body');
+    if (body) {
+      body.innerHTML = '<div style="padding:18px 14px;border:1px solid rgba(239,68,68,.22);border-radius:12px;background:rgba(127,29,29,.16);color:#fca5a5;font-size:.84rem">&#9888; Erro ao carregar a investiga&ccedil;&atilde;o: ' + e.message + '</div>';
+    }
+    _cenSingleSetStatus('Erro ao pesquisar a placa ' + plate + '.', 'error');
+  }
+}
+
+function _cenSingleOpenFullAnalysis() {
+  if (!_cenSingleState.report) return;
+  openBatedorReport(_cenSingleState.plate, false, _cenSingleState.opts || _cenSingleDefaultOpts());
+}
+
+function _cenSingleOpenPrintableReport() {
+  if (!_cenSingleState.report) return;
+  _abrirRelatorioPlacaIndividual();
+}
+
+function _cenSingleOpenMap() {
+  if (!_cenSingleState.report) return;
+  var events = (_cenSingleState.report.events || []).slice();
+  if (!events.length) return;
+  var timestamps = events.map(function(ev) { return ev.ts; }).filter(Boolean).sort();
+  var nowMs = Date.now();
+  var tsFrom = timestamps.length
+    ? _toLocalDTInput(new Date(new Date(timestamps[0]).getTime() - 3600000))
+    : _toLocalDTInput(new Date(nowMs - 7 * 86400000));
+  var tsTo = timestamps.length
+    ? _toLocalDTInput(new Date(new Date(timestamps[timestamps.length - 1]).getTime() + 3600000))
+    : _toLocalDTInput(new Date(nowMs));
+  _verRotaNaMapa(_cenSingleState.plate, tsFrom, tsTo, events.length + ' passagem(ns)');
+}
+
+function _cenSingleCreateTarget() {
+  if (!_cenSingleState.report || _cenSingleState.report.is_alvo) return;
+  _addPlateAsAlvo(_cenSingleState.plate);
+}
+
+function _cenSingleClear() {
+  var plateEl = document.getElementById('cen-single-plate');
+  if (plateEl) plateEl.value = '';
+  _cenSingleState = {
+    plate: '',
+    report: null,
+    opts: _cenSingleDefaultOpts(),
+    centralItem: null,
+  };
+  _cenSingleApplyOptsToForm(_cenSingleDefaultOpts(), true);
+  _cenSingleResetSummaryCards();
+  _cenSingleSyncActionButtons();
+  _cenSingleRenderEmpty();
+  _cenSingleSetStatus('Consulta limpa. Informe uma nova placa para investigar.', 'info');
+  _cenSingleFocusPlateInput();
+}
+
+function _cenSingleRefreshCurrent() {
+  var plateEl = document.getElementById('cen-single-plate');
+  var currentPlate = (plateEl && plateEl.value ? plateEl.value : _cenSingleState.plate || '').trim().toUpperCase();
+  _cenSingleInit();
+  if (currentPlate) {
+    var opts = _cenSingleReadOpts();
+    if (opts) _cenSingleSearch(currentPlate, opts);
   }
 }
 
@@ -9836,6 +10476,14 @@ var _cenLiveTimer   = null;
 var _cenAllItems    = [];   // cache bruto
 var _cenPage        = 0;
 var _cenPageSize    = 10;
+var _cenSingleInitDone = false;
+var _cenSingleState = {
+  plate: '',
+  report: null,
+  opts: null,
+  centralItem: null,
+};
+var _cenSingleRecentSearches = [];
 
 function toggleCenLive() {
   _cenLiveEnabled = !_cenLiveEnabled;
@@ -12649,14 +13297,15 @@ async function _alvoDvLoadCompanions(id, plate) {
 }
 
 function _alvoCompSearch(plate) {
-  // Navega para a aba Batedor e preenche a busca por placa
-  var inp = document.getElementById('batedor-plate');
+  plate = String(plate || '').trim().toUpperCase();
+  if (!plate) return;
+  var nav = document.querySelector('.nav-item[onclick*="batedor"]');
+  if (nav && typeof switchTab === 'function') switchTab('batedor', nav);
+  var subTab = document.getElementById('bat-subtab-placas');
+  if (subTab && typeof switchBatTab === 'function') switchBatTab('placas', subTab);
+  var inp = document.getElementById('cen-single-plate');
   if (inp) inp.value = plate;
-  var batTab = document.querySelector('[onclick*="showBatSub\'central\'"],[onclick*=\'showBatSub(\\"central\\"\'],[data-sub="central"]');
-  // tenta mostrar a sub-aba central do batedor e disparar busca
-  if (typeof showBatSub === 'function') showBatSub('central');
-  if (typeof showBat    === 'function') showBat();
-  if (inp && typeof loadCentral === 'function') { inp.value = plate; loadCentral(); }
+  if (typeof _cenSingleSearch === 'function') _cenSingleSearch(plate);
 }
 
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
