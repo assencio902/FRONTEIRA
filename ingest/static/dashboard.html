@@ -4143,7 +4143,19 @@
               <div style="min-width:280px;flex:1">
                 <div style="font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px">&#128269; Investigacao sob demanda</div>
                 <div style="font-size:1.08rem;font-weight:800;color:var(--text);margin-bottom:6px">Pesquise uma placa especifica e veja rota, passagens, parceiros e contexto operacional.</div>
-                <div style="font-size:.84rem;color:var(--muted);line-height:1.5">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+                  <div style="font-size:.84rem;color:var(--muted);line-height:1.5;flex:1;min-width:260px">Esta subaba foi organizada para funcionar como um <strong>alvo rastreado temporario</strong>: voce informa a placa, escolhe o periodo e abre uma analise aprofundada sem precisar cadastrar antes.</div>
+                  <label class="cen-lbl" style="margin:0;min-width:190px;align-self:flex-start">
+                    Per&iacute;odo de an&aacute;lise:
+                    <select id="cen-single-window" onchange="_cenSingleWindowChange()" class="cen-ctl" style="min-width:190px">
+                      <option value="6h">6 horas</option>
+                      <option value="24h" selected>24 horas</option>
+                      <option value="7d">7 dias</option>
+                      <option value="30d">30 dias</option>
+                      <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
+                    </select>
+                  </label>
+                </div>
               </div>
               <div style="min-width:220px;max-width:320px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.12)">
                 <div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#128161; Foco da analise</div>
@@ -4190,15 +4202,6 @@
                 oninput="_cenSinglePlateInput(this)"
                 onkeydown="if(event.key==='Enter'){ _cenSingleSearchFromForm(); }"
                 class="cen-ctl cen-ctl-plate">
-            </label>
-            <label class="cen-lbl">Per&iacute;odo:
-              <select id="cen-single-window" onchange="_cenSingleWindowChange()" class="cen-ctl">
-                <option value="6h">6 horas</option>
-                <option value="24h" selected>24 horas</option>
-                <option value="7d">7 dias</option>
-                <option value="30d">30 dias</option>
-                <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-              </select>
             </label>
             <label class="cen-lbl">Dire&ccedil;&atilde;o:
               <select id="cen-single-direction" class="cen-ctl">
@@ -5965,7 +5968,8 @@
         &#128196; Relat&oacute;rio &mdash; <span id="rel-modal-titulo" style="font-weight:800"></span>
       </h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-        <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#128663; Ver rota</button>
+        <button id="rel-btn-target" onclick="_relCriarAlvo()" style="background:#b91c1c;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127919; Criar alvo</button>
+        <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127760; Ver mapa</button>
         <button onclick="_relSalvarNoPC()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128190; Salvar</button>
         <button onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
         <button class="modal-close" onclick="closeRelModal(true)">&times;</button>
@@ -8397,7 +8401,7 @@ function _cenSingleRenderEmpty() {
   var body = document.getElementById('cen-single-body');
   if (!body) return;
   body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 10px">'
-    + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a an&aacute;lise detalhada.'
+    + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir o relat&oacute;rio detalhado.'
     + '</div>';
 }
 
@@ -8678,7 +8682,7 @@ function _cenSingleInit() {
     _cenSingleResetSummaryCards();
     _cenSingleSyncActionButtons();
     _cenSingleRenderEmpty();
-    _cenSingleSetStatus('Informe a placa e o per&iacute;odo desejado para abrir a an&aacute;lise detalhada.', 'info');
+    _cenSingleSetStatus('Informe a placa e o per&iacute;odo desejado para abrir o relat&oacute;rio detalhado.', 'info');
   }
   _cenSingleInitDone = true;
 }
@@ -8709,9 +8713,40 @@ async function _cenSingleSearch(plate, opts) {
   _cenSingleState.plate = plate;
   _cenSingleState.opts = Object.assign({}, opts);
   _cenSinglePushRecent(plate);
-  _cenSingleSetStatus('Abrindo an&aacute;lise detalhada de ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
-  await openBatedorReport(plate, false, opts);
-  _cenSingleSetStatus('An&aacute;lise detalhada aberta para ' + plate + '.', 'ok');
+  _cenSingleSetStatus('Gerando relat&oacute;rio de ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
+  try {
+    var responses = await Promise.all([
+      fetch(_cenSingleBuildReportUrl(plate, opts)),
+      fetch(_cenSingleBuildCentralUrl(plate, opts)).catch(function() { return null; }),
+    ]);
+    var reportResp = responses[0];
+    var centralResp = responses[1];
+    if (!reportResp || !reportResp.ok) {
+      var errPayload = await reportResp.json().catch(function() { return { detail: 'HTTP ' + (reportResp ? reportResp.status : '?') }; });
+      throw new Error(errPayload.detail || ('HTTP ' + reportResp.status));
+    }
+    var report = await reportResp.json();
+    var centralItem = null;
+    if (centralResp && centralResp.ok) {
+      var centralPayload = await centralResp.json().catch(function() { return { items: [] }; });
+      centralItem = (centralPayload.items || []).find(function(item) { return item.plate === plate; }) || null;
+    }
+    _cenSingleState.report = report;
+    _cenSingleState.centralItem = centralItem;
+    _batedorReportData = { plate: plate, d: report };
+    _reportCurrentPlate = plate;
+    _reportCurrentOpts = _normalizeReportOpts(opts);
+    if (centralItem) _cenAllItems = [centralItem];
+    _cenSingleBuildMapState(plate, report.events || []);
+    _cenSingleSyncSummaryCards(report, centralItem);
+    _abrirRelatorioPlacaIndividual();
+    _cenSingleSetStatus('Relat&oacute;rio aberto para ' + plate + '.', 'ok');
+  } catch(e) {
+    _cenSingleState.report = null;
+    _cenSingleState.centralItem = null;
+    _cenSingleResetSummaryCards();
+    _cenSingleSetStatus('Erro ao gerar o relat&oacute;rio da placa ' + plate + ': ' + e.message, 'error');
+  }
 }
 
 function _cenSingleOpenFullAnalysis() {
@@ -9461,6 +9496,7 @@ var camsCnf = (g.cameras_confirmed || []).slice().sort(function(a,b){
 // ═══════════════════════════════════════════════════════════════════════════
 var _relPdfTitleSlug = 'relatorio';
 var _relCurrentMapaFn = null;
+var _relCurrentCreateTargetFn = null;
 var _batedorReportData = null;  // cache dos dados carregados por openBatedorReport
 var _relEngine = (function() {
   var D = '\u2014'; // em dash
@@ -9579,6 +9615,7 @@ async function closeRelModal(restoreContext) {
   _relModalCloseRestoreFn = null;
   _relModalReturnFn = null;
   _relCurrentMapaFn = null;
+  _relCurrentCreateTargetFn = null;
   closeModal('rel-modal');
   if (restoreContext && typeof restoreFn === 'function') {
     try {
@@ -9589,13 +9626,15 @@ async function closeRelModal(restoreContext) {
   }
 }
 
-function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel) {
+function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn) {
   document.getElementById('rel-modal-titulo').textContent = titulo;
   document.getElementById('rel-modal-body').innerHTML = html;
   var btnMapa = document.getElementById('rel-btn-mapa');
+  var btnTarget = document.getElementById('rel-btn-target');
   if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
+  if (btnTarget) { _relCurrentCreateTargetFn = createTargetFn || null; btnTarget.style.display = createTargetFn ? 'flex' : 'none'; }
   _relModalCloseRestoreFn = typeof restoreFn === 'function' ? restoreFn : null;
-  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel); };
+  _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
   _relInjectPrintStyle();
   openModal('rel-modal');
@@ -9603,6 +9642,10 @@ function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel) {
 
 function _relVerRotaMapa() {
   if (typeof _relCurrentMapaFn === 'function') { _relCurrentMapaFn(); }
+}
+
+function _relCriarAlvo() {
+  if (typeof _relCurrentCreateTargetFn === 'function') { _relCurrentCreateTargetFn(); }
 }
 
 // ── Relatório de Placa Individual ────────────────────────────────────────────
@@ -9908,20 +9951,30 @@ function _abrirRelatorioPlacaIndividual() {
     _relEngine.buildFooter(now)
   ], 'rel-print');
 
-  _relAbrirModal(plate, rpiHtml, function() {
-    var rd = _batedorReportData;
-    if (!rd) return;
-    var evs = (rd.d && rd.d.events) || [];
-    var tss = evs.map(function(e){ return e.ts; }).filter(Boolean).sort();
-    var nowMs = Date.now();
-    var tsFrom = tss.length
-      ? _toLocalDTInput(new Date(new Date(tss[0]).getTime() - 3600000))
-      : _toLocalDTInput(new Date(nowMs - 7*86400000));
-    var tsTo = tss.length
-      ? _toLocalDTInput(new Date(new Date(tss[tss.length-1]).getTime() + 3600000))
-      : _toLocalDTInput(new Date(nowMs));
-    _verRotaNaMapa(rd.plate, tsFrom, tsTo, evs.length + ' passagem(ns)');
-  });
+  _relAbrirModal(
+    plate,
+    rpiHtml,
+    function() {
+      var rd = _batedorReportData;
+      if (!rd) return;
+      var evs = (rd.d && rd.d.events) || [];
+      var tss = evs.map(function(e){ return e.ts; }).filter(Boolean).sort();
+      var nowMs = Date.now();
+      var tsFrom = tss.length
+        ? _toLocalDTInput(new Date(new Date(tss[0]).getTime() - 3600000))
+        : _toLocalDTInput(new Date(nowMs - 7*86400000));
+      var tsTo = tss.length
+        ? _toLocalDTInput(new Date(new Date(tss[tss.length-1]).getTime() + 3600000))
+        : _toLocalDTInput(new Date(nowMs));
+      _verRotaNaMapa(rd.plate, tsFrom, tsTo, evs.length + ' passagem(ns)');
+    },
+    null,
+    null,
+    d.is_alvo ? null : function() {
+      closeRelModal(false);
+      _addPlateAsAlvo(plate);
+    }
+  );
 }
 // -- Relat�rio do Grupo Suspeito ----------------------------------------------
 function _cgsGerarRelatorio() {
@@ -10969,20 +11022,13 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     var decLabels = { confirmado: '&#9989; Suspeito confirmado', falso_positivo: '&#10060; Falso positivo', ignorar: '&#9197; Ignorado' };
     var decBg = { confirmado: 'rgba(220,38,38,.2)', falso_positivo: 'rgba(34,197,94,.1)', ignorar: 'rgba(100,100,100,.15)' };
     var decBorder = { confirmado: 'rgba(220,38,38,.5)', falso_positivo: 'rgba(34,197,94,.3)', ignorar: 'rgba(120,120,120,.3)' };
-    var _sc = d.score;
-    var _lv = d.level || 'normal';
     var decisionHtml = _plateSection('2. Decis\u00e3o operacional',
       (lastDec
         ? '<div style="background:' + (decBg[lastDec.decision]||'rgba(100,100,100,.1)') + ';border:1px solid ' + (decBorder[lastDec.decision]||'rgba(120,120,120,.3)') + ';border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.82rem;line-height:1.5">'
           + '<strong>' + (decLabels[lastDec.decision]||lastDec.decision) + '</strong>'
           + (lastDec.note ? ' \u2014 ' + lastDec.note : '')
           + ' <span style="color:var(--muted);font-size:.72rem">por ' + (lastDec.operator||'sistema') + ' em ' + fmtTs(lastDec.created_at) + '</span></div>'
-        : '<div style="margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:.82rem;color:var(--muted)">Nenhuma decis\u00e3o registrada para esta placa at\u00e9 o momento.</div>')
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px">'
-      + '<button class="btn btn-sm" style="background:rgba(220,38,38,.7);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'confirmado\')">&#9989; Confirmar suspeito</button>'
-      + '<button class="btn btn-sm" style="background:rgba(34,197,94,.5);color:#fff" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'falso_positivo\')">&#10060; Falso positivo</button>'
-      + '<button class="btn btn-outline btn-sm" onclick="_submitDecision(\'' + _escPlate + '\',' + _sc + ',\'' + _lv + '\',\'ignorar\')">&#9197; Ignorar</button>'
-      + '</div>',
+        : '<div style="margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:.82rem;color:var(--muted)">Nenhuma decis\u00e3o registrada para esta placa at\u00e9 o momento.</div>'),
       'var(--accent2)'
     );
 
