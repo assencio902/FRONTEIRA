@@ -4240,19 +4240,13 @@
               <div style="font-size:.72rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">&#128339; Ultimas pesquisadas</div>
               <div id="cen-single-recents" style="display:flex;gap:8px;flex-wrap:wrap"></div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
-              <button class="btn btn-outline btn-sm" id="cen-single-btn-full" onclick="_cenSingleOpenFullAnalysis()" disabled>&#128269; An&aacute;lise completa</button>
-              <button class="btn btn-outline btn-sm" id="cen-single-btn-report" onclick="_cenSingleOpenPrintableReport()" disabled>&#128196; Gerar relat&oacute;rio</button>
-              <button class="btn btn-outline btn-sm" id="cen-single-btn-map" onclick="_cenSingleOpenMap()" disabled>&#127760; Ver rota no mapa</button>
-              <button class="btn btn-outline btn-sm" id="cen-single-btn-target" onclick="_cenSingleCreateTarget()" disabled>&#127919; Criar alvo</button>
-            </div>
           </div>
 
           <div id="cen-single-statusline" class="status-line" style="margin-bottom:12px"></div>
 
           <div id="cen-single-body" style="border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.03);padding:18px 20px">
             <div style="text-align:center;color:var(--muted);padding:24px 10px">
-              Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a investiga&ccedil;&atilde;o.
+              Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a an&aacute;lise detalhada.
             </div>
           </div>
 
@@ -8409,7 +8403,7 @@ function _cenSingleRenderEmpty() {
   var body = document.getElementById('cen-single-body');
   if (!body) return;
   body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 10px">'
-    + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a investiga&ccedil;&atilde;o.'
+    + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir a an&aacute;lise detalhada.'
     + '</div>';
 }
 
@@ -8690,7 +8684,7 @@ function _cenSingleInit() {
     _cenSingleResetSummaryCards();
     _cenSingleSyncActionButtons();
     _cenSingleRenderEmpty();
-    _cenSingleSetStatus('Informe a placa e o per&iacute;odo desejado para iniciar a investiga&ccedil;&atilde;o.', 'info');
+    _cenSingleSetStatus('Informe a placa e o per&iacute;odo desejado para abrir a an&aacute;lise detalhada.', 'info');
   }
   _cenSingleInitDone = true;
 }
@@ -8720,54 +8714,10 @@ async function _cenSingleSearch(plate, opts) {
   opts = opts || _cenSingleReadOpts() || _cenSingleDefaultOpts();
   _cenSingleState.plate = plate;
   _cenSingleState.opts = Object.assign({}, opts);
-  _cenSingleRenderLoading(plate);
-  _cenSingleResetSummaryCards();
-  _cenSingleSyncActionButtons();
-  _cenSingleSetStatus('Analisando a placa ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
-  try {
-    var responses = await Promise.all([
-      fetch(_cenSingleBuildReportUrl(plate, opts)),
-      fetch(_cenSingleBuildCentralUrl(plate, opts)).catch(function() { return null; }),
-    ]);
-    var reportResp = responses[0];
-    var centralResp = responses[1];
-    if (!reportResp || !reportResp.ok) {
-      var errPayload = await reportResp.json().catch(function() { return { detail: 'HTTP ' + (reportResp ? reportResp.status : '?') }; });
-      throw new Error(errPayload.detail || ('HTTP ' + reportResp.status));
-    }
-    var report = await reportResp.json();
-    var centralItem = null;
-    if (centralResp && centralResp.ok) {
-      var centralPayload = await centralResp.json().catch(function() { return { items: [] }; });
-      centralItem = (centralPayload.items || []).find(function(item) { return item.plate === plate; }) || null;
-    }
-    _cenSingleState.report = report;
-    _cenSingleState.centralItem = centralItem;
-    _batedorReportData = { plate: plate, d: report };
-    _reportCurrentPlate = plate;
-    _reportCurrentOpts = _normalizeReportOpts(opts);
-    if (centralItem) _cenAllItems = [centralItem];
-    _cenSingleBuildMapState(plate, report.events || []);
-    _cenSinglePushRecent(plate);
-    _cenSingleSyncSummaryCards(report, centralItem);
-    _cenSingleSyncActionButtons();
-    _cenSingleRenderAnalysis(report, centralItem);
-    if ((report.events || []).length) {
-      _cenSingleSetStatus('An&aacute;lise atualizada para ' + plate + ': ' + String((report.summary || {}).total_passes || report.events.length || 0) + ' passagem(ns) e ' + String((report.convoy_partners || []).length) + ' parceiro(s) confirmado(s).', 'ok');
-    } else {
-      _cenSingleSetStatus('A placa ' + plate + ' n&atilde;o teve passagens no per&iacute;odo selecionado.', 'warn');
-    }
-  } catch(e) {
-    _cenSingleState.report = null;
-    _cenSingleState.centralItem = null;
-    _cenSingleResetSummaryCards();
-    _cenSingleSyncActionButtons();
-    var body = document.getElementById('cen-single-body');
-    if (body) {
-      body.innerHTML = '<div style="padding:18px 14px;border:1px solid rgba(239,68,68,.22);border-radius:12px;background:rgba(127,29,29,.16);color:#fca5a5;font-size:.84rem">&#9888; Erro ao carregar a investiga&ccedil;&atilde;o: ' + e.message + '</div>';
-    }
-    _cenSingleSetStatus('Erro ao pesquisar a placa ' + plate + '.', 'error');
-  }
+  _cenSinglePushRecent(plate);
+  _cenSingleSetStatus('Abrindo an&aacute;lise detalhada de ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
+  await openBatedorReport(plate, false, opts);
+  _cenSingleSetStatus('An&aacute;lise detalhada aberta para ' + plate + '.', 'ok');
 }
 
 function _cenSingleOpenFullAnalysis() {
@@ -8813,7 +8763,7 @@ function _cenSingleClear() {
   _cenSingleResetSummaryCards();
   _cenSingleSyncActionButtons();
   _cenSingleRenderEmpty();
-  _cenSingleSetStatus('Consulta limpa. Informe uma nova placa para investigar.', 'info');
+  _cenSingleSetStatus('Consulta limpa. Informe uma nova placa para abrir a an&aacute;lise detalhada.', 'info');
   _cenSingleFocusPlateInput();
 }
 
