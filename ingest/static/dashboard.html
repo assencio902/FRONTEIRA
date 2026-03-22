@@ -8894,6 +8894,8 @@ function _resolveTrajectoryCameraPoint(item, plate) {
   var cams = window._camsData || [];
   var eventKeys = [
     String(item.camera_id || '').trim().toLowerCase(),
+    String(item.camera_ip || '').trim().toLowerCase(),
+    String(item.camera_name || '').trim().toLowerCase(),
     String(item.cam_nome || '').trim().toLowerCase(),
     String(item.camera || '').trim().toLowerCase(),
     String(item.channel_name || '').trim().toLowerCase()
@@ -8911,9 +8913,56 @@ function _resolveTrajectoryCameraPoint(item, plate) {
     camera_id: item.camera_id || cam.camera_id || cam.ip || '',
     ts: item.occurred_at || item.ts || '',
     plate: plate,
-    cam_nome: item.cam_nome || item.camera || item.channel_name || cam.nome || cam.camera_id || '',
+    cam_nome: item.camera_name || item.cam_nome || item.camera || item.channel_name || cam.nome || cam.camera_id || '',
     lat: Number(cam.latitude),
     lng: Number(cam.longitude)
+  };
+}
+
+function _buildTrajectoryFallbackFromReport(plate, apiData) {
+  var rd = _batedorReportData;
+  var wantedPlate = String(plate || '').trim().toUpperCase();
+  var reportPlate = rd && rd.plate ? String(rd.plate).trim().toUpperCase() : '';
+  var statePlate = (_cenSingleState && _cenSingleState.plate) ? String(_cenSingleState.plate).trim().toUpperCase() : '';
+  var report = rd && rd.d ? rd.d : ((_cenSingleState && _cenSingleState.report) || null);
+  if (!report) return null;
+  if (reportPlate && reportPlate !== wantedPlate) return null;
+  if (!reportPlate && statePlate && statePlate !== wantedPlate) return null;
+  var events = (report.events || []).slice();
+  if (!events.length) return null;
+
+  var seen = {};
+  var points = [];
+  var missing = {};
+
+  events.forEach(function(ev) {
+    var point = _resolveTrajectoryCameraPoint(ev, plate);
+    if (point && point.lat != null && point.lng != null) {
+      var key = [point.camera_id || point.cam_nome || '', point.ts || ''].join('|');
+      if (!seen[key]) {
+        seen[key] = true;
+        points.push(point);
+      }
+      return;
+    }
+    var missName = ev.camera_name || ev.cam_nome || ev.camera || ev.channel_name || ev.camera_id || ev.camera_ip || '';
+    if (missName) missing[missName] = true;
+  });
+
+  if (!points.length) return null;
+  points.sort(function(a, b) { return new Date(a.ts || 0) - new Date(b.ts || 0); });
+  (apiData && apiData.cameras_without_gps || []).forEach(function(name) {
+    if (name) missing[name] = true;
+  });
+
+  return {
+    plate: wantedPlate,
+    start: apiData && apiData.start,
+    end: apiData && apiData.end,
+    total_events: Math.max(Number((apiData && apiData.total_events) || 0), events.length),
+    total_points: points.length,
+    cameras_without_gps: Object.keys(missing),
+    points: points
   };
 }
 
@@ -9637,166 +9686,97 @@ function _relAbrirDocumentoExportado() {
   return win;
 }
 
-function _relPdfLatin1(str) {
-  return String(str || '')
-    .replace(/\r/g, '')
-    .replace(/\u00A0/g, ' ')
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[–—]/g, '-')
-    .replace(/[•·]/g, '-')
-    .replace(/[^\x20-\x7E\u00A0-\u00FF\n]/g, '');
-}
+var _relHtml2PdfPromise = null;
 
-function _relPdfEscape(str) {
-  return _relPdfLatin1(str)
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
-}
-
-function _relPdfWrapLine(text, maxChars) {
-  var src = _relPdfLatin1(text || '').trim();
-  if (!src) return [''];
-  var words = src.split(/\s+/);
-  var lines = [];
-  var current = '';
-  words.forEach(function(word) {
-    if (!current) {
-      current = word;
+function _relEnsureHtml2PdfLib() {
+  if (window.html2pdf) return Promise.resolve(window.html2pdf);
+  if (_relHtml2PdfPromise) return _relHtml2PdfPromise;
+  _relHtml2PdfPromise = new Promise(function(resolve, reject) {
+    var existing = document.getElementById('rel-html2pdf-lib');
+    if (existing) {
+      existing.addEventListener('load', function() {
+        if (window.html2pdf) resolve(window.html2pdf);
+        else reject(new Error('html2pdf não carregado.'));
+      }, { once:true });
+      existing.addEventListener('error', function() {
+        reject(new Error('Falha ao carregar html2pdf.'));
+      }, { once:true });
       return;
     }
-    if ((current + ' ' + word).length <= maxChars) {
-      current += ' ' + word;
-    } else {
-      lines.push(current);
-      current = word;
-    }
+    var s = document.createElement('script');
+    s.id = 'rel-html2pdf-lib';
+    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+    s.onload = function() {
+      if (window.html2pdf) resolve(window.html2pdf);
+      else reject(new Error('html2pdf indisponível após carregamento.'));
+    };
+    s.onerror = function() {
+      reject(new Error('Não foi possível carregar a biblioteca de PDF.'));
+    };
+    document.head.appendChild(s);
   });
-  if (current) lines.push(current);
-  return lines;
+  return _relHtml2PdfPromise;
 }
 
-function _relBuildPdfLines() {
+function _relBuildPdfExportNode() {
   var body = document.getElementById('rel-modal-body');
-  var title = document.getElementById('rel-modal-titulo');
-  var raw = '';
-  if (title && title.textContent) raw += 'Relatorio - ' + title.textContent + '\n\n';
-  raw += body ? (body.innerText || body.textContent || '') : '';
-  raw = _relPdfLatin1(raw).replace(/\t/g, '    ');
-  var out = [];
-  raw.split('\n').forEach(function(line) {
-    var clean = line.replace(/\s+$/g, '');
-    if (!clean.trim()) {
-      if (out.length && out[out.length - 1] !== '') out.push('');
-      return;
-    }
-    _relPdfWrapLine(clean, 92).forEach(function(wrapped) { out.push(wrapped); });
-  });
-  return out.length ? out : ['Relatorio vazio.'];
+  if (!body) return null;
+  var report = body.querySelector('#rel-print') || body.firstElementChild || body;
+  var host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-20000px;top:0;width:794px;background:#ffffff;padding:18px 18px 24px;box-sizing:border-box;z-index:-1';
+  var clone = report.cloneNode(true);
+  clone.style.margin = '0';
+  clone.style.width = '100%';
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  return host;
 }
 
-function _relPdfBytesFromString(str) {
-  var bytes = new Uint8Array(str.length);
-  for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xFF;
-  return bytes;
+function _relDestroyPdfExportNode(node) {
+  if (node && node.parentNode) node.parentNode.removeChild(node);
 }
 
-function _relBuildPdfBlob() {
-  var lines = _relBuildPdfLines();
-  var pageWidth = 595.28;
-  var pageHeight = 841.89;
-  var marginLeft = 42;
-  var marginTop = 44;
-  var fontSize = 10.5;
-  var lineHeight = 14;
-  var linesPerPage = Math.max(1, Math.floor((pageHeight - marginTop * 2) / lineHeight));
-  var pageChunks = [];
-  for (var i = 0; i < lines.length; i += linesPerPage) {
-    pageChunks.push(lines.slice(i, i + linesPerPage));
+async function _relGenerateStyledPdf() {
+  var html2pdf = await _relEnsureHtml2PdfLib();
+  var host = _relBuildPdfExportNode();
+  if (!host) throw new Error('Relatório indisponível para exportação.');
+  var fileName = (_relPdfTitleSlug || 'relatorio').replace(/[^A-Z0-9_\-]/gi, '_') + '.pdf';
+  try {
+    await html2pdf().set({
+      margin: [8, 8, 8, 8],
+      filename: fileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        letterRendering: true
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    }).from(host).save();
+  } finally {
+    _relDestroyPdfExportNode(host);
   }
-  if (!pageChunks.length) pageChunks = [['Relatorio vazio.']];
-
-  var objects = {};
-  var pageIds = [];
-  var nextId = 4;
-
-  pageChunks.forEach(function(chunk) {
-    var pageId = nextId++;
-    var contentId = nextId++;
-    pageIds.push(pageId);
-    var content = 'BT\n'
-      + '/F1 ' + fontSize + ' Tf\n'
-      + lineHeight + ' TL\n'
-      + '1 0 0 1 ' + marginLeft + ' ' + (pageHeight - marginTop) + ' Tm\n';
-    chunk.forEach(function(line, idx) {
-      content += '(' + _relPdfEscape(line) + ') Tj\n';
-      if (idx !== chunk.length - 1) content += 'T*\n';
-    });
-    content += 'ET';
-    objects[contentId] = '<< /Length ' + content.length + ' >>\nstream\n' + content + '\nendstream';
-    objects[pageId] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pageWidth + ' ' + pageHeight + '] /Resources << /Font << /F1 3 0 R >> >> /Contents ' + contentId + ' 0 R >>';
-  });
-
-  objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
-  objects[2] = '<< /Type /Pages /Count ' + pageIds.length + ' /Kids [' + pageIds.map(function(id) { return id + ' 0 R'; }).join(' ') + '] >>';
-  objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
-
-  var maxId = nextId - 1;
-  var pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
-  var offsets = [0];
-  for (var id = 1; id <= maxId; id++) {
-    offsets[id] = pdf.length;
-    pdf += id + ' 0 obj\n' + objects[id] + '\nendobj\n';
-  }
-  var xrefOffset = pdf.length;
-  pdf += 'xref\n0 ' + (maxId + 1) + '\n';
-  pdf += '0000000000 65535 f \n';
-  for (var j = 1; j <= maxId; j++) {
-    pdf += String(offsets[j]).padStart(10, '0') + ' 00000 n \n';
-  }
-  pdf += 'trailer\n<< /Size ' + (maxId + 1) + ' /Root 1 0 R >>\nstartxref\n' + xrefOffset + '\n%%EOF';
-  return new Blob([_relPdfBytesFromString(pdf)], { type: 'application/pdf' });
 }
 
 async function _relSalvarNoPC() {
-  var fileName = (_relPdfTitleSlug || 'relatorio').replace(/[^A-Z0-9_\-]/gi, '_') + '.pdf';
-  var blob = _relBuildPdfBlob();
-  if (window.showSaveFilePicker) {
-    try {
-      var handle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{
-          description: 'Relatorio PDF',
-          accept: { 'application/pdf': ['.pdf'] }
-        }]
-      });
-      var writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      if (typeof _flashMsg === 'function') _flashMsg('💾 PDF salvo no PC.', '#2563eb');
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return;
-    }
+  try {
+    await _relGenerateStyledPdf();
+    if (typeof _flashMsg === 'function') _flashMsg('💾 PDF salvo no PC.', '#2563eb');
+  } catch (err) {
+    alert('Erro ao salvar PDF: ' + err.message);
   }
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
-  if (typeof _flashMsg === 'function') _flashMsg('💾 PDF baixado.', '#2563eb');
 }
 
-function _relExportarPDF() {
-  var win = _relAbrirDocumentoExportado();
-  if (!win) { alert('Permita pop-ups para exportar o PDF.'); return; }
-  setTimeout(function() {
-    try { win.print(); } catch (e) {}
-  }, 250);
+async function _relExportarPDF() {
+  try {
+    await _relGenerateStyledPdf();
+    if (typeof _flashMsg === 'function') _flashMsg('💾 PDF exportado.', '#2563eb');
+  } catch (err) {
+    alert('Erro ao exportar PDF: ' + err.message);
+  }
 }
 
 function _relInjectPrintStyle() {
@@ -13255,6 +13235,12 @@ async function _verRotaNaMapa(plate, tsFrom, tsTo, infoLabel) {
       throw new Error(errData.detail || 'HTTP ' + r.status);
     }
     var data = await r.json();
+    if (!data.points || data.points.length === 0) {
+      var fallbackData = _buildTrajectoryFallbackFromReport(plate, data);
+      if (fallbackData && fallbackData.points && fallbackData.points.length) {
+        data = fallbackData;
+      }
+    }
     if (!data.points || data.points.length === 0) {
       var msg = 'Nenhuma passagem com GPS encontrada neste per\u00edodo.';
       if (data.cameras_without_gps && data.cameras_without_gps.length)
