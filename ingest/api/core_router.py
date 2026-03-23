@@ -12,18 +12,18 @@ def build_core_router(
     router = APIRouter(tags=["core"])
 
     @router.get("/", include_in_schema=False)
-    def root():
+    async def root():
         return RedirectResponse(url="/dashboard")
 
     @router.get("/dashboard", include_in_schema=False)
-    def dashboard_page():
+    async def dashboard_page():
         dashboard_file = static_dir / "dashboard.html"
         if dashboard_file.exists():
             return FileResponse(dashboard_file)
         return RedirectResponse(url="/")
 
     @router.get("/login", include_in_schema=False)
-    def login_page():
+    async def login_page():
         login_file = static_dir / "login.html"
         if login_file.exists():
             return FileResponse(login_file)
@@ -34,7 +34,7 @@ def build_core_router(
         )
 
     @router.get("/health")
-    def health():
+    async def health():
         return {"status": "ok"}
 
     @router.api_route(
