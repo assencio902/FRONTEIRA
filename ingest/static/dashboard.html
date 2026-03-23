@@ -6229,7 +6229,7 @@
     <div class="form-error" id="camera-form-error"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-outline btn-sm" onclick="closeModal('camera-modal')">Cancelar</button>
-      <button class="btn btn-primary btn-sm" onclick="saveCamera()">Salvar</button>
+      <button id="camera-save-btn" type="button" class="btn btn-primary btn-sm" onclick="saveCamera()">Salvar</button>
     </div>
   </div>
 </div>
@@ -14232,6 +14232,37 @@ function openCameraModal(cam) {
   openModal('camera-modal');
   setTimeout(function(){ document.getElementById('cam-camera-id').focus(); }, 80);
 }
+
+(function initCameraModalBindings(){
+  function _bindCameraSave() {
+    var btn = document.getElementById('camera-save-btn');
+    var modal = document.getElementById('camera-modal');
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function(event){
+        event.preventDefault();
+        saveCamera();
+      });
+    }
+    if (modal && !modal.dataset.bound) {
+      modal.dataset.bound = '1';
+      modal.addEventListener('keydown', function(event){
+        if (event.key === 'Enter' && !event.shiftKey) {
+          var tag = (event.target && event.target.tagName || '').toUpperCase();
+          if (tag !== 'TEXTAREA') {
+            event.preventDefault();
+            saveCamera();
+          }
+        }
+      });
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _bindCameraSave);
+  } else {
+    _bindCameraSave();
+  }
+})();
 
 function editCamera(encodedOrObj) {
   var cam = (typeof encodedOrObj === 'string') ? JSON.parse(decodeURIComponent(encodedOrObj)) : encodedOrObj;
