@@ -8,6 +8,7 @@ Variaveis de ambiente:
   RETENTION_DAYS_IMAGES    int                   (default: 7)
   RETENTION_DAYS_EVENTS    int                   (default: 30)
   MAX_UPLOADS_GB           float  0=sem limite   (default: 50)
+  CLEANUP_MAX_USAGE_PERCENT float 0=desabilitado (default: 0)
   UPLOADS_DIR              path                  (default: /app/uploads)
 """
 
@@ -37,6 +38,7 @@ CLEANUP_DRY_RUN          = os.getenv("CLEANUP_DRY_RUN", "false").lower() == "tru
 RETENTION_DAYS_IMAGES    = int(os.getenv("RETENTION_DAYS_IMAGES", "7"))
 RETENTION_DAYS_EVENTS    = int(os.getenv("RETENTION_DAYS_EVENTS", "30"))
 MAX_UPLOADS_GB           = float(os.getenv("MAX_UPLOADS_GB", "50"))   # 0 = sem limite
+CLEANUP_MAX_USAGE_PERCENT = float(os.getenv("CLEANUP_MAX_USAGE_PERCENT", "0"))
 UPLOADS_DIR              = Path(os.getenv("UPLOADS_DIR", "/app/uploads"))
 
 _stop_event = threading.Event()
@@ -68,6 +70,16 @@ def _used_gb(path: Path) -> float:
     except Exception:
         pass
     return 0.0
+
+
+def _usage_percent(path: Path) -> float:
+    try:
+        usage = shutil.disk_usage(str(path))
+        if usage.total <= 0:
+            return 0.0
+        return (usage.used / usage.total) * 100.0
+    except Exception:
+        return 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -171,20 +183,38 @@ def cleanup_events(conn_factory) -> None:
 # ---------------------------------------------------------------------------
 def cleanup_by_disk_pressure(conn_factory) -> None:
     """
-    Se MAX_UPLOADS_GB > 0 e o uso da pasta uploads ultrapassar o limite,
-    apaga as pastas de dia mais antigas ate voltar abaixo do limite.
+    Se MAX_UPLOADS_GB > 0 OU CLEANUP_MAX_USAGE_PERCENT > 0 e o uso da pasta
+    uploads / filesystem ultrapassar o limite, apaga as pastas de dia mais
+    antigas ate voltar abaixo do limite.
     """
-    if MAX_UPLOADS_GB <= 0:
+    use_gb_limit = MAX_UPLOADS_GB > 0
+    use_percent_limit = CLEANUP_MAX_USAGE_PERCENT > 0
+    if not use_gb_limit and not use_percent_limit:
         return
 
     used = _used_gb(UPLOADS_DIR)
-    if used <= MAX_UPLOADS_GB:
+    usage_percent = _usage_percent(UPLOADS_DIR)
+    over_gb_limit = use_gb_limit and used > MAX_UPLOADS_GB
+    over_percent_limit = use_percent_limit and usage_percent > CLEANUP_MAX_USAGE_PERCENT
+    if not over_gb_limit and not over_percent_limit:
         return
 
-    logger.warning(
-        "DISCO: uploads usando %.1f GB > limite %.1f GB. Iniciando limpeza de pressao.",
-        used, MAX_UPLOADS_GB,
-    )
+    reasons: list[str] = []
+    if over_gb_limit:
+        reasons.append(f"uploads usando {used:.1f} GB > limite {MAX_UPLOADS_GB:.1f} GB")
+    if over_percent_limit:
+        reasons.append(
+            f"filesystem em {usage_percent:.1f}% > limite {CLEANUP_MAX_USAGE_PERCENT:.1f}%"
+        )
+    logger.warning("DISCO: %s. Iniciando limpeza de pressao.", " | ".join(reasons))
+
+    def _still_over_limit() -> bool:
+        current_used = _used_gb(UPLOADS_DIR)
+        current_percent = _usage_percent(UPLOADS_DIR)
+        return (
+            (use_gb_limit and current_used > MAX_UPLOADS_GB)
+            or (use_percent_limit and current_percent > CLEANUP_MAX_USAGE_PERCENT)
+        )
 
     today = datetime.now(timezone.utc).date()
     day_dirs = sorted(
@@ -193,7 +223,7 @@ def cleanup_by_disk_pressure(conn_factory) -> None:
     )
 
     for day_dir in day_dirs:
-        if _used_gb(UPLOADS_DIR) <= MAX_UPLOADS_GB:
+        if not _still_over_limit():
             break
         try:
             dir_date = datetime.strptime(day_dir.name, "%Y-%m-%d").date()
@@ -221,8 +251,10 @@ def cleanup_by_disk_pressure(conn_factory) -> None:
         try:
             shutil.rmtree(day_dir)
             logger.warning(
-                "DISCO[%s]: pasta removida por pressao de disco (%.1f GB usados).",
-                day_dir.name, used,
+                "DISCO[%s]: pasta removida por pressao de disco (%.1f GB usados, %.1f%% do filesystem).",
+                day_dir.name,
+                _used_gb(UPLOADS_DIR),
+                _usage_percent(UPLOADS_DIR),
             )
         except Exception as exc:
             logger.error("DISCO[%s]: erro ao remover: %s", day_dir.name, exc)
@@ -234,11 +266,12 @@ def cleanup_by_disk_pressure(conn_factory) -> None:
 def _cleanup_loop(conn_factory) -> None:
     logger.info(
         "Cleanup worker iniciado — interval=%ds images=%dd events=%dd "
-        "max_gb=%.0f dry_run=%s",
+        "max_gb=%.0f max_usage_percent=%.1f dry_run=%s",
         CLEANUP_INTERVAL_SECONDS,
         RETENTION_DAYS_IMAGES,
         RETENTION_DAYS_EVENTS,
         MAX_UPLOADS_GB,
+        CLEANUP_MAX_USAGE_PERCENT,
         CLEANUP_DRY_RUN,
     )
 
@@ -250,8 +283,9 @@ def _cleanup_loop(conn_factory) -> None:
             free = _free_gb(UPLOADS_DIR)
             used = _used_gb(UPLOADS_DIR)
             logger.info(
-                "Cleanup ciclo — disco livre: %.1f GB | uploads: %.2f GB",
+                "Cleanup ciclo — disco livre: %.1f GB | uploads: %.2f GB | uso_fs: %.1f%%",
                 free, used,
+                _usage_percent(UPLOADS_DIR),
             )
             cleanup_images(conn_factory)
             cleanup_events(conn_factory)

@@ -1,3 +1,5 @@
+import os
+import shutil
 from pathlib import Path
 from typing import Any, Callable
 
@@ -13,6 +15,74 @@ def _safe_file_path(base_dir: Path, file_path: str) -> Path:
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="arquivo nao encontrado")
     return target
+
+
+def _list_storage_mounts() -> list[dict[str, Any]]:
+    mounts: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    pseudo_fs = {
+        "proc",
+        "sysfs",
+        "tmpfs",
+        "devtmpfs",
+        "devpts",
+        "overlay",
+        "squashfs",
+        "cgroup",
+        "cgroup2",
+        "mqueue",
+        "rpc_pipefs",
+        "tracefs",
+        "securityfs",
+        "pstore",
+        "autofs",
+        "debugfs",
+        "configfs",
+        "fusectl",
+    }
+
+    mount_file = "/proc/mounts" if os.path.exists("/proc/mounts") else None
+    if mount_file:
+        with open(mount_file, "r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                device, mount_point, fs_type = parts[0], parts[1], parts[2]
+                mount_point = mount_point.replace("\\040", " ")
+                if fs_type in pseudo_fs:
+                    continue
+                if not (
+                    mount_point == "/"
+                    or mount_point.startswith("/mnt/")
+                    or mount_point.startswith("/media/")
+                    or mount_point.startswith("/srv/")
+                    or mount_point.startswith("/home/")
+                ):
+                    continue
+                if mount_point in seen:
+                    continue
+                seen.add(mount_point)
+                try:
+                    usage = shutil.disk_usage(mount_point)
+                except Exception:
+                    usage = None
+                mounts.append(
+                    {
+                        "mount_point": mount_point,
+                        "device": device,
+                        "fs_type": fs_type,
+                        "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
+                        "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
+                        "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
+                        "used_percent": round(((usage.used / usage.total) * 100), 2)
+                        if usage and usage.total
+                        else None,
+                    }
+                )
+
+    mounts.sort(key=lambda item: (0 if item["mount_point"] == "/" else 1, item["mount_point"]))
+    return mounts
 
 
 def build_storage_router(
@@ -71,6 +141,12 @@ def build_storage_router(
         if set_storage_cache_fn:
             set_storage_cache_fn(next_values)
         return {"ok": True, "settings": next_values}
+
+    @router.get("/api/storage/volumes")
+    def list_storage_volumes(request: Request):
+        require_auth_fn(request)
+        assert_admin_fn(request, "Apenas administradores podem visualizar os discos do servidor")
+        return {"items": _list_storage_mounts()}
 
     @router.get("/uploads/{file_path:path}", include_in_schema=False)
     async def serve_upload(file_path: str):

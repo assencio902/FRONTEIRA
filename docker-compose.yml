@@ -59,6 +59,7 @@
       RETENTION_DAYS_IMAGES: ${RETENTION_DAYS_IMAGES:-7}
       RETENTION_DAYS_EVENTS: ${RETENTION_DAYS_EVENTS:-30}
       MAX_UPLOADS_GB: ${MAX_UPLOADS_GB:-50}
+      CLEANUP_MAX_USAGE_PERCENT: ${CLEANUP_MAX_USAGE_PERCENT:-0}
       UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
       ABORDADO_IMAGES_DIR: ${ABORDADO_IMAGES_DIR:-/app/abordados}
       # ── Webhook hardening (anti-DoS / anti-burst RAM) ─────────────────────
