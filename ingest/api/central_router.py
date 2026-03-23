@@ -37,7 +37,7 @@ def build_central_router(
     ):
         window_min = parse_window_to_minutes_fn(window)
         co_win_s = max(1, min(1000, int(co_window)))
-        min_cam = max(2, int(min_cameras))
+        min_cam = max(1, int(min_cameras))
         trip_gap = max(1, int(max_trip_gap))
         lim = max(1, min(500, int(limit)))
         order = str(order_mode).strip().lower()

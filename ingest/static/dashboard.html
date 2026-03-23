@@ -8213,8 +8213,11 @@ function batWindowChange() {
   document.getElementById('bat-date-row').classList.toggle('visible', v === 'custom');
 }
 function cenWindowChange() {
-  var v = document.getElementById('cen-window').value;
-  document.getElementById('cen-date-row').classList.toggle('visible', v === 'custom');
+  var windowEl = document.getElementById('cen-window');
+  var rowEl = document.getElementById('cen-date-row');
+  if (!windowEl) return;
+  var v = windowEl.value;
+  if (rowEl) rowEl.classList.toggle('visible', v === 'custom');
   if (v !== 'custom') loadCentral(true);
 }
 function convWindowChange() {
@@ -10968,13 +10971,26 @@ function cenGroupSizeChange() {
   loadCentral(true);
 }
 
+function _cenGetValue(primaryId, fallbackId, defaultValue) {
+  var primaryEl = primaryId ? document.getElementById(primaryId) : null;
+  if (primaryEl && primaryEl.value != null) return primaryEl.value;
+  var fallbackEl = fallbackId ? document.getElementById(fallbackId) : null;
+  if (fallbackEl && fallbackEl.value != null) return fallbackEl.value;
+  return defaultValue;
+}
+
+function _cenSetText(id, value) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
 async function loadCentral(showSpinner) {
   if (showSpinner === undefined) showSpinner = true;
-  var w = document.getElementById('cen-window').value;
+  var w = _cenGetValue('cen-window', 'cen-single-window', '24h');
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
-    tsFrom = _toIso(document.getElementById('cen-ts-from').value);
-    tsTo   = _toIso(document.getElementById('cen-ts-to').value);
+    tsFrom = _toIso(_cenGetValue('cen-ts-from', 'cen-single-ts-from', ''));
+    tsTo   = _toIso(_cenGetValue('cen-ts-to', 'cen-single-ts-to', ''));
     if (!tsFrom || !tsTo) { alert('Informe o período personalizado (De / Até).'); return; }
     w = '1h';
   }
@@ -10988,8 +11004,11 @@ async function loadCentral(showSpinner) {
   if (showSpinner) {
     var _cst = document.getElementById('central-status');
     if (_cst) _cst.innerHTML = '<span class="spinner"></span>';
-    document.getElementById('central-tbody').innerHTML =
-      '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando…</td></tr>';
+    var centralBody = document.getElementById('central-tbody');
+    if (centralBody) {
+      centralBody.innerHTML =
+        '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando…</td></tr>';
+    }
   }
   try {
     var url = '/api/batedor/central?window=' + w + '&limit=300';
@@ -11002,9 +11021,9 @@ async function loadCentral(showSpinner) {
     _cenAllItems = all;
     _cenPage     = 0;
     // cards (sempre com dados brutos completos)
-    document.getElementById('cen-total').textContent = all.length;
-    document.getElementById('cen-multi').textContent = all.filter(function(i){ return (i.companions_count || 0) > 0 || !!i.in_comboio; }).length || '-';
-    document.getElementById('cen-alvos').textContent = all.filter(function(i){ return i.is_alvo; }).length || '-';
+    _cenSetText('cen-total', all.length);
+    _cenSetText('cen-multi', all.filter(function(i){ return (i.companions_count || 0) > 0 || !!i.in_comboio; }).length || '-');
+    _cenSetText('cen-alvos', all.filter(function(i){ return i.is_alvo; }).length || '-');
     _cenRenderPage();
     var ts = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     var _cst = document.getElementById('central-status');
@@ -11014,9 +11033,13 @@ async function loadCentral(showSpinner) {
   } catch(e) {
     var _cst = document.getElementById('central-status');
     if (_cst) _cst.textContent = 'Erro: ' + e.message;
-    if (showSpinner)
-      document.getElementById('central-tbody').innerHTML =
-        '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+    if (showSpinner) {
+      var centralBodyError = document.getElementById('central-tbody');
+      if (centralBodyError) {
+        centralBodyError.innerHTML =
+          '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e.message + '</td></tr>';
+      }
+    }
     // para o live se der erro
     _cenLiveEnabled = false; _cenStopTimer();
     var btn = document.getElementById('btn-cen-live');
@@ -11026,8 +11049,8 @@ async function loadCentral(showSpinner) {
 }
 
 function _cenRenderPage() {
-  var mc      = parseInt(document.getElementById('cen-min-cameras').value, 10);
-  var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
+  var mc = parseInt(_cenGetValue('cen-min-cameras', 'cen-single-min-cameras', '0'), 10) || 0;
+  var plateFl = String(_cenGetValue('cen-filter-plate', 'cen-single-plate', '') || '').trim().toUpperCase();
   var riscoFl = (document.getElementById('cen-risco') || {value:''}).value || '';
   var items = _cenAllItems.filter(function(i) {
     // filtro placa
@@ -11052,21 +11075,24 @@ function _cenRenderPage() {
   var start = _cenPage * _cenPageSize;
   var page  = items.slice(start, start + _cenPageSize);
 
-  document.getElementById('cen-top-score').textContent = items.length ? items[0].score_total : '-';
+  _cenSetText('cen-top-score', items.length ? items[0].score_total : '-');
 
   var pg = document.getElementById('cen-pagination');
-  if (total > _cenPageSize) {
+  if (pg && total > _cenPageSize) {
     pg.style.display = 'flex';
-    document.getElementById('cen-page-info').textContent =
-      'Página ' + (_cenPage + 1) + ' de ' + pages + ' · ' + total + ' placa(s)';
-    document.getElementById('cen-btn-prev').disabled = _cenPage === 0;
-    document.getElementById('cen-btn-next').disabled = _cenPage >= pages - 1;
-  } else if (total > 0) {
+    _cenSetText('cen-page-info', 'Página ' + (_cenPage + 1) + ' de ' + pages + ' · ' + total + ' placa(s)');
+    var prevBtn = document.getElementById('cen-btn-prev');
+    var nextBtn = document.getElementById('cen-btn-next');
+    if (prevBtn) prevBtn.disabled = _cenPage === 0;
+    if (nextBtn) nextBtn.disabled = _cenPage >= pages - 1;
+  } else if (pg && total > 0) {
     pg.style.display = 'flex';
-    document.getElementById('cen-page-info').textContent = total + ' placa(s)';
-    document.getElementById('cen-btn-prev').disabled = true;
-    document.getElementById('cen-btn-next').disabled = true;
-  } else {
+    _cenSetText('cen-page-info', total + ' placa(s)');
+    var prevBtnSingle = document.getElementById('cen-btn-prev');
+    var nextBtnSingle = document.getElementById('cen-btn-next');
+    if (prevBtnSingle) prevBtnSingle.disabled = true;
+    if (nextBtnSingle) nextBtnSingle.disabled = true;
+  } else if (pg) {
     pg.style.display = 'none';
   }
   renderCentral(page, total);
@@ -11152,7 +11178,8 @@ function _cenAcompanhamentoCell(item) {
 
 function renderCentral(items, total) {
   var tb = document.getElementById('central-tbody');
-  var plateFl = (document.getElementById('cen-filter-plate').value || '').trim().toUpperCase();
+  if (!tb) return;
+  var plateFl = String(_cenGetValue('cen-filter-plate', 'cen-single-plate', '') || '').trim().toUpperCase();
   if (!items.length) {
     var emptyMsg = (total === 0 ? 'Nenhuma placa em atenção encontrada com os filtros atuais.' : 'Sem resultados nesta página.');
     if (plateFl) emptyMsg = 'Placa não encontrada com os filtros informados.';
