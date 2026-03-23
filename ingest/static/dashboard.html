@@ -16234,21 +16234,41 @@ function _renderStorageVolumeDashboard() {
       + '</div>'
       + '</div>';
   }).join('');
-  chartEl.innerHTML = _storageVolumesCache.map(function(item) {
+  chartEl.innerHTML = '<div class="card" style="padding:16px 18px;background:rgba(255,255,255,.03);border:1px solid var(--border)">'
+    + '<div style="font-weight:700;font-size:.92rem;margin-bottom:4px">&#128202; Capacidade dos discos</div>'
+    + '<div style="font-size:.76rem;color:var(--muted);margin-bottom:16px">Visual de uso real por disco, com ocupado e livre.</div>'
+    + _storageVolumesCache.map(function(item) {
     var used = Number(item.used_percent || 0);
     var free = Math.max(0, 100 - used);
     var color = _storageUsageColor(used);
-    return '<div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px">'
-      + '<div style="font-weight:600">' + (item.mount_point || 'Disco') + '</div>'
-      + '<div style="font-size:.76rem;color:var(--muted)">' + (item.used_gb != null ? item.used_gb.toLocaleString('pt-BR') : '0') + ' GB usados / ' + (item.free_gb != null ? item.free_gb.toLocaleString('pt-BR') : '0') + ' GB livres</div>'
+    var ringBackground = 'conic-gradient(' + color + ' 0% ' + used + '%, rgba(255,255,255,.12) ' + used + '% 100%)';
+    return '<div style="display:grid;grid-template-columns:minmax(110px,140px) 1fr;gap:18px;align-items:center;padding:14px 0;border-top:1px solid rgba(255,255,255,.06)">'
+      + '<div style="display:flex;justify-content:center">'
+      + '<div style="width:104px;height:104px;border-radius:50%;background:' + ringBackground + ';display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)">'
+      + '<div style="width:70px;height:70px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.06)">'
+      + '<div style="font-size:1rem;font-weight:800;color:' + color + '">' + used.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '%</div>'
+      + '<div style="font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">usado</div>'
       + '</div>'
-      + '<div style="height:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);display:flex">'
+      + '</div>'
+      + '</div>'
+      + '<div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+      + '<div style="font-weight:700;font-size:.92rem">' + (item.mount_point || 'Disco') + '</div>'
+      + '<div style="font-size:.76rem;color:var(--muted)">' + (item.device || 'disco') + ' · ' + (item.fs_type || 'fs') + '</div>'
+      + '</div>'
+      + '<div style="height:18px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);display:flex;margin-bottom:10px">'
       + '<div style="width:' + used + '%;background:' + color + ';transition:width .25s ease"></div>'
-      + '<div style="width:' + free + '%;background:rgba(255,255,255,.12);transition:width .25s ease"></div>'
+      + '<div style="width:' + free + '%;background:rgba(255,255,255,.16);transition:width .25s ease"></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem">'
+      + '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:' + color + ';display:inline-block"></span>Ocupado: ' + (item.used_gb != null ? item.used_gb.toLocaleString('pt-BR') + ' GB' : '—') + '</span>'
+      + '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.35);display:inline-block"></span>Livre: ' + (item.free_gb != null ? item.free_gb.toLocaleString('pt-BR') + ' GB' : '—') + '</span>'
+      + '<span style="color:var(--muted)">Total: ' + (item.total_gb != null ? item.total_gb.toLocaleString('pt-BR') + ' GB' : '—') + '</span>'
+      + '</div>'
       + '</div>'
       + '</div>';
-  }).join('');
+  }).join('')
+    + '</div>';
 }
 function _renderStorageVolumes() {
   var wrap = document.getElementById('storage-path-volumes');
