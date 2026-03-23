@@ -7425,6 +7425,7 @@ async function loadPainel() {
       'Indisponivel'
     );
   }
+  _markTabLoaded('painel');
 }
 
 // ===== ESTADO =====
@@ -7497,6 +7498,35 @@ var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'E
 var _pnCharts = {};
 var _painelProdutividadeCache = null;
 var _vehicleTargetFlow = null;
+var _tabLoadMeta = {};
+
+function _queueTabLoad(name, loader, maxAgeMs, force) {
+  var meta = _tabLoadMeta[name] || (_tabLoadMeta[name] = { promise: null, loadedAt: 0 });
+  var now = Date.now();
+  if (!force && meta.promise) return meta.promise;
+  if (!force && meta.loadedAt && maxAgeMs > 0 && (now - meta.loadedAt) < maxAgeMs) {
+    return Promise.resolve();
+  }
+  meta.promise = Promise.resolve()
+    .then(loader)
+    .catch(function(err) {
+      console.error('[tab-load:' + name + ']', err);
+    })
+    .finally(function() {
+      meta.loadedAt = Date.now();
+      meta.promise = null;
+    });
+  return meta.promise;
+}
+
+function _invalidateTabLoad(name) {
+  if (_tabLoadMeta[name]) _tabLoadMeta[name].loadedAt = 0;
+}
+
+function _markTabLoaded(name) {
+  var meta = _tabLoadMeta[name] || (_tabLoadMeta[name] = { promise: null, loadedAt: 0 });
+  meta.loadedAt = Date.now();
+}
 
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
@@ -7516,7 +7546,7 @@ function switchTab(name, el) {
   el.classList.add('active');
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
-  if (name === 'painel')  loadPainel();
+  if (name === 'painel')  _queueTabLoad('painel', function(){ return loadPainel(); }, 15000);
   if (name === 'produtividade') loadProdutividadeTab(true, 'lancamentos');
   if (name === 'eventos') loadEvents(evOffset);
   if (name === 'batedor') {
@@ -7536,12 +7566,12 @@ function switchTab(name, el) {
     }
   }
   if (name === 'veiculos') { loadLists(); }
-  if (name === 'cameras')  loadCameras();
-  if (name === 'mapa')     loadMapa();
+  if (name === 'cameras')  _queueTabLoad('cameras', function(){ return loadCameras(); }, 10000);
+  if (name === 'mapa')     _queueTabLoad('mapa', function(){ return loadMapa(); }, 10000);
   else                     _stopMapaAutoRefresh();
-  if (name === 'usuarios') loadUsers();
-  if (name === 'storage')  loadStorageSettings();
-  if (name === 'alarmes')  loadAlarmes();
+  if (name === 'usuarios') _queueTabLoad('usuarios', function(){ return loadUsers(); }, 10000);
+  if (name === 'storage')  _queueTabLoad('storage', function(){ return loadStorageSettings(); }, 30000);
+  if (name === 'alarmes')  _queueTabLoad('alarmes', function(){ return loadAlarmes(); }, 10000);
   if (name === 'config')   initConfigTab();
   trackPageView(name, TAB_TITLES[name] || name, '/dashboard#' + name);
 }
@@ -13875,6 +13905,10 @@ function toggleRealtime() {
     btn.classList.remove('btn-outline');
     btn.classList.add('btn-success');
     label.innerHTML = 'ATIVO <span class="dot" style="display:inline-block;margin-left:4px"></span>';
+    if (_realtimeInterval) {
+      clearInterval(_realtimeInterval);
+      _realtimeInterval = null;
+    }
     checkBatedorRealtime(); // roda imediatamente
     _realtimeInterval = setInterval(checkBatedorRealtime, 60000);
   } else {
@@ -14140,6 +14174,7 @@ async function loadCameras() {
     _cameraRows.forEach(function(c){ if (c.last_seen) _cameraStatusMap[c.camera_id] = c.last_seen; });
     _renderCameras();
     populateEvCameraFilter(); // atualiza filtro de eventos com todas as câmeras
+    _markTabLoaded('cameras');
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar c\u00e2meras: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
@@ -15234,6 +15269,7 @@ async function loadMapa() {
           + '</div>';
       }
     }
+    _markTabLoaded('mapa');
 
   } catch(e) {
     console.error('[Mapa]', e);
@@ -16062,6 +16098,7 @@ async function loadStorageSettings() {
     if (!response.ok) throw new Error(data.detail || 'Falha ao carregar caminhos de storage.');
     _storageDefaults = Object.assign({}, _storageDefaults, data || {});
     _storageFillForm(_storageDefaults);
+    _markTabLoaded('storage');
   } catch (err) {
     _storageSetMessage('error', err.message || 'Falha ao carregar caminhos de storage.');
   }
@@ -16324,6 +16361,7 @@ async function loadUsers() {
     document.getElementById('uc-inactive').textContent  = _usersCache.filter(function(u){ return !u.ativa; }).length;
     _syncUsersActivityToggleButton();
     if (_usersActivityVisible) await loadAdminActivity();
+    _markTabLoaded('usuarios');
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar usu\u00e1rios: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
@@ -16503,6 +16541,7 @@ async function loadAlarmes() {
     document.getElementById('alc-ativos').textContent = _almCache.filter(function(a){ return a.ativo; }).length;
     document.getElementById('alc-criticos').textContent = _almCache.filter(function(a){ return a.prioridade === 'alta' || a.prioridade === 'critica'; }).length;
     document.getElementById('alc-inativos').textContent = _almCache.filter(function(a){ return !a.ativo; }).length;
+    _markTabLoaded('alarmes');
   } catch(e) {
     if (err) err.textContent = 'Erro ao carregar alarmes: ' + e.message;
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:32px">Falha ao carregar.</td></tr>';
@@ -16794,8 +16833,8 @@ function _renderHistTable(items) {
 (async function() {
   await loadMonPlates();
   // Carrega câmeras primeiro para o filtro ficar pronto antes dos eventos
-  await loadCameras().catch(function(){});
-  await loadPainel();
+  await _queueTabLoad('cameras', function(){ return loadCameras(); }, 0, true);
+  await _queueTabLoad('painel', function(){ return loadPainel(); }, 0, true);
   _presenceSetCurrentPage('painel', 'Painel', '/dashboard#painel');
   _startPresenceHeartbeat();
   await trackPageView('painel', 'Painel', '/dashboard#painel', true);
