@@ -17,9 +17,8 @@ def _safe_file_path(base_dir: Path, file_path: str) -> Path:
     return target
 
 
-def _list_storage_mounts() -> list[dict[str, Any]]:
-    mounts: list[dict[str, Any]] = []
-    seen: set[str] = set()
+def _read_mount_index() -> list[dict[str, str]]:
+    mounts: list[dict[str, str]] = []
     pseudo_fs = {
         "proc",
         "sysfs",
@@ -52,37 +51,64 @@ def _list_storage_mounts() -> list[dict[str, Any]]:
                 mount_point = mount_point.replace("\\040", " ")
                 if fs_type in pseudo_fs:
                     continue
-                if not (
-                    mount_point == "/"
-                    or mount_point.startswith("/mnt/")
-                    or mount_point.startswith("/media/")
-                    or mount_point.startswith("/srv/")
-                    or mount_point.startswith("/home/")
-                ):
-                    continue
-                if mount_point in seen:
-                    continue
-                seen.add(mount_point)
-                try:
-                    usage = shutil.disk_usage(mount_point)
-                except Exception:
-                    usage = None
                 mounts.append(
                     {
                         "mount_point": mount_point,
                         "device": device,
                         "fs_type": fs_type,
-                        "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
-                        "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
-                        "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
-                        "used_percent": round(((usage.used / usage.total) * 100), 2)
-                        if usage and usage.total
-                        else None,
                     }
                 )
-
-    mounts.sort(key=lambda item: (0 if item["mount_point"] == "/" else 1, item["mount_point"]))
+    mounts.sort(key=lambda item: len(item["mount_point"]), reverse=True)
     return mounts
+
+
+def _match_mount_info(target_path: Path, mount_index: list[dict[str, str]]) -> dict[str, str]:
+    target = str(target_path.resolve())
+    for item in mount_index:
+        mount_point = item["mount_point"]
+        if target == mount_point or target.startswith(mount_point.rstrip("/") + "/"):
+            return item
+    return {"mount_point": target, "device": "desconhecido", "fs_type": "desconhecido"}
+
+
+def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    mount_index = _read_mount_index()
+    labels = {
+        "event_images_dir": "Imagens de eventos",
+        "abordagem_images_dir": "Imagens de abordagens",
+        "metadata_dir": "Metadados",
+    }
+    for key, path in storage_dirs.items():
+        resolved = path.resolve()
+        path_key = str(resolved)
+        if path_key in seen:
+            continue
+        seen.add(path_key)
+        try:
+            usage = shutil.disk_usage(resolved)
+        except Exception:
+            usage = None
+        mount_info = _match_mount_info(resolved, mount_index)
+        items.append(
+            {
+                "key": key,
+                "label": labels.get(key, key),
+                "mount_point": str(resolved),
+                "device": mount_info.get("device"),
+                "fs_type": mount_info.get("fs_type"),
+                "backing_mount": mount_info.get("mount_point"),
+                "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
+                "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
+                "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
+                "used_percent": round(((usage.used / usage.total) * 100), 2)
+                if usage and usage.total
+                else None,
+            }
+        )
+    items.sort(key=lambda item: item["label"])
+    return items
 
 
 def build_storage_router(
@@ -146,7 +172,8 @@ def build_storage_router(
     def list_storage_volumes(request: Request):
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem visualizar os discos do servidor")
-        return {"items": _list_storage_mounts()}
+        storage_dirs = {key: get_storage_dir_fn(key) for key in default_storage_paths_fn().keys()}
+        return {"items": _list_storage_mounts(storage_dirs)}
 
     @router.get("/uploads/{file_path:path}", include_in_schema=False)
     async def serve_upload(file_path: str):

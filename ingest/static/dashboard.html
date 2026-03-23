@@ -16221,12 +16221,15 @@ function _renderStorageVolumeDashboard() {
   summaryEl.innerHTML = _storageVolumesCache.map(function(item) {
     var percent = Number(item.used_percent || 0);
     var color = _storageUsageColor(percent);
+    var title = item.label || item.mount_point || 'Disco';
+    var subtitle = (item.mount_point || 'caminho') + (item.backing_mount && item.backing_mount !== item.mount_point ? ' · disco ' + item.backing_mount : '');
     return '<div class="card" style="padding:14px 16px;background:rgba(255,255,255,.03);border:1px solid var(--border)">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
-      + '<div style="font-weight:700">' + (item.mount_point || 'Disco') + '</div>'
+      + '<div style="font-weight:700">' + title + '</div>'
       + '<span class="badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '55">' + percent.toLocaleString('pt-BR', {maximumFractionDigits:1}) + '% usado</span>'
       + '</div>'
-      + '<div style="font-size:.76rem;color:var(--muted);margin-top:6px">' + (item.device || 'disco') + ' · ' + (item.fs_type || 'fs') + '</div>'
+      + '<div style="font-size:.76rem;color:var(--muted);margin-top:6px">' + subtitle + '</div>'
+      + '<div style="font-size:.72rem;color:var(--muted);margin-top:3px">' + (item.device || 'disco') + ' · ' + (item.fs_type || 'fs') + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">'
       + '<div><div style="font-size:.7rem;color:var(--muted)">Total</div><div style="font-weight:700">' + (item.total_gb != null ? item.total_gb.toLocaleString('pt-BR') + ' GB' : '—') + '</div></div>'
       + '<div><div style="font-size:.7rem;color:var(--muted)">Usado</div><div style="font-weight:700">' + (item.used_gb != null ? item.used_gb.toLocaleString('pt-BR') + ' GB' : '—') + '</div></div>'
@@ -16242,6 +16245,8 @@ function _renderStorageVolumeDashboard() {
     var free = Math.max(0, 100 - used);
     var color = _storageUsageColor(used);
     var ringBackground = 'conic-gradient(' + color + ' 0% ' + used + '%, rgba(255,255,255,.12) ' + used + '% 100%)';
+    var title = item.label || item.mount_point || 'Disco';
+    var subtitle = (item.mount_point || 'caminho') + (item.backing_mount && item.backing_mount !== item.mount_point ? ' · disco ' + item.backing_mount : '');
     return '<div style="display:grid;grid-template-columns:minmax(110px,140px) 1fr;gap:18px;align-items:center;padding:14px 0;border-top:1px solid rgba(255,255,255,.06)">'
       + '<div style="display:flex;justify-content:center">'
       + '<div style="width:104px;height:104px;border-radius:50%;background:' + ringBackground + ';display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)">'
@@ -16253,9 +16258,10 @@ function _renderStorageVolumeDashboard() {
       + '</div>'
       + '<div>'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
-      + '<div style="font-weight:700;font-size:.92rem">' + (item.mount_point || 'Disco') + '</div>'
+      + '<div style="font-weight:700;font-size:.92rem">' + title + '</div>'
       + '<div style="font-size:.76rem;color:var(--muted)">' + (item.device || 'disco') + ' · ' + (item.fs_type || 'fs') + '</div>'
       + '</div>'
+      + '<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">' + subtitle + '</div>'
       + '<div style="height:18px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);display:flex;margin-bottom:10px">'
       + '<div style="width:' + used + '%;background:' + color + ';transition:width .25s ease"></div>'
       + '<div style="width:' + free + '%;background:rgba(255,255,255,.16);transition:width .25s ease"></div>'
