@@ -5747,7 +5747,7 @@
     </div>
 
     <div id="tab-storage" class="tab-pane">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px" id="users-main-header">
         <div>
           <div style="font-weight:700;font-size:.97rem">&#128451;&#65039; Storage</div>
           <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Defina onde o sistema salva imagens de eventos, imagens de abordagens e arquivos de metadados.</div>
@@ -16522,9 +16522,11 @@ async function toggleUsersActivitySection(forceOpen) {
   var nextVisible = typeof forceOpen === 'boolean' ? forceOpen : !_usersActivityVisible;
   _usersActivityVisible = nextVisible;
   panel.style.display = nextVisible ? 'block' : 'none';
+  var header = document.getElementById('users-main-header');
   var cards = document.getElementById('users-cards');
   var searchWrap = document.getElementById('users-search-wrap');
   var usersTableWrap = document.getElementById('users-table-wrap');
+  if (header) header.style.display = nextVisible ? 'none' : 'flex';
   if (cards) cards.style.display = nextVisible ? 'none' : 'flex';
   if (searchWrap) searchWrap.style.display = nextVisible ? 'none' : '';
   if (usersTableWrap) usersTableWrap.style.display = nextVisible ? 'none' : '';
