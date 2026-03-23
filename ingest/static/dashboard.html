@@ -6154,8 +6154,17 @@
       <div id="cam-id-hint" style="display:none"></div>
     </div>
     <div class="form-group">
-      <label>IP da c&#226;mera</label>
+      <label>IP da c&#226;mera *</label>
       <input type="text" id="cam-ip" placeholder="Ex: 172.21.151.16" maxlength="45">
+    </div>
+    <div class="form-group">
+      <label>Usu&aacute;rio da c&#226;mera *</label>
+      <input type="text" id="cam-usuario" placeholder="Ex: admin" maxlength="80" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Senha da c&#226;mera *</label>
+      <input type="password" id="cam-senha" placeholder="Informe a senha da c&#226;mera" maxlength="120" autocomplete="current-password">
+      <div id="cam-senha-hint" style="font-size:.72rem;color:var(--muted);margin-top:4px;display:none"></div>
     </div>
     <div class="form-group">
       <label>Dire&ccedil;&atilde;o do fluxo</label>
@@ -14118,6 +14127,8 @@ function openCameraModal(cam) {
   camIdField.style.pointerEvents = '';
   document.getElementById('cam-id-hint').style.display = 'none';
   document.getElementById('cam-ip').value          = cam ? (cam.ip          || '') : '';
+  document.getElementById('cam-usuario').value     = cam ? (cam.usuario     || '') : '';
+  document.getElementById('cam-senha').value       = '';
   document.getElementById('cam-direcao').value     = cam ? (cam.direcao     || '') : '';
   document.getElementById('cam-criticidade').value = cam ? (cam.criticidade || 'NORMAL') : 'NORMAL';
   document.getElementById('cam-peso-score').value  = cam ? (cam.peso_score  != null ? cam.peso_score : 1.0) : 1.0;
@@ -14125,6 +14136,9 @@ function openCameraModal(cam) {
   document.getElementById('cam-longitude').value   = cam ? (cam.longitude != null ? cam.longitude : '') : '';
   document.getElementById('cam-ativa').checked     = cam ? !!cam.ativa : true;
   document.getElementById('cam-modo-integracao').value = cam ? (cam.modo_integracao || 'push') : 'push';
+  var pwHint = document.getElementById('cam-senha-hint');
+  pwHint.style.display = cam ? 'block' : 'none';
+  pwHint.textContent = cam ? 'Deixe em branco para manter a senha atual.' : '';
   _camModoChange();
   document.getElementById('camera-form-error').textContent = '';
 
@@ -14193,6 +14207,8 @@ function editCamera(encodedOrObj) {
 async function saveCamera() {
   var cameraId    = document.getElementById('cam-camera-id').value.trim();
   var ip          = document.getElementById('cam-ip').value.trim();
+  var usuario     = document.getElementById('cam-usuario').value.trim();
+  var senha       = document.getElementById('cam-senha').value;
   var direcao     = document.getElementById('cam-direcao').value || null;
   var criticidade = document.getElementById('cam-criticidade').value;
   var peso_score  = parseFloat(document.getElementById('cam-peso-score').value) || 1.0;
@@ -14204,10 +14220,14 @@ async function saveCamera() {
   var errEl       = document.getElementById('camera-form-error');
   errEl.textContent = '';
   if (!cameraId) { errEl.textContent = 'ID / Nome da câmera é obrigatório.'; return; }
+  if (!ip) { errEl.textContent = 'IP da câmera é obrigatório.'; return; }
+  if (!usuario) { errEl.textContent = 'Usuário da câmera é obrigatório.'; return; }
+  if (!_cameraEditId && !senha.trim()) { errEl.textContent = 'Senha da câmera é obrigatória.'; return; }
   if (peso_score <= 0) { errEl.textContent = 'Peso Score deve ser maior que 0.'; return; }
   if (latRaw !== '' && (isNaN(latitude)  || latitude  < -90  || latitude  > 90))  { errEl.textContent = 'Latitude inválida (-90 a 90).';   return; }
   if (lngRaw !== '' && (isNaN(longitude) || longitude < -180 || longitude > 180)) { errEl.textContent = 'Longitude inválida (-180 a 180).'; return; }
-  var body = { camera_id: cameraId, nome: cameraId, ip: ip || null, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude, modo_integracao: 'push' };
+  var body = { camera_id: cameraId, nome: cameraId, ip: ip, usuario: usuario, direcao: direcao, criticidade: criticidade, peso_score: peso_score, ativa: ativa, latitude: latitude, longitude: longitude, modo_integracao: 'push' };
+  if (senha.trim()) body.senha = senha.trim();
   try {
     var url    = _cameraEditId ? '/api/cameras/' + _cameraEditId : '/api/cameras';
     var method = _cameraEditId ? 'PUT' : 'POST';

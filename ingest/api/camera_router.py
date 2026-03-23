@@ -5,6 +5,16 @@ from fastapi import APIRouter, HTTPException, Request
 from rbac import assert_admin_or_operator
 
 
+def _clean_camera_required_fields(data: dict[str, Any]) -> dict[str, str]:
+    return {
+        "camera_id": str(data.get("camera_id") or "").strip(),
+        "nome": str(data.get("nome") or "").strip(),
+        "ip": str(data.get("ip") or "").strip(),
+        "usuario": str(data.get("usuario") or "").strip(),
+        "senha": str(data.get("senha") or "").strip(),
+    }
+
+
 def build_camera_router(
     conn_factory: Callable[[], Any],
     get_camera_row: Callable[[str], dict | None],
@@ -72,7 +82,7 @@ def build_camera_router(
                     "latitude": float(row[12]) if row[12] is not None else None,
                     "longitude": float(row[13]) if row[13] is not None else None,
                     "modo_integracao": "push",
-                    "usuario": None,
+                    "usuario": row[15] or None,
                     "last_event_camera_id": row[16] or None,
                     "last_event_camera_ip": row[17] or None,
                     "last_event_at": row[18].isoformat() if row[18] else None,
@@ -105,17 +115,23 @@ def build_camera_router(
             "Apenas administradores e operadores podem criar cameras",
         )
         data = await request.json()
-        camera_id = (data.get("camera_id") or "").strip()
-        nome = (data.get("nome") or "").strip()
+        required = _clean_camera_required_fields(data)
+        camera_id = required["camera_id"]
+        nome = required["nome"]
+        ip = required["ip"]
+        usuario = required["usuario"]
+        senha = required["senha"]
         criticidade = (data.get("criticidade") or "NORMAL").strip().upper()
         peso = float(data.get("peso_score") or data.get("peso") or 1.0)
-        ip = (data.get("ip") or "").strip() or None
         direcao = (data.get("direcao") or "").strip().upper() or None
         latitude = float(data["latitude"]) if data.get("latitude") not in (None, "") else None
         longitude = float(data["longitude"]) if data.get("longitude") not in (None, "") else None
 
-        if not camera_id or not nome:
-            raise HTTPException(status_code=400, detail="camera_id e nome sao obrigatorios")
+        if not camera_id or not nome or not ip or not usuario or not senha:
+            raise HTTPException(
+                status_code=400,
+                detail="camera_id, nome, ip, usuario e senha sao obrigatorios",
+            )
         if criticidade not in ("NORMAL", "CRITICA"):
             raise HTTPException(status_code=400, detail="criticidade deve ser 'NORMAL' ou 'CRITICA'")
         if peso <= 0:
@@ -146,20 +162,20 @@ def build_camera_router(
                         camera_id, nome, ativa, criticidade, peso, peso_score,
                         ip, direcao, latitude, longitude, modo_integracao, usuario, senha
                     )
-                    VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, 'push', NULL, NULL)
+                    VALUES (%s, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, 'push', %s, %s)
                     ON CONFLICT (camera_id) DO UPDATE SET
                         nome = EXCLUDED.nome,
                         ativa = TRUE,
                         criticidade = EXCLUDED.criticidade,
                         peso = EXCLUDED.peso,
                         peso_score = EXCLUDED.peso_score,
-                        ip = COALESCE(EXCLUDED.ip, cameras.ip),
+                        ip = EXCLUDED.ip,
                         direcao = EXCLUDED.direcao,
                         latitude = COALESCE(EXCLUDED.latitude, cameras.latitude),
                         longitude = COALESCE(EXCLUDED.longitude, cameras.longitude),
                         modo_integracao = 'push',
-                        usuario = NULL,
-                        senha = NULL
+                        usuario = EXCLUDED.usuario,
+                        senha = EXCLUDED.senha
                     """,
                     (
                         camera_id,
@@ -171,6 +187,8 @@ def build_camera_router(
                         direcao,
                         latitude,
                         longitude,
+                        usuario,
+                        senha,
                     ),
                 )
 
@@ -189,6 +207,8 @@ def build_camera_router(
         ativa = data.get("ativa")
         new_cam_id = data.get("camera_id")
         ip = data.get("ip")
+        usuario = data.get("usuario")
+        senha = data.get("senha")
         direcao = data.get("direcao")
 
         if criticidade is not None:
@@ -206,9 +226,38 @@ def build_camera_router(
 
         with conn_factory() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT 1 FROM cameras WHERE id=%s LIMIT 1", (cam_id,))
-                if not cur.fetchone():
+                cur.execute(
+                    """
+                    SELECT camera_id, nome, ip, usuario, senha
+                    FROM cameras
+                    WHERE id=%s
+                    LIMIT 1
+                    """,
+                    (cam_id,),
+                )
+                existing = cur.fetchone()
+                if not existing:
                     raise HTTPException(status_code=404, detail="camera nao encontrada")
+
+                existing_camera_id = str(existing[0] or "").strip()
+                existing_nome = str(existing[1] or "").strip()
+                existing_ip = str(existing[2] or "").strip()
+                existing_usuario = str(existing[3] or "").strip()
+                existing_senha = str(existing[4] or "").strip()
+
+                final_camera_id = (
+                    str(new_cam_id).strip() if new_cam_id is not None else existing_camera_id
+                )
+                final_nome = str(nome).strip() if nome is not None else existing_nome
+                final_ip = str(ip).strip() if ip is not None else existing_ip
+                final_usuario = str(usuario).strip() if usuario is not None else existing_usuario
+                final_senha = str(senha).strip() if senha is not None else existing_senha
+
+                if not final_camera_id or not final_nome or not final_ip or not final_usuario or not final_senha:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="camera_id, nome, ip, usuario e senha sao obrigatorios",
+                    )
 
                 sets: list[str] = []
                 vals: list[Any] = []
@@ -231,20 +280,25 @@ def build_camera_router(
                     sets.append("ativa=%s")
                     vals.append(bool(ativa))
                 if ip is not None:
-                    clean_ip = str(ip).strip() or None
-                    if clean_ip:
-                        cur.execute(
-                            "SELECT camera_id FROM cameras WHERE ip=%s AND id!=%s LIMIT 1",
-                            (clean_ip, cam_id),
+                    clean_ip = str(ip).strip()
+                    cur.execute(
+                        "SELECT camera_id FROM cameras WHERE ip=%s AND id!=%s LIMIT 1",
+                        (clean_ip, cam_id),
+                    )
+                    dup = cur.fetchone()
+                    if dup:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"IP {clean_ip} ja esta em uso pela camera '{dup[0]}'",
                         )
-                        dup = cur.fetchone()
-                        if dup:
-                            raise HTTPException(
-                                status_code=400,
-                                detail=f"IP {clean_ip} ja esta em uso pela camera '{dup[0]}'",
-                            )
                     sets.append("ip=%s")
                     vals.append(clean_ip)
+                if usuario is not None:
+                    sets.append("usuario=%s")
+                    vals.append(str(usuario).strip())
+                if senha is not None:
+                    sets.append("senha=%s")
+                    vals.append(str(senha).strip())
                 if direcao is not None:
                     d_val = str(direcao).strip().upper() or None
                     if d_val and d_val not in ("CRESCENTE", "DECRESCENTE"):
@@ -264,8 +318,6 @@ def build_camera_router(
                     vals.append(lng_val)
 
                 sets.append("modo_integracao='push'")
-                sets.append("usuario=NULL")
-                sets.append("senha=NULL")
 
                 if sets:
                     vals.append(cam_id)
@@ -276,7 +328,7 @@ def build_camera_router(
                 cur.execute(
                     """
                     SELECT id, camera_id, nome, ativa, criticidade, peso, created_at, ip,
-                           latitude, longitude
+                           latitude, longitude, usuario
                     FROM cameras
                     WHERE id=%s
                     LIMIT 1
@@ -301,7 +353,7 @@ def build_camera_router(
             "ip": row[7],
             "latitude": float(row[8]) if row[8] is not None else None,
             "longitude": float(row[9]) if row[9] is not None else None,
-            "usuario": None,
+            "usuario": row[10] or None,
             "modo_integracao": "push",
         }
 
