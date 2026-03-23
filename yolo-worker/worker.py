@@ -196,8 +196,10 @@ def _classify_bus_subtype(xyxy: list, img_bgr) -> str:
     return "bus"
 
 IMAGES_DIR = Path(os.getenv("IMAGES_DIR", "/app/uploads"))
+METADATA_DIR = Path(os.getenv("METADATA_DIR", "/app/metadata"))
 MODEL_PATH  = os.getenv("YOLO_MODEL", "yolov8n.pt")
 CONFIDENCE  = float(os.getenv("YOLO_CONF", "0.35"))
+_storage_cache: dict[str, object] = {"expires_at": 0.0, "values": None}
 
 # Limiares de blur (variância do Laplaciano). Abaixo = desfocado.
 BLUR_THRESHOLD_GERAL = float(os.getenv("BLUR_THRESHOLD_GERAL", "60.0"))
@@ -216,6 +218,47 @@ def _get_model():
         _model = YOLO(MODEL_PATH)
         print(f"[YOLO] Modelo carregado: {MODEL_PATH}", flush=True)
     return _model
+
+
+def _db_connect():
+    return psycopg2.connect(
+        host=os.getenv("POSTGRES_HOST", "postgres"),
+        port=os.getenv("POSTGRES_PORT", "5432"),
+        dbname=os.getenv("POSTGRES_DB", "monitor"),
+        user=os.getenv("POSTGRES_USER", "monitor_user"),
+        password=os.getenv("POSTGRES_PASSWORD", "monitor_pass"),
+    )
+
+
+def _get_storage_path(key: str, fallback: Path) -> Path:
+    import time
+
+    now_ts = time.time()
+    cached_values = _storage_cache.get("values")
+    if cached_values and now_ts < float(_storage_cache.get("expires_at") or 0):
+        raw_value = str(cached_values.get(key) or "")
+    else:
+        raw_value = ""
+        try:
+            conn = _db_connect()
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT key, path FROM storage_settings")
+                    values = {row[0]: row[1] for row in cur.fetchall()}
+            conn.close()
+            _storage_cache["values"] = values
+            _storage_cache["expires_at"] = now_ts + 10
+            raw_value = str(values.get(key) or "")
+        except Exception:
+            raw_value = ""
+
+    target = Path(raw_value.strip()) if raw_value.strip() else fallback
+    if not target.is_absolute():
+        target = (Path.cwd() / target).resolve()
+    else:
+        target = target.resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    return target
 
 
 # ---------------------------------------------------------------------------
@@ -456,13 +499,7 @@ def _update_db_plate(image_path: str, plate: str, event_id: "int | None" = None)
         except StopIteration:
             rel_path = image_path
 
-        conn = psycopg2.connect(
-            host=os.getenv("POSTGRES_HOST", "postgres"),
-            port=os.getenv("POSTGRES_PORT", "5432"),
-            dbname=os.getenv("POSTGRES_DB", "monitor"),
-            user=os.getenv("POSTGRES_USER", "monitor_user"),
-            password=os.getenv("POSTGRES_PASSWORD", "monitor_pass"),
-        )
+        conn = _db_connect()
         with conn:
             with conn.cursor() as cur:
                 if event_id is not None:
@@ -550,13 +587,7 @@ def _update_db(image_path: str, result: dict, event_id: "int | None" = None) -> 
         except StopIteration:
             rel_path = image_path
 
-        conn = psycopg2.connect(
-            host=os.getenv("POSTGRES_HOST", "postgres"),
-            port=os.getenv("POSTGRES_PORT", "5432"),
-            dbname=os.getenv("POSTGRES_DB", "monitor"),
-            user=os.getenv("POSTGRES_USER", "monitor_user"),
-            password=os.getenv("POSTGRES_PASSWORD", "monitor_pass"),
-        )
+        conn = _db_connect()
         with conn:
             with conn.cursor() as cur:
                 if event_id is not None:
@@ -747,7 +778,11 @@ def job_analyze_event(image_path: str, plate_raw: str = "",
         }
 
         # ── Salvar JSON ao lado da imagem ─────────────────────────────────
-        json_path = p.with_suffix(".yolo.json")
+        metadata_root = _get_storage_path("metadata_dir", METADATA_DIR)
+        rel_parent = Path(*p.parts[p.parts.index("uploads") + 1 : -1]) if "uploads" in p.parts else Path()
+        json_dir = (metadata_root / rel_parent).resolve()
+        json_dir.mkdir(parents=True, exist_ok=True)
+        json_path = json_dir / f"{p.stem}.yolo.json"
         json_path.write_text(json.dumps(output, ensure_ascii=False, indent=2))
 
         tv             = target_vehicle or (vehicle_details[0] if vehicle_details else None)

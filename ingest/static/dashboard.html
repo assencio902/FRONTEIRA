@@ -3658,6 +3658,10 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Usu&#225;rios
   </div>
+  <div class="nav-item nav-admin-only" onclick="switchTab('storage',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+    Storage
+  </div>
   <div class="nav-item" onclick="switchTab('config',this)" title="Configura\u00e7\u00f5es">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Configura&#231;&#245;es
@@ -5765,6 +5769,42 @@
       </div>
     </div>
 
+    <div id="tab-storage" class="tab-pane">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.97rem">&#128451;&#65039; Storage</div>
+          <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Defina onde o sistema salva imagens de eventos, imagens de abordagens e arquivos de metadados.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="loadStorageSettings()" title="Atualizar caminhos">&#8635; Atualizar</button>
+          <button class="btn btn-outline btn-sm" onclick="restoreStorageDefaults()" title="Restaurar padr&#245;es">Restaurar padr&#245;es</button>
+          <button class="btn btn-add btn-sm" onclick="saveStorageSettings()">Salvar caminhos</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px">
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px">Use caminhos vis&#237;veis para os containers Docker. Caminhos relativos s&#227;o resolvidos a partir da aplica&#231;&#227;o. A altera&#231;&#227;o vale para novos arquivos; arquivos antigos continuam no diret&#243;rio anterior.</div>
+
+        <div class="form-group">
+          <label for="storage-event-images-dir">Imagens de eventos</label>
+          <input id="storage-event-images-dir" type="text" placeholder="/app/uploads" style="background:var(--input-bg)">
+        </div>
+
+        <div class="form-group">
+          <label for="storage-abordagem-images-dir">Imagens de abordagens</label>
+          <input id="storage-abordagem-images-dir" type="text" placeholder="/app/abordados" style="background:var(--input-bg)">
+        </div>
+
+        <div class="form-group">
+          <label for="storage-metadata-dir">Metadados (YOLO / JSON)</label>
+          <input id="storage-metadata-dir" type="text" placeholder="/app/metadata" style="background:var(--input-bg)">
+        </div>
+
+        <div class="form-error" id="storage-error" style="margin-bottom:12px"></div>
+        <div id="storage-ok" style="color:var(--success);font-size:.8rem;min-height:18px"></div>
+      </div>
+    </div>
+
     <!-- ===== ABA CONFIGURA\u00c7\u00d5ES ===== -->
     <div id="tab-config" class="tab-pane">
       <div class="cfg-title">&#9881;&#65039; Configura&#231;&#245;es</div>
@@ -7453,7 +7493,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', config: 'Configura\u00e7\u00f5es' };
+var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', usuarios: 'Usu\u00e1rios', storage: 'Storage', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 var _painelProdutividadeCache = null;
 var _vehicleTargetFlow = null;
@@ -7461,7 +7501,7 @@ var _vehicleTargetFlow = null;
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
   var role = window._authRole || 'visualizador';
-  if (role !== 'admin' && (name === 'produtividade' || name === 'cameras')) {
+  if (role !== 'admin' && (name === 'produtividade' || name === 'cameras' || name === 'storage' || name === 'usuarios')) {
     var painelNav = document.querySelector('#sidebar .nav-item[onclick="switchTab(\'painel\',this)"]');
     if (name !== 'painel' && painelNav) {
       switchTab('painel', painelNav);
@@ -7500,6 +7540,7 @@ function switchTab(name, el) {
   if (name === 'mapa')     loadMapa();
   else                     _stopMapaAutoRefresh();
   if (name === 'usuarios') loadUsers();
+  if (name === 'storage')  loadStorageSettings();
   if (name === 'alarmes')  loadAlarmes();
   if (name === 'config')   initConfigTab();
   trackPageView(name, TAB_TITLES[name] || name, '/dashboard#' + name);
@@ -15996,6 +16037,64 @@ function saveRefreshSetting() {
   var ms = parseInt(document.getElementById('cfg-refresh').value || '15000');
   localStorage.setItem('bpfron_refresh_interval', ms);
   _startAutoRefresh();
+}
+var _storageDefaults = {
+  event_images_dir: '/app/uploads',
+  abordagem_images_dir: '/app/abordados',
+  metadata_dir: '/app/metadata'
+};
+function _storageSetMessage(kind, text) {
+  var errEl = document.getElementById('storage-error');
+  var okEl = document.getElementById('storage-ok');
+  if (errEl) errEl.textContent = kind === 'error' ? (text || '') : '';
+  if (okEl) okEl.textContent = kind === 'ok' ? (text || '') : '';
+}
+function _storageFillForm(data) {
+  document.getElementById('storage-event-images-dir').value = data.event_images_dir || '';
+  document.getElementById('storage-abordagem-images-dir').value = data.abordagem_images_dir || '';
+  document.getElementById('storage-metadata-dir').value = data.metadata_dir || '';
+}
+async function loadStorageSettings() {
+  _storageSetMessage('', '');
+  try {
+    var response = await fetch('/api/storage/settings');
+    var data = await response.json().catch(function(){ return {}; });
+    if (!response.ok) throw new Error(data.detail || 'Falha ao carregar caminhos de storage.');
+    _storageDefaults = Object.assign({}, _storageDefaults, data || {});
+    _storageFillForm(_storageDefaults);
+  } catch (err) {
+    _storageSetMessage('error', err.message || 'Falha ao carregar caminhos de storage.');
+  }
+}
+function restoreStorageDefaults() {
+  _storageSetMessage('', '');
+  _storageFillForm(_storageDefaults);
+}
+async function saveStorageSettings() {
+  _storageSetMessage('', '');
+  var body = {
+    event_images_dir: (document.getElementById('storage-event-images-dir').value || '').trim(),
+    abordagem_images_dir: (document.getElementById('storage-abordagem-images-dir').value || '').trim(),
+    metadata_dir: (document.getElementById('storage-metadata-dir').value || '').trim()
+  };
+  if (!body.event_images_dir || !body.abordagem_images_dir || !body.metadata_dir) {
+    _storageSetMessage('error', 'Preencha todos os caminhos antes de salvar.');
+    return;
+  }
+  try {
+    var response = await fetch('/api/storage/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    var data = await response.json().catch(function(){ return {}; });
+    if (!response.ok) throw new Error(data.detail || 'Falha ao salvar caminhos de storage.');
+    _storageDefaults = Object.assign({}, _storageDefaults, data.settings || body);
+    _storageFillForm(_storageDefaults);
+    _storageSetMessage('ok', 'Caminhos de storage salvos com sucesso.');
+  } catch (err) {
+    _storageSetMessage('error', err.message || 'Falha ao salvar caminhos de storage.');
+  }
 }
 function saveCfgAlarmSound() {
   localStorage.setItem('bpfron_alarm_sound', document.getElementById('cfg-alarm-sound').value);

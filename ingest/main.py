@@ -45,6 +45,7 @@ from api.events_stats_router import build_events_stats_router
 from api.fcm_router import build_fcm_router
 from api.pessoas_router import build_pessoas_router
 from api.produtividade_router import build_produtividade_router
+from api.storage_router import build_storage_router
 from api.trajetoria_router import build_trajetoria_router
 from api.users_router import build_users_router
 from api.vehicle_report_router import build_vehicle_report_router
@@ -170,22 +171,43 @@ logger = logging.getLogger(__name__)
 # ===========================
 
 STATIC_DIR = Path("static")
-UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR = Path(os.getenv("UPLOADS_DIR", "uploads"))
 ABORDADOS_DIR = Path(os.getenv("ABORDADO_IMAGES_DIR", "abordados"))
+METADATA_DIR = Path(os.getenv("METADATA_DIR", "metadata"))
+_STORAGE_SETTINGS_CACHE: dict[str, Any] = {"expires_at": 0.0, "values": None}
+_STORAGE_SETTINGS_TTL_SECONDS = 10
+
+
+def _resolve_storage_path(raw_value: str | Path | None, fallback: Path) -> Path:
+    raw_text = str(raw_value or "").strip()
+    candidate = Path(raw_text) if raw_text else fallback
+    if not candidate.is_absolute():
+        candidate = (Path.cwd() / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    return candidate
+
+
+def _ensure_storage_dir(path: Path, label: str) -> None:
+    if path.exists() and not path.is_dir():
+        raise RuntimeError(
+            f"{label} '{path.resolve()}' existe mas e um arquivo regular, nao um diretorio."
+        )
+    path.mkdir(parents=True, exist_ok=True)
+
+
+def _default_storage_paths() -> dict[str, Path]:
+    return {
+        "event_images_dir": _resolve_storage_path(UPLOAD_DIR, Path("uploads")),
+        "abordagem_images_dir": _resolve_storage_path(ABORDADOS_DIR, Path("abordados")),
+        "metadata_dir": _resolve_storage_path(METADATA_DIR, Path("metadata")),
+    }
 
 # Inicialização robusta: detecta se o path existe como arquivo (erro comum de
 # bind mount incorreto no Docker, ex: host tem arquivo 'uploads' em vez de dir).
-if UPLOAD_DIR.exists() and not UPLOAD_DIR.is_dir():
-    raise RuntimeError(
-        f"UPLOAD_DIR '{UPLOAD_DIR.resolve()}' existe mas é um arquivo regular, "
-        "não um diretório. Remova ou renomeie o arquivo antes de iniciar o serviço. "
-        "No host Docker verifique se './uploads' no docker-compose.yml aponta para "
-        "um diretório, não para um arquivo."
-    )
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-logger.info("UPLOAD_DIR inicializado: %s", UPLOAD_DIR.resolve())
-ABORDADOS_DIR.mkdir(parents=True, exist_ok=True)
-logger.info("ABORDADOS_DIR inicializado: %s", ABORDADOS_DIR.resolve())
+for _storage_key, _storage_path in _default_storage_paths().items():
+    _ensure_storage_dir(_storage_path, _storage_key)
+    logger.info("%s inicializado: %s", _storage_key, _storage_path.resolve())
 
 MIN_LPR_CONFIDENCE = float(os.getenv("MIN_LPR_CONFIDENCE", "0.40"))
 
@@ -250,9 +272,63 @@ def _conn():
         pool.putconn(conn)
 
 
+def _load_storage_settings(force: bool = False) -> dict[str, str]:
+    now_ts = datetime.now(timezone.utc).timestamp()
+    cached_values = _STORAGE_SETTINGS_CACHE.get("values")
+    if not force and cached_values and now_ts < float(_STORAGE_SETTINGS_CACHE.get("expires_at") or 0):
+        return dict(cached_values)
+
+    values = {key: str(path) for key, path in _default_storage_paths().items()}
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT key, path FROM storage_settings")
+                for key, path in cur.fetchall():
+                    if key in values and path:
+                        values[key] = str(_resolve_storage_path(path, Path(values[key])))
+    except Exception:
+        values = {key: str(path) for key, path in _default_storage_paths().items()}
+
+    _STORAGE_SETTINGS_CACHE["values"] = dict(values)
+    _STORAGE_SETTINGS_CACHE["expires_at"] = now_ts + _STORAGE_SETTINGS_TTL_SECONDS
+    return values
+
+
+def _get_storage_dir(key: str) -> Path:
+    defaults = _default_storage_paths()
+    raw_value = _load_storage_settings().get(key)
+    resolved = _resolve_storage_path(raw_value, defaults[key])
+    _ensure_storage_dir(resolved, key)
+    return resolved
+
+
+def _set_storage_settings_cache(values: dict[str, str]) -> None:
+    _STORAGE_SETTINGS_CACHE["values"] = dict(values)
+    _STORAGE_SETTINGS_CACHE["expires_at"] = datetime.now(timezone.utc).timestamp() + _STORAGE_SETTINGS_TTL_SECONDS
+
+
 def _init_db():
     with _conn() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS storage_settings (
+                    key TEXT PRIMARY KEY,
+                    path TEXT NOT NULL,
+                    updated_at TIMESTAMPTZ DEFAULT NOW()
+                )
+                """
+            )
+            for _storage_key, _storage_path in _default_storage_paths().items():
+                cur.execute(
+                    """
+                    INSERT INTO storage_settings (key, path)
+                    VALUES (%s, %s)
+                    ON CONFLICT (key) DO NOTHING
+                    """,
+                    (_storage_key, str(_storage_path)),
+                )
+
             # Cameras
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS cameras (
@@ -1181,13 +1257,23 @@ app.add_middleware(AuthMiddleware)
 # static
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-app.mount("/abordados", StaticFiles(directory=str(ABORDADOS_DIR)), name="abordados")
 
 
 app.include_router(build_auth_router(_conn))
 app.include_router(build_admin_activity_router(_conn))
 app.include_router(build_camera_router(_conn, get_camera_row))
+app.include_router(
+    build_storage_router(
+        _conn,
+        require_auth,
+        assert_admin,
+        _resolve_storage_path,
+        _ensure_storage_dir,
+        _get_storage_dir,
+        _default_storage_paths,
+        _set_storage_settings_cache,
+    )
+)
 app.include_router(build_produtividade_router(_conn))
 app.include_router(
     build_pessoas_router(
@@ -1221,6 +1307,7 @@ app.include_router(
         _utcnow,
         _normalize_plate,
         _sync_alvo_to_lista,
+        lambda: _get_storage_dir("abordagem_images_dir"),
     )
 )
 app.include_router(build_consulta_router(_conn, require_auth))
@@ -1450,7 +1537,8 @@ def _fetch_snapshot_and_enqueue(
         return
 
     day   = _utcnow().strftime("%Y-%m-%d")
-    d     = UPLOAD_DIR / day
+    upload_dir = _get_storage_dir("event_images_dir")
+    d     = upload_dir / day
     d.mkdir(parents=True, exist_ok=True)
     fname = f"{uuid.uuid4().hex}.jpg"
     (d / fname).write_bytes(img_data)
@@ -1465,7 +1553,7 @@ def _fetch_snapshot_and_enqueue(
             )
 
     # Enfileira análise YOLO
-    abs_path = f"/app/uploads/{day}/{fname}"
+    abs_path = str((d / fname).resolve())
     try:
         _get_rq_queue().enqueue(
             "worker.job_analyze_event",
@@ -2089,13 +2177,14 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
         )
     for _img_name, data in selected_images:
         day   = (occurred_at or _utcnow()).strftime("%Y-%m-%d")
-        d     = UPLOAD_DIR / day
+        upload_dir = _get_storage_dir("event_images_dir")
+        d     = upload_dir / day
         d.mkdir(parents=True, exist_ok=True)
         fname = f"{uuid.uuid4().hex}.jpg"
         try:
             (d / fname).write_bytes(data)
             image_path = f"/uploads/{day}/{fname}"
-            abs_path   = f"/app/uploads/{day}/{fname}"
+            abs_path   = str((d / fname).resolve())
             _yolo_jobs_pending.append((abs_path, image_path))
         except Exception as _img_err:
             print(f"[INGEST] Erro ao salvar imagem: {_img_err}")

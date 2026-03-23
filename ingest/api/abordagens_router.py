@@ -26,7 +26,7 @@ def _guess_image_extension(filename: str, content_type: Optional[str]) -> str:
     return mapping.get((content_type or "").lower(), ".jpg")
 
 
-async def _save_abordado_image(upload) -> Optional[str]:
+async def _save_abordado_image(upload, base_dir: Path) -> Optional[str]:
     if not upload or not getattr(upload, "filename", None):
         return None
     content_type = (getattr(upload, "content_type", "") or "").lower()
@@ -37,7 +37,7 @@ async def _save_abordado_image(upload) -> Optional[str]:
         return None
     day_dir = datetime.utcnow().strftime("%Y-%m-%d")
     rel_dir = Path(day_dir)
-    abs_dir = _ABORDADO_IMAGES_DIR / rel_dir
+    abs_dir = base_dir / rel_dir
     abs_dir.mkdir(parents=True, exist_ok=True)
     ext = _guess_image_extension(upload.filename, content_type)
     filename = f"abordado-{datetime.utcnow().strftime('%H%M%S')}-{os.urandom(6).hex()}{ext}"
@@ -46,7 +46,7 @@ async def _save_abordado_image(upload) -> Optional[str]:
     return "/abordados/" + str((rel_dir / filename).as_posix()).lstrip("/")
 
 
-async def _save_vehicle_image(upload) -> Optional[str]:
+async def _save_vehicle_image(upload, base_dir: Path) -> Optional[str]:
     if not upload or not getattr(upload, "filename", None):
         return None
     content_type = (getattr(upload, "content_type", "") or "").lower()
@@ -57,7 +57,7 @@ async def _save_vehicle_image(upload) -> Optional[str]:
         return None
     day_dir = datetime.utcnow().strftime("%Y-%m-%d")
     rel_dir = Path("veiculos") / day_dir
-    abs_dir = _ABORDADO_IMAGES_DIR / rel_dir
+    abs_dir = base_dir / rel_dir
     abs_dir.mkdir(parents=True, exist_ok=True)
     ext = _guess_image_extension(upload.filename, content_type)
     filename = f"veiculo-{datetime.utcnow().strftime('%H%M%S')}-{os.urandom(6).hex()}{ext}"
@@ -77,8 +77,10 @@ def build_abordagens_router(
     utcnow_fn: Callable[[], datetime],
     normalize_plate_fn: Callable[[Optional[str]], str],
     sync_alvo_to_lista_fn: Callable[[Any, str, str], Any],
+    get_abordados_dir_fn: Callable[[], Path] | None = None,
 ) -> APIRouter:
     router = APIRouter(tags=["abordagens"])
+    resolve_abordados_dir = get_abordados_dir_fn or (lambda: _ABORDADO_IMAGES_DIR)
 
     @router.get("/api/abordagens")
     def listar_abordagens(
@@ -289,13 +291,14 @@ def build_abordagens_router(
                 data = json.loads(str(raw_payload))
             except json.JSONDecodeError as exc:
                 raise HTTPException(status_code=400, detail="payload invalido") from exc
-            abordado_foto_path = await _save_abordado_image(form.get("abordado_imagem"))
-            veiculo_foto_path = await _save_vehicle_image(form.get("veiculo_imagem"))
+            base_dir = resolve_abordados_dir()
+            abordado_foto_path = await _save_abordado_image(form.get("abordado_imagem"), base_dir)
+            veiculo_foto_path = await _save_vehicle_image(form.get("veiculo_imagem"), base_dir)
             for pessoa_data in (data.get("pessoas") or []):
                 upload_key = str(pessoa_data.get("foto_upload_key") or "").strip()
                 if not upload_key:
                     continue
-                foto_path = await _save_abordado_image(form.get(upload_key))
+                foto_path = await _save_abordado_image(form.get(upload_key), base_dir)
                 if foto_path:
                     pessoa_data["foto_path"] = foto_path
         else:
