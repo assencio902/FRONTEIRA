@@ -5787,21 +5787,57 @@
 
         <div class="form-group">
           <label for="storage-event-images-dir">Imagens de eventos</label>
-          <input id="storage-event-images-dir" type="text" placeholder="/app/uploads" style="background:var(--input-bg)">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="storage-event-images-dir" type="text" placeholder="/app/uploads" style="background:var(--input-bg);flex:1">
+            <button class="btn btn-outline btn-sm" type="button" onclick="openStoragePathPicker('event_images_dir')" title="Escolher caminho">&#128193;</button>
+          </div>
         </div>
 
         <div class="form-group">
           <label for="storage-abordagem-images-dir">Imagens de abordagens</label>
-          <input id="storage-abordagem-images-dir" type="text" placeholder="/app/abordados" style="background:var(--input-bg)">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="storage-abordagem-images-dir" type="text" placeholder="/app/abordados" style="background:var(--input-bg);flex:1">
+            <button class="btn btn-outline btn-sm" type="button" onclick="openStoragePathPicker('abordagem_images_dir')" title="Escolher caminho">&#128193;</button>
+          </div>
         </div>
 
         <div class="form-group">
           <label for="storage-metadata-dir">Metadados (YOLO / JSON)</label>
-          <input id="storage-metadata-dir" type="text" placeholder="/app/metadata" style="background:var(--input-bg)">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="storage-metadata-dir" type="text" placeholder="/app/metadata" style="background:var(--input-bg);flex:1">
+            <button class="btn btn-outline btn-sm" type="button" onclick="openStoragePathPicker('metadata_dir')" title="Escolher caminho">&#128193;</button>
+          </div>
         </div>
 
         <div class="form-error" id="storage-error" style="margin-bottom:12px"></div>
         <div id="storage-ok" style="color:var(--success);font-size:.8rem;min-height:18px"></div>
+      </div>
+    </div>
+
+    <div id="storage-path-modal" class="modal" style="display:none">
+      <div class="modal-card" style="max-width:560px">
+        <div class="modal-header">
+          <div>
+            <div style="font-weight:700;font-size:.98rem">&#128193; Escolher caminho</div>
+            <div id="storage-path-modal-subtitle" style="font-size:.78rem;color:var(--muted);margin-top:3px"></div>
+          </div>
+          <button class="modal-close" type="button" onclick="closeStoragePathPicker()">&times;</button>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:.8rem;color:var(--muted)">
+            Como o sistema roda no servidor, o navegador não consegue abrir diretamente o HD do Linux. Aqui você escolhe um caminho sugerido ou edita manualmente.
+          </div>
+          <div id="storage-path-presets" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          <div class="form-group" style="margin:0">
+            <label for="storage-path-manual-input">Caminho</label>
+            <input id="storage-path-manual-input" type="text" placeholder="/app/uploads" style="background:var(--input-bg)">
+          </div>
+          <div class="form-error" id="storage-path-picker-error"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn btn-outline btn-sm" type="button" onclick="closeStoragePathPicker()">Cancelar</button>
+            <button class="btn btn-primary btn-sm" type="button" onclick="applyStoragePathPicker()">Usar caminho</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -16079,6 +16115,24 @@ var _storageDefaults = {
   abordagem_images_dir: '/app/abordados',
   metadata_dir: '/app/metadata'
 };
+var _storageFieldMeta = {
+  event_images_dir: {
+    inputId: 'storage-event-images-dir',
+    label: 'Imagens de eventos',
+    presets: ['/app/uploads', 'uploads', '/mnt/dados/uploads', '/srv/fronteira/uploads']
+  },
+  abordagem_images_dir: {
+    inputId: 'storage-abordagem-images-dir',
+    label: 'Imagens de abordagens',
+    presets: ['/app/abordados', 'abordados', '/mnt/dados/abordados', '/srv/fronteira/abordados']
+  },
+  metadata_dir: {
+    inputId: 'storage-metadata-dir',
+    label: 'Metadados (YOLO / JSON)',
+    presets: ['/app/metadata', 'metadata', '/mnt/dados/metadata', '/srv/fronteira/metadata']
+  }
+};
+var _storagePickerField = null;
 function _storageSetMessage(kind, text) {
   var errEl = document.getElementById('storage-error');
   var okEl = document.getElementById('storage-ok');
@@ -16089,6 +16143,54 @@ function _storageFillForm(data) {
   document.getElementById('storage-event-images-dir').value = data.event_images_dir || '';
   document.getElementById('storage-abordagem-images-dir').value = data.abordagem_images_dir || '';
   document.getElementById('storage-metadata-dir').value = data.metadata_dir || '';
+}
+function _storageSetPickerError(text) {
+  var errEl = document.getElementById('storage-path-picker-error');
+  if (errEl) errEl.textContent = text || '';
+}
+function openStoragePathPicker(fieldKey) {
+  var meta = _storageFieldMeta[fieldKey];
+  var modal = document.getElementById('storage-path-modal');
+  if (!meta || !modal) return;
+  _storagePickerField = fieldKey;
+  document.getElementById('storage-path-modal-subtitle').textContent = meta.label;
+  var currentValue = (document.getElementById(meta.inputId).value || '').trim();
+  document.getElementById('storage-path-manual-input').value = currentValue || (meta.presets[0] || '');
+  var presetsWrap = document.getElementById('storage-path-presets');
+  presetsWrap.innerHTML = (meta.presets || []).map(function(path) {
+    var safePath = String(path).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<button class="btn btn-outline btn-sm" type="button" onclick="selectStoragePreset(\'' + safePath + '\')">&#128193; ' + path + '</button>';
+  }).join('');
+  _storageSetPickerError('');
+  openModal('storage-path-modal');
+  setTimeout(function(){
+    var input = document.getElementById('storage-path-manual-input');
+    if (input) input.focus();
+  }, 80);
+}
+function closeStoragePathPicker() {
+  _storagePickerField = null;
+  _storageSetPickerError('');
+  closeModal('storage-path-modal');
+}
+function selectStoragePreset(path) {
+  var input = document.getElementById('storage-path-manual-input');
+  if (input) input.value = path || '';
+  _storageSetPickerError('');
+}
+function applyStoragePathPicker() {
+  if (!_storagePickerField) return;
+  var meta = _storageFieldMeta[_storagePickerField];
+  if (!meta) return;
+  var input = document.getElementById('storage-path-manual-input');
+  var target = document.getElementById(meta.inputId);
+  var value = (input && input.value || '').trim();
+  if (!value) {
+    _storageSetPickerError('Informe um caminho antes de aplicar.');
+    return;
+  }
+  if (target) target.value = value;
+  closeStoragePathPicker();
 }
 async function loadStorageSettings() {
   _storageSetMessage('', '');
