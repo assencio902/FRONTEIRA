@@ -17,7 +17,6 @@ import psycopg2.pool
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.datastructures import UploadFile
 from starlette.requests import ClientDisconnect
 from starlette.responses import RedirectResponse
 
@@ -94,6 +93,19 @@ WEBHOOK_REQUIRE_CONTENT_LENGTH = (os.getenv("WEBHOOK_REQUIRE_CONTENT_LENGTH") or
     "on",
 )
 SNAPSHOT_FALLBACK_ENABLED = (os.getenv("SNAPSHOT_FALLBACK_ENABLED") or "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+WEBHOOK_MAX_IMAGES_PER_EVENT = max(1, _get_int_env("WEBHOOK_MAX_IMAGES_PER_EVENT", 1))
+YOLO_ENQUEUE_ENABLED = (os.getenv("YOLO_ENQUEUE_ENABLED") or "true").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+YOLO_OCR_FALLBACK_ENABLED = (os.getenv("YOLO_OCR_FALLBACK_ENABLED") or "false").strip().lower() in (
     "1",
     "true",
     "yes",
@@ -1510,72 +1522,24 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
     )
 
     if "multipart/" in ct_lower:
-        # ── Formato Hikvision ISAPI: multipart/form-data OU multipart/mixed ──
-        if "multipart/form-data" in ct_lower:
-            # Starlette/python-multipart só processa multipart/form-data nativamente
-            _parser_used = "multipart/form-data (form())"
-            # Nomes de campo reconhecidos como placa (ordem de prioridade)
-            _PLATE_FIELD_NAMES = (
-                "licensePlate", "plate", "anprLicensePlate",
-                "PlateNumber", "plateNumber", "ANPR.licensePlate", "ANPR_plate",
-            )
-            _form_text_fields: dict[str, str] = {}   # todos os campos texto recebidos
-            try:
-                form = await request.form()
-            except ClientDisconnect:
-                return JSONResponse({"ok": True})
-
-            for field_name, v in form.multi_items():
-                if isinstance(v, str):
-                    _form_text_fields[field_name] = v
-                    # XML enviado como campo de texto simples (sem filename)
-                    if xml_bytes is None and v.strip().startswith("<"):
-                        xml_bytes = v.encode("utf-8", errors="replace")
-                        logger.info(
-                            "[WEBHOOK-DIAG] XML recebido como campo texto name=%s len=%d",
-                            field_name, len(xml_bytes),
-                        )
-                elif isinstance(v, UploadFile):
-                    data = await v.read()
-                    ct_part = (v.content_type or "").lower()
-                    fname_lower = (v.filename or "").lower()
-                    is_xml_part = (
-                        fname_lower.endswith(".xml")
-                        or "xml" in ct_part
-                        or (xml_bytes is None and data.lstrip()[:1] == b"<")
-                    )
-                    if is_xml_part and xml_bytes is None:
-                        xml_bytes = data
-                        logger.info(
-                            "[WEBHOOK-DIAG] XML recebido como UploadFile name=%s filename=%s ct=%s len=%d",
-                            field_name, v.filename, v.content_type, len(data),
-                        )
-                    elif ct_part.startswith("image/") and len(data) >= 10_000:
-                        images.append((v.filename or "image.jpg", data))
-                    elif not is_xml_part and len(data) >= 10_000:
-                        # Aceita como imagem independente de xml_bytes: câmeras podem enviar
-                        # imagem antes do XML, ou só imagem (sem XML), com content-type binário
-                        images.append((v.filename or "image.jpg", data))
-
-            # ── Log de diagnóstico HTTP-escuta: campos recebidos no form ─────
-            logger.info(
-                "[WEBHOOK-HTTP-ESCUTA] ip=%s campos_form=%r xml_bytes=%s images=%d",
-                client_ip,
-                list(_form_text_fields.keys()),
-                len(xml_bytes) if xml_bytes else 0,
-                len(images),
-            )
-        else:
-            _form_text_fields = {}
-        if "multipart/mixed" in ct_lower or ("multipart/" in ct_lower and "form-data" not in ct_lower):
-            # multipart/mixed ou outro subtipo — Starlette não processa; parse manual
-            _parser_used = f"multipart/manual ({ct_lower.split(';')[0].strip()})"
+        _form_text_fields = {}
+        _parser_used = f"multipart/manual ({ct_lower.split(';')[0].strip()})"
+        try:
             body_raw = await _read_body_limited(request, WEBHOOK_MAX_BODY_BYTES)
-            logger.info(
-                "[WEBHOOK-DIAG] multipart/mixed ip=%s len=%d primeiros_500=%r",
-                client_ip, len(body_raw), body_raw[:500].decode("utf-8", errors="replace"),
-            )
-            xml_bytes, images = _parse_multipart_body(content_type, body_raw)
+        except ClientDisconnect:
+            return JSONResponse({"ok": True})
+        logger.info(
+            "[WEBHOOK-DIAG] multipart ip=%s len=%d primeiros_500=%r",
+            client_ip, len(body_raw), body_raw[:500].decode("utf-8", errors="replace"),
+        )
+        xml_bytes, images = _parse_multipart_body(content_type, body_raw)
+        logger.info(
+            "[WEBHOOK-HTTP-ESCUTA] ip=%s campos_form=%r xml_bytes=%s images=%d",
+            client_ip,
+            [],
+            len(xml_bytes) if xml_bytes else 0,
+            len(images),
+        )
 
     else:
         _form_text_fields = {}
@@ -2107,14 +2071,23 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
         cam_meta = _cm
 
     # Se não houver placa mas houver imagem, solicita OCR automático no worker
-    if not plate and images:
+    if not plate and images and YOLO_OCR_FALLBACK_ENABLED:
         lpr_meta["needs_ocr"] = True
 
     # ── Salva imagem enviada no POST (se houver) ──────────────────────────
     # Apenas salva o arquivo em disco aqui; o job YOLO é enfileirado DEPOIS
     # do INSERT para que event_id já exista no banco quando o worker rodar.
     _yolo_jobs_pending: list[tuple[str, str]] = []   # (abs_path, image_path)
-    for _img_name, data in images:
+    selected_images = images[:WEBHOOK_MAX_IMAGES_PER_EVENT]
+    dropped_images = max(0, len(images) - len(selected_images))
+    if dropped_images:
+        logger.warning(
+            "[WEBHOOK] %d imagem(ns) descartada(s) por limite do evento camera_id=%s limit=%d",
+            dropped_images,
+            camera_id,
+            WEBHOOK_MAX_IMAGES_PER_EVENT,
+        )
+    for _img_name, data in selected_images:
         day   = (occurred_at or _utcnow()).strftime("%Y-%m-%d")
         d     = UPLOAD_DIR / day
         d.mkdir(parents=True, exist_ok=True)
@@ -2171,22 +2144,23 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
             # ── Enfileira YOLO agora que event_id é conhecido ──────────────
             # Enfileira APÓS o INSERT para que o worker encontre o evento no banco
             # ao executar UPDATE ... WHERE id = %s. Passa event_id junto com a imagem.
-            for _yolo_abs_path, _yolo_img_path in _yolo_jobs_pending:
-                try:
-                    _get_rq_queue().enqueue(
-                        "worker.job_analyze_event",
-                        _yolo_abs_path,
-                        plate or "",
-                        lpr_meta,
-                        event_id,          # ← event_id passado para o worker usar como chave de UPDATE
-                        job_timeout=120,
-                    )
-                    logger.info(
-                        "[WEBHOOK-YOLO] job enfileirado event_id=%s path=%s",
-                        event_id, _yolo_img_path,
-                    )
-                except Exception as _rq_err:
-                    print(f"[RQ] Falha ao enfileirar job YOLO event_id={event_id}: {_rq_err}")
+            if YOLO_ENQUEUE_ENABLED:
+                for _yolo_abs_path, _yolo_img_path in _yolo_jobs_pending:
+                    try:
+                        _get_rq_queue().enqueue(
+                            "worker.job_analyze_event",
+                            _yolo_abs_path,
+                            plate or "",
+                            lpr_meta,
+                            event_id,          # ← event_id passado para o worker usar como chave de UPDATE
+                            job_timeout=120,
+                        )
+                        logger.info(
+                            "[WEBHOOK-YOLO] job enfileirado event_id=%s path=%s",
+                            event_id, _yolo_img_path,
+                        )
+                    except Exception as _rq_err:
+                        print(f"[RQ] Falha ao enfileirar job YOLO event_id={event_id}: {_rq_err}")
 
             # -- Classificação de placa pós-persistência --
             _diag_plate_up = (plate or "").strip().upper()
