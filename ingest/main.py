@@ -77,6 +77,58 @@ from services.fcm_service import (
 
 from cleanup_background import start_cleanup_background, stop_cleanup_background
 
+
+def _get_int_env(name: str, default: int) -> int:
+    try:
+        v = (os.getenv(name) or "").strip()
+        return int(v) if v else default
+    except Exception:
+        return default
+
+
+WEBHOOK_MAX_BODY_BYTES = _get_int_env("WEBHOOK_MAX_BODY_BYTES", 8 * 1024 * 1024)  # 8 MiB
+WEBHOOK_REQUIRE_CONTENT_LENGTH = (os.getenv("WEBHOOK_REQUIRE_CONTENT_LENGTH") or "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
+
+def _enforce_webhook_body_limits(request: Request) -> None:
+    """
+    Protege endpoints de webhook contra payloads grandes.
+
+    Importante: `request.form()` e `request.body()` tendem a carregar o payload todo em RAM.
+    Aqui tentamos barrar cedo via `Content-Length`.
+    """
+    content_length_hdr = (request.headers.get("content-length") or "").strip()
+    if content_length_hdr:
+        try:
+            content_length = int(content_length_hdr)
+        except Exception:
+            content_length = -1
+        if content_length >= 0 and content_length > WEBHOOK_MAX_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="Request body too large")
+    elif WEBHOOK_REQUIRE_CONTENT_LENGTH:
+        raise HTTPException(status_code=411, detail="Content-Length required")
+
+
+async def _read_body_limited(request: Request, max_bytes: int) -> bytes:
+    """
+    Lê o body em streaming com limite rígido para evitar explosão de RAM em bursts.
+    """
+    buf = bytearray()
+    total = 0
+    async for chunk in request.stream():
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(status_code=413, detail="Request body too large")
+        buf.extend(chunk)
+    return bytes(buf)
+
 # ============================================================
 # RBAC - Role-Based Access Control
 # ============================================================
@@ -1414,6 +1466,8 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
     content_type = request.headers.get("content-type", "")
     ct_lower = content_type.lower()
 
+    _enforce_webhook_body_limits(request)
+
     xml_bytes: bytes | None = None
     images: list[tuple[str, bytes]] = []
     plate = ""
@@ -1510,7 +1564,7 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
         if "multipart/mixed" in ct_lower or ("multipart/" in ct_lower and "form-data" not in ct_lower):
             # multipart/mixed ou outro subtipo — Starlette não processa; parse manual
             _parser_used = f"multipart/manual ({ct_lower.split(';')[0].strip()})"
-            body_raw = await request.body()
+            body_raw = await _read_body_limited(request, WEBHOOK_MAX_BODY_BYTES)
             logger.info(
                 "[WEBHOOK-DIAG] multipart/mixed ip=%s len=%d primeiros_500=%r",
                 client_ip, len(body_raw), body_raw[:500].decode("utf-8", errors="replace"),
@@ -1519,7 +1573,7 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
 
     else:
         _form_text_fields = {}
-        body = await request.body()
+        body = await _read_body_limited(request, WEBHOOK_MAX_BODY_BYTES)
 
         # ── Log de corpo não-multipart ────────────────────────────────────────
         _body_preview = body[:500].decode("utf-8", errors="replace") if body else ""

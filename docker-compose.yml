@@ -61,12 +61,20 @@
       MAX_UPLOADS_GB: ${MAX_UPLOADS_GB:-50}
       UPLOADS_DIR: ${UPLOADS_DIR:-/app/uploads}
       ABORDADO_IMAGES_DIR: ${ABORDADO_IMAGES_DIR:-/app/abordados}
+      # ── Webhook hardening (anti-DoS / anti-burst RAM) ─────────────────────
+      WEBHOOK_MAX_BODY_BYTES: ${WEBHOOK_MAX_BODY_BYTES:-8388608}
+      WEBHOOK_REQUIRE_CONTENT_LENGTH: ${WEBHOOK_REQUIRE_CONTENT_LENGTH:-false}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
+    # Útil quando usado com `docker compose --compatibility`.
+    deploy:
+      resources:
+        limits:
+          memory: ${INGEST_MEM_LIMIT:-8g}
     logging:
       driver: "json-file"
       options:
