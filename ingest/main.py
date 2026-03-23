@@ -93,6 +93,12 @@ WEBHOOK_REQUIRE_CONTENT_LENGTH = (os.getenv("WEBHOOK_REQUIRE_CONTENT_LENGTH") or
     "yes",
     "on",
 )
+SNAPSHOT_FALLBACK_ENABLED = (os.getenv("SNAPSHOT_FALLBACK_ENABLED") or "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
 
 
 def _enforce_webhook_body_limits(request: Request) -> None:
@@ -2301,8 +2307,14 @@ async def simple_webhook_handler(request: Request, background_tasks: BackgroundT
                         except Exception as _fcm_err:
                             logger.exception("[FCM] EXCEÇÃO no auto-disparo do alerta event_id=%s: %s", event_id, _fcm_err)
 
-    # Se não chegou imagem pelo POST, tenta buscar snapshot da câmera via ISAPI
-    if not image_path and cam.get("ip") and cam.get("usuario") and cam.get("senha"):
+    # Snapshot fallback é opt-in porque, sob carga, um GET por evento pode saturar a câmera/ingest.
+    if (
+        SNAPSHOT_FALLBACK_ENABLED
+        and not image_path
+        and cam.get("ip")
+        and cam.get("usuario")
+        and cam.get("senha")
+    ):
         background_tasks.add_task(
             _fetch_snapshot_and_enqueue,
             event_id,

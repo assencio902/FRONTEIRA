@@ -1147,6 +1147,22 @@
     .modal-header h2 { font-size:18px; font-weight:700; line-height:var(--lh-tight); }
     .modal-close { background:none; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1; padding:0 2px; transition:color .15s; }
     .modal-close:hover { color:var(--text); }
+    .password-field { position:relative; }
+    .password-field input { padding-right:44px; }
+    .password-toggle {
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      border:none;
+      background:none;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:1rem;
+      line-height:1;
+      padding:4px;
+    }
+    .password-toggle:hover { color:var(--text); }
     #rel-modal .modal,
     #comboio-modal .modal {
       background:#f8fafc;
@@ -6163,7 +6179,10 @@
     </div>
     <div class="form-group">
       <label>Senha da c&#226;mera *</label>
-      <input type="password" id="cam-senha" placeholder="Informe a senha da c&#226;mera" maxlength="120" autocomplete="current-password">
+      <div class="password-field">
+        <input type="password" id="cam-senha" placeholder="Informe a senha da c&#226;mera" maxlength="120" autocomplete="current-password">
+        <button type="button" id="cam-senha-toggle" class="password-toggle" onclick="toggleCameraPasswordVisibility()" aria-label="Mostrar senha" title="Mostrar senha">&#128065;</button>
+      </div>
       <div id="cam-senha-hint" style="font-size:.72rem;color:var(--muted);margin-top:4px;display:none"></div>
     </div>
     <div class="form-group">
@@ -14115,6 +14134,17 @@ function _camModoChange() {
   if (field) field.value = 'push';
 }
 
+function toggleCameraPasswordVisibility() {
+  var input = document.getElementById('cam-senha');
+  var btn = document.getElementById('cam-senha-toggle');
+  if (!input || !btn) return;
+  var show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.innerHTML = show ? '&#128584;' : '&#128065;';
+  btn.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+  btn.setAttribute('title', show ? 'Ocultar senha' : 'Mostrar senha');
+}
+
 function openCameraModal(cam) {
   _cameraEditId = cam ? cam.id : null;
   document.getElementById('camera-modal-title').textContent = cam ? 'Editar Câmera' : 'Adicionar Câmera';
@@ -14129,6 +14159,10 @@ function openCameraModal(cam) {
   document.getElementById('cam-ip').value          = cam ? (cam.ip          || '') : '';
   document.getElementById('cam-usuario').value     = cam ? (cam.usuario     || '') : '';
   document.getElementById('cam-senha').value       = '';
+  document.getElementById('cam-senha').type        = 'password';
+  document.getElementById('cam-senha-toggle').innerHTML = '&#128065;';
+  document.getElementById('cam-senha-toggle').setAttribute('aria-label', 'Mostrar senha');
+  document.getElementById('cam-senha-toggle').setAttribute('title', 'Mostrar senha');
   document.getElementById('cam-direcao').value     = cam ? (cam.direcao     || '') : '';
   document.getElementById('cam-criticidade').value = cam ? (cam.criticidade || 'NORMAL') : 'NORMAL';
   document.getElementById('cam-peso-score').value  = cam ? (cam.peso_score  != null ? cam.peso_score : 1.0) : 1.0;
