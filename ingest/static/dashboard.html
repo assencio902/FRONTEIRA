@@ -13998,7 +13998,7 @@ async function removeAlvo(id, plate) {
 // ===== MONITORAMENTO BATEDOR EM TEMPO REAL =====
 var _batedorSeen = {}; // chave: 'plateA|plateB', valor: timestamp último alerta
 var _batedorAtivos = 0;
-var _realtimeEnabled = true;
+var _realtimeEnabled = false;
 var _realtimeInterval = null;
 var _batNotifEnabled = false;
 
@@ -14052,7 +14052,7 @@ function toggleRealtime() {
 }
 
 async function checkBatedorRealtime() {
-  if (!_realtimeEnabled) return;
+  if (!_realtimeEnabled || currentTab !== 'batedor') return;
   try {
     var resp = await fetch('/api/batedor/central?window=2h&limit=100');
     if (!resp.ok) return;
@@ -17202,12 +17202,7 @@ function _renderHistTable(items) {
   _presenceSetCurrentPage('painel', 'Painel', '/dashboard#painel');
   _startPresenceHeartbeat();
   await trackPageView('painel', 'Painel', '/dashboard#painel', true);
-  // Monitoramento automático sem dependência de controles no topo.
   _startBgAlarm();
-  if (!_realtimeInterval) {
-    checkBatedorRealtime();
-    _realtimeInterval = setInterval(checkBatedorRealtime, 60000);
-  }
 })();
 </script>
 
