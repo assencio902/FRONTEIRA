@@ -121,6 +121,25 @@ def build_central_router(
                     filtered_groups.append(group)
 
                 raw_groups = filtered_groups
+                if not raw_groups:
+                    return {
+                        "groups": [],
+                        "total": 0,
+                        "window": window,
+                        "t_from": t_from.isoformat(),
+                        "t_to": t_to.isoformat(),
+                    }
+
+                candidate_limit = min(max(lim * 3, 60), 180)
+                raw_groups = sorted(
+                    raw_groups,
+                    key=lambda group: (
+                        group.get("cameras_count", 0),
+                        group.get("group_size", 0),
+                        -int(group.get("trip_span_sec", 0) or 0),
+                    ),
+                    reverse=True,
+                )[:candidate_limit]
 
                 cur.execute("SELECT plate, descricao FROM alvos")
                 alvo_map = {row[0]: row[1] for row in cur.fetchall()}
