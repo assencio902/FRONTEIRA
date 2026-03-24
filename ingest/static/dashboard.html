@@ -7604,17 +7604,19 @@ function switchTab(name, el) {
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
     var batName = activeBat ? activeBat.getAttribute('data-bat') : 'placas';
-    if (!batName || batName === 'placas') {
-      var placasTab = document.getElementById('bat-subtab-placas');
-      if (placasTab) switchBatTab('placas', placasTab);
-      else { _cenSwitchView('placas'); _cenSingleInit(); _cenSingleFocusPlateInput(); }
-    }
-    else if (batName === 'suspeitos') _cgsLoad(true);
-    else if (batName === 'alvos')   loadAlvos();
-    else {
-      var fallbackPlacasTab = document.getElementById('bat-subtab-placas');
-      if (fallbackPlacasTab) switchBatTab('placas', fallbackPlacasTab);
-      else { _cenSwitchView('placas'); _cenSingleInit(); _cenSingleFocusPlateInput(); }
+    var _batTabMap = {
+      placas: document.getElementById('bat-subtab-placas'),
+      suspeitos: document.getElementById('bat-subtab-suspeitos'),
+      alvos: document.getElementById('bat-subtab-alvos')
+    };
+    var nextBat = _batTabMap[batName] ? batName : 'placas';
+    var nextBatEl = _batTabMap[nextBat];
+    if (nextBatEl) {
+      switchBatTab(nextBat, nextBatEl);
+    } else {
+      _cenSwitchView('placas');
+      _cenSingleInit();
+      _cenSingleFocusPlateInput();
     }
   }
   if (name === 'veiculos') { loadLists(); }
