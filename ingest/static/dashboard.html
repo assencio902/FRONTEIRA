@@ -7677,7 +7677,7 @@ function switchBatTab(name, el) {
   if (name === 'suspeitos') {
     document.getElementById('bat-sub-central').classList.add('active');
     _cenSwitchView('grupos');
-    _cgsLoad(true);
+    _cgsRenderIdle();
   } else if (name === 'placas') {
     document.getElementById('bat-sub-central').classList.add('active');
     _cenSwitchView('placas');
@@ -7685,7 +7685,7 @@ function switchBatTab(name, el) {
     _cenSingleFocusPlateInput();
   } else if (name === 'alvos') {
     document.getElementById('bat-sub-alvos').classList.add('active');
-    loadAlvos(); _loadAlvoCameras();
+    _renderAlvosIdle();
   }
   var labels = { suspeitos: 'Batedor / Suspeitos', placas: 'Batedor / Placas', alvos: 'Batedor / Alvos' };
   trackPageView('batedor:' + name, labels[name] || ('Batedor / ' + name), '/dashboard#batedor/' + name);
@@ -8243,7 +8243,6 @@ function cenWindowChange() {
   if (!windowEl) return;
   var v = windowEl.value;
   if (rowEl) rowEl.classList.toggle('visible', v === 'custom');
-  if (v !== 'custom') loadCentral(true);
 }
 function convWindowChange() {
   var v = document.getElementById('conv-window').value;
@@ -9076,7 +9075,6 @@ function _cgsGroupSizeChange() {
   var mode = (document.getElementById('cgs-ordermode') || {}).value;
   var plLabel = document.getElementById('cgs-payload-label');
   if (plLabel) plLabel.style.display = (mode === 'leader_front' && gs === '3+') ? 'inline' : 'none';
-  _cgsLoad(true);
 }
 
 function _cgsOrderModeChange() {
@@ -9086,13 +9084,11 @@ function _cgsOrderModeChange() {
   var gs = (document.getElementById('cgs-gsizes') || {}).value || '2';
   var plLabel = document.getElementById('cgs-payload-label');
   if (plLabel) plLabel.style.display = (mode === 'leader_front' && gs === '3+') ? 'inline' : 'none';
-  _cgsLoad(true);
 }
 
 function _cgsWindowChange() {
   var v = document.getElementById('cgs-window').value;
   document.getElementById('cgs-date-row').classList.toggle('visible', v === 'custom');
-  if (v !== 'custom') _cgsLoad(true);
 }
 
 function _cgsReset() {
@@ -9110,6 +9106,24 @@ function _cgsReset() {
 function _cgsApplyFilter() {
   _cgsPage = 0;
   _cgsRenderPage();
+}
+
+function _cgsRenderIdle() {
+  var tbody = document.getElementById('cgs-tbody');
+  var status = document.getElementById('cgs-status');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px">Clique em Buscar para analisar grupos suspeitos.</td></tr>';
+  }
+  if (status) status.textContent = '';
+}
+
+function _renderAlvosIdle() {
+  var tb = document.getElementById('alvos-tbody');
+  var st = document.getElementById('alvos-status');
+  if (tb) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Clique em Atualizar para carregar os alvos rastreados.</td></tr>';
+  }
+  if (st) st.textContent = '';
 }
 
 function _resolveTrajectoryCameraPoint(item, plate) {
