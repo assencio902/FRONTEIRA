@@ -3,11 +3,15 @@ import 'package:flutter/foundation.dart';
 /// Configuracao global do app.
 ///
 /// Em producao, informe `--dart-define=API_BASE_URL=https://seu-servidor`.
-/// Em debug, usamos um fallback local para facilitar o desenvolvimento.
+/// Em debug, usamos o servidor homologado por padrao, com override opcional.
 class AppConfig {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
+  );
+  static const String _debugConfiguredBaseUrl = String.fromEnvironment(
+    'API_DEBUG_BASE_URL',
+    defaultValue: 'http://131.100.76.4:17223',
   );
 
   static String get baseUrl {
@@ -24,17 +28,18 @@ class AppConfig {
   }
 
   static String _debugDefaultBaseUrl() {
-    if (kIsWeb) return 'http://127.0.0.1:8000';
+    final configured = _normalize(_debugConfiguredBaseUrl);
+    if (configured.isNotEmpty) return configured;
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return 'http://10.0.2.2:8000';
+        return 'http://131.100.76.4:17223';
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
       case TargetPlatform.fuchsia:
-        return 'http://127.0.0.1:8000';
+        return 'http://131.100.76.4:17223';
     }
   }
 

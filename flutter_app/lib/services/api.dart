@@ -16,9 +16,9 @@ class ApiUnauthorizedException implements Exception {
 /// API simples centralizada.
 /// Usa [AuthStorage] para persistir e ler o token JWT automaticamente.
 /// Base URL:
-///   - Produção: http://104.236.104.79:8000
-///   - Local (emulador): http://10.0.2.2:8000
-///   - Local (dispositivo): http://192.168.x.x:8000 (IP da máquina host)
+///   - Produção/rede atual: http://131.100.76.4:17223
+///   - Override manual: --dart-define=API_BASE_URL=...
+///   - Override debug: --dart-define=API_DEBUG_BASE_URL=...
 class Api {
   static String get baseUrl => AppConfig.baseUrl;
 
