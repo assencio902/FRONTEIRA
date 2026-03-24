@@ -73,6 +73,7 @@ def build_central_router(
                     window_s=co_win_s,
                     max_trip_gap_s=trip_gap,
                     min_cameras=min_cam,
+                    limit_events=15000,
                 )
                 if allow_3plus:
                     raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes or group["group_size"] >= 3]
@@ -371,6 +372,7 @@ def build_central_router(
                     window_s=co_win_s,
                     max_trip_gap_s=trip_gap,
                     min_cameras=min_cam,
+                    limit_events=15000,
                 )
 
         if allow_3plus:
@@ -586,6 +588,7 @@ def build_central_router(
                     prefix_vals=prefix_vals,
                     allow_sql=allow_sql,
                     allow_vals=allow_vals,
+                    limit_events=12000,
                 )
                 for group in convoy_groups:
                     cams = group["cameras_count"]

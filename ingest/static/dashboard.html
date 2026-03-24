@@ -6,6 +6,13 @@
   <title>Polícia de Fronteiras e Divisas</title>
   <script>
     // Diagnóstico: captura qualquer erro JS e exibe na tela
+    window.__switchTabPending = [];
+    window.switchTab = window.switchTab || function(name, el) {
+      if (typeof window.__switchTabImpl === 'function') {
+        return window.__switchTabImpl(name, el);
+      }
+      window.__switchTabPending.push([name, el]);
+    };
     window.onerror = function(msg, src, line, col, err) {
       var d = document.getElementById('_dbg');
       if (!d) {
@@ -7580,11 +7587,20 @@ function _markTabLoaded(name) {
   meta.loadedAt = Date.now();
 }
 
+function _findSidebarTabElement(name) {
+  try {
+    return document.querySelector("#sidebar .nav-item[onclick*=\"switchTab('" + name + "'\"]");
+  } catch (e) {
+    return null;
+  }
+}
+
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
+  if (!el || !el.classList) el = _findSidebarTabElement(name);
   var role = window._authRole || 'visualizador';
   if (role !== 'admin' && (name === 'produtividade' || name === 'cameras' || name === 'storage' || name === 'usuarios')) {
-    var painelNav = document.querySelector('#sidebar .nav-item[onclick="switchTab(\'painel\',this)"]');
+    var painelNav = _findSidebarTabElement('painel');
     if (name !== 'painel' && painelNav) {
       switchTab('painel', painelNav);
     }
@@ -7595,7 +7611,7 @@ function switchTab(name, el) {
   var tabEl = document.getElementById('tab-' + name);
   console.log('[switchTab] tab-element encontrado:', !!tabEl);
   if (tabEl) tabEl.classList.add('active');
-  el.classList.add('active');
+  if (el && el.classList) el.classList.add('active');
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
   if (name === 'painel')  _queueTabLoad('painel', function(){ return loadPainel(); }, 15000);
@@ -7630,7 +7646,13 @@ function switchTab(name, el) {
   trackPageView(name, TAB_TITLES[name] || name, '/dashboard#' + name);
 }
 // garante acesso global mesmo em contextos de onclick attribute
+window.__switchTabImpl = switchTab;
 window.switchTab = switchTab;
+if (Array.isArray(window.__switchTabPending) && window.__switchTabPending.length) {
+  window.__switchTabPending.splice(0).forEach(function(args) {
+    try { switchTab(args[0], args[1]); } catch (e) {}
+  });
+}
 
 function switchBatTab(name, el) {
   // para o monitoramento ao vivo se sair de placas individuais
@@ -8928,8 +8950,8 @@ async function _cenSingleSearch(plate, opts) {
   _cenSingleSetStatus('Gerando relat&oacute;rio de ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
   try {
     var responses = await Promise.all([
-      fetch(_cenSingleBuildReportUrl(plate, opts)),
-      fetch(_cenSingleBuildCentralUrl(plate, opts)).catch(function() { return null; }),
+      _fetchWithTimeout(_cenSingleBuildReportUrl(plate, opts), null, 20000),
+      _fetchWithTimeout(_cenSingleBuildCentralUrl(plate, opts), null, 12000).catch(function() { return null; }),
     ]);
     var reportResp = responses[0];
     var centralResp = responses[1];
@@ -9352,7 +9374,7 @@ async function _cgsLoad(showSpinner) {
   if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom);
   if (tsTo)   url += '&ts_to='   + encodeURIComponent(tsTo);
   try {
-    var resp = await fetch(url);
+    var resp = await _fetchWithTimeout(url, null, 15000);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     _cgsAllGroups = data.groups || [];
@@ -10985,6 +11007,28 @@ function _cenGetValue(primaryId, fallbackId, defaultValue) {
 function _cenSetText(id, value) {
   var el = document.getElementById(id);
   if (el) el.textContent = value;
+}
+
+async function _fetchWithTimeout(url, options, timeoutMs) {
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = null;
+  var requestOptions = Object.assign({}, options || {});
+  if (controller) requestOptions.signal = controller.signal;
+  if (controller && timeoutMs > 0) {
+    timer = setTimeout(function() {
+      try { controller.abort(); } catch (e) {}
+    }, timeoutMs);
+  }
+  try {
+    return await fetch(url, requestOptions);
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      throw new Error('Tempo excedido ao consultar o Batedor.');
+    }
+    throw e;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 async function loadCentral(showSpinner) {
@@ -12769,7 +12813,7 @@ async function loadAlvos() {
   tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   if (st) st.innerHTML = '<span class="spinner"></span>';
   try {
-    var resp = await fetch('/api/alvos');
+    var resp = await _fetchWithTimeout('/api/alvos', null, 10000);
     var data = await resp.json();
     var alvos = data.alvos || [];
     // atualiza cards

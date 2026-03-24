@@ -109,6 +109,7 @@ def build_comboio_router(
                     max_trip_gap_s=trip_max_s,
                     min_cameras=min_cam,
                     target_plate=plate,
+                    limit_events=12000,
                 )
                 cur.execute("SELECT plate, descricao FROM alvos")
                 alvo_map_raw = {row[0]: row[1] for row in cur.fetchall()}
@@ -451,6 +452,7 @@ def build_comboio_router(
                     window_s=window_s,
                     max_trip_gap_s=max_trip_gap_s,
                     min_cameras=2,
+                    limit_events=15000,
                 )
                 group_set = frozenset(group_plates)
                 matched = None

@@ -2445,13 +2445,54 @@ def _detect_convoy_groups(
     prefix_vals = prefix_vals or []
     allow_vals = allow_vals or []
 
-    # ── 1. Buscar eventos ──────────────────────────────────────────────────
-    target_sql = ""
-    target_vals: list = []
     if target_plate:
-        # Busca eventos da placa alvo + de qualquer placa na mesma câmera/período
-        # Para eficiência, primeiro identifica as câmeras onde a placa alvo aparece
-        pass  # Sem filtro de placa — precisamos de todos os veículos para formar clusters
+        cur.execute(
+            """
+            SELECT
+                e.camera_id,
+                COALESCE(e.ts, e.occurred_at) AS sort_time
+            FROM lpr_events e
+            WHERE e.plate = %s
+              AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+            ORDER BY e.camera_id, COALESCE(e.ts, e.occurred_at), e.id
+            LIMIT 5000
+            """,
+            [target_plate, t_from, t_to],
+        )
+        target_rows = cur.fetchall()
+        if not target_rows:
+            return []
+
+        target_ranges: dict[str, list[tuple]] = defaultdict(list)
+        for cam_id, sort_time in target_rows:
+            target_ranges[cam_id].append(
+                (
+                    sort_time - timedelta(seconds=window_s),
+                    sort_time + timedelta(seconds=window_s),
+                )
+            )
+
+        merged_ranges: dict[str, list[tuple]] = {}
+        for cam_id, ranges in target_ranges.items():
+            ranges = sorted(ranges, key=lambda item: item[0])
+            merged: list[tuple] = []
+            for start_at, end_at in ranges:
+                if not merged or start_at > merged[-1][1]:
+                    merged.append((start_at, end_at))
+                else:
+                    merged[-1] = (merged[-1][0], max(merged[-1][1], end_at))
+            merged_ranges[cam_id] = merged
+
+        target_clauses: list[str] = []
+        target_vals: list = []
+        for cam_id, ranges in merged_ranges.items():
+            for start_at, end_at in ranges:
+                target_clauses.append("(e.camera_id = %s AND COALESCE(e.ts, e.occurred_at) BETWEEN %s AND %s)")
+                target_vals.extend([cam_id, start_at, end_at])
+        target_sql = "AND (" + " OR ".join(target_clauses) + ")"
+    else:
+        target_sql = ""
+        target_vals = []
 
     cur.execute(f"""
         SELECT
@@ -2472,10 +2513,11 @@ def _detect_convoy_groups(
         WHERE e.plate IS NOT NULL
           AND e.plate NOT IN ('', 'unknown', 'UNKNOWN')
           AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
+          {target_sql}
           {prefix_sql} {allow_sql}
         ORDER BY e.camera_id, COALESCE(e.ts, e.occurred_at), e.id
         LIMIT {int(limit_events)}
-    """, [t_from, t_to] + prefix_vals + allow_vals)
+    """, [t_from, t_to] + target_vals + prefix_vals + allow_vals)
     rows = cur.fetchall()
 
     # ── 2. Agrupar por câmera ──────────────────────────────────────────────

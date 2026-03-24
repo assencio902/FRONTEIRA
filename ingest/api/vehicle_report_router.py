@@ -106,6 +106,7 @@ def build_vehicle_report_router(
                     max_trip_gap_s=3600,
                     min_cameras=2,
                     target_plate=plate,
+                    limit_events=12000,
                 )
 
                 partner_data: dict[str, dict[str, Any]] = {}
