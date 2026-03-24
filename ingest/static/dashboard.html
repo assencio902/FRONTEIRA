@@ -10950,7 +10950,7 @@ async function _loadCenGrupos(w, cowin, gsizes, orderMode, leaderRatio, payloadM
             + '&payload_max_front=' + encodeURIComponent(payloadMax);
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom);
     if (tsTo)    url += '&ts_to=' + encodeURIComponent(tsTo);
-    var r = await fetch(url);
+    var r = await _fetchWithTimeout(url, null, 12000);
     if (!r.ok) return;
     var data = await r.json();
     var groups = data.groups || [];
@@ -10978,7 +10978,10 @@ async function _loadCenGrupos(w, cowin, gsizes, orderMode, leaderRatio, payloadM
       }
     });
     _cenRenderPage();
-  } catch(e) { /* silencioso */ }
+  } catch(e) {
+    var cst = document.getElementById('central-status');
+    if (cst && !cst.textContent) cst.textContent = 'Aviso: ' + e.message;
+  }
 }
 
 function cenOrderModeChange() {
@@ -11061,7 +11064,7 @@ async function loadCentral(showSpinner) {
     var url = '/api/batedor/central?window=' + w + '&limit=300';
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
     if (prefix)  url += '&plate_prefix='  + encodeURIComponent(prefix.trim().toUpperCase());
-    var r = await fetch(url);
+    var r = await _fetchWithTimeout(url, null, 15000);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
     var all = data.items || [];
@@ -11352,7 +11355,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
   }
 
   try {
-    var resp = await fetch(_url);
+    var resp = await _fetchWithTimeout(_url, null, 20000);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
 
@@ -12898,7 +12901,7 @@ async function openAlvoDetail(plate, descricao) {
   openModal('detail-modal');
 
   try {
-    var resp = await fetch('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=' + _alvoCoWindow + '&min_cameras=2&trip_max=3600&limit=20');
+    var resp = await _fetchWithTimeout('/api/batedor/companions/' + encodeURIComponent(plate) + '?window=24h&co_window=' + _alvoCoWindow + '&min_cameras=2&trip_max=3600&limit=20', null, 15000);
     var data = await resp.json();
     var companions = data.companions || [];
 
@@ -15602,7 +15605,7 @@ async function loadGruposComboio(showSpinner) {
             + '&order_mode=' + encodeURIComponent(om)
             + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=100';
     
-    var r = await fetch(url);
+    var r = await _fetchWithTimeout(url, null, 15000);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
     var groups = data.groups || [];
