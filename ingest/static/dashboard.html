@@ -7558,6 +7558,7 @@ var _pnCharts = {};
 var _painelProdutividadeCache = null;
 var _vehicleTargetFlow = null;
 var _tabLoadMeta = {};
+var _lastTabSwitch = { name: '', at: 0 };
 
 function _queueTabLoad(name, loader, maxAgeMs, force) {
   var meta = _tabLoadMeta[name] || (_tabLoadMeta[name] = { promise: null, loadedAt: 0 });
@@ -7597,6 +7598,11 @@ function _findSidebarTabElement(name) {
 
 function switchTab(name, el) {
   console.log('[switchTab] chamado com:', name);
+  var now = Date.now();
+  if (currentTab === name && _lastTabSwitch.name === name && (now - _lastTabSwitch.at) < 800) {
+    return;
+  }
+  _lastTabSwitch = { name: name, at: now };
   if (!el || !el.classList) el = _findSidebarTabElement(name);
   var role = window._authRole || 'visualizador';
   if (role !== 'admin' && (name === 'produtividade' || name === 'cameras' || name === 'storage' || name === 'usuarios')) {
@@ -7615,8 +7621,8 @@ function switchTab(name, el) {
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
   if (name === 'painel')  _queueTabLoad('painel', function(){ return loadPainel(); }, 15000);
-  if (name === 'produtividade') loadProdutividadeTab(true, 'lancamentos');
-  if (name === 'eventos') loadEvents(evOffset);
+  if (name === 'produtividade') _queueTabLoad('produtividade', function(){ return loadProdutividadeTab(true, 'lancamentos'); }, 10000);
+  if (name === 'eventos') _queueTabLoad('eventos', function(){ return loadEvents(evOffset); }, 5000);
   if (name === 'batedor') {
     var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
     var batName = activeBat ? activeBat.getAttribute('data-bat') : 'placas';
@@ -7635,7 +7641,7 @@ function switchTab(name, el) {
       _cenSingleFocusPlateInput();
     }
   }
-  if (name === 'veiculos') { loadLists(); }
+  if (name === 'veiculos') _queueTabLoad('veiculos', function(){ return loadLists(); }, 10000);
   if (name === 'cameras')  _queueTabLoad('cameras', function(){ return loadCameras(); }, 10000);
   if (name === 'mapa')     _queueTabLoad('mapa', function(){ return loadMapa(); }, 10000);
   else                     _stopMapaAutoRefresh();
