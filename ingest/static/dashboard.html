@@ -16190,11 +16190,11 @@ function _storageUsageColor(percent) {
 function _groupStorageVolumesByDisk() {
   var groups = {};
   (_storageVolumesCache || []).forEach(function(item) {
-    var diskKey = String(item.backing_mount || item.mount_point || item.label || 'disco');
+    var diskKey = String(item.device || item.backing_mount || item.mount_point || item.label || 'disco');
     if (!groups[diskKey]) {
       groups[diskKey] = {
         key: diskKey,
-        mount_point: item.backing_mount || item.mount_point || diskKey,
+        mount_point: item.device || item.backing_mount || item.mount_point || diskKey,
         device: item.device || 'disco',
         fs_type: item.fs_type || 'fs',
         total_gb: item.total_gb,
