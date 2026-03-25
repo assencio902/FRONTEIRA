@@ -240,7 +240,17 @@ def build_alvos_router(
         where: list[str] = ["e.plate = %s"]
         vals: list[Any] = [plate]
 
-        range_map = {"24h": 24 * 60, "7d": 7 * 1440, "15d": 15 * 1440, "30d": 30 * 1440}
+        range_map = {
+            "1h": 60,
+            "2h": 120,
+            "3h": 180,
+            "6h": 360,
+            "12h": 720,
+            "24h": 24 * 60,
+            "7d": 7 * 1440,
+            "15d": 15 * 1440,
+            "30d": 30 * 1440,
+        }
         if range and range in range_map:
             mins = range_map[range]
             where.append(f"COALESCE(e.occurred_at, e.ts) >= NOW() - ({mins} * INTERVAL '1 minute')")

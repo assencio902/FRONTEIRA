@@ -167,6 +167,74 @@
     .sub-tab { padding:12px 24px; cursor:pointer; font-size:14px; font-weight:600; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-1px; transition:all .15s; user-select:none; line-height:var(--lh-tight); }
     .sub-tab:hover { color:var(--text); }
     .sub-tab.active { color:var(--accent2); border-bottom-color:var(--accent); }
+    .sub-tab.sub-tab-search {
+      margin-left: 10px;
+      margin-bottom: 0;
+      border-bottom: 0;
+      border-radius: 8px;
+      background: #76894c;
+      color: #fff7db;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .sub-tab.sub-tab-search:hover,
+    .sub-tab.sub-tab-search.active {
+      color: #fff7db;
+      background: #859955;
+      border-bottom: 0;
+    }
+    /* ── Batedor: sub-abas com estilo igual ao Pessoas ── */
+    #tab-batedor .sub-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+    #tab-batedor .sub-tabs .sub-tab {
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .85rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      margin-bottom: -2px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      transition: all .15s;
+      line-height: var(--lh-tight);
+    }
+    #tab-batedor .sub-tabs .sub-tab:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.04);
+    }
+    #tab-batedor .sub-tabs .sub-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 700;
+      background: rgba(250,204,21,.06);
+    }
+    #tab-batedor .sub-tabs .sub-tab.sub-tab-search {
+      margin-left: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: var(--radius) var(--radius) 0 0;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+      padding: 8px 16px;
+      gap: 6px;
+    }
+    #tab-batedor .sub-tabs .sub-tab.sub-tab-search:hover,
+    #tab-batedor .sub-tabs .sub-tab.sub-tab-search.active {
+      color: var(--accent);
+      background: rgba(250,204,21,.06);
+      border-bottom-color: var(--accent);
+    }
     .bat-live-badge { display:inline-flex; align-items:center; gap:5px; margin-left:8px;
       background:#dc2626; color:#fff; font-size:11px; font-weight:800; padding:3px 9px;
       border-radius:99px; vertical-align:middle; animation:pulse-badge 1.4s infinite; }
@@ -4071,7 +4139,7 @@
         <div class="sub-tab" data-bat="suspeitos" onclick="switchBatTab('suspeitos',this)" id="bat-subtab-suspeitos">
           &#128101; Grupos Suspeitos
         </div>
-        <div class="sub-tab" data-bat="alvos" onclick="switchBatTab('alvos',this)" id="bat-subtab-alvos">
+        <div class="sub-tab sub-tab-search" data-bat="alvos" onclick="switchBatTab('alvos',this)" id="bat-subtab-alvos">
           &#127919; Alvos Rastreados
         </div>
         <button id="btn-bat-notif" class="btn btn-outline btn-sm" onclick="toggleBatNotif()"
@@ -4120,13 +4188,12 @@
             </label></span>
             <label class="cen-lbl">&#9201; Janela/c&acirc;m:
               <select id="cgs-cowin" onchange="_cgsLoad(true)" class="cen-ctl">
-                <option value="60">1 min</option>
-                <option value="120">2 min</option>
                 <option value="300" selected>5 min</option>
                 <option value="600">10 min</option>
                 <option value="900">15 min</option>
+                <option value="1200">20 min</option>
                 <option value="1800">30 min</option>
-                <option value="3600">1 hora</option>
+                <option value="3600">60 min</option>
               </select>
             </label>
             <label class="cen-lbl" title="Tamanho do grupo: n&uacute;mero de ve&iacute;culos andando juntos em comboio">&#128101; Grupo:
@@ -4268,6 +4335,16 @@
                 <option value="4">&gt;= 4 c&acirc;m.</option>
               </select>
             </label>
+            <label class="cen-lbl">&#9201; Intervalo entre ve&iacute;culos:
+              <select id="cen-single-cowin" class="cen-ctl">
+                <option value="300" selected>5 min</option>
+                <option value="600">10 min</option>
+                <option value="900">15 min</option>
+                <option value="1200">20 min</option>
+                <option value="1800">30 min</option>
+                <option value="3600">60 min</option>
+              </select>
+            </label>
             <button class="cen-btn-apply cen-btn-search" onclick="_cenSingleSearchFromForm()">&#128269; Pesquisar</button>
             <button class="cen-btn-clear" onclick="_cenSingleClear()">Limpar</button>
             <span class="date-range-row" id="cen-single-date-row" style="display:none">
@@ -4332,11 +4409,12 @@
             <div>
               <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Per&iacute;odo</div>
               <select id="alvo-dv-range" onchange="_alvoDvPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
-                <option value="7d" selected>7 dias</option>
-                <option value="15d">15 dias</option>
-                <option value="30d">30 dias</option>
-                <option value="90d">90 dias</option>
-                <option value="180d">180 dias</option>
+                <option value="1h">1 hora</option>
+                <option value="2h">2 horas</option>
+                <option value="3h">3 horas</option>
+                <option value="6h">6 horas</option>
+                <option value="12h">12 horas</option>
+                <option value="24h" selected>24 horas</option>
                 <option value="custom">Per&iacute;odo personalizado</option>
               </select>
             </div>
@@ -4354,12 +4432,12 @@
               <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Janela de tempo</div>
               <select id="alvo-dv-janela" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
                 <option value="">Qualquer</option>
-                <option value="1">1 min</option>
                 <option value="5">5 min</option>
                 <option value="10">10 min</option>
                 <option value="15">15 min</option>
+                <option value="20">20 min</option>
                 <option value="30">30 min</option>
-                <option value="60">1 hora</option>
+                <option value="60">60 min</option>
               </select>
             </div>
             <div>
@@ -5103,6 +5181,40 @@
         <button class="btn btn-danger btn-sm" id="cad-excluir-ok-btn" onclick="_cadExcluirConfirmar()">
           &#128465; Confirmar Exclus&atilde;o
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Editar alvo rastreado -->
+<div class="modal-overlay" id="alvo-edit-modal" onclick="if(event.target===this)_alvoEditFechar()">
+  <div class="modal modal-sm" style="max-width:520px">
+    <div class="modal-header">
+      <h2>&#9998; Editar Alvo</h2>
+      <button class="modal-close" onclick="_alvoEditFechar()">&times;</button>
+    </div>
+    <div>
+      <label style="display:block;font-size:.82rem;color:var(--muted);margin-bottom:10px">
+        Placa:
+        <input
+          type="text"
+          id="alvo-edit-plate"
+          maxlength="12"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.92rem;width:100%;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('alvo-edit-desc').focus()}">
+      </label>
+      <label style="display:block;font-size:.82rem;color:var(--muted);margin-bottom:12px">
+        Nome/descri&ccedil;&atilde;o:
+        <input
+          type="text"
+          id="alvo-edit-desc"
+          maxlength="120"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.92rem;width:100%;box-sizing:border-box"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();_alvoEditSalvar()}">
+      </label>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="_alvoEditFechar()">Cancelar</button>
+        <button class="btn btn-sm" style="background:var(--warning);color:#1a1a1a;border-color:var(--warning);font-weight:700" onclick="_alvoEditSalvar()">&#9998; Salvar</button>
       </div>
     </div>
   </div>
@@ -7559,6 +7671,62 @@ var _painelProdutividadeCache = null;
 var _vehicleTargetFlow = null;
 var _tabLoadMeta = {};
 var _lastTabSwitch = { name: '', at: 0 };
+var _navHistory = [];
+var _navMutePush = false;
+
+function _getCurrentBatSub() {
+  try {
+    var activeBat = document.querySelector('#bat-sub-tabs .sub-tab.active');
+    return activeBat ? activeBat.getAttribute('data-bat') : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function _captureNavState() {
+  return {
+    tab: currentTab || 'painel',
+    bat: (currentTab === 'batedor') ? _getCurrentBatSub() : null
+  };
+}
+
+function _pushNavState(state) {
+  if (_navMutePush) return;
+  if (!state || !state.tab) return;
+  var last = _navHistory.length ? _navHistory[_navHistory.length - 1] : null;
+  if (last && last.tab === state.tab && last.bat === state.bat) return;
+  _navHistory.push(state);
+  if (_navHistory.length > 60) _navHistory.shift();
+}
+
+function _navGoBack() {
+  if (!_navHistory.length) return false;
+  var prev = _navHistory.pop();
+  if (!prev || !prev.tab) return false;
+  _navMutePush = true;
+  try {
+    if (prev.tab !== currentTab) {
+      var el = _findSidebarTabElement(prev.tab);
+      switchTab(prev.tab, el);
+      if (prev.tab === 'batedor' && prev.bat) {
+        var subEl = document.getElementById('bat-subtab-' + prev.bat);
+        if (subEl) switchBatTab(prev.bat, subEl);
+      }
+      return true;
+    }
+    if (prev.tab === 'batedor' && prev.bat) {
+      var curBat = _getCurrentBatSub();
+      if (curBat !== prev.bat) {
+        var subEl2 = document.getElementById('bat-subtab-' + prev.bat);
+        if (subEl2) switchBatTab(prev.bat, subEl2);
+        return true;
+      }
+    }
+  } finally {
+    setTimeout(function(){ _navMutePush = false; }, 0);
+  }
+  return false;
+}
 
 function _queueTabLoad(name, loader, maxAgeMs, force) {
   var meta = _tabLoadMeta[name] || (_tabLoadMeta[name] = { promise: null, loadedAt: 0 });
@@ -7612,6 +7780,8 @@ function switchTab(name, el) {
     }
     return;
   }
+  var prevState = _captureNavState();
+  if (currentTab !== name) _pushNavState(prevState);
   document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   var tabEl = document.getElementById('tab-' + name);
@@ -7668,6 +7838,8 @@ function switchBatTab(name, el) {
     if (livBtn) { livBtn.classList.remove('btn-success'); livBtn.classList.add('btn-outline');
                   livBtn.innerHTML = '&#9654; <span id="cen-live-label">Monitorar</span>'; }
   }
+  var prevState = _captureNavState();
+  if (prevState.tab === 'batedor' && prevState.bat && prevState.bat !== name) _pushNavState(prevState);
   document.querySelectorAll('#bat-sub-tabs .sub-tab').forEach(function(t){ t.classList.remove('active'); });
   // desativa todos os panes reais existentes no DOM
   ['central', 'alvos', 'grupos'].forEach(function(n){
@@ -7691,7 +7863,7 @@ function switchBatTab(name, el) {
     _cenSingleFocusPlateInput();
   } else if (name === 'alvos') {
     document.getElementById('bat-sub-alvos').classList.add('active');
-    _renderAlvosIdle();
+    loadAlvos();
   }
   var labels = { suspeitos: 'Batedor / Suspeitos', placas: 'Batedor / Placas', alvos: 'Batedor / Alvos' };
   trackPageView('batedor:' + name, labels[name] || ('Batedor / ' + name), '/dashboard#batedor/' + name);
@@ -7772,7 +7944,8 @@ document.addEventListener('keydown', function(e) {
     if (document.getElementById('rel-modal').classList.contains('open')) { closeRelModal(true); return; }
     if (document.getElementById('vehicle-modal').classList.contains('open')) { closeVehicleModal(); return; }
     if (document.getElementById('vehicle-target-modal').classList.contains('open')) { closeVehicleTargetModal(); return; }
-    ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal'].forEach(closeModal);
+    ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal','alvo-edit-modal'].forEach(closeModal);
+    if (_navGoBack()) return;
   }
 });
 
@@ -8417,6 +8590,7 @@ function _cenSingleDefaultOpts() {
     direction: null,
     min_confidence: 0,
     min_cameras: 2,
+    co_window: 300,
   };
 }
 
@@ -8531,6 +8705,7 @@ function _cenSingleApplyOptsToForm(opts, force) {
   var dirEl = document.getElementById('cen-single-direction');
   var confEl = document.getElementById('cen-single-confidence');
   var minCamEl = document.getElementById('cen-single-min-cameras');
+  var cowinEl = document.getElementById('cen-single-cowin');
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   if (plateEl && (force || !plateEl.value) && _cenSingleState.plate) plateEl.value = _cenSingleState.plate;
@@ -8542,6 +8717,7 @@ function _cenSingleApplyOptsToForm(opts, force) {
   if (dirEl && (force || !dirEl.value)) dirEl.value = opts.direction || '';
   if (confEl && (force || !confEl.value)) confEl.value = String(opts.min_confidence || 0);
   if (minCamEl && (force || !minCamEl.value)) minCamEl.value = String(opts.min_cameras != null ? opts.min_cameras : 2);
+  if (cowinEl && (force || !cowinEl.value)) cowinEl.value = String(opts.co_window != null ? opts.co_window : 300);
   if (fromEl && (force || !fromEl.value)) {
     fromEl.value = opts.ts_from ? _toLocalDTInput(new Date(opts.ts_from)) : _toLocalDTInput(new Date(Date.now() - 7 * 86400000));
   }
@@ -8661,6 +8837,7 @@ function _cenSingleBuildReportUrl(plate, opts) {
   if (opts.direction) url += '&filter_direction=' + encodeURIComponent(opts.direction);
   if (opts.min_confidence > 0) url += '&min_confidence=' + String(opts.min_confidence);
   if (opts.min_cameras > 0) url += '&min_cameras=' + String(opts.min_cameras);
+  if (opts.co_window) url += '&co_window=' + String(opts.co_window);
   return url;
 }
 
@@ -8681,6 +8858,7 @@ function _cenSingleReadOpts() {
   var dirEl = document.getElementById('cen-single-direction');
   var confEl = document.getElementById('cen-single-confidence');
   var minCamEl = document.getElementById('cen-single-min-cameras');
+  var cowinEl = document.getElementById('cen-single-cowin');
   var fromEl = document.getElementById('cen-single-ts-from');
   var toEl = document.getElementById('cen-single-ts-to');
   var opts = _cenSingleDefaultOpts();
@@ -8688,6 +8866,7 @@ function _cenSingleReadOpts() {
   opts.direction = dirEl ? (dirEl.value || null) : null;
   opts.min_confidence = confEl ? (parseFloat(confEl.value || '0') || 0) : 0;
   opts.min_cameras = minCamEl ? (parseInt(minCamEl.value || '0', 10) || 0) : 0;
+  opts.co_window = cowinEl ? (parseInt(cowinEl.value || '300', 10) || 300) : 300;
   if (opts.window === 'custom') {
     opts.ts_from = _toIso(fromEl ? fromEl.value : '');
     opts.ts_to = _toIso(toEl ? toEl.value : '');
@@ -8955,8 +9134,8 @@ async function _cenSingleSearch(plate, opts) {
   _cenSingleSetStatus('Gerando relat&oacute;rio de ' + plate + ' em ' + _cenSingleHumanWindow(opts) + '&hellip;', 'info');
   try {
     var responses = await Promise.all([
-      _fetchWithTimeout(_cenSingleBuildReportUrl(plate, opts), null, 20000),
-      _fetchWithTimeout(_cenSingleBuildCentralUrl(plate, opts), null, 12000).catch(function() { return null; }),
+      _fetchWithTimeout(_cenSingleBuildReportUrl(plate, opts), null, 45000),
+      _fetchWithTimeout(_cenSingleBuildCentralUrl(plate, opts), null, 25000).catch(function() { return null; }),
     ]);
     var reportResp = responses[0];
     var centralResp = responses[1];
@@ -11286,6 +11465,7 @@ var _reportCurrentOpts = null;
 function _normalizeReportOpts(opts) {
   var out = Object.assign({}, opts || {});
   if (!out.window && !out.ts_from && !out.ts_to) out.window = '2h';
+  if (!out.co_window) out.co_window = 300;
   return out;
 }
 
@@ -11366,6 +11546,7 @@ async function openBatedorReport(plate, _fromHistory, opts) {
     if (opts.direction)          _url += '&filter_direction='  + encodeURIComponent(opts.direction);
     if (opts.min_confidence > 0) _url += '&min_confidence='   + opts.min_confidence;
     if (opts.min_cameras > 1)    _url += '&min_cameras='      + opts.min_cameras;
+    if (opts.co_window)          _url += '&co_window='        + opts.co_window;
     if (opts.vehicle_type)       _url += '&vehicle_type='     + encodeURIComponent(opts.vehicle_type);
     if (opts.vehicle_color)      _url += '&vehicle_color='    + encodeURIComponent(opts.vehicle_color);
   } else {
@@ -12856,6 +13037,9 @@ async function loadAlvos() {
     tb.innerHTML = alvos.map(function(a) {
       var desde   = new Date(a.created_at).toLocaleDateString('pt-BR');
       var descEsc = (a.descricao || '').replace(/'/g, "&#39;");
+      var plateEnc = encodeURIComponent(a.plate || '');
+      var descEnc  = encodeURIComponent(a.descricao || '');
+      var desdeEnc = encodeURIComponent(desde || '');
       var lastSeen = (function() {
         if (!a.last_seen) return '<span style="color:var(--muted);font-size:.78rem">&#8212;</span>';
         var d   = new Date(a.last_seen);
@@ -12877,12 +13061,12 @@ async function loadAlvos() {
         }
       })();
       // Botões de ação por perfil
-      var btnVer    = '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;,&#39;' + desde + '&#39;)" title="Visualizar alvo">&#128269; Visualizar</button>';
+      var btnVer    = '<button class="btn btn-outline btn-xs" data-plate="' + plateEnc + '" data-desc="' + descEnc + '" data-desde="' + desdeEnc + '" onclick="alvoVer(' + a.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'), decodeURIComponent(this.dataset.desde||\'\'))" title="Visualizar alvo">&#128269; Visualizar</button>';
       var btnEditar = (_role === 'admin' || _role === 'operador')
-        ? '<button class="btn btn-outline btn-xs" onclick="alvoEditar(' + a.id + ',&#39;' + a.plate + '&#39;,&#39;' + descEsc + '&#39;)" title="Editar alvo">&#9998; Editar</button>'
+        ? '<button class="btn btn-outline btn-xs" data-plate="' + plateEnc + '" data-desc="' + descEnc + '" onclick="alvoEditar(' + a.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'))" title="Editar alvo">&#9998; Editar</button>'
         : '';
       var btnApagar = (_role === 'admin')
-        ? '<button class="btn btn-danger btn-xs" onclick="alvoApagar(' + a.id + ',&#39;' + a.plate + '&#39;)" title="Excluir alvo">&#128465; Excluir</button>'
+        ? '<button class="btn btn-danger btn-xs" data-plate="' + plateEnc + '" onclick="alvoApagar(' + a.id + ', decodeURIComponent(this.dataset.plate||\'\'))" title="Excluir alvo">&#128465; Excluir</button>'
         : '';
       var descTxt   = (a.descricao || '').trim();
       var descTitle = descTxt.replace(/"/g, '&quot;');
@@ -13756,8 +13940,10 @@ async function _alvoDvLoadCompanions(id, plate) {
       var ev0    = (c.evidence || [])[0];
       var localStr = ev0 ? (ev0.camera || ev0.camera_id || '&mdash;') : '&mdash;';
       // ações
+      var alvoPlateEnc = alvo ? encodeURIComponent(alvo.plate || '') : '';
+      var alvoDescEnc  = alvo ? encodeURIComponent(alvo.descricao || '') : '';
       var btnDetalhe = alvo
-        ? '<button class="btn btn-outline btn-xs" onclick="alvoVer(' + alvo.id + ',\''+alvo.plate+'\',\''+((alvo.descricao||'').replace(/\'/g,"\'\'"))+'\')">&#128269; Visualizar</button> '
+        ? '<button class="btn btn-outline btn-xs" data-plate="' + alvoPlateEnc + '" data-desc="' + alvoDescEnc + '" onclick="alvoVer(' + alvo.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'))">&#128269; Visualizar</button> '
         : '';
       var safeComp = c.companion.replace(/'/g,"\\'");
       var btnBuscar = '<button class="btn btn-outline btn-xs" onclick="_alvoCompSearch(\''+safeComp+'\')" title="Buscar esta placa no Batedor">&#128301; Batedor</button>';
@@ -13801,7 +13987,7 @@ function _alvoCompSearch(plate) {
 
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
 async function _alvoDvAplicar() {
-  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'7d'}).value || '7d';
+  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
   var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value    || '';
   var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value    || '';
   var res = document.getElementById('alvo-dv-resultados');
@@ -13833,7 +14019,7 @@ async function _alvoDvAplicar() {
 
 // ── Alvo: Limpa filtros e re-executa ─────────────────────────────────────────
 function _alvoDvLimpar() {
-  [['alvo-dv-range','7d'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
+  [['alvo-dv-range','24h'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
    ['alvo-dv-start',''],['alvo-dv-end','']].forEach(function(f) {
     var el = document.getElementById(f[0]); if (el) el.value = f[1];
   });
@@ -13845,8 +14031,8 @@ function _alvoDvLimpar() {
 function _alvoDvRenderHistorico(d, rangeVal, janela, mincam) {
   var res = document.getElementById('alvo-dv-resultados');
   if (!res) return;
-  var jLabel = {'1':'1 min','5':'5 min','10':'10 min','15':'15 min','30':'30 min','60':'1 hora'};
-  var rLabel = {'24h':'24 horas','7d':'7 dias','15d':'15 dias','30d':'30 dias','custom':'per&iacute;odo personalizado'};
+  var jLabel = {'5':'5 min','10':'10 min','15':'15 min','20':'20 min','30':'30 min','60':'60 min'};
+  var rLabel = {'1h':'1 hora','2h':'2 horas','3h':'3 horas','6h':'6 horas','12h':'12 horas','24h':'24 horas','custom':'per&iacute;odo personalizado'};
   var chips = [];
   chips.push('<span style="background:rgba(250,204,21,.15);color:var(--accent);border:1px solid rgba(250,204,21,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#128197; ' + (rLabel[rangeVal] || rangeVal) + '</span>');
   if (janela) chips.push('<span style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#9201; janela: ' + (jLabel[janela] || janela + ' min') + '</span>');
@@ -13919,7 +14105,7 @@ async function alvoVer(id, plate, descricao, desde) {
   var _prioEl = document.getElementById('alvo-dv-prioridade');
   if (_prioEl) _prioEl.innerHTML = '<span style="font-size:.72rem;color:var(--muted);font-style:italic">Classificando&hellip;</span>';
   // reseta filtros
-  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '7d';
+  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '24h';
   var jEl = document.getElementById('alvo-dv-janela'); if (jEl) jEl.value = '';
   var mEl = document.getElementById('alvo-dv-mincam'); if (mEl) mEl.value = '';
   var ds  = document.getElementById('alvo-dv-start');  if (ds)  ds.value  = '';
@@ -13954,6 +14140,11 @@ function editAlvo(id, plate, descricao) {
   _editAlvoId = id;
   var _pi = document.getElementById('alvo-plate-input');
   var _di = document.getElementById('alvo-desc-input');
+  // fallback cirúrgico: se o formulário não existir nesta tela, edita via prompt
+  if (!_pi || !_di) {
+    openAlvoEditModal(id, plate, descricao);
+    return;
+  }
   if (_pi) _pi.value = plate;
   if (_di) _di.value = descricao.replace(/&#39;/g, "'");
   var btn = document.querySelector('[onclick="addAlvo()"]');
@@ -13964,6 +14155,34 @@ function editAlvo(id, plate, descricao) {
     btn.style.background = 'var(--warning)';
   }
   if (_pi) _pi.focus();
+}
+
+var _alvoEditId = null;
+function openAlvoEditModal(id, plate, descricao) {
+  _alvoEditId = id;
+  var p = document.getElementById('alvo-edit-plate');
+  var d = document.getElementById('alvo-edit-desc');
+  if (p) p.value = String(plate || '').trim().toUpperCase();
+  if (d) d.value = String(descricao || '').replace(/&#39;/g, "'").trim();
+  openModal('alvo-edit-modal');
+  if (p) setTimeout(function(){ p.focus(); p.select(); }, 50);
+}
+function _alvoEditFechar() {
+  closeModal('alvo-edit-modal');
+  _alvoEditId = null;
+}
+async function _alvoEditSalvar() {
+  var plate = (document.getElementById('alvo-edit-plate').value || '').trim().toUpperCase();
+  var desc  = (document.getElementById('alvo-edit-desc').value || '').trim();
+  if (!plate) { alert('Informe a placa.'); return; }
+  var resp = await fetch('/api/alvos/' + _alvoEditId, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({plate: plate, descricao: desc})
+  });
+  if (!resp.ok) { alert('Erro ao salvar: ' + await resp.text()); return; }
+  _alvoEditFechar();
+  loadAlvos();
 }
 
 function _resetAlvoForm() {
