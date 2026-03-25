@@ -281,6 +281,34 @@
       background: rgba(250,204,21,.06);
       border-bottom-color: var(--accent);
     }
+    /* ── Batedor: sub-abas internas (alvos rastreados) ── */
+    .alvo-subtabs {
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin:10px 0 12px;
+      border-bottom:1px solid var(--border);
+      padding-bottom:6px;
+    }
+    .alvo-subtab {
+      background: transparent;
+      border:1px solid transparent;
+      border-radius:8px;
+      color: var(--muted);
+      cursor:pointer;
+      font-size:.78rem;
+      font-weight:700;
+      padding:6px 12px;
+      transition: all .15s;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+    .alvo-subtab:hover { color: var(--text); background: rgba(255,255,255,.04); }
+    .alvo-subtab.active {
+      color: var(--accent);
+      border-color: rgba(250,204,21,.3);
+      background: rgba(250,204,21,.08);
+    }
     .bat-live-badge { display:inline-flex; align-items:center; gap:5px; margin-left:8px;
       background:#dc2626; color:#fff; font-size:11px; font-weight:800; padding:3px 9px;
       border-radius:99px; vertical-align:middle; animation:pulse-badge 1.4s infinite; }
@@ -4539,12 +4567,24 @@
         </div>
         <!-- Cards de resumo -->
         <div id="alvo-dv-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:16px"></div>
-        <!-- Últimas Passagens (automático) -->
-        <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
-        <!-- Linha do tempo de rota (toggle) -->
-        <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
-        <!-- Acompanhantes / Comboio -->
-        <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
+
+        <!-- Sub-abas: Passagens x Acompanhantes -->
+        <div class="alvo-subtabs">
+          <button class="alvo-subtab active" id="alvo-subtab-passagens" onclick="_alvoDvSwitchSection('passagens')">Últimas passagens</button>
+          <button class="alvo-subtab" id="alvo-subtab-acompanhantes" onclick="_alvoDvSwitchSection('acompanhantes')">Acompanhantes</button>
+        </div>
+
+        <div id="alvo-subpane-passagens">
+          <!-- Últimas Passagens (automático) -->
+          <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
+          <!-- Linha do tempo de rota (toggle) -->
+          <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
+        </div>
+
+        <div id="alvo-subpane-acompanhantes" style="display:none">
+          <!-- Acompanhantes / Comboio -->
+          <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
+        </div>
         <!-- Resultados -->
         <div id="alvo-dv-resultados">
           <p style="color:var(--muted);padding:12px 0">Selecione os filtros acima e clique em <strong>Aplicar filtros</strong>.</p>
@@ -13428,7 +13468,7 @@ var _alvoDvId    = null;
 var _alvoDvPlate = null;
 
 // ── Janelas de análise automática (altere aqui para ajustar todos os blocos) ──
-var ALVO_DV_PASS_WINDOW = '7d';   // Últimas Passagens + Ver Rota   (padrão: 7 dias)
+var ALVO_DV_PASS_WINDOW = '24h';   // Últimas Passagens + Ver Rota   (padrão: 24h)
 var ALVO_DV_HIST_WINDOW = '90d';  // Histórico ampliado (reservado) (padrão: 90 dias)
 // Formata a janela para exibição: '7d' → '7 dias', '30d' → '30 dias', '24h' → '24h'
 function _alvoDvFmtWindow(w) {
@@ -13447,12 +13487,30 @@ function alvoVerFechar() {
 }
 
 // ── Alvo: Controla exibição dos campos de datas personalizadas ───────────────
-function _alvoDvPeriodChange() {
-  var sel = document.getElementById('alvo-dv-range');
-  var cd  = document.getElementById('alvo-dv-custom-dates');
-  if (!sel || !cd) return;
-  cd.style.display = sel.value === 'custom' ? 'flex' : 'none';
-}
+  function _alvoDvPeriodChange() {
+    var sel = document.getElementById('alvo-dv-range');
+    var cd  = document.getElementById('alvo-dv-custom-dates');
+    if (!sel || !cd) return;
+    cd.style.display = sel.value === 'custom' ? 'flex' : 'none';
+  }
+
+  // ── Alvo: Sub-abas internas (passagens x acompanhantes) ────────────────────
+  function _alvoDvSwitchSection(name) {
+    var btnPass = document.getElementById('alvo-subtab-passagens');
+    var btnComp = document.getElementById('alvo-subtab-acompanhantes');
+    var panePass = document.getElementById('alvo-subpane-passagens');
+    var paneComp = document.getElementById('alvo-subpane-acompanhantes');
+    if (btnPass) btnPass.classList.toggle('active', name === 'passagens');
+    if (btnComp) btnComp.classList.toggle('active', name === 'acompanhantes');
+    if (panePass) panePass.style.display = name === 'passagens' ? '' : 'none';
+    if (paneComp) paneComp.style.display = name === 'acompanhantes' ? '' : 'none';
+    if (name === 'passagens' && (_alvoDvPassagensCache || []).length === 0) {
+      _alvoDvLoadPassagens(_alvoDvId);
+    }
+    if (name === 'acompanhantes' && (_alvoDvCompanionsCache || []).length === 0) {
+      _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
+    }
+  }
 
 // ── Alvo: Renderiza um card de resumo ────────────────────────────────────────
 function _alvoDvMkCard(label, value) {
@@ -13505,8 +13563,20 @@ async function _alvoDvLoadPassagens(id) {
   _alvoDvPassagensCache = [];
   if (rotaEl) { rotaEl.style.display = 'none'; rotaEl.innerHTML = ''; }
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
-  try {
-    var resp = await fetch('/api/alvos/' + id + '/historico?range=' + ALVO_DV_PASS_WINDOW + '&limit=20');
+    try {
+      var rangeEl = document.getElementById('alvo-dv-range');
+      var rangeVal = rangeEl ? rangeEl.value : ALVO_DV_PASS_WINDOW;
+      var params = [];
+      if (rangeVal && rangeVal !== 'custom') {
+        params.push('range=' + encodeURIComponent(rangeVal));
+      } else if (rangeVal === 'custom') {
+        var start = (document.getElementById('alvo-dv-start') || {}).value || '';
+        var end   = (document.getElementById('alvo-dv-end')   || {}).value || '';
+        if (start) params.push('start=' + encodeURIComponent(start));
+        if (end)   params.push('end=' + encodeURIComponent(end));
+      }
+      params.push('limit=20');
+      var resp = await fetch('/api/alvos/' + id + '/historico?' + params.join('&'));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
     var events = d.events || [];
@@ -13520,16 +13590,19 @@ async function _alvoDvLoadPassagens(id) {
         headerBtn.style.cursor = hasRota ? 'pointer' : 'not-allowed';
         headerBtn.title = hasRota ? 'Ver rota no mapa' : 'Rota indisponível (mínimo 2 passagens)';
       }
-    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
-      + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
-      + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '</span>' : '')
-      + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
-      + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-ver-rota-mapa">&#128506; Ver no Mapa</button>' : '')
-      + '</div>';
+      var passLabel = rangeVal === 'custom'
+        ? ((document.getElementById('alvo-dv-start') || {}).value || '') + ' → ' + ((document.getElementById('alvo-dv-end') || {}).value || '')
+        : _alvoDvFmtWindow(rangeVal || ALVO_DV_PASS_WINDOW);
+      var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+        + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
+        + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; ' + (passLabel || '') + '</span>' : '')
+        + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
+        + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-ver-rota-mapa">&#128506; Ver no Mapa</button>' : '')
+        + '</div>';
     if (events.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
         + header
-        + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada nos &uacute;ltimos ' + _alvoDvFmtWindow(ALVO_DV_PASS_WINDOW) + '.</div>'
+          + '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada no per&iacute;odo selecionado.</div>'
         + '</div>';
       return;
     }
@@ -14226,6 +14299,7 @@ async function _alvoDvAplicar() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
     _alvoDvRenderHistorico(d, rangeVal, janela, mincam);
+    if (_alvoDvId) _alvoDvLoadPassagens(_alvoDvId);
   } catch(e) {
     res.innerHTML = '<p style="color:var(--danger);padding:8px 0">Erro ao carregar hist&oacute;rico: ' + e + '</p>';
   }
@@ -14331,6 +14405,7 @@ async function alvoVer(id, plate, descricao, desde) {
   _alvoDvLoadPassagens(id);
   _alvoDvLoadCompanions(id, _alvoDvPlate);
   _alvoDvAplicar();
+  _alvoDvSwitchSection('passagens');
 }
 
 // ── Alvo: Editar (admin + operador) ──────────────────────────────────────────
