@@ -4078,15 +4078,27 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <input type="text" id="ev-search" placeholder="Filtrar por placa..." onkeydown="if(event.key==='Enter')filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
         <select id="ev-camera" onchange="filterEvents()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem"><option value="">Todas as cameras</option></select>
-        <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">De</label>
-        <input type="datetime-local" id="ev-date-from" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
-        <label style="font-size:.78rem;color:var(--muted);white-space:nowrap">Até</label>
-        <input type="datetime-local" id="ev-date-to" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
-        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="today" onclick="setDatePreset('today')">Hoje</button>
-        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="24h" onclick="setDatePreset('24h')">24h</button>
-        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="week" onclick="setDatePreset('week')">7 dias</button>
-        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="30d" onclick="setDatePreset('30d')">30 dias</button>
-        <button class="btn btn-outline btn-sm ev-period-btn" data-preset="90d" onclick="setDatePreset('90d')">90 dias</button>
+        <div>
+          <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Período</div>
+          <select id="ev-period" onchange="evPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
+            <option value="today">Hoje</option>
+            <option value="24h" selected>24 horas</option>
+            <option value="7d">7 dias</option>
+            <option value="30d">30 dias</option>
+            <option value="90d">90 dias</option>
+            <option value="custom">Período personalizado</option>
+          </select>
+        </div>
+        <div id="ev-custom-dates" style="display:none;gap:10px;align-items:flex-end">
+          <div>
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">De</div>
+            <input type="datetime-local" id="ev-date-from" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
+          </div>
+          <div>
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Até</div>
+            <input type="datetime-local" id="ev-date-to" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem" onchange="_clearEventPresetActive();filterEvents()">
+          </div>
+        </div>
         <button class="btn btn-search btn-sm" onclick="filterEvents()">&#128269; Buscar</button>
         <button class="btn btn-outline btn-sm" onclick="clearFilter()">Limpar</button>
         <select id="ev-limit-select" onchange="setEvLimit(this.value)" style="padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:.85rem">
@@ -8381,15 +8393,27 @@ function _toLocalInput(d) {
 }
 
 function _clearEventPresetActive() {
-  document.querySelectorAll('#tab-eventos .ev-period-btn').forEach(function(btn) {
-    btn.classList.remove('active');
-  });
+  var sel = document.getElementById('ev-period');
+  if (sel) sel.value = 'custom';
+  var row = document.getElementById('ev-custom-dates');
+  if (row) row.style.display = 'flex';
 }
 
 function _setEventPresetActive(preset) {
-  document.querySelectorAll('#tab-eventos .ev-period-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-preset') === preset);
-  });
+  var sel = document.getElementById('ev-period');
+  if (sel) sel.value = preset;
+  var row = document.getElementById('ev-custom-dates');
+  if (row) row.style.display = preset === 'custom' ? 'flex' : 'none';
+}
+
+function evPeriodChange() {
+  var sel = document.getElementById('ev-period');
+  var v = sel ? sel.value : '24h';
+  if (v === 'custom') {
+    _setEventPresetActive('custom');
+    return;
+  }
+  setDatePreset(v);
 }
 
 function setDatePreset(preset) {
@@ -8399,7 +8423,7 @@ function setDatePreset(preset) {
     from = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
   } else if (preset === '24h') {
     from = new Date(now.getTime() - 24 * 3600 * 1000);
-  } else if (preset === 'week') {
+  } else if (preset === 'week' || preset === '7d') {
     from = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
   } else if (preset === '30d') {
     from = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
@@ -13871,10 +13895,17 @@ async function _alvoDvLoadCompanions(id, plate) {
   var el = document.getElementById('alvo-dv-companions');
   if (!el || !plate) return;
   var _compRange = (document.getElementById('alvo-dv-range') || {value:'7d'}).value || '7d';
+  var _compJanela = (document.getElementById('alvo-dv-janela') || {value:''}).value || '';
+  var _compMinCam = (document.getElementById('alvo-dv-mincam') || {value:''}).value || '';
   var _compWindow = _compRange !== 'custom' ? _compRange : '7d';  // custom usa o intervalo do filtro de histórico via params separados
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip; <span style="font-size:.75rem;opacity:.7">(' + _alvoDvFmtWindow(_compWindow) + ')</span></p>';
   try {
-    var qs = '?window=' + encodeURIComponent(_compWindow) + '&co_window=300&min_cameras=1&trip_max=7200&limit=20';
+    var coWinSec = _compJanela ? (parseInt(_compJanela, 10) || 0) * 60 : 300;
+    var minCamVal = _compMinCam ? (parseInt(_compMinCam, 10) || 0) : 0;
+    var qs = '?window=' + encodeURIComponent(_compWindow)
+      + '&co_window=' + encodeURIComponent(coWinSec || 300)
+      + '&min_cameras=' + encodeURIComponent(minCamVal || 1)
+      + '&trip_max=7200&limit=20';
     var [compResp, alvosResp] = await Promise.all([
       fetch('/api/batedor/companions/' + encodeURIComponent(plate) + qs),
       fetch('/api/alvos')
