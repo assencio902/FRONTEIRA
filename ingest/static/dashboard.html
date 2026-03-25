@@ -4505,8 +4505,6 @@
             <button class="btn btn-outline btn-sm" onclick="alvoVerFechar()" style="white-space:nowrap">&#8592; Voltar à lista</button>
             <div id="alvo-dv-titulo" style="font-size:1.05rem;font-weight:700;flex:1"></div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              <button class="btn btn-outline btn-sm" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-header-ver-rota" style="white-space:nowrap">&#128506; Ver rota</button>
-              <button class="btn btn-outline btn-sm" onclick="_alvoDvGerarRelatorio()" style="white-space:nowrap">&#128203; Relat&oacute;rio</button>
               <div id="alvo-dv-prioridade"></div>
             </div>
           </div>
@@ -4572,12 +4570,17 @@
         <div class="alvo-subtabs">
           <button class="alvo-subtab active" id="alvo-subtab-passagens" onclick="_alvoDvSwitchSection('passagens')">Últimas passagens</button>
           <button class="alvo-subtab" id="alvo-subtab-acompanhantes" onclick="_alvoDvSwitchSection('acompanhantes')">Acompanhantes</button>
+          <button class="alvo-subtab" id="alvo-subtab-rota" onclick="_alvoDvSwitchSection('rota')">Rota</button>
+          <button class="alvo-subtab" onclick="_alvoDvGerarRelatorio()">&#128203; Relat&oacute;rio</button>
         </div>
 
         <div id="alvo-subpane-passagens">
           <!-- Últimas Passagens (automático) -->
           <div id="alvo-dv-passagens-recentes" style="margin-bottom:12px"></div>
-          <!-- Linha do tempo de rota (toggle) -->
+        </div>
+
+        <div id="alvo-subpane-rota" style="display:none">
+          <!-- Linha do tempo de rota -->
           <div id="alvo-dv-rota" style="display:none;margin-bottom:20px"></div>
         </div>
 
@@ -6342,9 +6345,7 @@
       </h2>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         <button id="rel-btn-target" onclick="_relCriarAlvo()" style="background:#b91c1c;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127919; Criar alvo</button>
-        <button id="rel-btn-mapa" onclick="_relVerRotaMapa()" style="background:#065f46;color:#6ee7b7;border:1px solid #047857;border-radius:6px;padding:6px 12px;font-size:.82rem;font-weight:700;cursor:pointer;display:none;align-items:center;gap:4px">&#127760; Ver mapa</button>
         <button onclick="_relSalvarNoPC()" style="background:#1e40af;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128190; Salvar</button>
-        <button id="rel-btn-print" onclick="window.print()" style="background:#374151;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">&#128438; Imprimir</button>
         <button class="modal-close" onclick="closeRelModal(true)">&times;</button>
       </div>
     </div>
@@ -10379,7 +10380,7 @@ function _relBuildPdfExportNode() {
   if (!body) return null;
   var report = body.querySelector('#rel-print') || body.firstElementChild || body;
   var host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:-20000px;top:0;width:794px;background:#ffffff;padding:18px 18px 24px;box-sizing:border-box;z-index:-1';
+  host.style.cssText = 'position:fixed;left:0;top:0;width:794px;background:#ffffff;padding:18px 18px 24px;box-sizing:border-box;z-index:-1;opacity:0;pointer-events:none';
   var clone = report.cloneNode(true);
   clone.style.margin = '0';
   clone.style.width = '100%';
@@ -10465,12 +10466,8 @@ async function closeRelModal(restoreContext) {
 function _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn, showPrintBtn) {
   document.getElementById('rel-modal-titulo').textContent = titulo;
   document.getElementById('rel-modal-body').innerHTML = html;
-  var btnMapa = document.getElementById('rel-btn-mapa');
   var btnTarget = document.getElementById('rel-btn-target');
-  var btnPrint = document.getElementById('rel-btn-print');
-  if (btnMapa) { _relCurrentMapaFn = mapaFn || null; btnMapa.style.display = mapaFn ? 'flex' : 'none'; }
   if (btnTarget) { _relCurrentCreateTargetFn = createTargetFn || null; btnTarget.style.display = createTargetFn ? 'flex' : 'none'; }
-  if (btnPrint) btnPrint.style.display = showPrintBtn === false ? 'none' : 'flex';
   _relModalCloseRestoreFn = typeof restoreFn === 'function' ? restoreFn : null;
   _relModalReturnFn = function() { _relAbrirModal(titulo, html, mapaFn, restoreFn, backLabel, createTargetFn, showPrintBtn); };
   _relPdfTitleSlug = titulo.replace(/[^A-Z0-9_]/gi, '_');
@@ -13497,19 +13494,73 @@ function alvoVerFechar() {
   // ── Alvo: Sub-abas internas (passagens x acompanhantes) ────────────────────
   function _alvoDvSwitchSection(name) {
     var btnPass = document.getElementById('alvo-subtab-passagens');
+    var btnRota = document.getElementById('alvo-subtab-rota');
     var btnComp = document.getElementById('alvo-subtab-acompanhantes');
     var panePass = document.getElementById('alvo-subpane-passagens');
+    var paneRota = document.getElementById('alvo-subpane-rota');
     var paneComp = document.getElementById('alvo-subpane-acompanhantes');
     if (btnPass) btnPass.classList.toggle('active', name === 'passagens');
+    if (btnRota) btnRota.classList.toggle('active', name === 'rota');
     if (btnComp) btnComp.classList.toggle('active', name === 'acompanhantes');
     if (panePass) panePass.style.display = name === 'passagens' ? '' : 'none';
+    if (paneRota) paneRota.style.display = name === 'rota' ? '' : 'none';
     if (paneComp) paneComp.style.display = name === 'acompanhantes' ? '' : 'none';
     if (name === 'passagens' && (_alvoDvPassagensCache || []).length === 0) {
       _alvoDvLoadPassagens(_alvoDvId);
     }
+    if (name === 'rota') {
+      _alvoDvRenderRotaPane();
+      _alvoDvVerRotaMapa();
+    }
     if (name === 'acompanhantes' && (_alvoDvCompanionsCache || []).length === 0) {
       _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
     }
+  }
+
+  // ── Alvo: Rota no mapa (para qualquer placa) ─────────────────────────────
+  async function _alvoDvVerRotaMapaPlate(plate) {
+    var tgt = (plate || '').trim().toUpperCase();
+    if (!tgt) return;
+    var rangeEl = document.getElementById('alvo-dv-range');
+    var range   = rangeEl ? rangeEl.value : '24h';
+    var now = Date.now();
+    var tsTo   = _toLocalDTInput(new Date(now));
+    var tsFrom;
+    var msMap = { '1h':3600000,'2h':7200000,'3h':10800000,'6h':21600000,'12h':43200000,'24h':86400000,
+                  '7d': 7*86400000, '15d': 15*86400000, '30d': 30*86400000, '90d': 90*86400000, '180d': 180*86400000 };
+    var periodLabel = range === 'custom' ? 'período personalizado' : 'últimos ' + range;
+    if (range === 'custom') {
+      var f = (document.getElementById('alvo-dv-start') || {}).value;
+      var t = (document.getElementById('alvo-dv-end')   || {}).value;
+      if (!f || !t) { alert('Defina as datas De e Até para usar o período personalizado.'); return; }
+      tsFrom = f + 'T00:00';
+      tsTo   = t + 'T23:59';
+      periodLabel = f + ' → ' + t;
+    } else {
+      tsFrom = _toLocalDTInput(new Date(now - (msMap[range] || 86400000)));
+    }
+    await _verRotaNaMapa(tgt, tsFrom, tsTo, periodLabel);
+  }
+
+  function _alvoDvRenderRotaPane() {
+    var el = document.getElementById('alvo-dv-rota');
+    if (!el) return;
+    var comps = _alvoDvCompanionsCache || [];
+    var basePlate = (_alvoDvPlate || '').trim();
+    var baseSafe = JSON.stringify(basePlate);
+    var btns = '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapaPlate(' + baseSafe + ')">&#128506; Ver rota do alvo</button>';
+    if (comps.length) {
+      btns += comps.map(function(c){
+        var p = (c.companion || '').trim();
+        var safe = JSON.stringify(p);
+        return '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapaPlate(' + safe + ')">&#128506; Rota ' + p + '</button>';
+      }).join('');
+    }
+    el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px">'
+      + '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">Abrir rota no mapa</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div>'
+      + '</div>';
+    el.style.display = 'block';
   }
 
 // ── Alvo: Renderiza um card de resumo ────────────────────────────────────────
@@ -14187,9 +14238,13 @@ async function _alvoDvLoadCompanions(id, plate) {
       warnHtml = '<div style="margin-top:8px;padding:7px 12px;border-radius:7px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);font-size:.78rem;color:#f87171">'
         + '&#9888; Consulta extensa: a an&aacute;lise de acompanhantes em 180 dias pode levar mais tempo.</div>';
     }
+    var hasRota = (_alvoDvPassagensCache || []).length >= 2;
     var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
       + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; ' + _alvoDvFmtWindow(_compWindow) + '</span>' : '')
+      + '<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'
+      + '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-header-ver-rota" style="white-space:nowrap"' + (hasRota ? '' : ' disabled') + '>&#128506; Ver rota</button>'
+      + '</span>'
       + '</div>'
       + warnHtml;
 
