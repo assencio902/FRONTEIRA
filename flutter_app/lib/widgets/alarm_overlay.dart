@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // Widget de overlay de alarme (stub básico)
 class AlarmOverlay extends StatelessWidget {
   final String plate;
+  final String? targetName;
   final String camera;
   final String confidence;
   final String imagePath;
@@ -11,6 +12,7 @@ class AlarmOverlay extends StatelessWidget {
   const AlarmOverlay({
     super.key,
     required this.plate,
+    this.targetName,
     required this.camera,
     required this.confidence,
     required this.imagePath,
@@ -46,6 +48,17 @@ class AlarmOverlay extends StatelessWidget {
                 letterSpacing: 2,
               ),
             ),
+            if (targetName != null && targetName!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Alvo: $targetName',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               camera,

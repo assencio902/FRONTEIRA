@@ -314,6 +314,16 @@ class Api {
     return List<Map<String, dynamic>>.from(data['items'] as List? ?? []);
   }
 
+  /// GET /api/vehicles/allplates — placas monitoradas agrupadas por lista.
+  static Future<Map<String, dynamic>> getAllPlates() async {
+    final url = Uri.parse('$baseUrl/api/vehicles/allplates');
+    final h = await headers();
+    final res = await http.get(url, headers: h).timeout(const Duration(seconds: 10));
+    if (res.statusCode == 401) throw ApiUnauthorizedException();
+    if (res.statusCode >= 400) throw Exception('Erro ${res.statusCode}');
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// GET /api/vehicles?list_id=X — veículos de uma lista de monitoramento.
   static Future<List<Map<String, dynamic>>> getVehicles(int listId) async {
     final url = Uri.parse('$baseUrl/api/vehicles').replace(

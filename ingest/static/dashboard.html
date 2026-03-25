@@ -130,6 +130,40 @@
     #topbar { background:var(--sidebar); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
     #topbar h1 { font-size:20px; font-weight:700; line-height:var(--lh-tight); }
     .top-right { display:flex; align-items:center; gap:12px; }
+    .alerts-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(239,68,68,.16);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.12);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .alerts-btn:hover { transform: translateY(-1px); border-color: rgba(239,68,68,.6); }
+    .alerts-btn .alerts-icon { font-size: 18px; line-height: 1; }
+    .alerts-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #ef4444;
+      color: #fff;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border: 2px solid var(--sidebar);
+    }
     .badge-live { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--success); line-height:var(--lh-tight); font-weight:600; }
     .dot { width:8px; height:8px; border-radius:50%; background:var(--success); animation:pulse 1.6s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
@@ -1381,6 +1415,8 @@
       margin:8px 0; text-align:center; }
     #alarm-toast .alarm-plate-txt { font-size:2rem; font-weight:900; letter-spacing:.14em;
       color:#fff; text-shadow:0 2px 6px rgba(0,0,0,.5); }
+    #alarm-toast .alarm-target { margin-top:6px; font-size:.9rem; font-weight:700; color:#fde68a; }
+    #alarm-toast .alarm-camera { margin-top:4px; font-size:.85rem; font-weight:600; color:#f8fafc; opacity:.9; }
     #alarm-toast .alarm-lists { font-size:.82rem; color:#000; font-weight:600; margin-top:6px; }
     #alarm-toast .alarm-dir { display:inline-block; background:#7f1d1d; color:#fff;
       border-radius:6px; padding:2px 10px; font-size:.8rem; font-weight:700;
@@ -1410,6 +1446,11 @@
     #alerts-panel-body { flex:1; overflow-y:auto; }
     .alert-item { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:10px; align-items:flex-start; border-left:3px solid transparent; }
     .alert-item.unseen { border-left-width:3px; }
+    .alerts-filter { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .alerts-filter-label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+    .alerts-filter-buttons { display:flex; gap:6px; flex-wrap:wrap; }
+    .alerts-filter-btn { background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:8px; font-size:.75rem; font-weight:700; cursor:pointer; }
+    .alerts-filter-btn.active { background:var(--accent); color:#000; border-color:var(--accent); }
     .alert-item-icon { font-size:1.15rem; flex-shrink:0; margin-top:1px; }
     .alert-item-plate { font-weight:800; font-size:.93rem; letter-spacing:.06em; }
     .alert-item-detail { font-size:var(--fs-secondary); color:var(--muted); margin-top:3px; line-height:1.45; }
@@ -3758,7 +3799,13 @@
       <h1 id="topbar-title" style="display:none">Painel</h1>
       <span class="topbar-subtitle topo-faixa-institucional brand-title"><span class="topo-texto"><span class="brand-verde-title">BATALH&Atilde;O DE POL&Iacute;CIA DE FRONTEIRAS E DIVISAS</span><span class="pmro-main">PM RO</span><span class="pmro-sub brand-subtitle">servindo e protegendo</span></span></span>
     </div>
-    <div class="top-right header-right"><span class="topo-pattern"><img src="/static/pmro-pattern.svg" alt="Padrão institucional"></span></div>
+    <div class="top-right header-right">
+      <button class="alerts-btn" onclick="openAlertsPanel()" title="Alarmes de listas">
+        <span class="alerts-icon">&#128276;</span>
+        <span id="alerts-badge" class="alerts-badge" style="display:none">0</span>
+      </button>
+      <span class="topo-pattern"><img src="/static/pmro-pattern.svg" alt="Padrão institucional"></span>
+    </div>
   </div>
 
   <div id="content">
@@ -6104,6 +6151,8 @@
   </div>
   <div class="alarm-plate-box">
     <div class="alarm-plate-txt" id="alarm-toast-plate">---</div>
+    <div class="alarm-target" id="alarm-toast-target">---</div>
+    <div class="alarm-camera" id="alarm-toast-camera">---</div>
   </div>
   <div class="alarm-lists" id="alarm-toast-lists"></div>
   <div id="alarm-toast-dir"></div>
@@ -6137,8 +6186,19 @@
       <button class="btn btn-outline btn-xs" onclick="closeAlertsPanel()">&#10005;</button>
     </div>
   </div>
+  <div class="alerts-filter">
+    <span class="alerts-filter-label">Per&iacute;odo:</span>
+    <div class="alerts-filter-buttons">
+      <button class="alerts-filter-btn active" data-days="7" onclick="_setAlertsPeriod(7, this)">7d</button>
+      <button class="alerts-filter-btn" data-days="15" onclick="_setAlertsPeriod(15, this)">15d</button>
+      <button class="alerts-filter-btn" data-days="30" onclick="_setAlertsPeriod(30, this)">30d</button>
+      <button class="alerts-filter-btn" data-days="60" onclick="_setAlertsPeriod(60, this)">60d</button>
+      <button class="alerts-filter-btn" data-days="90" onclick="_setAlertsPeriod(90, this)">90d</button>
+      <button class="alerts-filter-btn" data-days="180" onclick="_setAlertsPeriod(180, this)">180d</button>
+    </div>
+  </div>
   <div id="alerts-panel-body">
-    <div style="color:var(--muted);text-align:center;padding:40px;font-size:.85rem">Nenhum alerta ainda.<br>Ative o Monitor para come&ccedil;ar.</div>
+    <div style="color:var(--muted);text-align:center;padding:40px;font-size:.85rem">Nenhum alerta no per&iacute;odo selecionado.</div>
   </div>
 </div>
 
@@ -6703,6 +6763,10 @@ function playAlarmSound(sound) {
 
 var _alertsList    = [];  // {type, icon, plate, detail, ts, tsISO, seen, data}
 var _alertsUnseen  = 0;
+var _alertsFilterDays = 7;
+var _alertsHistory = []; // itens persistidos do histórico do backend
+var _alertsHistoryLoaded = false;
+var _alertsHistoryLoading = false;
 
 function addAlert(type, icon, plate, detail, routeInfo, extraData) {
   var now = new Date();
@@ -6715,14 +6779,78 @@ function addAlert(type, icon, plate, detail, routeInfo, extraData) {
   if (badge) { badge.textContent = _alertsUnseen > 99 ? '99+' : _alertsUnseen; badge.style.display = ''; }
 }
 
+function _setAlertsPeriod(days, btn) {
+  _alertsFilterDays = parseInt(days, 10) || 7;
+  document.querySelectorAll('.alerts-filter-btn').forEach(function(b){
+    b.classList.toggle('active', b === btn);
+  });
+  var cnt = document.getElementById('alerts-panel-count');
+  if (cnt) {
+    var total = _getAlertsForPanel().length;
+    cnt.textContent = total ? '(' + total + ' registro' + (total > 1 ? 's' : '') + ')' : '';
+  }
+  _renderAlertsList();
+}
+
+async function _loadAlertsHistory() {
+  if (_alertsHistoryLoading) return;
+  _alertsHistoryLoading = true;
+  try {
+    var r = await fetch('/api/alarmes/historico');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    var items = d.items || [];
+    _alertsHistory = items.map(function(h){
+      var tsISO = h.criado_em || h.detected_at || null;
+      var tsFmt = tsISO ? new Date(tsISO).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--:--';
+      var detail = (h.target_name ? 'Alvo: <strong>' + h.target_name + '</strong> &middot; ' : '') +
+                   (h.camera_name ? 'C&acirc;mera: <strong>' + h.camera_name + '</strong>' : '');
+      return {
+        type: 'camera',
+        icon: '&#128247;',
+        plate: h.placa || '—',
+        detail: detail || 'Alarme registrado',
+        ts: tsFmt,
+        tsISO: tsISO,
+        seen: true,
+        route: null,
+        data: { camera: h.camera_name || null, target_name: h.target_name || null, lists: [] }
+      };
+    });
+    _alertsHistoryLoaded = true;
+  } catch(e) {
+    _alertsHistoryLoaded = true;
+  } finally {
+    _alertsHistoryLoading = false;
+  }
+}
+
+function _getAlertsForPanel() {
+  var cutoff = Date.now() - (_alertsFilterDays * 24 * 60 * 60 * 1000);
+  var items = [];
+  _alertsList.forEach(function(a){ if (a.type === 'camera') items.push(a); });
+  _alertsHistory.forEach(function(a){ items.push(a); });
+  items = items.filter(function(a){
+    if (!a.tsISO) return true;
+    return new Date(a.tsISO).getTime() >= cutoff;
+  });
+  items.sort(function(a,b){
+    var ta = a.tsISO ? new Date(a.tsISO).getTime() : 0;
+    var tb = b.tsISO ? new Date(b.tsISO).getTime() : 0;
+    return tb - ta;
+  });
+  return items;
+}
+
 function _renderAlertsList() {
   var body = document.getElementById('alerts-panel-body');
   if (!body) return;
-  if (!_alertsList.length) {
-    body.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;font-size:.85rem">Nenhum alerta ainda.</div>';
+  var list = _getAlertsForPanel();
+  if (!list.length) {
+    body.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;font-size:.85rem">Nenhum alerta no per\u00edodo selecionado.</div>';
     return;
   }
-  body.innerHTML = _alertsList.map(function(a, i) {
+  body.innerHTML = list.map(function(a, i) {
     // Cor base: usa a cor da lista (câmera) ou cor fixa por tipo
     var accentColor;
     if (a.type === 'camera' && a.data && a.data.lists && a.data.lists[0] && a.data.lists[0].color) {
@@ -6756,6 +6884,7 @@ function _renderAlertsList() {
         '<div class="alert-report" style="background:' + accentColor + '12;border-color:' + accentColor + '44">' +
           '<div class="alert-report-plate" style="color:' + accentColor + '">&#9888; ' + a.plate + '</div>' +
           '<div class="alert-report-row"><span>&#128197; Data/Hora:</span><strong>' + dtFmt + '</strong></div>' +
+          (d.target_name ? '<div class="alert-report-row"><span>&#127919; Alvo:</span><strong>' + d.target_name + '</strong></div>' : '') +
           (d.camera ? '<div class="alert-report-row"><span>&#128247; C\u00e2mera:</span><strong>' + d.camera + '</strong></div>' : '') +
           (listTags ? '<div class="alert-report-row" style="flex-wrap:wrap;gap:3px"><span>&#128203; Listas:</span>' + listTags + '</div>' : '') +
           (d.sound ? '<div class="alert-report-row"><span>&#128266; Som:</span><strong>' + d.sound + '</strong></div>' : '') +
@@ -6778,7 +6907,7 @@ function _renderAlertsList() {
 }
 
 function _alertClick(i) {
-  var a = _alertsList[i];
+  var a = _getAlertsForPanel()[i];
   if (!a || !a.route) return;
   closeAlertsPanel();
   var tipo  = a.route.type;
@@ -6786,7 +6915,10 @@ function _alertClick(i) {
   _openToastDetail(tipo, plate);
 }
 
-function openAlertsPanel() {
+async function openAlertsPanel() {
+  if (!_alertsHistoryLoaded) {
+    await _loadAlertsHistory();
+  }
   // marca todos como vistos
   _alertsList.forEach(function(a){ a.seen = true; });
   _alertsUnseen = 0;
@@ -6794,7 +6926,8 @@ function openAlertsPanel() {
   if (badge) badge.style.display = 'none';
   // atualiza contador no cabeçalho
   var cnt = document.getElementById('alerts-panel-count');
-  if (cnt) cnt.textContent = _alertsList.length ? '(' + _alertsList.length + ' registro' + (_alertsList.length > 1 ? 's' : '') + ')' : '';
+  var total = _getAlertsForPanel().length;
+  if (cnt) cnt.textContent = total ? '(' + total + ' registro' + (total > 1 ? 's' : '') + ')' : '';
   _renderAlertsList();
   document.getElementById('alerts-panel').classList.add('open');
   document.getElementById('alerts-panel-overlay').style.display = 'block';
@@ -6809,6 +6942,8 @@ function clearAlerts() {
   _alertsList = []; _alertsUnseen = 0;
   var badge = document.getElementById('alerts-badge');
   if (badge) badge.style.display = 'none';
+  var cnt = document.getElementById('alerts-panel-count');
+  if (cnt) cnt.textContent = '';
   _renderAlertsList();
 }
 
@@ -6955,18 +7090,30 @@ function triggerAbordagem(follower, leader, cameras, avgDelta) {
     }
   } catch(e) {}
 }
-function triggerAlarm(plate, lists, direcao) {
-  var alarmLists = lists.filter(function(l){ return l.alarm_enabled; });
+function _getTargetNameFromLists(lists) {
+  if (!lists || !lists.length) return '';
+  for (var i = 0; i < lists.length; i++) {
+    var n = (lists[i].notes || '').trim();
+    if (n) return n;
+  }
+  var fallback = lists[0].list_name || lists[0].name || '';
+  return String(fallback || '').trim();
+}
+function triggerAlarm(plate, lists, direcao, cameraName) {
+  var alarmLists = (lists || []).filter(Boolean);
   if (!alarmLists.length) return;
   var listNames = alarmLists.map(function(l){ return l.list_name || l.name || '?'; }).join(', ');
   var soundName = alarmLists[0].alarm_sound || 'beep';
+  var targetName = _getTargetNameFromLists(alarmLists);
   var dirTxt = direcao === 'CRESCENTE' ? ' \u00b7 \u2191 CRESCENTE' : direcao === 'DECRESCENTE' ? ' \u00b7 \u2193 DECRESCENTE' : '';
 
   // Sempre salva no histórico (mesmo mudo)
   addAlert('camera', '&#128247;', plate,
-    'Lista(s): <strong>' + listNames + '</strong>' + dirTxt,
+    (targetName ? 'Alvo: <strong>' + targetName + '</strong> &middot; ' : '') +
+    (cameraName ? 'C&acirc;mera: <strong>' + cameraName + '</strong>' : 'Lista(s): <strong>' + listNames + '</strong>') +
+    dirTxt,
     null,
-    { lists: alarmLists, camera: null, sound: soundName, direcao: direcao || null }
+    { lists: alarmLists, camera: cameraName || null, sound: soundName, direcao: direcao || null, target_name: targetName || null }
   );
 
   // Se mudo: apenas histórico — sem som, sem flash, sem toast
@@ -6981,6 +7128,8 @@ function triggerAlarm(plate, lists, direcao) {
   // Toast
   var toast = document.getElementById('alarm-toast');
   document.getElementById('alarm-toast-plate').textContent = plate;
+  document.getElementById('alarm-toast-target').textContent = 'ALVO: ' + (targetName || '—');
+  document.getElementById('alarm-toast-camera').textContent = 'CÂMERA: ' + (cameraName || '—');
   document.getElementById('alarm-toast-lists').innerHTML =
     '&#128247; Lista(s): <strong>' +
     alarmLists.map(function(l){ return l.list_name || l.name || '?'; }).join(', ') +
@@ -8144,7 +8293,7 @@ function _activeAlarmListsForPlate(plate) {
   if (!plate) return [];
   var pm = monPlates[plate.toUpperCase()];
   if (!pm || !pm.length) return [];
-  return pm.filter(function(l) { return !!l.alarm_enabled; });
+  return pm;
 }
 
 function _hasActiveAlarmForPlate(plate) {
@@ -8192,7 +8341,8 @@ async function loadEvents(newOffset) {
         var pm = ev.plate && monPlates[ev.plate.toUpperCase()];
         if (pm && !alarmed.has(ev.plate)) {
           alarmed.add(ev.plate);
-          triggerAlarm(ev.plate, pm);
+          var cam = ev.cam_nome || ev.channel_name || ev.camera_name || ev.camera_id || ev.camera || '';
+          triggerAlarm(ev.plate, pm, ev.direcao || null, cam);
         }
       });
     }
@@ -12889,7 +13039,8 @@ async function _bgAlarmTick() {
       var pm = ev.plate && monPlates[ev.plate.toUpperCase()];
       if (pm && !alarmed.has(ev.plate)) {
         alarmed.add(ev.plate);
-        triggerAlarm(ev.plate, pm, ev.direcao || null);
+        var cam = ev.cam_nome || ev.channel_name || ev.camera_name || ev.camera_id || ev.camera || '';
+        triggerAlarm(ev.plate, pm, ev.direcao || null, cam);
       }
     });
 

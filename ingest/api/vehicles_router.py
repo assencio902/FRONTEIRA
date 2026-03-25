@@ -23,7 +23,7 @@ def build_vehicles_router(conn_factory: Callable[[], Any]) -> APIRouter:
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        SELECT DISTINCT vli.plate, vl.id, vl.name
+                        SELECT DISTINCT vli.plate, vl.id, vl.name, vli.notes, vli.is_alvo
                         FROM vehicle_list_items vli
                         JOIN vehicle_lists vl ON vl.id = vli.list_id
                         ORDER BY vli.plate
@@ -53,7 +53,7 @@ def build_vehicles_router(conn_factory: Callable[[], Any]) -> APIRouter:
                             alarm_map[lista_id] = (prioridade, sound)
 
             plates = {}
-            for plate, list_id, list_name in rows:
+            for plate, list_id, list_name, notes, is_alvo in rows:
                 if plate not in plates:
                     plates[plate] = []
                 alarm_info = alarm_map.get(list_id)
@@ -61,7 +61,10 @@ def build_vehicles_router(conn_factory: Callable[[], Any]) -> APIRouter:
                     {
                         "list_id": list_id,
                         "list_name": list_name,
-                        "alarm_enabled": alarm_info is not None,
+                        "notes": notes,
+                        "is_alvo": bool(is_alvo) if is_alvo is not None else False,
+                        # Alarme sempre ativo para qualquer veículo cadastrado em lista
+                        "alarm_enabled": True,
                         "alarm_sound": alarm_info[1] if alarm_info else "beep",
                     }
                 )

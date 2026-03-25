@@ -40,36 +40,40 @@ const _kGreen  = AppColors.success;
 const _kRed    = AppColors.danger;
 const _kMuted  = AppColors.muted;
 
-enum _AlertsPeriod { h12, h24, d7, d15, d30 }
+enum _AlertsPeriod { d7, d15, d30, d60, d90, d180 }
 
 extension _AlertsPeriodExt on _AlertsPeriod {
   String get label {
     switch (this) {
-      case _AlertsPeriod.h12:
-        return '12h';
-      case _AlertsPeriod.h24:
-        return '24h';
       case _AlertsPeriod.d7:
         return '7d';
       case _AlertsPeriod.d15:
         return '15d';
       case _AlertsPeriod.d30:
         return '30d';
+      case _AlertsPeriod.d60:
+        return '60d';
+      case _AlertsPeriod.d90:
+        return '90d';
+      case _AlertsPeriod.d180:
+        return '180d';
     }
   }
 
   Duration get window {
     switch (this) {
-      case _AlertsPeriod.h12:
-        return const Duration(hours: 12);
-      case _AlertsPeriod.h24:
-        return const Duration(hours: 24);
       case _AlertsPeriod.d7:
         return const Duration(days: 7);
       case _AlertsPeriod.d15:
         return const Duration(days: 15);
       case _AlertsPeriod.d30:
         return const Duration(days: 30);
+      case _AlertsPeriod.d60:
+        return const Duration(days: 60);
+      case _AlertsPeriod.d90:
+        return const Duration(days: 90);
+      case _AlertsPeriod.d180:
+        return const Duration(days: 180);
     }
   }
 }
@@ -411,7 +415,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> _events = [];
   bool _loadingDash = false;
   String? _dashboardError;
-  _AlertsPeriod _alertsPeriod = _AlertsPeriod.h24;
+  _AlertsPeriod _alertsPeriod = _AlertsPeriod.d30;
+  int _alarmsCount = 0;
   
   // ── Dados da Central de Ameaças ───────────────────────────────────────────
   List<Map<String, dynamic>> _gruposComboio = [];
@@ -490,6 +495,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Inicializar histórico de alarmes
     final historyService = AlarmHistoryService();
     await historyService.init();
+    _refreshAlarmCount();
     
     // Conectar ao WebSocket
     await _wsService.connect();
@@ -507,6 +513,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _refreshAlarmCount() {
+    final count = AlarmHistoryService.getHistory().length;
+    if (mounted) setState(() => _alarmsCount = count);
+  }
+
   /// Processar evento em tempo real do WebSocket
   void _handleRealtimeEvent(Map<String, dynamic> event) {
     final plate = (event['plate'] as String?)?.toUpperCase() ?? '';
@@ -515,6 +526,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final confidenceValue = double.tryParse(confidenceStr) ?? 0.0;
     final imagePath = event['image_path'] ?? event['image'] ?? '';
     final vehicleType = event['vehicle_type'] as String?;
+    final targetName = _watchlistService.getTargetName(plate);
     
     debugPrint('📨 Evento recebido: $plate em $camera');
 
@@ -529,7 +541,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         confidence: confidenceValue,
         imageUrl: imagePath.toString(),
         vehicleType: vehicleType,
+        targetName: targetName,
       );
+      _refreshAlarmCount();
       
       // Mostrar overlay de alarme
       if (mounted) {
@@ -538,6 +552,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           barrierDismissible: false,
           builder: (ctx) => AlarmOverlay(
             plate: plate,
+            targetName: targetName,
             camera: camera.toString(),
             confidence: confidenceStr,
             imagePath: imagePath.toString(),
@@ -966,14 +981,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAlarmeTab() {
-    final suspeitosBase = _events
-        .where((e) => ((e['confidence'] as num?)?.toDouble() ?? 100.0) < 70.0)
-        .toList();
+    final history = AlarmHistoryService.getHistory();
     final minTs = DateTime.now().subtract(_alertsPeriod.window);
-    final suspeitos = suspeitosBase.where((e) {
-      final eventTs = _extractEventTimestamp(e);
-      if (eventTs == null) return true;
-      return eventTs.isAfter(minTs);
+    final alarms = history.where((a) {
+      final dt = _parseAlarmTime(a);
+      if (dt == null) return true;
+      return dt.isAfter(minTs);
     }).toList();
 
     return SafeArea(
@@ -998,7 +1011,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.5)),
                 const SizedBox(width: 8),
-                if (suspeitos.isNotEmpty)
+                if (alarms.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 7, vertical: 2),
@@ -1006,7 +1019,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: _kRed.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('${suspeitos.length}',
+                    child: Text('${alarms.length}',
                         style: const TextStyle(
                             color: _kRed,
                           fontSize: 14,
@@ -1026,7 +1039,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'FILTROS DE ALERTA: 12h | 24h | 7d | 15d | 30d',
+                  'FILTROS DE ALERTA: 7d | 15d | 30d | 60d | 90d | 180d',
                   style: TextStyle(
                     color: _kYellow,
                     fontSize: 13,
@@ -1046,11 +1059,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Expanded(
-            child: _loadingDash && suspeitos.isEmpty
+            child: _loadingDash && alarms.isEmpty
                 ? const Center(
                     child: CircularProgressIndicator(
                         color: _kYellow, strokeWidth: 2))
-                : _dashboardError != null && suspeitos.isEmpty
+                : _dashboardError != null && alarms.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1069,7 +1082,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ),
                       )
-                : suspeitos.isEmpty
+                : alarms.isEmpty
                   ? Center(
                     child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -1089,9 +1102,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ],
                         ))
                     : ListView.builder(
-                        itemCount: suspeitos.length,
+                        itemCount: alarms.length,
                         itemBuilder: (_, i) =>
-                            _PassagemRow(event: suspeitos[i], highlightLow: true),
+                            _AlarmHistoryRow(alarm: alarms[i]),
                       ),
           ),
         ],
@@ -1150,6 +1163,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
     }
 
+    return null;
+  }
+
+  DateTime? _parseAlarmTime(Map<String, dynamic> alarm) {
+    final dynamic raw = alarm['created_at'] ?? alarm['detected_at'] ?? alarm['ts'];
+    if (raw == null) return null;
+    if (raw is String) {
+      try {
+        return DateTime.parse(raw).toLocal();
+      } catch (_) {
+        return null;
+      }
+    }
+    if (raw is num) {
+      final value = raw.toInt();
+      final ms = value > 9999999999 ? value : value * 1000;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal();
+    }
     return null;
   }
 
@@ -2080,6 +2111,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AlarmHistoryScreen(),
+                      ),
+                    );
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _kRed.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: _kRed.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_active_rounded,
+                          color: _kRed,
+                          size: 16,
+                        ),
+                      ),
+                      if (_alarmsCount > 0)
+                        Positioned(
+                          top: -6,
+                          right: -6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: _kRed,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              _alarmsCount > 99 ? '99+' : '$_alarmsCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
                   onTap: _openPushDiagnostics,
                   child: Container(
                     padding:
@@ -2297,23 +2380,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ── Painel Alertas Ativos ────────────────────────────────────────────────────
 
   Widget _buildAlertasPanel() {
-    final suspeitos = _events
-        .where((e) => ((e['confidence'] as num?)?.toDouble() ?? 100.0) < 70.0)
-        .take(5)
-        .toList();
+    final alarms = AlarmHistoryService.getHistory().take(5).toList();
     return _Panel(
-      icon: Icons.warning_amber_rounded,
-      title: 'LEITURAS SUSPEITAS',
-      child: suspeitos.isEmpty
+      icon: Icons.notifications_active_rounded,
+      title: 'ALARMES DE LISTA',
+      child: alarms.isEmpty
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 18),
               child: Center(
-                  child: Text('Nenhuma leitura suspeita no momento.',
+                  child: Text('Nenhum alarme registrado ainda.',
                       style: TextStyle(color: _kMuted, fontSize: 12))),
             )
           : Column(
-              children: suspeitos
-                  .map((e) => _PassagemRow(event: e, highlightLow: true))
+              children: alarms
+                  .map((a) => _AlarmHistoryRow(alarm: a))
                   .toList(),
             ),
     );
@@ -2359,6 +2439,80 @@ class _StatCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(sub, style: const TextStyle(color: _kMuted, fontSize: 12)),
       ]),
+    );
+  }
+}
+
+class _AlarmHistoryRow extends StatelessWidget {
+  final Map<String, dynamic> alarm;
+
+  const _AlarmHistoryRow({required this.alarm});
+
+  String _fmtDate(dynamic raw) {
+    if (raw == null) return '—';
+    if (raw is String) {
+      try {
+        final dt = DateTime.parse(raw).toLocal();
+        final d = '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+        final t = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        return '$d $t';
+      } catch (_) {
+        return raw;
+      }
+    }
+    return raw.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plate = (alarm['plate'] ?? alarm['placa'] ?? '?????').toString().toUpperCase();
+    final target = (alarm['target_name'] ?? alarm['alvo'] ?? '').toString();
+    final camera = (alarm['camera'] ?? alarm['camera_name'] ?? 'Câmera desconhecida').toString();
+    final createdAt = alarm['created_at'] ?? alarm['detected_at'] ?? alarm['ts'];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _kRed.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _kRed.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            plate,
+            style: const TextStyle(
+              color: _kYellow,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2,
+            ),
+          ),
+          if (target.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Alvo: $target',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            'Câmera: $camera',
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _fmtDate(createdAt),
+            style: const TextStyle(color: _kMuted, fontSize: 11),
+          ),
+        ],
+      ),
     );
   }
 }
