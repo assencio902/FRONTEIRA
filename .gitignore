@@ -32,3 +32,13 @@ wsl_diagnostic.ps1
 
 check_*.js
 
+
+uploads.old/
+.codex_tmp_*
+*.save
+*.save.*
+rbac_logs_tmp.txt
+temp_event.json
+test_events.json
+test_events2.json
+flutter_app/android/key.properties.save
