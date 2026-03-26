@@ -4598,6 +4598,30 @@
 
     <!-- ===== ABA VEICULOS ===== -->
     <div id="tab-veiculos" class="tab-pane">
+      <!-- ÚLTIMAS PASSAGENS: filtro unificado e card único -->
+      <div id="veic-ultimas-section" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:700;font-size:.97rem">Últimas passagens</div>
+            <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Busca rápida por placa e janela de tempo.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="veic-plate-field" placeholder="Placa (ex: ABC1D23)" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-weight:700;text-transform:uppercase" oninput="this.value=this.value.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,7)">
+            <select id="veic-range" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)">
+              <option value="12">12h</option>
+              <option value="24" selected>24h</option>
+              <option value="168">7 dias</option>
+              <option value="720">30 dias</option>
+              <option value="custom">Personalizado</option>
+            </select>
+            <input type="datetime-local" id="veic-start" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);display:none">
+            <input type="datetime-local" id="veic-end" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);display:none">
+            <button class="btn btn-search btn-sm" onclick="loadVeicUltimasPassagens()">&#128269; Aplicar filtros</button>
+            <button class="btn btn-outline btn-sm" onclick="clearVeicUltimas()">Limpar</button>
+          </div>
+        </div>
+        <div id="veic-ultimas-card"></div>
+      </div>
       <!-- VIEW: LISTA DE LISTAS -->
       <div id="view-listas">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
@@ -16136,6 +16160,95 @@ function clearVehicleTrajectory() {
   
   // Recarrega mapa de câmeras
   loadMapa();
+}
+
+// ===== VEÍCULOS: Últimas passagens (card único) =====
+function _toggleVeicRangeCustom() {
+  var range = document.getElementById('veic-range').value;
+  var s = document.getElementById('veic-start');
+  var e = document.getElementById('veic-end');
+  if (range === 'custom') { s.style.display = 'inline-block'; e.style.display = 'inline-block'; }
+  else { s.style.display = 'none'; e.style.display = 'none'; }
+}
+document.getElementById('veic-range').addEventListener('change', _toggleVeicRangeCustom);
+
+async function loadVeicUltimasPassagens() {
+  var plate = (document.getElementById('veic-plate-field').value || '').trim().toUpperCase();
+  var range = document.getElementById('veic-range').value;
+  var start = document.getElementById('veic-start').value;
+  var end = document.getElementById('veic-end').value;
+  var container = document.getElementById('veic-ultimas-card');
+  if (!plate) {
+    container.innerHTML = '<div class="card" style="padding:14px">⚠️ Informe a placa.</div>';
+    return;
+  }
+  container.innerHTML = '<div class="card" style="padding:14px"><span class="spinner"></span> Buscando últimas passagens…</div>';
+  try {
+    var params = ['limit=50', 'offset=0', 'plate=' + encodeURIComponent(plate)];
+    if (range && range !== 'custom') params.push('range=' + encodeURIComponent(range + 'h'));
+    else {
+      if (start) params.push('start=' + encodeURIComponent(start));
+      if (end) params.push('end=' + encodeURIComponent(end));
+    }
+    var url = '/api/events?' + params.join('&');
+    var resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    var items = data.items || data || [];
+    renderVeicUltimasCard(plate, items, range, start, end);
+  } catch (e) {
+    container.innerHTML = '<div class="card" style="padding:14px;color:var(--danger)">Erro ao buscar: ' + e.message + '</div>';
+  }
+}
+
+function renderVeicUltimasCard(plate, items, range, start, end) {
+  var container = document.getElementById('veic-ultimas-card');
+  var periodLabel = range === 'custom' ? ((start||'') + ' → ' + (end||'')) : (range ? range + 'h' : '24h');
+  var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
+    + '<div style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase">Últimas passagens</div>'
+    + '<div style="font-size:.82rem;color:var(--muted);">' + (items.length || 0) + ' registro(s) · ' + periodLabel + '</div>'
+    + '<div style="margin-left:auto"><button class="btn btn-outline btn-xs" onclick="viewVeicTraj(\'' + plate + '\')">&#128663; Ver Trajetória</button></div>'
+    + '</div>';
+
+  if (!items.length) {
+    container.innerHTML = '<div class="card">' + header + '<div style="color:var(--muted);padding:8px 0">Nenhuma passagem encontrada.</div></div>';
+    return;
+  }
+
+  var rows = items.map(function(it) {
+    var ts = it.occurred_at || it.ts || it.created_at || '';
+    var cam = it.cam_nome || it.camera_name || it.camera || it.camera_id || '-';
+    var thumb = it.image_path ? '<img class="thumb" src="/api/events/' + it.id + '/thumbnail?w=96&h=64" loading="lazy" onclick="openImage(' + it.id + ',\'' + (it.plate||'') + '\')">' : '<div class="thumb-none">-</div>';
+    var conf = it.confidence != null ? (Math.round(it.confidence) + '%') : '-';
+    return '<div style="display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">' + thumb
+      + '<div style="min-width:140px">' + (ts ? new Date(ts).toLocaleString('pt-BR') : '-') + '</div>'
+      + '<div style="flex:1;color:var(--muted)">' + cam + '</div>'
+      + '<div style="width:72px;text-align:center;font-weight:700">' + conf + '</div>'
+      + '</div>';
+  }).join('');
+
+  container.innerHTML = '<div class="card">' + header + '<div>' + rows + '</div></div>';
+}
+
+function clearVeicUltimas(){
+  document.getElementById('veic-plate-field').value = '';
+  document.getElementById('veic-start').value = '';
+  document.getElementById('veic-end').value = '';
+  document.getElementById('veic-range').value = '24';
+  _toggleVeicRangeCustom();
+  document.getElementById('veic-ultimas-card').innerHTML = '';
+}
+
+function viewVeicTraj(plate) {
+  try {
+    document.getElementById('traj-plate-field').value = (plate || '').toUpperCase();
+    // seta período padrão 24h
+    var now = new Date();
+    var from = new Date(now.getTime() - 24 * 3600 * 1000);
+    document.getElementById('traj-start-field').value = _toLocalDTInput(from);
+    document.getElementById('traj-end-field').value = _toLocalDTInput(now);
+  } catch(e) {}
+  loadVehicleTrajectory();
 }
 
 // ===== GRUPOS DE COMBOIO =====
