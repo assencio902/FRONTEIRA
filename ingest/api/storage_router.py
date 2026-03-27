@@ -73,7 +73,7 @@ def _read_mount_index() -> list[dict[str, str]]:
             host_mounts.sort(key=lambda item: len(item["mount_point"]), reverse=True)
             return host_mounts
 
-    # Tenta usar df -PT (mais confiável em containers)
+    # Try df -PT when host mounts are not available.
     try:
         output = subprocess.check_output(["df", "-PT"], text=True, stderr=subprocess.DEVNULL)
         for line in output.splitlines()[1:]:
@@ -116,74 +116,49 @@ def _resolve_host_path(path: Path) -> Path | None:
     return host_path if host_path.exists() else None
 
 
+def _group_mounts_by_device(mount_index: list[dict[str, str]]) -> dict[str, dict[str, Any]]:
+    device_map: dict[str, dict[str, Any]] = {}
+    for item in mount_index:
+        device = (item.get("device") or "").strip()
+        mount_point = (item.get("mount_point") or "").strip()
+        if not device or not mount_point:
+            continue
+        if device in ("overlay", "tmpfs", "udev"):
+            continue
+        entry = device_map.setdefault(
+            device,
+            {
+                "fs_type": item.get("fs_type"),
+                "mount_points": [],
+            },
+        )
+        entry["mount_points"].append(mount_point)
+    return device_map
+
+
 def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    seen: set[str] = set()
     mount_index = _read_mount_index()
-    seen_devices: set[str] = set()
-    labels = {
-        "event_images_dir": "Imagens de eventos",
-        "abordagem_images_dir": "Imagens de abordagens",
-        "metadata_dir": "Metadados",
-    }
-    for key, path in storage_dirs.items():
-        resolved = path.resolve()
-        path_key = str(resolved)
-        if path_key in seen:
+    device_map = _group_mounts_by_device(mount_index)
+    for device, info in device_map.items():
+        mount_points = sorted(info.get("mount_points") or [], key=len)
+        if not mount_points:
             continue
-        seen.add(path_key)
-        host_path = _resolve_host_path(resolved)
-        usage_path = host_path or resolved
+        primary_mount = mount_points[0]
+        usage_path = _resolve_host_path(Path(primary_mount)) or Path(primary_mount)
         try:
             usage = shutil.disk_usage(usage_path)
         except Exception:
             usage = None
-        mount_info = _match_mount_info(host_path or resolved, mount_index)
-        device = mount_info.get("device")
-        if device:
-            seen_devices.add(device)
         items.append(
             {
-                "key": key,
-                "label": labels.get(key, key),
-                "mount_point": str(resolved),
+                "key": f"device:{device}",
+                "label": f"Disco {device}",
+                "mount_point": primary_mount,
+                "mount_points": mount_points,
                 "device": device,
-                "fs_type": mount_info.get("fs_type"),
-                "backing_mount": mount_info.get("mount_point"),
-                "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
-                "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
-                "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
-                "used_percent": round(((usage.used / usage.total) * 100), 2)
-                if usage and usage.total
-                else None,
-            }
-        )
-    # Adiciona todos os pontos de montagem do Linux para exibir no gráfico
-    for mount in mount_index:
-        mount_point = mount.get("mount_point")
-        if not mount_point:
-            continue
-        device = mount.get("device") or ""
-        if device and device in seen_devices:
-            continue
-        if mount_point in seen:
-            continue
-        seen.add(mount_point)
-        if device:
-            seen_devices.add(device)
-        try:
-            usage_path = _resolve_host_path(Path(mount_point)) or Path(mount_point)
-            usage = shutil.disk_usage(usage_path)
-        except Exception:
-            usage = None
-        items.append(
-            {
-                "key": f"mount:{mount_point}",
-                "label": f"Disco {mount_point}",
-                "mount_point": mount_point,
-                "device": device or "desconhecido",
-                "fs_type": mount.get("fs_type"),
-                "backing_mount": mount_point,
+                "fs_type": info.get("fs_type"),
+                "backing_mount": primary_mount,
                 "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
                 "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
                 "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
