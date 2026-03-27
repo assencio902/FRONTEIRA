@@ -16558,13 +16558,12 @@ function _authMigrateLegacyStorage() {
     var legacy = localStorage.getItem(key);
     if (legacy) {
       sessionStorage.setItem(key, legacy);
-      localStorage.removeItem(key);
     }
   });
 }
 
 function _authGet(key) {
-  return sessionStorage.getItem(key) || '';
+  return sessionStorage.getItem(key) || localStorage.getItem(key) || '';
 }
 
 function _authClearSession() {

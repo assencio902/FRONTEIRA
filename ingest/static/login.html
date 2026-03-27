@@ -672,19 +672,18 @@
         var legacy = localStorage.getItem(key);
         if (legacy) {
           sessionStorage.setItem(key, legacy);
-          localStorage.removeItem(key);
         }
       });
     }
 
     function _authGet(key) {
-      return sessionStorage.getItem(key) || '';
+      return sessionStorage.getItem(key) || localStorage.getItem(key) || '';
     }
 
     function _authSetSession(data) {
       Object.keys(data).forEach(function(key) {
         sessionStorage.setItem(key, data[key] || '');
-        localStorage.removeItem(key);
+        localStorage.setItem(key, data[key] || '');
       });
     }
     // Se já tem token válido, redirecionar para dashboard
