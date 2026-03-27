@@ -14670,6 +14670,8 @@ function _alvoDvRenderHistorico(d, rangeVal, janela, mincam) {
 
 // ── Alvo: Ver (abre tela full-screen) ────────────────────────────────────────
 async function alvoVer(id, plate, descricao, desde) {
+  var prevState = _captureNavState();
+  _pushNavState(prevState);
   _alvoDvId    = id;
   _alvoDvPlate = (plate || '').replace(/&#39;/g, "'");
   var descReal = (descricao || '').replace(/&#39;/g, "'");
