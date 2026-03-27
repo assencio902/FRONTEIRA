@@ -1,6 +1,7 @@
 import os
 import os
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
@@ -41,24 +42,46 @@ def _read_mount_index() -> list[dict[str, str]]:
         "fusectl",
     }
 
-    mount_file = "/proc/mounts" if os.path.exists("/proc/mounts") else None
-    if mount_file:
-        with open(mount_file, "r", encoding="utf-8", errors="ignore") as fh:
-            for line in fh:
-                parts = line.split()
-                if len(parts) < 3:
-                    continue
-                device, mount_point, fs_type = parts[0], parts[1], parts[2]
-                mount_point = mount_point.replace("\\040", " ")
-                if fs_type in pseudo_fs:
-                    continue
-                mounts.append(
-                    {
-                        "mount_point": mount_point,
-                        "device": device,
-                        "fs_type": fs_type,
-                    }
-                )
+    # Tenta usar df -PT (mais confiável em containers)
+    try:
+        output = subprocess.check_output(["df", "-PT"], text=True, stderr=subprocess.DEVNULL)
+        for line in output.splitlines()[1:]:
+            parts = line.split()
+            if len(parts) < 7:
+                continue
+            device, fs_type, mount_point = parts[0], parts[1], parts[6]
+            if fs_type in pseudo_fs:
+                continue
+            if device in ("overlay", "tmpfs", "udev"):
+                continue
+            mounts.append(
+                {
+                    "mount_point": mount_point,
+                    "device": device,
+                    "fs_type": fs_type,
+                }
+            )
+    except Exception:
+        mount_file = "/proc/mounts" if os.path.exists("/proc/mounts") else None
+        if mount_file:
+            with open(mount_file, "r", encoding="utf-8", errors="ignore") as fh:
+                for line in fh:
+                    parts = line.split()
+                    if len(parts) < 3:
+                        continue
+                    device, mount_point, fs_type = parts[0], parts[1], parts[2]
+                    mount_point = mount_point.replace("\\040", " ")
+                    if fs_type in pseudo_fs:
+                        continue
+                    if device in ("overlay", "tmpfs", "udev"):
+                        continue
+                    mounts.append(
+                        {
+                            "mount_point": mount_point,
+                            "device": device,
+                            "fs_type": fs_type,
+                        }
+                    )
     mounts.sort(key=lambda item: len(item["mount_point"]), reverse=True)
     return mounts
 
@@ -76,6 +99,7 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     seen: set[str] = set()
     mount_index = _read_mount_index()
+    seen_devices: set[str] = set()
     labels = {
         "event_images_dir": "Imagens de eventos",
         "abordagem_images_dir": "Imagens de abordagens",
@@ -113,9 +137,14 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
         mount_point = mount.get("mount_point")
         if not mount_point:
             continue
+        device = mount.get("device") or ""
+        if device and device in seen_devices:
+            continue
         if mount_point in seen:
             continue
         seen.add(mount_point)
+        if device:
+            seen_devices.add(device)
         try:
             usage = shutil.disk_usage(mount_point)
         except Exception:
@@ -125,7 +154,7 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
                 "key": f"mount:{mount_point}",
                 "label": f"Disco {mount_point}",
                 "mount_point": mount_point,
-                "device": mount.get("device"),
+                "device": device or "desconhecido",
                 "fs_type": mount.get("fs_type"),
                 "backing_mount": mount_point,
                 "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
