@@ -4288,10 +4288,10 @@
           <div class="cen-tb">
             <label class="cen-lbl">Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
-                  <option value="1d">Hoje</option>
+                  <option value="1d" selected>Hoje</option>
                   <option value="7d">7 dias</option>
                   <option value="15d">15 dias</option>
-                  <option value="30d" selected>30 dias</option>
+                  <option value="30d">30 dias</option>
                   <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
                 </select>
             </label>
@@ -9643,7 +9643,7 @@ function _cgsWindowChange() {
 
 function _cgsReset() {
   var el;
-  el = document.getElementById('cgs-window');      if (el) { el.value = '30d'; _cgsWindowChange(); }
+  el = document.getElementById('cgs-window');      if (el) { el.value = '1d'; _cgsWindowChange(); }
   el = document.getElementById('cgs-gsizes');      if (el) el.value = '2';
   el = document.getElementById('cgs-min-cameras'); if (el) el.value = '2';
   el = document.getElementById('cgs-cowin');       if (el) el.value = '300';
@@ -9912,7 +9912,7 @@ async function _cgsLoad(showSpinner) {
   if (showSpinner) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando grupos suspeitos&hellip;</td></tr>';
   }
-  var w = (document.getElementById('cgs-window') || {}).value || '30d';
+  var w = (document.getElementById('cgs-window') || {}).value || '1d';
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
     tsFrom = _toIso((document.getElementById('cgs-ts-from') || {}).value);
