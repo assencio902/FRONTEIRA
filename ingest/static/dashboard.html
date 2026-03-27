@@ -16807,6 +16807,7 @@ function _applyRoleBasedUI(root) {
 // Interceptar fetch para adicionar Authorization
 (function(){
   var origFetch = window.fetch;
+  var _authWarned = false;
   window.fetch = function(url, opts) {
     opts = opts || {};
     var token = window._authToken;
@@ -16818,8 +16819,11 @@ function _applyRoleBasedUI(root) {
     }
     return origFetch.call(this, url, opts).then(function(resp) {
       if (resp.status === 401) {
-        _authClearSession();
-        window.location.replace('/login');
+        if (!_authWarned) {
+          _authWarned = true;
+          console.warn('[AUTH] 401 detectado. Mantendo sessao e exibindo aviso.');
+          alert('Sessão instável: uma chamada retornou 401. Tente recarregar a página (Ctrl+F5).');
+        }
       }
       return resp;
     });
