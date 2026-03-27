@@ -6841,7 +6841,7 @@ var _alertsHistoryLoading = false;
 
 function addAlert(type, icon, plate, detail, routeInfo, extraData) {
   var now = new Date();
-  var ts  = now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var ts  = _fmtTimeTZ(now);
   var tsISO = now.toISOString();
   _alertsList.unshift({type:type, icon:icon, plate:plate, detail:detail, ts:ts, tsISO:tsISO, seen:false, route: routeInfo||null, data: extraData||null});
   if (_alertsList.length > 200) _alertsList.pop();
@@ -6873,7 +6873,7 @@ async function _loadAlertsHistory() {
     var items = d.items || [];
     _alertsHistory = items.map(function(h){
       var tsISO = h.criado_em || h.detected_at || null;
-      var tsFmt = tsISO ? new Date(tsISO).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--:--';
+      var tsFmt = tsISO ? _fmtTimeTZ(tsISO) : '--:--';
       var detail = (h.target_name ? 'Alvo: <strong>' + h.target_name + '</strong> &middot; ' : '') +
                    (h.camera_name ? 'C&acirc;mera: <strong>' + h.camera_name + '</strong>' : '');
       return {
@@ -6945,9 +6945,7 @@ function _renderAlertsList() {
     var reportHtml = '';
     if (a.type === 'camera' && a.data) {
       var d = a.data;
-      var dtFmt = a.tsISO
-        ? new Date(a.tsISO).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})
-        : a.ts;
+      var dtFmt = a.tsISO ? _fmtDateTimeTZ(a.tsISO) : a.ts;
       var listTags = (d.lists || []).map(function(l) {
         return '<span style="background:#3b82f633;color:#3b82f6;border:1px solid #3b82f644;border-radius:99px;padding:1px 8px;font-weight:700;font-size:.72rem;margin-right:3px">' + (l.list_name || l.name) + '</span>';
       }).join('');
@@ -7853,14 +7851,60 @@ var listsCache  = [];
 var _imgMeta    = {}; // cache evId -> {camName, ts} para o modal de imagem
 
 // ===== UTILS =====
-function fmtTs(ts) {
+var _TZ_RO = 'America/Porto_Velho';
+(function(){
+  if (Date.prototype._bpfronTzPatched) return;
+  Date.prototype._bpfronTzPatched = true;
+  var _origToLocaleString = Date.prototype.toLocaleString;
+  var _origToLocaleDateString = Date.prototype.toLocaleDateString;
+  var _origToLocaleTimeString = Date.prototype.toLocaleTimeString;
+  function _withTZ(locale, options) {
+    if (!locale || locale === 'pt-BR') {
+      options = options || {};
+      if (!options.timeZone) options.timeZone = _TZ_RO;
+    }
+    return options;
+  }
+  Date.prototype.toLocaleString = function(locale, options) {
+    return _origToLocaleString.call(this, locale, _withTZ(locale, options));
+  };
+  Date.prototype.toLocaleDateString = function(locale, options) {
+    return _origToLocaleDateString.call(this, locale, _withTZ(locale, options));
+  };
+  Date.prototype.toLocaleTimeString = function(locale, options) {
+    return _origToLocaleTimeString.call(this, locale, _withTZ(locale, options));
+  };
+})();
+function _fmtDateTimeTZ(ts) {
   if (!ts) return '-';
   try {
     return new Date(ts).toLocaleString('pt-BR', {
+      timeZone: _TZ_RO,
       day:'2-digit', month:'2-digit', year:'numeric',
       hour:'2-digit', minute:'2-digit', second:'2-digit'
     });
   } catch(e) { return ts; }
+}
+function _fmtDateTZ(ts) {
+  if (!ts) return '-';
+  try {
+    return new Date(ts).toLocaleDateString('pt-BR', {
+      timeZone: _TZ_RO,
+      day:'2-digit', month:'2-digit', year:'numeric'
+    });
+  } catch(e) { return '-'; }
+}
+function _fmtTimeTZ(ts) {
+  if (!ts) return '--:--';
+  try {
+    return new Date(ts).toLocaleTimeString('pt-BR', {
+      timeZone: _TZ_RO,
+      hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+  } catch(e) { return '--:--'; }
+}
+function fmtTs(ts) {
+  return _fmtDateTimeTZ(ts);
 }
 
 function formatConfidencePercent(value) {
@@ -8306,8 +8350,8 @@ function openImage(evId, plate) {
   var meta = _imgMeta[evId] || {};
   document.getElementById('img-modal-cam').textContent  = meta.camName || '-';
   var dtObj = meta.ts ? new Date(meta.ts) : null;
-  document.getElementById('img-modal-date').textContent = dtObj ? dtObj.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}) : '-';
-  document.getElementById('img-modal-time').textContent = dtObj ? dtObj.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '-';
+  document.getElementById('img-modal-date').textContent = dtObj ? _fmtDateTZ(dtObj) : '-';
+  document.getElementById('img-modal-time').textContent = dtObj ? _fmtTimeTZ(dtObj) : '-';
 
   // --- Badge: Confiança ---
   var confBadge = document.getElementById('img-modal-conf-badge');
