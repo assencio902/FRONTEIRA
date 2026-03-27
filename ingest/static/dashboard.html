@@ -4426,9 +4426,6 @@
                   <option value="7d">7 dias</option>
                   <option value="15d">15 dias</option>
                   <option value="30d">30 dias</option>
-                  <option value="60d">60 dias</option>
-                  <option value="90d">90 dias</option>
-                  <option value="180d">180 dias</option>
                   <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
                 </select>
             </label>
@@ -4534,9 +4531,6 @@
                   <option value="7d">7 dias</option>
                   <option value="15d">15 dias</option>
                   <option value="30d">30 dias</option>
-                  <option value="60d">60 dias</option>
-                  <option value="90d">90 dias</option>
-                  <option value="180d">180 dias</option>
                   <option value="custom">Per&iacute;odo personalizado</option>
               </select>
             </div>
@@ -14013,7 +14007,7 @@ function _alvoDvGerarRelatorio() {
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">\u00dalt. Junto</th>'
           + '<th style="padding:5px 10px;font-size:.68rem;text-transform:uppercase;border:1px solid #e5e7eb">Local / C\u00e2mera</th>'
         + '</tr></thead><tbody>' + compRows + '</tbody></table></div>'
-    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos \u00faltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'7d'}).value||'7d') + '.</div>';
+    : '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos \u00faltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'1d'}).value||'1d') + '.</div>';
   var _alvoAnaliseHtml = (function() {
     var _ci = (_cenAllItems || []).find(function(it){ return it.plate === plate; });
     var _tc = _ci && _ci.threat_center;
@@ -14067,7 +14061,7 @@ function _alvoDvGerarRelatorio() {
     + '<div style="margin-bottom:24px">'
       + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:8px">&#128101; Acompanhantes / Comboio</div>'
       + (companions.length === 0
-        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'7d'}).value||'7d') + '.</div>'
+        ? '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;font-size:.82rem;color:#9ca3af">Nenhum acompanhante identificado nos &uacute;ltimos ' + _alvoDvFmtWindow((document.getElementById('alvo-dv-range')||{value:'1d'}).value||'1d') + '.</div>'
         : '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">'
           + '<thead><tr style="background:#e5e7eb">'
             + th('Placa') + th('Papel') + th('Cooc.') + th('Últ. vez junto') + th('Local / Câmera')
