@@ -336,6 +336,7 @@ def build_central_router(
         leader_ratio: float = 0.7,
         max_front_ratio_other: float = 0.3,
         payload_max_front: int = 0,
+        limit_events: int = 15000,
         limit: int = 100,
         ts_from: str | None = None,
         ts_to: str | None = None,
@@ -353,6 +354,7 @@ def build_central_router(
             "leader_ratio",
             "max_front_ratio_other",
             "payload_max_front",
+            "limit_events",
             "limit",
             "ts_from",
             "ts_to",
@@ -398,6 +400,7 @@ def build_central_router(
         trip_gap = max(1, int(max_trip_gap))
         lim = max(1, min(500, int(limit)))
         min_pass = max(1, int(min_passes))
+        lim_events = max(1000, min(50000, int(limit_events)))
         if ts_from and ts_to:
             t_from = parse_dt_fn(ts_from) or (utcnow_fn() - timedelta(minutes=window_min))
             t_to = parse_dt_fn(ts_to) or utcnow_fn()
@@ -414,7 +417,7 @@ def build_central_router(
                     window_s=co_win_s,
                     max_trip_gap_s=trip_gap,
                     min_cameras=min_cam,
-                    limit_events=15000,
+                    limit_events=lim_events,
                 )
 
         if allow_3plus:

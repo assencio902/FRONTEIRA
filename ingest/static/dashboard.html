@@ -16382,6 +16382,7 @@ async function loadGruposComboio(showSpinner) {
   var gs = document.getElementById('grupos-sizes').value || '2,3';
   var mc = document.getElementById('grupos-min-cameras').value || '2';
   var om = document.getElementById('grupos-order-mode').value || 'any';
+  var limEvents = 8000;
   
   if (showSpinner) {
     document.getElementById('grupos-status').innerHTML = '<span class="spinner"></span>';
@@ -16394,9 +16395,10 @@ async function loadGruposComboio(showSpinner) {
             + '&group_sizes=' + encodeURIComponent(gs)
             + '&min_cameras=' + encodeURIComponent(mc)
             + '&order_mode=' + encodeURIComponent(om)
-            + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=100';
+            + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=100'
+            + '&limit_events=' + encodeURIComponent(limEvents);
     
-    var r = await _fetchWithTimeout(url, null, 15000);
+    var r = await _fetchWithTimeout(url, null, 25000);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
     var groups = data.groups || [];
