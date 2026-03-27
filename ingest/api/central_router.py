@@ -37,6 +37,7 @@ def build_central_router(
         request: Request = None,
     ):
         window_min = parse_window_to_minutes_fn(window)
+        window_min = min(window_min, 30 * 1440)
         co_win_s = max(1, min(1000, int(co_window)))
         min_cam = max(1, int(min_cameras))
         trip_gap = max(1, int(max_trip_gap))
@@ -53,6 +54,9 @@ def build_central_router(
         else:
             t_to = utcnow_fn()
             t_from = t_to - timedelta(minutes=window_min)
+        max_delta = timedelta(days=30)
+        if t_to - t_from > max_delta:
+            t_from = t_to - max_delta
 
         valid_sizes: set[int] = set()
         allow_3plus = False
