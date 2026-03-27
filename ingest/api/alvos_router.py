@@ -250,6 +250,9 @@ def build_alvos_router(
             "7d": 7 * 1440,
             "15d": 15 * 1440,
             "30d": 30 * 1440,
+            "60d": 60 * 1440,
+            "90d": 90 * 1440,
+            "180d": 180 * 1440,
         }
         if range and range in range_map:
             mins = range_map[range]

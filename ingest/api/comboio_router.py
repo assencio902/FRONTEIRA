@@ -1,7 +1,7 @@
 import json
 import math
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from fastapi import APIRouter, HTTPException, Request
@@ -87,14 +87,28 @@ def build_comboio_router(
         min_cameras: int = 2,
         trip_max: int = 3600,
         limit: int = 20,
+        ts_from: str | None = None,
+        ts_to: str | None = None,
     ):
         co_win_s = max(1, min(1000, int(co_window)))
         min_cam = max(1, int(min_cameras))
         trip_max_s = max(1, int(trip_max))
         window_min = parse_window_to_minutes_fn(window)
         lim = max(1, min(100, int(limit)))
-        t_to = utcnow_fn()
-        t_from = t_to - timedelta(minutes=window_min)
+        if ts_from and ts_to:
+            try:
+                t_from = datetime.fromisoformat(ts_from.replace("Z", "").replace(" ", "T"))
+                t_to = datetime.fromisoformat(ts_to.replace("Z", "").replace(" ", "T"))
+                if t_from.tzinfo is None:
+                    t_from = t_from.replace(tzinfo=timezone.utc)
+                if t_to.tzinfo is None:
+                    t_to = t_to.replace(tzinfo=timezone.utc)
+            except Exception:
+                t_to = utcnow_fn()
+                t_from = t_to - timedelta(minutes=window_min)
+        else:
+            t_to = utcnow_fn()
+            t_from = t_to - timedelta(minutes=window_min)
         plate = (plate or "").strip().upper()
         if not plate:
             return {"companions": []}
@@ -222,7 +236,7 @@ def build_comboio_router(
             extra_where.append("AND b.plate ILIKE %s")
             extra_vals.append(plate_prefix.strip().upper() + "%")
         if direcao:
-            extra_where.append("AND UPPER(COALESCE(NULLIF(c.direcao,''), '')) = UPPER(%s)")
+            extra_where.append("AND UPPER(COALESCE(NULLIF(a.direcao,''), c.direcao, '')) = UPPER(%s)")
             extra_vals.append(direcao.strip())
         extra_sql = "\n                  ".join(extra_where)
 
@@ -250,6 +264,7 @@ def build_comboio_router(
                         )                                                    AS companion_vtype,
                         COALESCE(
                             NULLIF(b.yolo_result->'target_vehicle'->>'cor', ''),
+                            NULLIF(b.cam_meta->>'vehicle_color', ''),
                             ''
                         )                                                    AS companion_color
                     FROM lpr_events a

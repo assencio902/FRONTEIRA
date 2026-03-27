@@ -3821,6 +3821,12 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7l8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
     Storage
   </div>
+<div class="nav-item nav-admin-only" onclick="switchTab('saude',this)">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M3 12h4l2-5 4 10 2-5h6"/>
+  </svg>
+  Saúde
+</div>
   <div class="nav-item" onclick="switchTab('config',this)" title="Configura\u00e7\u00f5es">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Configura&#231;&#245;es
@@ -4130,7 +4136,15 @@
         </div>
       </div>
     </div>
-
+<!-- ===== ABA SAÚDE ===== -->
+<div id="tab-saude" class="tab-pane">
+  <div class="painel-shell">
+    <h2>Saúde do Sistema</h2>
+    <div id="saude-containers">Containers: carregando...</div>
+    <div id="saude-discos">Discos: carregando...</div>
+    <div id="saude-backup">Backup: carregando...</div>
+  </div>
+</div>
     <!-- ===== ABA EVENTOS ===== -->
     <div id="tab-eventos" class="tab-pane">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
@@ -4274,14 +4288,15 @@
           <div class="cen-tb">
             <label class="cen-lbl">Per&iacute;odo:
               <select id="cgs-window" onchange="_cgsWindowChange()" class="cen-ctl">
-                <option value="1h">1 hora</option>
-                <option value="2h">2 horas</option>
-                <option value="3h">3 horas</option>
-                <option value="6h">6 horas</option>
-                <option value="12h">12 horas</option>
-                <option value="24h" selected>24 horas</option>
-                <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-              </select>
+                  <option value="1d" selected>Hoje</option>
+                  <option value="7d">7 dias</option>
+                  <option value="15d">15 dias</option>
+                  <option value="30d">30 dias</option>
+                  <option value="60d">60 dias</option>
+                  <option value="90d">90 dias</option>
+                  <option value="180d">180 dias</option>
+                  <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
+                </select>
             </label>
             <span id="cgs-filter-cameras"><label class="cen-lbl">M&iacute;n. c&acirc;meras:
               <select id="cgs-min-cameras" onchange="_cgsLoad(true)" class="cen-ctl">
@@ -4408,14 +4423,17 @@
                 onkeydown="if(event.key==='Enter'){ _cenSingleSearchFromForm(); }"
                 class="cen-ctl cen-ctl-plate">
             </label>
-            <label class="cen-lbl">Per&iacute;odo:
-              <select id="cen-single-window" onchange="_cenSingleWindowChange(this)" class="cen-ctl">
-                <option value="6h">6 horas</option>
-                <option value="24h" selected>24 horas</option>
-                <option value="7d">7 dias</option>
-                <option value="30d">30 dias</option>
-                <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
-              </select>
+              <label class="cen-lbl">Per&iacute;odo:
+                <select id="cen-single-window" onchange="_cenSingleWindowChange(this)" class="cen-ctl">
+                  <option value="1d" selected>Hoje</option>
+                  <option value="7d">7 dias</option>
+                  <option value="15d">15 dias</option>
+                  <option value="30d">30 dias</option>
+                  <option value="60d">60 dias</option>
+                  <option value="90d">90 dias</option>
+                  <option value="180d">180 dias</option>
+                  <option value="custom">&#128197; Per&iacute;odo personalizado&hellip;</option>
+                </select>
             </label>
             <label class="cen-lbl">Dire&ccedil;&atilde;o:
               <select id="cen-single-direction" class="cen-ctl">
@@ -4515,13 +4533,14 @@
             <div>
               <div style="font-size:.7rem;color:var(--muted);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Per&iacute;odo</div>
               <select id="alvo-dv-range" onchange="_alvoDvPeriodChange()" style="background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 12px;font-size:.85rem;height:34px;outline:none">
-                <option value="1h">1 hora</option>
-                <option value="2h">2 horas</option>
-                <option value="3h">3 horas</option>
-                <option value="6h">6 horas</option>
-                <option value="12h">12 horas</option>
-                <option value="24h" selected>24 horas</option>
-                <option value="custom">Per&iacute;odo personalizado</option>
+                  <option value="1d" selected>Hoje</option>
+                  <option value="7d">7 dias</option>
+                  <option value="15d">15 dias</option>
+                  <option value="30d">30 dias</option>
+                  <option value="60d">60 dias</option>
+                  <option value="90d">90 dias</option>
+                  <option value="180d">180 dias</option>
+                  <option value="custom">Per&iacute;odo personalizado</option>
               </select>
             </div>
             <div id="alvo-dv-custom-dates" style="display:none;gap:10px;align-items:flex-end">
@@ -4558,7 +4577,7 @@
               </select>
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-sm" onclick="_alvoDvAplicar()" style="background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700">Aplicar filtros</button>
+              <button class="btn btn-sm" onclick="_alvoDvAplicar()" style="background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:700">Aplicar</button>
               <button class="btn btn-outline btn-sm" onclick="_alvoDvLimpar()">Limpar</button>
             </div>
           </div>
@@ -4588,40 +4607,16 @@
           <!-- Acompanhantes / Comboio -->
           <div id="alvo-dv-companions" style="margin-bottom:20px"></div>
         </div>
-        <!-- Resultados -->
-        <div id="alvo-dv-resultados">
-          <p style="color:var(--muted);padding:12px 0">Selecione os filtros acima e clique em <strong>Aplicar filtros</strong>.</p>
-        </div>
+          <!-- Resultados (oculto: passagens já mostram tudo pelo filtro) -->
+          <div id="alvo-dv-resultados" style="display:none">
+            <p style="color:var(--muted);padding:12px 0">Selecione os filtros acima e clique em <strong>Aplicar</strong>.</p>
+          </div>
       </div><!-- /alvo-detalhe-view -->
 
     </div><!-- /tab-batedor -->
 
     <!-- ===== ABA VEICULOS ===== -->
     <div id="tab-veiculos" class="tab-pane">
-      <!-- ÚLTIMAS PASSAGENS: filtro unificado e card único -->
-      <div id="veic-ultimas-section" style="margin-bottom:18px">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
-          <div style="min-width:0;flex:1;">
-            <div style="font-weight:700;font-size:.97rem">Últimas passagens</div>
-            <div style="font-size:.79rem;color:var(--muted);margin-top:3px">Busca rápida por placa e janela de tempo.</div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input type="text" id="veic-plate-field" placeholder="Placa (ex: ABC1D23)" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-weight:700;text-transform:uppercase" oninput="this.value=this.value.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,7)">
-            <select id="veic-range" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)">
-              <option value="12">12h</option>
-              <option value="24" selected>24h</option>
-              <option value="168">7 dias</option>
-              <option value="720">30 dias</option>
-              <option value="custom">Personalizado</option>
-            </select>
-            <input type="datetime-local" id="veic-start" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);display:none">
-            <input type="datetime-local" id="veic-end" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);display:none">
-            <button class="btn btn-search btn-sm" onclick="loadVeicUltimasPassagens()">&#128269; Aplicar filtros</button>
-            <button class="btn btn-outline btn-sm" onclick="clearVeicUltimas()">Limpar</button>
-          </div>
-        </div>
-        <div id="veic-ultimas-card"></div>
-      </div>
       <!-- VIEW: LISTA DE LISTAS -->
       <div id="view-listas">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
@@ -7912,7 +7907,7 @@ function scoreClass(s) {
 }
 
 // ===== TABS =====
-var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', usuarios: 'Usu\u00e1rios', storage: 'Storage', config: 'Configura\u00e7\u00f5es' };
+var TAB_TITLES = { painel: 'Painel', produtividade: 'Produtividade', eventos: 'Eventos', batedor: 'Batedor de Suspeitos', veiculos: 'Veiculos Monitorados', cameras: 'C\u00e2meras', mapa: 'Mapa de C\u00e2meras', alarmes: 'Alarmes', usuarios: 'Usu\u00e1rios', storage: 'Storage', saude: 'Sa\u00fade', config: 'Configura\u00e7\u00f5es' };
 var _pnCharts = {};
 var _painelProdutividadeCache = null;
 var _vehicleTargetFlow = null;
@@ -8020,7 +8015,7 @@ function switchTab(name, el) {
   _lastTabSwitch = { name: name, at: now };
   if (!el || !el.classList) el = _findSidebarTabElement(name);
   var role = window._authRole || 'visualizador';
-  if (role !== 'admin' && (name === 'produtividade' || name === 'cameras' || name === 'storage' || name === 'usuarios')) {
+  if (role !== 'admin' && (name === 'produtividade' || name === 'cameras' || name === 'storage' || name === 'usuarios' || name === 'saude')) {
     var painelNav = _findSidebarTabElement('painel');
     if (name !== 'painel' && painelNav) {
       switchTab('painel', painelNav);
@@ -8029,11 +8024,23 @@ function switchTab(name, el) {
   }
   var prevState = _captureNavState();
   if (currentTab !== name) _pushNavState(prevState);
-  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+
+  // esconder todas as abas
+  document.querySelectorAll('.tab-pane').forEach(function(p){
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+
+  // localizar aba correta
   var tabEl = document.getElementById('tab-' + name);
   console.log('[switchTab] tab-element encontrado:', !!tabEl);
-  if (tabEl) tabEl.classList.add('active');
+
+  // ativar apenas a selecionada
+  if (tabEl) {
+    tabEl.classList.add('active');
+    tabEl.style.display = 'block';
+  }
   if (el && el.classList) el.classList.add('active');
   document.getElementById('topbar-title').textContent = TAB_TITLES[name] || name;
   currentTab = name;
@@ -8062,10 +8069,11 @@ function switchTab(name, el) {
   if (name === 'cameras')  _queueTabLoad('cameras', function(){ return loadCameras(); }, 10000);
   if (name === 'mapa')     _queueTabLoad('mapa', function(){ return loadMapa(); }, 10000);
   else                     _stopMapaAutoRefresh();
-  if (name === 'usuarios') _queueTabLoad('usuarios', function(){ return loadUsers(); }, 10000);
+  if (name === 'usuarios' || name === 'saude') _queueTabLoad('usuarios', function(){ return loadUsers(); }, 10000);
   if (name === 'storage')  _queueTabLoad('storage', function(){ return loadStorageSettings(); }, 30000);
   if (name === 'alarmes')  _queueTabLoad('alarmes', function(){ return loadAlarmes(); }, 10000);
   if (name === 'config')   initConfigTab();
+  if (name === 'saude')    loadSaude();
   trackPageView(name, TAB_TITLES[name] || name, '/dashboard#' + name);
 }
 // garante acesso global mesmo em contextos de onclick attribute
@@ -8129,7 +8137,98 @@ function refreshCurrent() {
   }
   else if (currentTab === 'cameras') loadCameras();
   else if (currentTab === 'alarmes') loadAlarmes();
+  else if (currentTab === 'saude') loadSaude();
   else { loadLists(); }
+}
+
+function _formatSaudeDate(value) {
+  if (!value) return '';
+  try {
+    var dt = new Date(value);
+    if (isNaN(dt.getTime())) return String(value);
+    return dt.toLocaleString('pt-BR');
+  } catch (_) {
+    return String(value);
+  }
+}
+
+function _groupVolumes(items) {
+  var groups = {};
+  (items || []).forEach(function(item) {
+    var key = String(item.backing_mount || item.mount_point || item.device || 'disco');
+    if (!groups[key]) {
+      groups[key] = { key: key, used: 0, free: 0, total: 0 };
+    }
+    if (typeof item.used_gb === 'number') groups[key].used += item.used_gb;
+    if (typeof item.free_gb === 'number') groups[key].free += item.free_gb;
+    if (typeof item.total_gb === 'number') groups[key].total += item.total_gb;
+  });
+  return Object.keys(groups).sort().map(function(k){ return groups[k]; });
+}
+
+async function loadSaude() {
+  var containersEl = document.getElementById('saude-containers');
+  var discosEl = document.getElementById('saude-discos');
+  var backupEl = document.getElementById('saude-backup');
+  if (containersEl) containersEl.textContent = 'Containers: carregando...';
+  if (discosEl) discosEl.textContent = 'Discos: carregando...';
+  if (backupEl) backupEl.textContent = 'Backup: carregando...';
+
+  try {
+    var hResp = await fetch('/api/health');
+    var hData = hResp.ok ? await hResp.json() : {};
+    var services = (hData && hData.services) || {};
+    var serviceKeys = Object.keys(services);
+    var okCount = 0;
+    serviceKeys.forEach(function(key) {
+      var entry = services[key];
+      var st = (typeof entry === 'string') ? entry : (entry && entry.status);
+      if (st === 'healthy') okCount += 1;
+    });
+    if (containersEl) {
+      var total = serviceKeys.length || 0;
+      var label = (okCount === total && total > 0) ? 'OK' : 'ALERTA';
+      containersEl.textContent = 'Containers/Serviços: ' + label + ' / ' + okCount + ' ativos';
+    }
+  } catch (_) {
+    if (containersEl) containersEl.textContent = 'Containers/Serviços: erro ao carregar';
+  }
+
+  try {
+    var dResp = await fetch('/api/storage/volumes');
+    var dData = await dResp.json().catch(function(){ return {}; });
+    if (!dResp.ok) throw new Error(dData.detail || 'Falha ao listar discos');
+    var groups = _groupVolumes(dData.items || []);
+    if (discosEl) {
+      if (!groups.length) {
+        discosEl.textContent = 'Discos: não encontrados';
+      } else {
+        discosEl.innerHTML = groups.map(function(g) {
+          var used = g.used ? g.used.toLocaleString('pt-BR') : '—';
+          var free = g.free ? g.free.toLocaleString('pt-BR') : '—';
+          return '<div>Disco ' + g.key + ': ' + used + 'GB usado / ' + free + 'GB livre</div>';
+        }).join('');
+      }
+    }
+  } catch (_) {
+    if (discosEl) discosEl.textContent = 'Discos: erro ao carregar';
+  }
+
+  try {
+    var bResp = await fetch('/api/backup/status');
+    var bData = await bResp.json().catch(function(){ return {}; });
+    if (!bResp.ok) throw new Error(bData.detail || 'Falha ao carregar backup');
+    if (backupEl) {
+      if (bData && bData.status === 'ok') {
+        var when = _formatSaudeDate(bData.last_backup);
+        backupEl.textContent = 'Backup: OK (último: ' + (when || 'sem data') + ')';
+      } else {
+        backupEl.textContent = 'Backup: não configurado';
+      }
+    }
+  } catch (_) {
+    if (backupEl) backupEl.textContent = 'Backup: erro ao carregar';
+  }
 }
 
 // ===== MODAIS =====
@@ -8184,15 +8283,24 @@ function closeVehicleTargetModal() {
   _vehicleTargetFlow = null;
 }
 
+var _escLock = false;
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    if (_escLock || e.repeat) return;
+    _escLock = true;
+    setTimeout(function(){ _escLock = false; }, 300);
     if (_usersActivityVisible) { toggleUsersActivitySection(false); return; }
     if (document.getElementById('traj-map-modal').classList.contains('open')) { _fecharMapaOverlay(false); return; }
-    if (document.getElementById('rel-modal').classList.contains('open')) { closeRelModal(true); return; }
-    if (document.getElementById('vehicle-modal').classList.contains('open')) { closeVehicleModal(); return; }
-    if (document.getElementById('vehicle-target-modal').classList.contains('open')) { closeVehicleTargetModal(); return; }
-    ['img-modal','detail-modal','list-modal','vehicle-modal','vehicle-target-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','rel-modal','cgs-detalhe-modal','cad-view-modal','alvo-edit-modal'].forEach(closeModal);
-    if (_navGoBack()) return;
+      if (document.getElementById('rel-modal').classList.contains('open')) { closeRelModal(true); return; }
+      if (document.getElementById('vehicle-modal').classList.contains('open')) { closeVehicleModal(); return; }
+      if (document.getElementById('vehicle-target-modal').classList.contains('open')) { closeVehicleTargetModal(); return; }
+      var _closedModal = false;
+      ['img-modal','detail-modal','list-modal','camera-modal','painel-produtividade-modal','user-modal','alarme-modal','cgs-detalhe-modal','cad-view-modal','alvo-edit-modal'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el && el.classList.contains('open')) { closeModal(id); _closedModal = true; }
+      });
+      if (_closedModal) return;
+      if (_navGoBack()) return;
   }
 });
 
@@ -8844,7 +8952,7 @@ function _cenSwitchView(view) {
 
 function _cenSingleDefaultOpts() {
   return {
-    window: '24h',
+    window: '1d',
     ts_from: null,
     ts_to: null,
     direction: null,
@@ -8933,11 +9041,11 @@ function _cenSinglePlateInput(el) {
 
 function _cenSingleGetWindowValue() {
   var win = document.getElementById('cen-single-window');
-  return (win && win.value) || '24h';
+  return (win && win.value) || '1d';
 }
 
 function _cenSingleSetWindowControls(value) {
-  value = value || '24h';
+  value = value || '1d';
   var el = document.getElementById('cen-single-window');
   if (el) el.value = value;
 }
@@ -8970,7 +9078,7 @@ function _cenSingleApplyOptsToForm(opts, force) {
   var toEl = document.getElementById('cen-single-ts-to');
   if (plateEl && (force || !plateEl.value) && _cenSingleState.plate) plateEl.value = _cenSingleState.plate;
   if (winEl && (force || !winEl.value)) {
-    _cenSingleSetWindowControls(opts.window || '24h');
+    _cenSingleSetWindowControls(opts.window || '1d');
   } else {
     _cenSingleSetWindowControls(_cenSingleGetWindowValue());
   }
@@ -9108,7 +9216,7 @@ function _cenSingleBuildCentralUrl(plate, opts) {
     url += '&ts_from=' + encodeURIComponent(opts.ts_from);
     url += '&ts_to=' + encodeURIComponent(opts.ts_to);
   } else {
-    url += '&window=' + encodeURIComponent(opts.window || '24h');
+    url += '&window=' + encodeURIComponent(opts.window || '1d');
   }
   if (opts.direction) url += '&direcao=' + encodeURIComponent(opts.direction);
   return url;
@@ -9144,7 +9252,7 @@ function _cenSingleReadOpts() {
 function _cenSingleHumanWindow(opts) {
   if (!opts) return 'per&iacute;odo atual';
   if (opts.window === 'custom' && opts.ts_from && opts.ts_to) return 'per&iacute;odo personalizado';
-  var labels = { '6h': '6 horas', '24h': '24 horas', '7d': '7 dias', '30d': '30 dias' };
+  var labels = { '1d': 'Hoje', '7d': '7 dias', '15d': '15 dias', '30d': '30 dias', '60d': '60 dias', '90d': '90 dias', '180d': '180 dias' };
   return labels[opts.window] || opts.window || 'per&iacute;odo atual';
 }
 
@@ -9538,7 +9646,7 @@ function _cgsWindowChange() {
 
 function _cgsReset() {
   var el;
-  el = document.getElementById('cgs-window');      if (el) { el.value = '24h'; _cgsWindowChange(); }
+  el = document.getElementById('cgs-window');      if (el) { el.value = '1d'; _cgsWindowChange(); }
   el = document.getElementById('cgs-gsizes');      if (el) el.value = '2';
   el = document.getElementById('cgs-min-cameras'); if (el) el.value = '2';
   el = document.getElementById('cgs-cowin');       if (el) el.value = '300';
@@ -9807,7 +9915,7 @@ async function _cgsLoad(showSpinner) {
   if (showSpinner) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span> Analisando grupos suspeitos&hellip;</td></tr>';
   }
-  var w = (document.getElementById('cgs-window') || {}).value || '24h';
+  var w = (document.getElementById('cgs-window') || {}).value || '1d';
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
     tsFrom = _toIso((document.getElementById('cgs-ts-from') || {}).value);
@@ -9829,11 +9937,12 @@ async function _cgsLoad(showSpinner) {
     + '&order_mode=' + encodeURIComponent(orderMode)
     + '&leader_ratio=' + encodeURIComponent(leaderR)
     + '&payload_max_front=' + encodeURIComponent(payloadM)
+    + '&limit_events=8000'
     + '&limit=200';
   if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom);
   if (tsTo)   url += '&ts_to='   + encodeURIComponent(tsTo);
   try {
-    var resp = await _fetchWithTimeout(url, null, 15000);
+    var resp = await _fetchWithTimeout(url, null, 45000);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     _cgsAllGroups = data.groups || [];
@@ -10404,7 +10513,7 @@ function _relBuildPdfExportNode() {
   if (!body) return null;
   var report = body.querySelector('#rel-print') || body.firstElementChild || body;
   var host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:0;top:0;width:794px;background:#ffffff;padding:18px 18px 24px;box-sizing:border-box;z-index:-1;opacity:0;pointer-events:none';
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;padding:18px 18px 24px;box-sizing:border-box;z-index:0;opacity:1;pointer-events:none';
   var clone = report.cloneNode(true);
   clone.style.margin = '0';
   clone.style.width = '100%';
@@ -10423,7 +10532,7 @@ async function _relGenerateStyledPdf() {
   if (!host) throw new Error('Relatório indisponível para exportação.');
   var fileName = (_relPdfTitleSlug || 'relatorio').replace(/[^A-Z0-9_\-]/gi, '_') + '.pdf';
   try {
-    await html2pdf().set({
+    var opts = {
       margin: [8, 8, 8, 8],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
@@ -10436,18 +10545,53 @@ async function _relGenerateStyledPdf() {
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'] }
-    }).from(host).save();
+    };
+    var blob = await html2pdf().set(opts).from(host).outputPdf('blob');
+    if (blob && blob.size) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } else {
+      await html2pdf().set(opts).from(host).save();
+    }
   } finally {
     _relDestroyPdfExportNode(host);
   }
 }
 
+function _relPrintReport() {
+  var body = document.getElementById('rel-modal-body');
+  if (!body) { alert('Relatório indisponível para impressão.'); return; }
+  var report = body.querySelector('#rel-print') || body.firstElementChild || body;
+  if (!report) { alert('Relatório indisponível para impressão.'); return; }
+  var existing = document.getElementById('rel-print-inline');
+  if (existing) existing.remove();
+  var s = document.createElement('style');
+  s.id = 'rel-print-inline';
+  s.textContent =
+    '@media print{body>*:not(#rel-modal){display:none!important}' +
+    '#rel-modal{display:block!important;position:static!important;background:#fff!important;padding:0!important;visibility:visible!important}' +
+    '#rel-modal .modal{display:block!important;max-width:100%!important;max-height:none!important;box-shadow:none!important;border:none!important;padding:0!important;position:static!important;visibility:visible!important}' +
+    '#rel-modal .modal-header{display:none!important}' +
+    '#rel-modal-body{display:block!important;background:#fff!important;color:#111!important;padding:0!important;height:auto!important;max-height:none!important;overflow:visible!important;visibility:visible!important}' +
+    '#rel-modal-body *{color:#111!important;visibility:visible!important}' +
+    '#rel-modal-body .badge{background:#e5e7eb!important;border-color:#d1d5db!important;color:#111!important}' +
+    '#rel-modal-body a{color:#111!important}}';
+  document.head.appendChild(s);
+  setTimeout(function(){ window.print(); setTimeout(function(){ s.remove(); }, 500); }, 50);
+}
+
 async function _relSalvarNoPC() {
   try {
-    await _relGenerateStyledPdf();
-    if (typeof _flashMsg === 'function') _flashMsg('💾 PDF salvo no PC.', '#2563eb');
+    // Preferir impressão para evitar bloqueio do Windows/antivírus
+    _relPrintReport();
+    if (typeof _flashMsg === 'function') _flashMsg('🖨️ Abra o diálogo e salve como PDF.', '#2563eb');
   } catch (err) {
-    alert('Erro ao salvar PDF: ' + err.message);
+    alert('Erro ao preparar impressão: ' + err.message);
   }
 }
 
@@ -11491,7 +11635,7 @@ async function _fetchWithTimeout(url, options, timeoutMs) {
 
 async function loadCentral(showSpinner) {
   if (showSpinner === undefined) showSpinner = true;
-  var w = _cenGetValue('cen-window', 'cen-single-window', '24h');
+  var w = _cenGetValue('cen-window', 'cen-single-window', '1d');
   var tsFrom = null, tsTo = null;
   if (w === 'custom') {
     tsFrom = _toIso(_cenGetValue('cen-ts-from', 'cen-single-ts-from', ''));
@@ -11500,6 +11644,7 @@ async function loadCentral(showSpinner) {
     w = '1h';
   }
   var prefix  = '';
+  var plateContains = String(_cenGetValue('cen-filter-plate', 'cen-single-plate', '') || '').trim();
   var gsizes    = (document.getElementById('cen-gsizes')     || {}).value || '2';
   var cowin     = (document.getElementById('cen-cowin')      || {}).value || '300';
   var orderMode = (document.getElementById('cen-ordermode')  || {}).value || 'any';
@@ -11519,6 +11664,7 @@ async function loadCentral(showSpinner) {
     var url = '/api/batedor/central?window=' + w + '&limit=300';
     if (tsFrom)  url += '&ts_from=' + encodeURIComponent(tsFrom) + '&ts_to=' + encodeURIComponent(tsTo);
     if (prefix)  url += '&plate_prefix='  + encodeURIComponent(prefix.trim().toUpperCase());
+    if (plateContains) url += '&plate_contains=' + encodeURIComponent(plateContains.trim().toUpperCase());
     var r = await _fetchWithTimeout(url, null, 15000);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
@@ -13222,7 +13368,7 @@ function _getAlvoRepFilters() {
   if (w === 'custom') {
     tsFrom = (document.getElementById('alvo-rep-ts-from') || {}).value || null;
     tsTo   = (document.getElementById('alvo-rep-ts-to')   || {}).value || null;
-    if (!tsFrom || !tsTo) w = '24h'; // fallback se não preenchido
+    if (!tsFrom || !tsTo) w = '1d'; // fallback se não preenchido
   }
   var camEl   = document.getElementById('alvo-rep-camera');
   var dirEl   = document.getElementById('alvo-rep-direction');
@@ -13489,12 +13635,13 @@ var _alvoDvId    = null;
 var _alvoDvPlate = null;
 
 // ── Janelas de análise automática (altere aqui para ajustar todos os blocos) ──
-var ALVO_DV_PASS_WINDOW = '24h';   // Últimas Passagens + Ver Rota   (padrão: 24h)
+var ALVO_DV_PASS_WINDOW = '1d';   // Últimas Passagens + Ver Rota   (padrão: 1 dia)
 var ALVO_DV_HIST_WINDOW = '90d';  // Histórico ampliado (reservado) (padrão: 90 dias)
 // Formata a janela para exibição: '7d' → '7 dias', '30d' → '30 dias', '24h' → '24h'
 function _alvoDvFmtWindow(w) {
   var m = String(w).match(/^(\d+)(d|h)$/i);
   if (!m) return w;
+  if (m[2].toLowerCase() === 'd' && m[1] === '1') return 'Hoje';
   return m[2].toLowerCase() === 'd' ? m[1] + ' dias' : m[1] + 'h';
 }
 
@@ -13546,12 +13693,12 @@ function alvoVerFechar() {
     var tgt = (plate || '').trim().toUpperCase();
     if (!tgt) return;
     var rangeEl = document.getElementById('alvo-dv-range');
-    var range   = rangeEl ? rangeEl.value : '24h';
+    var range   = rangeEl ? rangeEl.value : '1d';
     var now = Date.now();
     var tsTo   = _toLocalDTInput(new Date(now));
     var tsFrom;
-    var msMap = { '1h':3600000,'2h':7200000,'3h':10800000,'6h':21600000,'12h':43200000,'24h':86400000,
-                  '7d': 7*86400000, '15d': 15*86400000, '30d': 30*86400000, '90d': 90*86400000, '180d': 180*86400000 };
+    var msMap = { '1h':3600000,'2h':7200000,'3h':10800000,'6h':21600000,'12h':43200000,'24h':86400000,'1d':86400000,
+                  '7d': 7*86400000, '15d': 15*86400000, '30d': 30*86400000, '60d': 60*86400000, '90d': 90*86400000, '180d': 180*86400000 };
     var periodLabel = range === 'custom' ? 'período personalizado' : 'últimos ' + range;
     if (range === 'custom') {
       var f = (document.getElementById('alvo-dv-start') || {}).value;
@@ -13631,27 +13778,31 @@ var _alvoDvPassagensCache = [];
 var _alvoDvDetalhesCache  = null;
 var _alvoDvCompanionsCache = [];
 
-async function _alvoDvLoadPassagens(id) {
-  var el = document.getElementById('alvo-dv-passagens-recentes');
-  var rotaEl = document.getElementById('alvo-dv-rota');
-  if (!el) return;
-  _alvoDvPassagensCache = [];
-  if (rotaEl) { rotaEl.style.display = 'none'; rotaEl.innerHTML = ''; }
-  el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
-    try {
-      var rangeEl = document.getElementById('alvo-dv-range');
-      var rangeVal = rangeEl ? rangeEl.value : ALVO_DV_PASS_WINDOW;
-      var params = [];
-      if (rangeVal && rangeVal !== 'custom') {
-        params.push('range=' + encodeURIComponent(rangeVal));
-      } else if (rangeVal === 'custom') {
-        var start = (document.getElementById('alvo-dv-start') || {}).value || '';
-        var end   = (document.getElementById('alvo-dv-end')   || {}).value || '';
-        if (start) params.push('start=' + encodeURIComponent(start));
-        if (end)   params.push('end=' + encodeURIComponent(end));
-      }
-      params.push('limit=20');
-      var resp = await fetch('/api/alvos/' + id + '/historico?' + params.join('&'));
+  async function _alvoDvLoadPassagens(id) {
+    var el = document.getElementById('alvo-dv-passagens-recentes');
+    var rotaEl = document.getElementById('alvo-dv-rota');
+    if (!el) return;
+    _alvoDvPassagensCache = [];
+    if (rotaEl) { rotaEl.style.display = 'none'; rotaEl.innerHTML = ''; }
+    el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Carregando &uacute;ltimas passagens&hellip;</p>';
+      try {
+        var rangeEl = document.getElementById('alvo-dv-range');
+        var rangeVal = rangeEl ? rangeEl.value : ALVO_DV_PASS_WINDOW;
+        var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value || '';
+        var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value || '';
+        var params = [];
+        if (rangeVal && rangeVal !== 'custom') {
+          params.push('range=' + encodeURIComponent(rangeVal));
+        } else if (rangeVal === 'custom') {
+          var start = (document.getElementById('alvo-dv-start') || {}).value || '';
+          var end   = (document.getElementById('alvo-dv-end')   || {}).value || '';
+          if (start) params.push('start=' + encodeURIComponent(start));
+          if (end)   params.push('end=' + encodeURIComponent(end));
+        }
+        if (janela) params.push('janela_min=' + encodeURIComponent(janela));
+        if (mincam) params.push('min_cameras=' + encodeURIComponent(mincam));
+        params.push('limit=500');
+        var resp = await fetch('/api/alvos/' + id + '/historico?' + params.join('&'));
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
     var events = d.events || [];
@@ -13671,8 +13822,7 @@ async function _alvoDvLoadPassagens(id) {
       var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
         + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas Passagens</span>'
         + (events.length ? '<span style="font-size:.76rem;color:var(--muted)">' + events.length + ' registro(s) &bull; ' + (passLabel || '') + '</span>' : '')
-        + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRota()" id="btn-alvo-ver-rota" style="margin-left:auto">&#128663; Ver Rota</button>' : '')
-        + (hasRota ? '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-ver-rota-mapa">&#128506; Ver no Mapa</button>' : '')
+        + ''
         + '</div>';
     if (events.length === 0) {
       el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
@@ -14120,7 +14270,7 @@ async function _alvoDvVerRotaMapa() {
   var btn = document.getElementById('btn-alvo-ver-rota-mapa');
   if (btn) { btn.disabled = true; btn.innerHTML = '&#128260; Carregando&hellip;'; }
   await _verRotaNaMapa(plate, tsFrom, tsTo, periodLabel);
-  if (btn) { btn.disabled = false; btn.innerHTML = '&#128506; Ver no Mapa'; }
+  if (btn) { btn.disabled = false; btn.innerHTML = '&#128506; Rota'; }
 }
 
 // ── Alvo: Indicador de risco / prioridade ───────────────────────────────────
@@ -14230,13 +14380,26 @@ async function _alvoDvLoadCompanions(id, plate) {
   var _compRange = (document.getElementById('alvo-dv-range') || {value:'7d'}).value || '7d';
   var _compJanela = (document.getElementById('alvo-dv-janela') || {value:''}).value || '';
   var _compMinCam = (document.getElementById('alvo-dv-mincam') || {value:''}).value || '';
-  var _compWindow = _compRange !== 'custom' ? _compRange : '7d';  // custom usa o intervalo do filtro de histórico via params separados
+  var _compWindow = _compRange !== 'custom' ? _compRange : 'custom';
   el.innerHTML = '<p style="color:var(--muted);font-size:.82rem;padding:4px 0"><span class="spinner"></span> Buscando acompanhantes&hellip; <span style="font-size:.75rem;opacity:.7">(' + _alvoDvFmtWindow(_compWindow) + ')</span></p>';
   try {
     var coWinSec = _compJanela ? (parseInt(_compJanela, 10) || 0) * 60 : 300;
     var minCamVal = _compMinCam ? (parseInt(_compMinCam, 10) || 0) : 0;
-    var qs = '?window=' + encodeURIComponent(_compWindow)
-      + '&co_window=' + encodeURIComponent(coWinSec || 300)
+    var qs = '';
+    if (_compRange === 'custom') {
+      var _start = (document.getElementById('alvo-dv-start') || {}).value || '';
+      var _end   = (document.getElementById('alvo-dv-end')   || {}).value || '';
+      if (_start && _end) {
+        qs = '?ts_from=' + encodeURIComponent(_start + 'T00:00')
+           + '&ts_to=' + encodeURIComponent(_end + 'T23:59');
+      } else {
+        _compWindow = '7d';
+      }
+    }
+    if (!qs) {
+      qs = '?window=' + encodeURIComponent(_compWindow);
+    }
+    qs += '&co_window=' + encodeURIComponent(coWinSec || 300)
       + '&min_cameras=' + encodeURIComponent(minCamVal || 1)
       + '&trip_max=7200&limit=20';
     var [compResp, alvosResp] = await Promise.all([
@@ -14263,12 +14426,9 @@ async function _alvoDvLoadCompanions(id, plate) {
         + '&#9888; Consulta extensa: a an&aacute;lise de acompanhantes em 180 dias pode levar mais tempo.</div>';
     }
     var hasRota = (_alvoDvPassagensCache || []).length >= 2;
-    var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
+      var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">'
       + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128101; Acompanhantes / Comboio</span>'
       + (companions.length ? '<span style="font-size:.76rem;color:var(--muted)">' + companions.length + ' ve&iacute;culo(s) &bull; ' + _alvoDvFmtWindow(_compWindow) + '</span>' : '')
-      + '<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">'
-      + '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapa()" id="btn-alvo-header-ver-rota" style="white-space:nowrap"' + (hasRota ? '' : ' disabled') + '>&#128506; Ver rota</button>'
-      + '</span>'
       + '</div>'
       + warnHtml;
 
@@ -14310,19 +14470,21 @@ async function _alvoDvLoadCompanions(id, plate) {
       // ações
       var alvoPlateEnc = alvo ? encodeURIComponent(alvo.plate || '') : '';
       var alvoDescEnc  = alvo ? encodeURIComponent(alvo.descricao || '') : '';
-      var btnDetalhe = alvo
-        ? '<button class="btn btn-outline btn-xs" data-plate="' + alvoPlateEnc + '" data-desc="' + alvoDescEnc + '" onclick="alvoVer(' + alvo.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'))">&#128269; Visualizar</button> '
-        : '';
-      var safeComp = c.companion.replace(/'/g,"\\'");
-      var btnBuscar = '<button class="btn btn-outline btn-xs" onclick="_alvoCompSearch(\''+safeComp+'\')" title="Buscar esta placa no Batedor">&#128301; Batedor</button>';
-      return '<tr>'
+        var btnDetalhe = alvo
+          ? '<button class="btn btn-outline btn-xs" data-plate="' + alvoPlateEnc + '" data-desc="' + alvoDescEnc + '" onclick="alvoVer(' + alvo.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'))">&#128269; Visualizar</button> '
+          : '';
+        var safeComp = c.companion.replace(/'/g,"\\'");
+        var btnFoto  = '<button class="btn btn-outline btn-xs" onclick="_alvoCompVerFoto(\''+safeComp+'\')" title="Ver foto do veículo">&#128247; Foto</button>';
+        var btnRota  = '<button class="btn btn-outline btn-xs" onclick="_alvoDvVerRotaMapaPlate(\''+safeComp+'\')" title="Ver rota no mapa">&#128506; Rota</button>';
+        var btnCriar = alvo ? '' : '<button class="btn btn-outline btn-xs" onclick="_addPlateAsAlvo(\''+safeComp+'\')" title="Criar alvo rastreado">&#127919; Criar alvo</button>';
+        return '<tr>'
         + '<td style="font-weight:700;font-family:monospace;font-size:.88rem;white-space:nowrap;letter-spacing:.06em">' + c.companion + alvoBadge + '</td>'
         + '<td>' + desc + '</td>'
         + '<td style="text-align:center">' + roleBadge + '<br><span style="font-size:.72rem;color:var(--muted);white-space:nowrap">' + c.cameras_together + ' c&acirc;m.</span></td>'
         + '<td style="white-space:nowrap;font-size:.78rem;color:var(--muted)">' + lastTog + '</td>'
         + '<td style="font-size:.75rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + localStr + '">' + localStr + '</td>'
-        + '<td class="action-cell"><div class="action-buttons">' + btnDetalhe + btnBuscar + '</div></td>'
-        + '</tr>';
+          + '<td class="action-cell"><div class="action-buttons">' + btnFoto + btnRota + btnCriar + btnDetalhe + '</div></td>'
+          + '</tr>';
     }).join('');
 
     el.innerHTML = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden">'
@@ -14333,7 +14495,7 @@ async function _alvoDvLoadCompanions(id, plate) {
       + '<th style="text-align:center">Papel / Cooc.</th>'
       + '<th style="white-space:nowrap">&Uacute;ltima vez junto</th>'
       + '<th>Local / C&acirc;mera</th>'
-      + '<th style="white-space:nowrap">A&ccedil;&otilde;es</th>'
+        + '<th style="white-space:nowrap;text-align:center">A&ccedil;&otilde;es</th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
       + '</div>';
   } catch(e) {
@@ -14353,14 +14515,32 @@ function _alvoCompSearch(plate) {
   if (typeof _cenSingleSearch === 'function') _cenSingleSearch(plate);
 }
 
+async function _alvoCompVerFoto(plate) {
+  plate = String(plate || '').trim().toUpperCase();
+  if (!plate) return;
+  try {
+    var r = await fetch('/api/events?plate=' + encodeURIComponent(plate) + '&limit=1');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var d = await r.json();
+    var items = d.items || d.events || d.data || [];
+    var ev = items && items[0] ? items[0] : null;
+    var img = ev && (ev.image_path || ev.image || ev.thumb || ev.image_url);
+    if (!img) { alert('Sem imagem disponível para esta placa.'); return; }
+    openImageUrl(img, 'Foto do veículo ' + plate);
+  } catch (e) {
+    alert('Erro ao buscar foto: ' + (e.message || e));
+  }
+}
+
 // ── Alvo: Busca histórico filtrado ───────────────────────────────────────────
-async function _alvoDvAplicar() {
-  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'24h'}).value || '24h';
-  var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value    || '';
-  var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value    || '';
-  var res = document.getElementById('alvo-dv-resultados');
-  if (!res) return;
-  res.innerHTML = '<p style="color:var(--muted);padding:8px 0"><span class="spinner"></span> Carregando hist&oacute;rico de passagens&hellip;</p>';
+  async function _alvoDvAplicar() {
+  var rangeVal = (document.getElementById('alvo-dv-range')  || {value:'1d'}).value || '1d';
+    var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value    || '';
+    var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value    || '';
+    var res = document.getElementById('alvo-dv-resultados');
+    if (!res) return;
+    res.innerHTML = '';
+    res.style.display = 'none';
   var params = [];
   if (rangeVal !== 'custom') {
     params.push('periodo=' + encodeURIComponent(rangeVal));
@@ -14377,18 +14557,20 @@ async function _alvoDvAplicar() {
     var resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var d = await resp.json();
-    _alvoDvRenderHistorico(d, rangeVal, janela, mincam);
-    if (_alvoDvId) _alvoDvLoadPassagens(_alvoDvId);
-  } catch(e) {
-    res.innerHTML = '<p style="color:var(--danger);padding:8px 0">Erro ao carregar hist&oacute;rico: ' + e + '</p>';
-  }
+      var res = document.getElementById('alvo-dv-resultados');
+      if (res) { res.innerHTML = ''; res.style.display = 'none'; }
+      if (_alvoDvId) _alvoDvLoadPassagens(_alvoDvId);
+    } catch(e) {
+      res.innerHTML = '<p style="color:var(--danger);padding:8px 0">Erro ao carregar hist&oacute;rico: ' + e + '</p>';
+      res.style.display = 'block';
+    }
   // Recarrega acompanhantes respeitando os mesmos filtros ativos
   if (_alvoDvId && _alvoDvPlate) _alvoDvLoadCompanions(_alvoDvId, _alvoDvPlate);
 }
 
 // ── Alvo: Limpa filtros e re-executa ─────────────────────────────────────────
 function _alvoDvLimpar() {
-  [['alvo-dv-range','24h'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
+  [['alvo-dv-range','1d'],['alvo-dv-janela',''],['alvo-dv-mincam',''],
    ['alvo-dv-start',''],['alvo-dv-end','']].forEach(function(f) {
     var el = document.getElementById(f[0]); if (el) el.value = f[1];
   });
@@ -14401,7 +14583,7 @@ function _alvoDvRenderHistorico(d, rangeVal, janela, mincam) {
   var res = document.getElementById('alvo-dv-resultados');
   if (!res) return;
   var jLabel = {'5':'5 min','10':'10 min','15':'15 min','20':'20 min','30':'30 min','60':'60 min'};
-  var rLabel = {'1h':'1 hora','2h':'2 horas','3h':'3 horas','6h':'6 horas','12h':'12 horas','24h':'24 horas','custom':'per&iacute;odo personalizado'};
+    var rLabel = {'1d':'Hoje','7d':'7 dias','15d':'15 dias','30d':'30 dias','60d':'60 dias','90d':'90 dias','180d':'180 dias','custom':'per&iacute;odo personalizado'};
   var chips = [];
   chips.push('<span style="background:rgba(250,204,21,.15);color:var(--accent);border:1px solid rgba(250,204,21,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#128197; ' + (rLabel[rangeVal] || rangeVal) + '</span>');
   if (janela) chips.push('<span style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);border-radius:99px;padding:2px 10px;font-size:.75rem;font-weight:600">&#9201; janela: ' + (jLabel[janela] || janela + ' min') + '</span>');
@@ -14474,7 +14656,7 @@ async function alvoVer(id, plate, descricao, desde) {
   var _prioEl = document.getElementById('alvo-dv-prioridade');
   if (_prioEl) _prioEl.innerHTML = '<span style="font-size:.72rem;color:var(--muted);font-style:italic">Classificando&hellip;</span>';
   // reseta filtros
-  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '24h';
+  var rEl = document.getElementById('alvo-dv-range');  if (rEl) rEl.value = '1d';
   var jEl = document.getElementById('alvo-dv-janela'); if (jEl) jEl.value = '';
   var mEl = document.getElementById('alvo-dv-mincam'); if (mEl) mEl.value = '';
   var ds  = document.getElementById('alvo-dv-start');  if (ds)  ds.value  = '';
@@ -16160,95 +16342,6 @@ function clearVehicleTrajectory() {
   
   // Recarrega mapa de câmeras
   loadMapa();
-}
-
-// ===== VEÍCULOS: Últimas passagens (card único) =====
-function _toggleVeicRangeCustom() {
-  var range = document.getElementById('veic-range').value;
-  var s = document.getElementById('veic-start');
-  var e = document.getElementById('veic-end');
-  if (range === 'custom') { s.style.display = 'inline-block'; e.style.display = 'inline-block'; }
-  else { s.style.display = 'none'; e.style.display = 'none'; }
-}
-document.getElementById('veic-range').addEventListener('change', _toggleVeicRangeCustom);
-
-async function loadVeicUltimasPassagens() {
-  var plate = (document.getElementById('veic-plate-field').value || '').trim().toUpperCase();
-  var range = document.getElementById('veic-range').value;
-  var start = document.getElementById('veic-start').value;
-  var end = document.getElementById('veic-end').value;
-  var container = document.getElementById('veic-ultimas-card');
-  if (!plate) {
-    container.innerHTML = '<div class="card" style="padding:14px">⚠️ Informe a placa.</div>';
-    return;
-  }
-  container.innerHTML = '<div class="card" style="padding:14px"><span class="spinner"></span> Buscando últimas passagens…</div>';
-  try {
-    var params = ['limit=50', 'offset=0', 'plate=' + encodeURIComponent(plate)];
-    if (range && range !== 'custom') params.push('range=' + encodeURIComponent(range + 'h'));
-    else {
-      if (start) params.push('start=' + encodeURIComponent(start));
-      if (end) params.push('end=' + encodeURIComponent(end));
-    }
-    var url = '/api/events?' + params.join('&');
-    var resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    var data = await resp.json();
-    var items = data.items || data || [];
-    renderVeicUltimasCard(plate, items, range, start, end);
-  } catch (e) {
-    container.innerHTML = '<div class="card" style="padding:14px;color:var(--danger)">Erro ao buscar: ' + e.message + '</div>';
-  }
-}
-
-function renderVeicUltimasCard(plate, items, range, start, end) {
-  var container = document.getElementById('veic-ultimas-card');
-  var periodLabel = range === 'custom' ? ((start||'') + ' → ' + (end||'')) : (range ? range + 'h' : '24h');
-  var header = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'
-    + '<div style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase">Últimas passagens</div>'
-    + '<div style="font-size:.82rem;color:var(--muted);">' + (items.length || 0) + ' registro(s) · ' + periodLabel + '</div>'
-    + '<div style="margin-left:auto"><button class="btn btn-outline btn-xs" onclick="viewVeicTraj(\'' + plate + '\')">&#128663; Ver Trajetória</button></div>'
-    + '</div>';
-
-  if (!items.length) {
-    container.innerHTML = '<div class="card">' + header + '<div style="color:var(--muted);padding:8px 0">Nenhuma passagem encontrada.</div></div>';
-    return;
-  }
-
-  var rows = items.map(function(it) {
-    var ts = it.occurred_at || it.ts || it.created_at || '';
-    var cam = it.cam_nome || it.camera_name || it.camera || it.camera_id || '-';
-    var thumb = it.image_path ? '<img class="thumb" src="/api/events/' + it.id + '/thumbnail?w=96&h=64" loading="lazy" onclick="openImage(' + it.id + ',\'' + (it.plate||'') + '\')">' : '<div class="thumb-none">-</div>';
-    var conf = it.confidence != null ? (Math.round(it.confidence) + '%') : '-';
-    return '<div style="display:flex;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">' + thumb
-      + '<div style="min-width:140px">' + (ts ? new Date(ts).toLocaleString('pt-BR') : '-') + '</div>'
-      + '<div style="flex:1;color:var(--muted)">' + cam + '</div>'
-      + '<div style="width:72px;text-align:center;font-weight:700">' + conf + '</div>'
-      + '</div>';
-  }).join('');
-
-  container.innerHTML = '<div class="card">' + header + '<div>' + rows + '</div></div>';
-}
-
-function clearVeicUltimas(){
-  document.getElementById('veic-plate-field').value = '';
-  document.getElementById('veic-start').value = '';
-  document.getElementById('veic-end').value = '';
-  document.getElementById('veic-range').value = '24';
-  _toggleVeicRangeCustom();
-  document.getElementById('veic-ultimas-card').innerHTML = '';
-}
-
-function viewVeicTraj(plate) {
-  try {
-    document.getElementById('traj-plate-field').value = (plate || '').toUpperCase();
-    // seta período padrão 24h
-    var now = new Date();
-    var from = new Date(now.getTime() - 24 * 3600 * 1000);
-    document.getElementById('traj-start-field').value = _toLocalDTInput(from);
-    document.getElementById('traj-end-field').value = _toLocalDTInput(now);
-  } catch(e) {}
-  loadVehicleTrajectory();
 }
 
 // ===== GRUPOS DE COMBOIO =====
@@ -20065,4 +20158,3 @@ function _renderRelatorio(data) {
 
 </body>
 </html>
-

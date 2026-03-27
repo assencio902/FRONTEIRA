@@ -69,10 +69,17 @@ def build_trajetoria_router(
                         COALESCE(e.yolo_result->'target_vehicle'->>'cor', '') AS vehicle_color,
                         e.image_path
                     FROM lpr_events e
-                    LEFT JOIN cameras c ON (
-                        c.camera_id = e.camera_id
-                        OR c.ip = e.camera_id
-                        OR c.ip = e.camera_ip
+                    LEFT JOIN cameras c ON c.id = (
+                        SELECT id FROM cameras
+                        WHERE
+                            lower(trim(camera_id)) = lower(trim(e.camera_id))
+                            OR lower(trim(ip)) = lower(trim(e.camera_id))
+                            OR lower(trim(ip)) = lower(trim(e.camera_ip))
+                            OR lower(trim(ip)) = lower(trim(split_part(regexp_replace(e.camera_ip, '^https?://', '', 'gi'), ':', 1)))
+                            OR lower(trim(ip)) = lower(trim(split_part(regexp_replace(e.camera_id, '^https?://', '', 'gi'), ':', 1)))
+                            OR lower(trim(nome)) = lower(trim(e.camera_id))
+                        ORDER BY (camera_id = e.camera_id) DESC, id DESC
+                        LIMIT 1
                     )
                     WHERE regexp_replace(upper(coalesce(e.plate,'')), '[^A-Z0-9]', '', 'g')
                           = regexp_replace(upper(%s), '[^A-Z0-9]', '', 'g')

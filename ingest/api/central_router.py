@@ -30,6 +30,7 @@ def build_central_router(
         order_mode: str = "any",
         leader_ratio: float = 0.7,
         payload_max_front: int = 0,
+        limit_events: int = 8000,
         ts_from: str | None = None,
         ts_to: str | None = None,
         limit: int = 100,
@@ -40,6 +41,7 @@ def build_central_router(
         min_cam = max(1, int(min_cameras))
         trip_gap = max(1, int(max_trip_gap))
         lim = max(1, min(500, int(limit)))
+        lim_events = max(1000, min(50000, int(limit_events)))
         order = str(order_mode).strip().lower()
         if order not in ("any", "leader_front"):
             order = "any"
@@ -73,7 +75,7 @@ def build_central_router(
                     window_s=co_win_s,
                     max_trip_gap_s=trip_gap,
                     min_cameras=min_cam,
-                    limit_events=15000,
+                    limit_events=lim_events,
                 )
                 if allow_3plus:
                     raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes or group["group_size"] >= 3]
@@ -325,7 +327,9 @@ def build_central_router(
     def batedor_grupos_comboio(
         window: str = "2h",
         co_window: int = 300,
-        group_sizes: str = "2",
+        min_vehicles: int | None = None,
+        min_passes: int = 1,
+        group_sizes: str | None = None,
         min_cameras: int = 2,
         max_trip_gap: int = 3600,
         order_mode: str = "any",
@@ -333,11 +337,15 @@ def build_central_router(
         max_front_ratio_other: float = 0.3,
         payload_max_front: int = 0,
         limit: int = 100,
+        ts_from: str | None = None,
+        ts_to: str | None = None,
         request: Request = None,
     ):
         allowed_params = {
             "window",
             "co_window",
+            "min_vehicles",
+            "min_passes",
             "group_sizes",
             "min_cameras",
             "max_trip_gap",
@@ -346,6 +354,8 @@ def build_central_router(
             "max_front_ratio_other",
             "payload_max_front",
             "limit",
+            "ts_from",
+            "ts_to",
         }
         if request:
             unsupported = set(request.query_params.keys()) - allowed_params
@@ -357,14 +367,22 @@ def build_central_router(
 
         valid_sizes: set[int] = set()
         allow_3plus = False
-        for value in str(group_sizes).split(","):
-            value = value.strip()
-            if value == "2":
-                valid_sizes.add(2)
-            elif value in ("3+", "3"):
+        if min_vehicles is not None:
+            mv = max(2, min(3, int(min_vehicles)))
+            if mv == 2:
+                valid_sizes = {2}
+            else:
+                valid_sizes = {3}
                 allow_3plus = True
-        if not valid_sizes and not allow_3plus:
-            valid_sizes = {2}
+        else:
+            for value in str(group_sizes or "2").split(","):
+                value = value.strip()
+                if value == "2":
+                    valid_sizes.add(2)
+                elif value in ("3+", "3"):
+                    allow_3plus = True
+            if not valid_sizes and not allow_3plus:
+                valid_sizes = {2}
 
         order = str(order_mode).strip().lower()
         if order not in ("any", "leader_front"):
@@ -375,12 +393,17 @@ def build_central_router(
         p_max_front = max(0, int(payload_max_front))
 
         window_min = parse_window_to_minutes_fn(window)
-        co_win_s = max(1, min(1000, int(co_window)))
-        min_cam = max(2, int(min_cameras))
+        co_win_s = max(1, min(3600, int(co_window)))
+        min_cam = max(1, int(min_cameras))
         trip_gap = max(1, int(max_trip_gap))
         lim = max(1, min(500, int(limit)))
-        t_to = utcnow_fn()
-        t_from = t_to - timedelta(minutes=window_min)
+        min_pass = max(1, int(min_passes))
+        if ts_from and ts_to:
+            t_from = parse_dt_fn(ts_from) or (utcnow_fn() - timedelta(minutes=window_min))
+            t_to = parse_dt_fn(ts_to) or utcnow_fn()
+        else:
+            t_to = utcnow_fn()
+            t_from = t_to - timedelta(minutes=window_min)
 
         with conn_factory() as conn:
             with conn.cursor() as cur:
@@ -398,6 +421,8 @@ def build_central_router(
             raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes or group["group_size"] >= 3]
         else:
             raw_groups = [group for group in raw_groups if group["group_size"] in valid_sizes]
+        if min_pass > 1:
+            raw_groups = [group for group in raw_groups if group["cameras_count"] >= min_pass]
 
         groups = []
         for group in raw_groups:
@@ -465,12 +490,15 @@ def build_central_router(
         sizes_echo = sorted(str(value) for value in valid_sizes)
         if allow_3plus:
             sizes_echo.append("3+")
+        min_vehicles_echo = min_vehicles if min_vehicles is not None else (min(valid_sizes) if valid_sizes else 2)
         return {
             "groups": groups[:lim],
             "total": len(groups),
             "window": window,
             "co_window": co_win_s,
             "group_sizes": sizes_echo,
+            "min_vehicles": min_vehicles_echo,
+            "min_passes": min_pass,
             "min_cameras": min_cam,
             "max_trip_gap_s": trip_gap,
             "order_mode": order,
@@ -484,6 +512,7 @@ def build_central_router(
         ts_from: str | None = None,
         ts_to: str | None = None,
         plate_prefix: str | None = None,
+        plate_contains: str | None = None,
         direcao: str | None = None,
         vehicle_type: str | None = None,
         vehicle_color: str | None = None,
@@ -530,6 +559,9 @@ def build_central_router(
         if plate_prefix:
             prefix_sql = "AND plate ILIKE %s"
             prefix_vals = [plate_prefix.strip().upper() + "%"]
+        if plate_contains:
+            prefix_sql += " AND plate ILIKE %s"
+            prefix_vals.append("%" + plate_contains.strip().upper() + "%")
 
         with conn_factory() as conn:
             with conn.cursor() as cur:
