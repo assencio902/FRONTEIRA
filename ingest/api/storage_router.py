@@ -1,5 +1,4 @@
 import os
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -17,6 +16,31 @@ def _safe_file_path(base_dir: Path, file_path: str) -> Path:
     if not target.exists() or not target.is_file():
         raise HTTPException(status_code=404, detail="arquivo nao encontrado")
     return target
+
+
+def _read_mount_index_from_proc(mount_file: Path, pseudo_fs: set[str]) -> list[dict[str, str]]:
+    mounts: list[dict[str, str]] = []
+    if not mount_file.exists():
+        return mounts
+    with mount_file.open("r", encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            device, mount_point, fs_type = parts[0], parts[1], parts[2]
+            mount_point = mount_point.replace("\\040", " ")
+            if fs_type in pseudo_fs:
+                continue
+            if device in ("overlay", "tmpfs", "udev"):
+                continue
+            mounts.append(
+                {
+                    "mount_point": mount_point,
+                    "device": device,
+                    "fs_type": fs_type,
+                }
+            )
+    return mounts
 
 
 def _read_mount_index() -> list[dict[str, str]]:
@@ -42,6 +66,13 @@ def _read_mount_index() -> list[dict[str, str]]:
         "fusectl",
     }
 
+    host_root = Path(os.environ.get("HOST_ROOT", "/host"))
+    if host_root.exists():
+        host_mounts = _read_mount_index_from_proc(host_root / "proc/mounts", pseudo_fs)
+        if host_mounts:
+            host_mounts.sort(key=lambda item: len(item["mount_point"]), reverse=True)
+            return host_mounts
+
     # Tenta usar df -PT (mais confiável em containers)
     try:
         output = subprocess.check_output(["df", "-PT"], text=True, stderr=subprocess.DEVNULL)
@@ -62,26 +93,7 @@ def _read_mount_index() -> list[dict[str, str]]:
                 }
             )
     except Exception:
-        mount_file = "/proc/mounts" if os.path.exists("/proc/mounts") else None
-        if mount_file:
-            with open(mount_file, "r", encoding="utf-8", errors="ignore") as fh:
-                for line in fh:
-                    parts = line.split()
-                    if len(parts) < 3:
-                        continue
-                    device, mount_point, fs_type = parts[0], parts[1], parts[2]
-                    mount_point = mount_point.replace("\\040", " ")
-                    if fs_type in pseudo_fs:
-                        continue
-                    if device in ("overlay", "tmpfs", "udev"):
-                        continue
-                    mounts.append(
-                        {
-                            "mount_point": mount_point,
-                            "device": device,
-                            "fs_type": fs_type,
-                        }
-                    )
+        mounts.extend(_read_mount_index_from_proc(Path("/proc/mounts"), pseudo_fs))
     mounts.sort(key=lambda item: len(item["mount_point"]), reverse=True)
     return mounts
 
@@ -93,6 +105,15 @@ def _match_mount_info(target_path: Path, mount_index: list[dict[str, str]]) -> d
         if target == mount_point or target.startswith(mount_point.rstrip("/") + "/"):
             return item
     return {"mount_point": target, "device": "desconhecido", "fs_type": "desconhecido"}
+
+
+def _resolve_host_path(path: Path) -> Path | None:
+    host_root = Path(os.environ.get("HOST_ROOT", "/host"))
+    if not host_root.exists():
+        return None
+    rel = str(path.resolve()).lstrip("/")
+    host_path = host_root / rel
+    return host_path if host_path.exists() else None
 
 
 def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
@@ -111,17 +132,22 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
         if path_key in seen:
             continue
         seen.add(path_key)
+        host_path = _resolve_host_path(resolved)
+        usage_path = host_path or resolved
         try:
-            usage = shutil.disk_usage(resolved)
+            usage = shutil.disk_usage(usage_path)
         except Exception:
             usage = None
-        mount_info = _match_mount_info(resolved, mount_index)
+        mount_info = _match_mount_info(host_path or resolved, mount_index)
+        device = mount_info.get("device")
+        if device:
+            seen_devices.add(device)
         items.append(
             {
                 "key": key,
                 "label": labels.get(key, key),
                 "mount_point": str(resolved),
-                "device": mount_info.get("device"),
+                "device": device,
                 "fs_type": mount_info.get("fs_type"),
                 "backing_mount": mount_info.get("mount_point"),
                 "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
@@ -146,7 +172,8 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
         if device:
             seen_devices.add(device)
         try:
-            usage = shutil.disk_usage(mount_point)
+            usage_path = _resolve_host_path(Path(mount_point)) or Path(mount_point)
+            usage = shutil.disk_usage(usage_path)
         except Exception:
             usage = None
         items.append(

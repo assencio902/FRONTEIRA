@@ -87,6 +87,7 @@
       - ./abordados:/app/abordados
       - ./ingest/static:/app/static
       - ./secrets:/app/secrets:ro
+      - /:/host:ro
 
   yolo-worker:
     build: ./yolo-worker
