@@ -1,4 +1,5 @@
 import os
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Callable
@@ -99,6 +100,34 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
                 "device": mount_info.get("device"),
                 "fs_type": mount_info.get("fs_type"),
                 "backing_mount": mount_info.get("mount_point"),
+                "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
+                "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
+                "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
+                "used_percent": round(((usage.used / usage.total) * 100), 2)
+                if usage and usage.total
+                else None,
+            }
+        )
+    # Adiciona todos os pontos de montagem do Linux para exibir no gráfico
+    for mount in mount_index:
+        mount_point = mount.get("mount_point")
+        if not mount_point:
+            continue
+        if mount_point in seen:
+            continue
+        seen.add(mount_point)
+        try:
+            usage = shutil.disk_usage(mount_point)
+        except Exception:
+            usage = None
+        items.append(
+            {
+                "key": f"mount:{mount_point}",
+                "label": f"Disco {mount_point}",
+                "mount_point": mount_point,
+                "device": mount.get("device"),
+                "fs_type": mount.get("fs_type"),
+                "backing_mount": mount_point,
                 "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
                 "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
                 "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
