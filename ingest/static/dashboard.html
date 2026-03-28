@@ -4487,6 +4487,18 @@
 
           <div id="cen-single-statusline" class="status-line" style="margin-bottom:12px"></div>
 
+          <div id="cen-single-tabs" class="sub-tabs" style="margin-bottom:12px;display:none">
+            <div class="sub-tab active" data-ctab="passagens" onclick="_cenSingleSwitchTab('passagens', this)">&#128197; Passagens</div>
+            <div class="sub-tab" data-ctab="acompanhantes" onclick="_cenSingleSwitchTab('acompanhantes', this)">&#128101; Acompanhantes</div>
+            <div class="sub-tab" data-ctab="rota" onclick="_cenSingleSwitchTab('rota', this)">&#128506; Rota</div>
+            <div class="sub-tab" data-ctab="relatorio" onclick="_cenSingleSwitchTab('relatorio', this)">&#128221; Relat&oacute;rio</div>
+          </div>
+
+          <div id="cen-single-tab-passagens" class="cen-single-tab-pane"></div>
+          <div id="cen-single-tab-acompanhantes" class="cen-single-tab-pane" style="display:none"></div>
+          <div id="cen-single-tab-rota" class="cen-single-tab-pane" style="display:none"></div>
+          <div id="cen-single-tab-relatorio" class="cen-single-tab-pane" style="display:none"></div>
+
           <!-- elementos legados mantidos apenas por compatibilidade -->
           <input type="hidden" id="cen-interval" value="60">
           <span id="central-status" style="display:none"></span>
@@ -9300,19 +9312,48 @@ function _cenSingleSyncActionButtons() {
 }
 
 function _cenSingleRenderEmpty() {
-  var body = document.getElementById('cen-single-body');
-  if (!body) return;
-  body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px 10px">'
+  _cenSingleShowTabs(false);
+  _cenSingleSetTabContent('passagens',
+    '<div style="text-align:center;color:var(--muted);padding:24px 10px">'
     + 'Digite uma placa e clique em <strong>Pesquisar</strong> para abrir o relat&oacute;rio detalhado.'
-    + '</div>';
+    + '</div>'
+  );
+  _cenSingleSetTabContent('acompanhantes', '');
+  _cenSingleSetTabContent('rota', '');
+  _cenSingleSetTabContent('relatorio', '');
 }
 
 function _cenSingleRenderLoading(plate) {
-  var body = document.getElementById('cen-single-body');
-  if (!body) return;
-  body.innerHTML = '<div style="text-align:center;color:var(--muted);padding:28px 10px">'
+  _cenSingleShowTabs(false);
+  _cenSingleSetTabContent('passagens',
+    '<div style="text-align:center;color:var(--muted);padding:28px 10px">'
     + '<span class="spinner"></span><br><br>Analisando <strong style="font-family:monospace">' + plate + '</strong>&hellip;'
-    + '</div>';
+    + '</div>'
+  );
+  _cenSingleSetTabContent('acompanhantes', '');
+  _cenSingleSetTabContent('rota', '');
+  _cenSingleSetTabContent('relatorio', '');
+}
+
+function _cenSingleSetTabContent(name, html) {
+  var el = document.getElementById('cen-single-tab-' + name);
+  if (el) el.innerHTML = html || '';
+}
+
+function _cenSingleShowTabs(show) {
+  var tabs = document.getElementById('cen-single-tabs');
+  if (tabs) tabs.style.display = show ? '' : 'none';
+}
+
+function _cenSingleSwitchTab(name, el) {
+  var tabs = ['passagens', 'acompanhantes', 'rota', 'relatorio'];
+  tabs.forEach(function(t) {
+    var pane = document.getElementById('cen-single-tab-' + t);
+    if (pane) pane.style.display = (t === name) ? '' : 'none';
+    var btn = document.querySelector('#cen-single-tabs .sub-tab[data-ctab="' + t + '"]');
+    if (btn) btn.classList.toggle('active', t === name);
+  });
+  _cenSingleState.activeTab = name;
 }
 
 function _cenSingleBuildReportUrl(plate, opts) {
@@ -9409,8 +9450,7 @@ function _cenSingleBuildMapState(plate, events) {
 }
 
 function _cenSingleRenderAnalysis(report, centralItem) {
-  var body = document.getElementById('cen-single-body');
-  if (!body || !report) return;
+  if (!report) return;
   var summary = report.summary || {};
   var eventsAsc = (report.events || []).slice().sort(function(a, b) {
     return new Date(a && a.ts ? a.ts : 0) - new Date(b && b.ts ? b.ts : 0);
@@ -9470,14 +9510,18 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '</div>';
   }
 
-  var trajectoryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px">'
+  var passSummaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px">'
     + _cenSingleMetric('Primeira passagem', firstEvent ? fmtTs(firstEvent.ts) : '\u2014', firstEvent ? (firstEvent.camera_name || firstEvent.camera_id || '') : '')
     + _cenSingleMetric('&Uacute;ltima passagem', lastEvent ? fmtTs(lastEvent.ts) : '\u2014', lastEvent ? (lastEvent.camera_name || lastEvent.camera_id || '') : '')
     + _cenSingleMetric('Percurso resumido', cameraOrder.length ? String(cameraOrder.length) + ' c&acirc;m.' : '\u2014', cameraOrder.length ? 'ordem de apari&ccedil;&atilde;o' : 'sem rota')
+    + '</div>';
+
+  var routeBlock = '<div style="padding:12px 14px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:12px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+      + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em">&#128506; Ordem de c&acirc;meras no per&iacute;odo</div>'
+      + (eventsAsc.length ? '<button class="btn btn-outline btn-xs" onclick="_cenSingleOpenMap()">Ver rota no mapa</button>' : '')
     + '</div>'
-    + '<div style="padding:12px 14px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:12px">'
-      + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">&#128506; Ordem de c&acirc;meras no per&iacute;odo</div>'
-      + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;line-height:1.8">' + routeHtml + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;line-height:1.8;margin-top:8px">' + routeHtml + '</div>'
     + '</div>';
 
   var eventRows = eventsDesc.slice(0, 12).map(function(ev, index) {
@@ -9491,9 +9535,12 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '<td style="font-size:.78rem;color:var(--muted);text-align:center">' + conf + '</td>'
       + '</tr>';
   }).join('');
-  trajectoryHtml += eventsDesc.length
+  var eventTableHtml = eventsDesc.length
     ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
     : '<div style="padding:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--muted);font-size:.82rem">Nenhuma passagem encontrada para a placa no per&iacute;odo selecionado.</div>';
+
+  var passagensHtml = passSummaryHtml + eventTableHtml;
+  var rotaHtml = passSummaryHtml + routeBlock;
 
   var partnersHtml = '';
   if (partners.length) {
@@ -9569,10 +9616,15 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '</div>';
   }
 
-  body.innerHTML = _cenSingleSection('1. Resumo t&aacute;tico da placa', summaryHtml, risk.color, risk.border)
-    + _cenSingleSection('2. Trajet&oacute;ria no per&iacute;odo', trajectoryHtml, 'var(--accent2)')
-    + _cenSingleSection('3. Companheiros / comboio (' + partners.length + ')', partnersHtml, '#fca5a5', 'rgba(239,68,68,.18)')
-    + _cenSingleSection('4. Decis&atilde;o e v&iacute;nculo operacional', decisionHtml + threatHtml, 'var(--accent2)');
+  var relatorioHtml = _cenSingleSection('1. Resumo t&aacute;tico da placa', summaryHtml, risk.color, risk.border)
+    + _cenSingleSection('2. Decis&atilde;o e v&iacute;nculo operacional', decisionHtml + threatHtml, 'var(--accent2)');
+
+  _cenSingleSetTabContent('passagens', passagensHtml);
+  _cenSingleSetTabContent('acompanhantes', partnersHtml);
+  _cenSingleSetTabContent('rota', rotaHtml);
+  _cenSingleSetTabContent('relatorio', relatorioHtml);
+  _cenSingleShowTabs(true);
+  _cenSingleSwitchTab(_cenSingleState.activeTab || 'passagens');
 }
 
 function _cenSingleInit() {
@@ -13561,7 +13613,7 @@ async function loadAlvos() {
   tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   if (st) st.innerHTML = '<span class="spinner"></span>';
   try {
-    var resp = await _fetchWithTimeout('/api/alvos?lite=1', null, 10000);
+    var resp = await _fetchWithTimeout('/api/alvos?lite=1', null, 20000);
     var data = await resp.json();
     var alvos = data.alvos || [];
     _alvosHasLoaded = true;
@@ -13631,15 +13683,7 @@ async function _loadAlvosLastSeen(alvos) {
     if (!alvos || !alvos.length) return;
     var plates = alvos.map(function(a) { return a.plate; }).filter(Boolean);
     if (!plates.length) return;
-    var resp = await _fetchWithTimeout('/api/alvos/last_seen?plates=' + encodeURIComponent(plates.join(',')), null, 12000);
-    if (!resp.ok) return;
-    var data = await resp.json();
-    var items = data.items || [];
-    var map = {};
-    items.forEach(function(it) { if (it && it.plate) map[it.plate] = it.last_seen; });
-    alvos.forEach(function(a) {
-      var last = map[a.plate];
-      var el = document.getElementById('alvo-last-' + a.id);
+    var formatLastSeen = function(last, el) {
       if (!el) return;
       if (!last) { el.innerHTML = '&#8212;'; return; }
       var d = new Date(last);
@@ -13659,7 +13703,22 @@ async function _loadAlvosLastSeen(alvos) {
       } else {
         el.innerHTML = '<span style="color:var(--muted);font-size:.78rem">' + dtStr + '</span>';
       }
-    });
+    };
+    var chunkSize = 50;
+    for (var i = 0; i < plates.length; i += chunkSize) {
+      var chunk = plates.slice(i, i + chunkSize);
+      var resp = await _fetchWithTimeout('/api/alvos/last_seen?plates=' + encodeURIComponent(chunk.join(',')), null, 8000);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      var items = data.items || [];
+      var map = {};
+      items.forEach(function(it) { if (it && it.plate) map[it.plate] = it.last_seen; });
+      alvos.forEach(function(a) {
+        if (!map.hasOwnProperty(a.plate)) return;
+        var el = document.getElementById('alvo-last-' + a.id);
+        formatLastSeen(map[a.plate], el);
+      });
+    }
   } catch (e) {
     // silencioso
   }
