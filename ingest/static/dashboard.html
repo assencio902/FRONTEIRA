@@ -8322,7 +8322,10 @@ async function runBackupNow() {
       var err = await resp.json().catch(function(){ return {}; });
       throw new Error(err.detail || 'Falha ao executar backup');
     }
-    alert('Backup iniciado com sucesso.');
+    var data = await resp.json().catch(function(){ return {}; });
+    var msg = 'Backup concluído com sucesso.';
+    if (data && data.file) msg += ' Arquivo: ' + data.file;
+    alert(msg);
     await loadSaude();
   } catch (err) {
     alert('Falha ao executar backup: ' + (err.message || err));
