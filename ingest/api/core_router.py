@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from starlette.responses import RedirectResponse
 
+from utils import _get_health_status, _set_app_start_time
 
 def build_core_router(
     static_dir: Any,
@@ -36,6 +37,11 @@ def build_core_router(
     @router.get("/health")
     async def health():
         return {"status": "ok"}
+
+    @router.get("/api/health")
+    async def api_health():
+        _set_app_start_time()
+        return _get_health_status()
 
     @router.api_route(
         "/catchall",

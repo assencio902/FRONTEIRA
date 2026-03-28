@@ -8233,15 +8233,17 @@ async function loadSaude() {
     var dResp = await fetch('/api/storage/volumes');
     var dData = await dResp.json().catch(function(){ return {}; });
     if (!dResp.ok) throw new Error(dData.detail || 'Falha ao listar discos');
-    var groups = _groupVolumes(dData.items || []);
+    var items = dData.items || [];
     if (discosEl) {
-      if (!groups.length) {
+      if (!items.length) {
         discosEl.textContent = 'Discos: não encontrados';
       } else {
-        discosEl.innerHTML = groups.map(function(g) {
-          var used = g.used ? g.used.toLocaleString('pt-BR') : '—';
-          var free = g.free ? g.free.toLocaleString('pt-BR') : '—';
-          return '<div>Disco ' + g.key + ': ' + used + 'GB usado / ' + free + 'GB livre</div>';
+        discosEl.innerHTML = items.map(function(item) {
+          var label = item.label || item.device || item.mount_point || 'Disco';
+          var used = (typeof item.used_gb === 'number') ? item.used_gb.toLocaleString('pt-BR') : '—';
+          var free = (typeof item.free_gb === 'number') ? item.free_gb.toLocaleString('pt-BR') : '—';
+          var total = (typeof item.total_gb === 'number') ? item.total_gb.toLocaleString('pt-BR') : '—';
+          return '<div>' + label + ': ' + used + 'GB usado / ' + free + 'GB livre / ' + total + 'GB total</div>';
         }).join('');
       }
     }
