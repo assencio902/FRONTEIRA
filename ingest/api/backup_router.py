@@ -66,29 +66,19 @@ def build_backup_router(
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem executar o backup")
 
-        script_path = Path(os.getenv("BACKUP_SCRIPT_PATH", "/host/dados/backup_postgres.sh"))
-        if not script_path.exists():
-            raise HTTPException(status_code=404, detail="Script de backup nao encontrado")
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        log_path = Path(os.getenv("BACKUP_LOG_PATH", str(backup_dir / "backup.log")))
+        backup_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            env = os.environ.copy()
-            env.setdefault("DOCKER_HOST", "unix:///var/run/docker.sock")
-            env["PATH"] = "/host/usr/bin:/host/bin:/usr/bin:/bin:" + env.get("PATH", "")
-            result = subprocess.run(
-                ["bash", "-lc", f"bash '{script_path}'"],
-                capture_output=True,
-                text=True,
-                timeout=int(os.getenv("BACKUP_RUN_TIMEOUT", "600")),
-                env=env,
-            )
-        except subprocess.TimeoutExpired:
-            raise HTTPException(status_code=504, detail="Backup em execucao por muito tempo")
+        timeout = int(os.getenv("BACKUP_RUN_TIMEOUT", "600"))
+        backup_file = _run_pg_dump(backup_dir, timeout)
 
-        if result.returncode != 0:
-            detail = (result.stderr or result.stdout or "Falha ao executar backup").strip()
-            raise HTTPException(status_code=500, detail=detail[:300])
+        log_line = f"Backup criado com sucesso em: {backup_file}\n"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as log_f:
+            log_f.write(log_line)
 
-        return {"status": "ok"}
+        return {"status": "ok", "file": str(backup_file)}
 
     return router
 
@@ -104,3 +94,63 @@ def _find_latest_backup_file(backup_dir: Path) -> Path | None:
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _run_pg_dump(backup_dir: Path, timeout: int) -> Path:
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    backup_file = backup_dir / f"backup_{timestamp}.sql"
+
+    pg_host = os.getenv("POSTGRES_HOST", "postgres")
+    pg_port = os.getenv("POSTGRES_PORT", "5432")
+    pg_user = os.getenv("POSTGRES_USER", "monitor_user")
+    pg_db = os.getenv("POSTGRES_DB", "monitor")
+    pg_password = os.getenv("POSTGRES_PASSWORD", "")
+
+    env = os.environ.copy()
+    if pg_password:
+        env["PGPASSWORD"] = pg_password
+
+    cmd = [
+        "pg_dump",
+        "-h",
+        pg_host,
+        "-p",
+        str(pg_port),
+        "-U",
+        pg_user,
+        "-d",
+        pg_db,
+    ]
+
+    try:
+        with backup_file.open("w", encoding="utf-8") as out_f:
+            result = subprocess.run(
+                cmd,
+                stdout=out_f,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout,
+                env=env,
+            )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Backup em execucao por muito tempo")
+
+    if result.returncode != 0:
+        detail = (result.stderr or "Falha ao executar backup").strip()
+        raise HTTPException(status_code=500, detail=detail[:300])
+
+    _prune_old_backups(backup_dir, keep=7)
+    return backup_file
+
+
+def _prune_old_backups(backup_dir: Path, keep: int) -> None:
+    candidates = sorted(
+        (p for p in backup_dir.glob("backup_*.sql") if p.is_file()),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for old_file in candidates[keep:]:
+        try:
+            old_file.unlink()
+        except OSError:
+            continue
