@@ -13773,12 +13773,19 @@ function alvoVerFechar() {
 }
 
 // ── Alvo: Controla exibição dos campos de datas personalizadas ───────────────
-  function _alvoDvPeriodChange() {
-    var sel = document.getElementById('alvo-dv-range');
-    var cd  = document.getElementById('alvo-dv-custom-dates');
-    if (!sel || !cd) return;
-    cd.style.display = sel.value === 'custom' ? 'flex' : 'none';
-  }
+function _alvoDvPeriodChange() {
+  var sel = document.getElementById('alvo-dv-range');
+  var cd  = document.getElementById('alvo-dv-custom-dates');
+  if (!sel || !cd) return;
+  cd.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
+function _alvoDvGetTodayRange() {
+  var now = new Date();
+  var start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  var end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
+  return { start: _toLocalDTInput(start), end: _toLocalDTInput(end) };
+}
 
   // ── Alvo: Sub-abas internas (passagens x acompanhantes) ────────────────────
   function _alvoDvSwitchSection(name) {
@@ -13909,7 +13916,11 @@ var _alvoDvCompanionsCache = [];
         var janela   = (document.getElementById('alvo-dv-janela') || {value:''}).value || '';
         var mincam   = (document.getElementById('alvo-dv-mincam') || {value:''}).value || '';
         var params = [];
-        if (rangeVal && rangeVal !== 'custom') {
+        if (rangeVal === '1d') {
+          var today = _alvoDvGetTodayRange();
+          params.push('start=' + encodeURIComponent(today.start));
+          params.push('end=' + encodeURIComponent(today.end));
+        } else if (rangeVal && rangeVal !== 'custom') {
           params.push('range=' + encodeURIComponent(rangeVal));
         } else if (rangeVal === 'custom') {
           var start = (document.getElementById('alvo-dv-start') || {}).value || '';
@@ -14504,7 +14515,11 @@ async function _alvoDvLoadCompanions(id, plate) {
     var coWinSec = _compJanela ? (parseInt(_compJanela, 10) || 0) * 60 : 300;
     var minCamVal = _compMinCam ? (parseInt(_compMinCam, 10) || 0) : 0;
     var qs = '';
-    if (_compRange === 'custom') {
+    if (_compRange === '1d') {
+      var today = _alvoDvGetTodayRange();
+      qs = '?ts_from=' + encodeURIComponent(today.start)
+         + '&ts_to=' + encodeURIComponent(today.end);
+    } else if (_compRange === 'custom') {
       var _start = (document.getElementById('alvo-dv-start') || {}).value || '';
       var _end   = (document.getElementById('alvo-dv-end')   || {}).value || '';
       if (_start && _end) {
@@ -14660,7 +14675,11 @@ async function _alvoCompVerFoto(plate) {
     res.innerHTML = '';
     res.style.display = 'none';
   var params = [];
-  if (rangeVal !== 'custom') {
+  if (rangeVal === '1d') {
+    var today = _alvoDvGetTodayRange();
+    params.push('start=' + encodeURIComponent(today.start));
+    params.push('end='   + encodeURIComponent(today.end));
+  } else if (rangeVal !== 'custom') {
     params.push('periodo=' + encodeURIComponent(rangeVal));
   } else {
     var start = (document.getElementById('alvo-dv-start') || {value:''}).value || '';
