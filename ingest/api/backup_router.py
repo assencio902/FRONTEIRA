@@ -71,11 +71,15 @@ def build_backup_router(
             raise HTTPException(status_code=404, detail="Script de backup nao encontrado")
 
         try:
+            env = os.environ.copy()
+            env.setdefault("DOCKER_HOST", "unix:///var/run/docker.sock")
+            env["PATH"] = "/host/usr/bin:/host/bin:/usr/bin:/bin:" + env.get("PATH", "")
             result = subprocess.run(
-                ["bash", str(script_path)],
+                ["bash", "-lc", f"bash '{script_path}'"],
                 capture_output=True,
                 text=True,
                 timeout=int(os.getenv("BACKUP_RUN_TIMEOUT", "600")),
+                env=env,
             )
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=504, detail="Backup em execucao por muito tempo")
