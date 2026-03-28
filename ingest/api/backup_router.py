@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 
 
 def build_backup_router(
@@ -17,8 +18,8 @@ def build_backup_router(
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem visualizar o status de backup")
 
-        raw_path = os.getenv("BACKUP_LOG_PATH", "/host/backup/postgres/backup.log")
-        log_path = Path(raw_path)
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        log_path = Path(os.getenv("BACKUP_LOG_PATH", str(backup_dir / "backup.log")))
         if not log_path.exists():
             return {
                 "status": "not_configured",
@@ -31,6 +32,7 @@ def build_backup_router(
         age = datetime.now(timezone.utc) - last_backup
         max_age = timedelta(hours=int(os.getenv("BACKUP_MAX_AGE_HOURS", "36")))
 
+        last_file = _find_latest_backup_file(backup_dir)
         return {
             "status": "ok" if age <= max_age else "stale",
             "path": str(log_path),
@@ -38,6 +40,37 @@ def build_backup_router(
             "last_backup": last_backup.isoformat().replace("+00:00", "Z"),
             "age_hours": round(age.total_seconds() / 3600, 2),
             "max_age_hours": round(max_age.total_seconds() / 3600, 2),
+            "backup_dir": str(backup_dir),
+            "last_file": str(last_file) if last_file else None,
         }
 
+    @router.get("/api/backup/download")
+    def download_backup(request: Request):
+        require_auth_fn(request)
+        assert_admin_fn(request, "Apenas administradores podem baixar o backup")
+
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        latest = _find_latest_backup_file(backup_dir)
+        if not latest:
+            raise HTTPException(status_code=404, detail="Nenhum arquivo de backup encontrado")
+
+        return FileResponse(
+            latest,
+            filename=latest.name,
+            media_type="application/octet-stream",
+        )
+
     return router
+
+
+def _find_latest_backup_file(backup_dir: Path) -> Path | None:
+    if not backup_dir.exists():
+        return None
+    patterns = ["*.sql", "*.sql.gz", "*.dump", "*.backup", "*.gz"]
+    candidates: list[Path] = []
+    for pattern in patterns:
+        candidates.extend(backup_dir.glob(pattern))
+    candidates = [p for p in candidates if p.is_file()]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)

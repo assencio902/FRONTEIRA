@@ -4143,6 +4143,7 @@
     <div id="saude-containers">Containers: carregando...</div>
     <div id="saude-discos">Discos: carregando...</div>
     <div id="saude-backup">Backup: carregando...</div>
+    <button id="saude-backup-download" class="btn btn-outline btn-sm" type="button" onclick="downloadBackup()" style="margin-top:6px">Baixar backup</button>
   </div>
 </div>
     <!-- ===== ABA EVENTOS ===== -->
@@ -8205,9 +8206,11 @@ async function loadSaude() {
   var containersEl = document.getElementById('saude-containers');
   var discosEl = document.getElementById('saude-discos');
   var backupEl = document.getElementById('saude-backup');
+  var backupBtn = document.getElementById('saude-backup-download');
   if (containersEl) containersEl.textContent = 'Containers: carregando...';
   if (discosEl) discosEl.textContent = 'Discos: carregando...';
   if (backupEl) backupEl.textContent = 'Backup: carregando...';
+  if (backupBtn) backupBtn.disabled = true;
 
   try {
     var hResp = await fetch('/api/health');
@@ -8259,12 +8262,45 @@ async function loadSaude() {
       if (bData && bData.status === 'ok') {
         var when = _formatSaudeDate(bData.last_backup);
         backupEl.textContent = 'Backup: OK (último: ' + (when || 'sem data') + ')';
+        if (backupBtn) backupBtn.disabled = false;
+      } else if (bData && bData.status === 'stale') {
+        var when2 = _formatSaudeDate(bData.last_backup);
+        backupEl.textContent = 'Backup: antigo (último: ' + (when2 || 'sem data') + ')';
+        if (backupBtn) backupBtn.disabled = false;
       } else {
         backupEl.textContent = 'Backup: não configurado';
+        if (backupBtn) backupBtn.disabled = true;
       }
     }
   } catch (_) {
     if (backupEl) backupEl.textContent = 'Backup: erro ao carregar';
+    if (backupBtn) backupBtn.disabled = true;
+  }
+}
+
+async function downloadBackup() {
+  var btn = document.getElementById('saude-backup-download');
+  if (btn) btn.disabled = true;
+  try {
+    var resp = await fetch('/api/backup/download');
+    if (!resp.ok) throw new Error('Falha ao baixar backup');
+    var blob = await resp.blob();
+    var filename = 'backup.sql';
+    var cd = resp.headers.get('content-disposition') || '';
+    var match = cd.match(/filename="?([^"]+)"?/i);
+    if (match && match[1]) filename = match[1];
+    var url = window.URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Falha ao baixar backup: ' + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
