@@ -8157,7 +8157,7 @@ function switchBatTab(name, el) {
     _cenSingleFocusPlateInput();
   } else if (name === 'alvos') {
     document.getElementById('bat-sub-alvos').classList.add('active');
-    loadAlvos();
+    _alvosInitIfNeeded();
   }
   var labels = { suspeitos: 'Batedor / Suspeitos', placas: 'Batedor / Placas', alvos: 'Batedor / Alvos' };
   trackPageView('batedor:' + name, labels[name] || ('Batedor / ' + name), '/dashboard#batedor/' + name);
@@ -11630,6 +11630,7 @@ var _cenSingleState = {
 };
 var _cenSingleBusy = false;
 var _cenSingleRecentSearches = [];
+var _alvosHasLoaded = false;
 
 function toggleCenLive() {
   _cenLiveEnabled = !_cenLiveEnabled;
@@ -13555,12 +13556,15 @@ async function loadAlvos() {
   var tb = document.getElementById('alvos-tbody');
   var st = document.getElementById('alvos-status');
   if (!tb) return;
+  if (loadAlvos._busy) return;
+  loadAlvos._busy = true;
   tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   if (st) st.innerHTML = '<span class="spinner"></span>';
   try {
     var resp = await _fetchWithTimeout('/api/alvos', null, 10000);
     var data = await resp.json();
     var alvos = data.alvos || [];
+    _alvosHasLoaded = true;
     // atualiza cards
     var totalEl   = document.getElementById('alvo-total');
     var recenteEl = document.getElementById('alvo-recente');
@@ -13625,6 +13629,18 @@ async function loadAlvos() {
   } catch(e) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
     if (st) st.textContent = 'Erro';
+  } finally {
+    loadAlvos._busy = false;
+  }
+}
+
+function _alvosInitIfNeeded() {
+  if (_alvosHasLoaded) return;
+  var tb = document.getElementById('alvos-tbody');
+  var st = document.getElementById('alvos-status');
+  if (st) st.textContent = 'Clique em Atualizar para carregar.';
+  if (tb) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Clique em Atualizar para carregar os alvos.</td></tr>';
   }
 }
 
