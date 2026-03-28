@@ -4487,11 +4487,11 @@
 
           <div id="cen-single-statusline" class="status-line" style="margin-bottom:12px"></div>
 
-          <div id="cen-single-tabs" class="sub-tabs" style="margin-bottom:12px;display:none">
-            <div class="sub-tab active" data-ctab="passagens" onclick="_cenSingleSwitchTab('passagens', this)">&#128197; Passagens</div>
-            <div class="sub-tab" data-ctab="acompanhantes" onclick="_cenSingleSwitchTab('acompanhantes', this)">&#128101; Acompanhantes</div>
-            <div class="sub-tab" data-ctab="rota" onclick="_cenSingleSwitchTab('rota', this)">&#128506; Rota</div>
-            <div class="sub-tab" data-ctab="relatorio" onclick="_cenSingleSwitchTab('relatorio', this)">&#128221; Relat&oacute;rio</div>
+          <div id="cen-single-tabs" class="alvo-subtabs" style="margin-bottom:12px;display:none">
+            <button class="alvo-subtab active" data-ctab="passagens" onclick="_cenSingleSwitchTab('passagens', this)">&#128197; Últimas passagens</button>
+            <button class="alvo-subtab" data-ctab="acompanhantes" onclick="_cenSingleSwitchTab('acompanhantes', this)">&#128101; Acompanhantes</button>
+            <button class="alvo-subtab" data-ctab="rota" onclick="_cenSingleSwitchTab('rota', this)">&#128506; Rota</button>
+            <button class="alvo-subtab" data-ctab="relatorio" onclick="_cenSingleSwitchTab('relatorio', this)">&#128203; Relat&oacute;rio</button>
           </div>
 
           <div id="cen-single-tab-passagens" class="cen-single-tab-pane"></div>
@@ -9350,7 +9350,7 @@ function _cenSingleSwitchTab(name, el) {
   tabs.forEach(function(t) {
     var pane = document.getElementById('cen-single-tab-' + t);
     if (pane) pane.style.display = (t === name) ? '' : 'none';
-    var btn = document.querySelector('#cen-single-tabs .sub-tab[data-ctab="' + t + '"]');
+    var btn = document.querySelector('#cen-single-tabs .alvo-subtab[data-ctab="' + t + '"]');
     if (btn) btn.classList.toggle('active', t === name);
   });
   _cenSingleState.activeTab = name;
@@ -9510,18 +9510,10 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '</div>';
   }
 
-  var passSummaryHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:12px">'
-    + _cenSingleMetric('Primeira passagem', firstEvent ? fmtTs(firstEvent.ts) : '\u2014', firstEvent ? (firstEvent.camera_name || firstEvent.camera_id || '') : '')
-    + _cenSingleMetric('&Uacute;ltima passagem', lastEvent ? fmtTs(lastEvent.ts) : '\u2014', lastEvent ? (lastEvent.camera_name || lastEvent.camera_id || '') : '')
-    + _cenSingleMetric('Percurso resumido', cameraOrder.length ? String(cameraOrder.length) + ' c&acirc;m.' : '\u2014', cameraOrder.length ? 'ordem de apari&ccedil;&atilde;o' : 'sem rota')
-    + '</div>';
-
-  var routeBlock = '<div style="padding:12px 14px;background:rgba(0,0,0,.12);border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:12px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
-      + '<div style="font-size:.74rem;font-weight:800;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em">&#128506; Ordem de c&acirc;meras no per&iacute;odo</div>'
-      + (eventsAsc.length ? '<button class="btn btn-outline btn-xs" onclick="_cenSingleOpenMap()">Ver rota no mapa</button>' : '')
-    + '</div>'
-    + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;line-height:1.8;margin-top:8px">' + routeHtml + '</div>'
+  var passLabel = (_cenSingleState && _cenSingleState.opts) ? _cenSingleHumanWindow(_cenSingleState.opts) : '';
+  var passHeader = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+    + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128336; &Uacute;ltimas passagens</span>'
+    + (eventsDesc.length ? '<span style="font-size:.76rem;color:var(--muted)">' + eventsDesc.length + ' registro(s) &bull; ' + (passLabel || '') + '</span>' : '')
     + '</div>';
 
   var eventRows = eventsDesc.slice(0, 12).map(function(ev, index) {
@@ -9536,11 +9528,21 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '</tr>';
   }).join('');
   var eventTableHtml = eventsDesc.length
-    ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
-    : '<div style="padding:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--muted);font-size:.82rem">Nenhuma passagem encontrada para a placa no per&iacute;odo selecionado.</div>';
+    ? '<div class="table-wrap" style="margin:0"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
+    : '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada no per&iacute;odo selecionado.</div>';
 
-  var passagensHtml = passSummaryHtml + eventTableHtml;
-  var rotaHtml = passSummaryHtml + routeBlock;
+  var passagensHtml = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
+    + passHeader
+    + eventTableHtml
+    + '</div>';
+
+  var rotaHtml = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">'
+      + '<span style="font-size:.82rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.06em">&#128506; Rota</span>'
+      + (eventsAsc.length ? '<button class="btn btn-outline btn-xs" onclick="_cenSingleOpenMap()">Ver rota no mapa</button>' : '')
+    + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0;line-height:1.8">' + routeHtml + '</div>'
+    + '</div>';
 
   var partnersHtml = '';
   if (partners.length) {
