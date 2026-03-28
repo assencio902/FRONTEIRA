@@ -4143,7 +4143,10 @@
     <div id="saude-containers">Containers: carregando...</div>
     <div id="saude-discos">Discos: carregando...</div>
     <div id="saude-backup">Backup: carregando...</div>
-    <button id="saude-backup-download" class="btn btn-outline btn-sm" type="button" onclick="downloadBackup()" style="margin-top:6px">Baixar backup</button>
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+      <button id="saude-backup-download" class="btn btn-outline btn-sm" type="button" onclick="downloadBackup()">Baixar backup</button>
+      <button id="saude-backup-run" class="btn btn-outline btn-sm" type="button" onclick="runBackupNow()">Fazer backup agora</button>
+    </div>
   </div>
 </div>
     <!-- ===== ABA EVENTOS ===== -->
@@ -8207,10 +8210,12 @@ async function loadSaude() {
   var discosEl = document.getElementById('saude-discos');
   var backupEl = document.getElementById('saude-backup');
   var backupBtn = document.getElementById('saude-backup-download');
+  var backupRunBtn = document.getElementById('saude-backup-run');
   if (containersEl) containersEl.textContent = 'Containers: carregando...';
   if (discosEl) discosEl.textContent = 'Discos: carregando...';
   if (backupEl) backupEl.textContent = 'Backup: carregando...';
   if (backupBtn) backupBtn.disabled = true;
+  if (backupRunBtn) backupRunBtn.disabled = false;
 
   try {
     var hResp = await fetch('/api/health');
@@ -8263,18 +8268,22 @@ async function loadSaude() {
         var when = _formatSaudeDate(bData.last_backup);
         backupEl.textContent = 'Backup: OK (último: ' + (when || 'sem data') + ')';
         if (backupBtn) backupBtn.disabled = false;
+        if (backupRunBtn) backupRunBtn.disabled = false;
       } else if (bData && bData.status === 'stale') {
         var when2 = _formatSaudeDate(bData.last_backup);
         backupEl.textContent = 'Backup: antigo (último: ' + (when2 || 'sem data') + ')';
         if (backupBtn) backupBtn.disabled = false;
+        if (backupRunBtn) backupRunBtn.disabled = false;
       } else {
         backupEl.textContent = 'Backup: não configurado';
         if (backupBtn) backupBtn.disabled = true;
+        if (backupRunBtn) backupRunBtn.disabled = false;
       }
     }
   } catch (_) {
     if (backupEl) backupEl.textContent = 'Backup: erro ao carregar';
     if (backupBtn) backupBtn.disabled = true;
+    if (backupRunBtn) backupRunBtn.disabled = false;
   }
 }
 
@@ -8299,6 +8308,24 @@ async function downloadBackup() {
     window.URL.revokeObjectURL(url);
   } catch (err) {
     alert('Falha ao baixar backup: ' + (err.message || err));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function runBackupNow() {
+  var btn = document.getElementById('saude-backup-run');
+  if (btn) btn.disabled = true;
+  try {
+    var resp = await fetch('/api/backup/run', { method: 'POST' });
+    if (!resp.ok) {
+      var err = await resp.json().catch(function(){ return {}; });
+      throw new Error(err.detail || 'Falha ao executar backup');
+    }
+    alert('Backup iniciado com sucesso.');
+    await loadSaude();
+  } catch (err) {
+    alert('Falha ao executar backup: ' + (err.message || err));
   } finally {
     if (btn) btn.disabled = false;
   }

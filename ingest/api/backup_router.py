@@ -1,4 +1,5 @@
 import os
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -59,6 +60,31 @@ def build_backup_router(
             filename=latest.name,
             media_type="application/octet-stream",
         )
+
+    @router.post("/api/backup/run")
+    def run_backup(request: Request):
+        require_auth_fn(request)
+        assert_admin_fn(request, "Apenas administradores podem executar o backup")
+
+        script_path = Path(os.getenv("BACKUP_SCRIPT_PATH", "/host/dados/backup_postgres.sh"))
+        if not script_path.exists():
+            raise HTTPException(status_code=404, detail="Script de backup nao encontrado")
+
+        try:
+            result = subprocess.run(
+                ["bash", str(script_path)],
+                capture_output=True,
+                text=True,
+                timeout=int(os.getenv("BACKUP_RUN_TIMEOUT", "600")),
+            )
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=504, detail="Backup em execucao por muito tempo")
+
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "Falha ao executar backup").strip()
+            raise HTTPException(status_code=500, detail=detail[:300])
+
+        return {"status": "ok"}
 
     return router
 
