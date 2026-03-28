@@ -9709,8 +9709,8 @@ async function _cenSingleSearch(plate, opts) {
     if (centralItem) _cenAllItems = [centralItem];
     _cenSingleBuildMapState(plate, report.events || []);
     _cenSingleSyncSummaryCards(report, centralItem);
-    _abrirRelatorioPlacaIndividual();
-    _cenSingleSetStatus('Relat&oacute;rio aberto para ' + plate + '.', 'ok');
+    _cenSingleSetStatus('Relat&oacute;rio carregado para ' + plate + '.', 'ok');
+    _cenSingleSwitchTab('passagens');
   } catch(e) {
     _cenSingleState.report = null;
     _cenSingleState.centralItem = null;
@@ -9729,7 +9729,7 @@ function _cenSingleOpenFullAnalysis() {
 
 function _cenSingleOpenPrintableReport() {
   if (!_cenSingleState.report) return;
-  _abrirRelatorioPlacaIndividual();
+  _cenSingleSwitchTab('relatorio');
 }
 
 function _cenSingleOpenMap() {
@@ -9757,7 +9757,7 @@ async function _cenSingleRestoreReportModal(plate) {
     _batedorReportData = { plate: plate || _cenSingleState.plate || '', d: _cenSingleState.report };
   }
   if (_batedorReportData && _batedorReportData.d) {
-    _abrirRelatorioPlacaIndividual();
+    _cenSingleSwitchTab('relatorio');
     return;
   }
   if (plate) {
