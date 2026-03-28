@@ -4468,7 +4468,7 @@
                 <option value="3600">60 min</option>
               </select>
             </label>
-            <button class="cen-btn-apply cen-btn-search" onclick="_cenSingleSearchFromForm()">&#128269; Pesquisar</button>
+            <button id="cen-single-search-btn" class="cen-btn-apply cen-btn-search" onclick="_cenSingleSearchFromForm()">&#128269; Pesquisar</button>
             <button class="cen-btn-clear" onclick="_cenSingleClear()">Limpar</button>
             <span class="date-range-row" id="cen-single-date-row" style="display:none">
               <span class="cen-lbl">De</span>
@@ -9324,6 +9324,7 @@ function _cenSingleBuildReportUrl(plate, opts) {
   if (opts.min_confidence > 0) url += '&min_confidence=' + String(opts.min_confidence);
   if (opts.min_cameras > 0) url += '&min_cameras=' + String(opts.min_cameras);
   if (opts.co_window) url += '&co_window=' + String(opts.co_window);
+  url += '&limit_events=3000';
   return url;
 }
 
@@ -9592,6 +9593,10 @@ function _cenSingleInit() {
 }
 
 async function _cenSingleSearchFromForm() {
+  if (_cenSingleBusy) {
+    _cenSingleSetStatus('Aguarde: busca em andamento...', 'info');
+    return;
+  }
   var plateEl = document.getElementById('cen-single-plate');
   if (!plateEl) return;
   var plate = (plateEl.value || '').trim().toUpperCase();
@@ -9611,6 +9616,9 @@ async function _cenSingleSearch(plate, opts) {
     _cenSingleSetStatus('Placa inv&aacute;lida para pesquisa.', 'error');
     return;
   }
+  var btn = document.getElementById('cen-single-search-btn');
+  _cenSingleBusy = true;
+  if (btn) { btn.disabled = true; btn.innerHTML = '&#9201; Buscando...'; }
   var plateEl = document.getElementById('cen-single-plate');
   if (plateEl) plateEl.value = plate;
   opts = opts || _cenSingleReadOpts() || _cenSingleDefaultOpts();
@@ -9650,6 +9658,9 @@ async function _cenSingleSearch(plate, opts) {
     _cenSingleState.centralItem = null;
     _cenSingleResetSummaryCards();
     _cenSingleSetStatus('Erro ao gerar o relat&oacute;rio da placa ' + plate + ': ' + e.message, 'error');
+  } finally {
+    _cenSingleBusy = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = '&#128269; Pesquisar'; }
   }
 }
 
@@ -10028,6 +10039,8 @@ function _cgsPageNav(delta) {
 }
 
 async function _cgsLoad(showSpinner) {
+  if (_cgsLoad._busy) return;
+  _cgsLoad._busy = true;
   var tbody = document.getElementById('cgs-tbody');
   if (!tbody) return;
   if (showSpinner) {
@@ -10055,12 +10068,12 @@ async function _cgsLoad(showSpinner) {
     + '&order_mode=' + encodeURIComponent(orderMode)
     + '&leader_ratio=' + encodeURIComponent(leaderR)
     + '&payload_max_front=' + encodeURIComponent(payloadM)
-    + '&limit_events=5000'
-    + '&limit=200';
+    + '&limit_events=2000'
+    + '&limit=100';
   if (tsFrom) url += '&ts_from=' + encodeURIComponent(tsFrom);
   if (tsTo)   url += '&ts_to='   + encodeURIComponent(tsTo);
   try {
-    var resp = await _fetchWithTimeout(url, null, 60000);
+    var resp = await _fetchWithTimeout(url, null, 25000);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
     _cgsAllGroups = data.groups || [];
@@ -10078,6 +10091,8 @@ async function _cgsLoad(showSpinner) {
     _cgsRenderPage();
   } catch(e) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px">Erro ao carregar: ' + e.message + '</td></tr>';
+  } finally {
+    _cgsLoad._busy = false;
   }
 }
 
@@ -11609,6 +11624,7 @@ var _cenSingleState = {
   opts: null,
   centralItem: null,
 };
+var _cenSingleBusy = false;
 var _cenSingleRecentSearches = [];
 
 function toggleCenLive() {
@@ -16515,13 +16531,15 @@ function _gruposScheduleNext() {
 }
 
 async function loadGruposComboio(showSpinner) {
+  if (loadGruposComboio._busy) return;
+  loadGruposComboio._busy = true;
   if (showSpinner === undefined) showSpinner = true;
   
   var w = document.getElementById('grupos-window').value || '2h';
   var gs = document.getElementById('grupos-sizes').value || '2,3';
   var mc = document.getElementById('grupos-min-cameras').value || '2';
   var om = document.getElementById('grupos-order-mode').value || 'any';
-  var limEvents = 5000;
+  var limEvents = 2000;
   
   if (showSpinner) {
     document.getElementById('grupos-status').innerHTML = '<span class="spinner"></span>';
@@ -16534,10 +16552,10 @@ async function loadGruposComboio(showSpinner) {
             + '&group_sizes=' + encodeURIComponent(gs)
             + '&min_cameras=' + encodeURIComponent(mc)
             + '&order_mode=' + encodeURIComponent(om)
-            + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=100'
+            + '&co_window=300&leader_ratio=0.7&payload_max_front=0&limit=60'
             + '&limit_events=' + encodeURIComponent(limEvents);
     
-    var r = await _fetchWithTimeout(url, null, 45000);
+    var r = await _fetchWithTimeout(url, null, 25000);
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
     var groups = data.groups || [];
@@ -16575,6 +16593,8 @@ async function loadGruposComboio(showSpinner) {
     var btn = document.getElementById('btn-grupos-live');
     if (btn) { btn.classList.remove('btn-success'); btn.classList.add('btn-outline');
                btn.innerHTML = '&#9654; <span id="grupos-live-label">Monitorar</span>'; }
+  } finally {
+    loadGruposComboio._busy = false;
   }
 }
 

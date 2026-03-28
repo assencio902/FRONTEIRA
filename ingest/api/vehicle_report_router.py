@@ -28,6 +28,8 @@ def build_vehicle_report_router(
         vehicle_type: str | None = None,
         vehicle_color: str | None = None,
         co_window: int = 300,
+        limit_events: int = 4000,
+        skip_convoy: bool = False,
     ):
         plate = (plate or "").strip().upper()
         if not plate:
@@ -99,17 +101,20 @@ def build_vehicle_report_router(
                 )
                 ev_rows = cur.fetchall()
 
-                co_win_s = max(10, int(co_window))
-                convoy_groups = detect_convoy_groups_fn(
-                    cur,
-                    t_from,
-                    t_to,
-                    window_s=co_win_s,
-                    max_trip_gap_s=3600,
-                    min_cameras=2,
-                    target_plate=plate,
-                    limit_events=12000,
-                )
+                convoy_groups = []
+                if not skip_convoy:
+                    co_win_s = max(10, int(co_window))
+                    safe_limit = max(500, min(int(limit_events), 20000))
+                    convoy_groups = detect_convoy_groups_fn(
+                        cur,
+                        t_from,
+                        t_to,
+                        window_s=co_win_s,
+                        max_trip_gap_s=3600,
+                        min_cameras=2,
+                        target_plate=plate,
+                        limit_events=safe_limit,
+                    )
 
                 partner_data: dict[str, dict[str, Any]] = {}
                 for group in convoy_groups:
