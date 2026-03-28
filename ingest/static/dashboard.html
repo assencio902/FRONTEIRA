@@ -9519,8 +9519,9 @@ function _cenSingleRenderAnalysis(report, centralItem) {
   var eventRows = eventsDesc.slice(0, 12).map(function(ev, index) {
     var conf = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
     var imgUrl = normalizeImageUrl(ev.image_path);
+    var plateLabel = (_cenSingleState && _cenSingleState.plate) ? _cenSingleState.plate : (report && report.plate ? report.plate : '');
     var img = imgUrl
-      ? '<img src="' + imgUrl + '" style="height:36px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="openImageUrl(\'' + imgUrl + '\', \'Passagem ' + plate + '\')" onerror="this.style.display=\'none\'" loading="lazy">'
+      ? '<img src="' + imgUrl + '" style="height:36px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="openImageUrl(\'' + imgUrl + '\', \'Passagem ' + plateLabel + '\')" onerror="this.style.display=\'none\'" loading="lazy">'
       : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
     return '<tr>'
       + '<td style="font-size:.74rem;color:var(--muted);text-align:center">' + (index + 1) + '</td>'
