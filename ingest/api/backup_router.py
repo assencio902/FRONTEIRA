@@ -19,7 +19,7 @@ def build_backup_router(
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem visualizar o status de backup")
 
-        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/backup/postgres"))
         log_path = Path(os.getenv("BACKUP_LOG_PATH", str(backup_dir / "backup.log")))
         if not log_path.exists():
             return {
@@ -50,7 +50,7 @@ def build_backup_router(
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem baixar o backup")
 
-        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/backup/postgres"))
         latest = _find_latest_backup_file(backup_dir)
         if not latest:
             raise HTTPException(status_code=404, detail="Nenhum arquivo de backup encontrado")
@@ -66,7 +66,7 @@ def build_backup_router(
         require_auth_fn(request)
         assert_admin_fn(request, "Apenas administradores podem executar o backup")
 
-        backup_dir = Path(os.getenv("BACKUP_DIR", "/host/backup/postgres"))
+        backup_dir = Path(os.getenv("BACKUP_DIR", "/backup/postgres"))
         log_path = Path(os.getenv("BACKUP_LOG_PATH", str(backup_dir / "backup.log")))
         backup_dir.mkdir(parents=True, exist_ok=True)
 

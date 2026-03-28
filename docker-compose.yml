@@ -89,6 +89,7 @@
       - ./secrets:/app/secrets:ro
       - /:/host:ro
       - /var/run/docker.sock:/var/run/docker.sock
+      - /backup:/backup
 
   yolo-worker:
     build: ./yolo-worker
