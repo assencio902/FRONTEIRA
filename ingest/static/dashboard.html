@@ -9518,6 +9518,10 @@ function _cenSingleRenderAnalysis(report, centralItem) {
 
   var eventRows = eventsDesc.slice(0, 12).map(function(ev, index) {
     var conf = ev.confidence > 0 ? formatConfidencePercent(ev.confidence) + '%' : '\u2014';
+    var imgUrl = normalizeImageUrl(ev.image_path);
+    var img = imgUrl
+      ? '<img src="' + imgUrl + '" style="height:36px;border-radius:4px;cursor:pointer;border:1px solid var(--border);vertical-align:middle" onclick="openImageUrl(\'' + imgUrl + '\', \'Passagem ' + plate + '\')" onerror="this.style.display=\'none\'" loading="lazy">'
+      : '<span style="color:var(--muted);font-size:.72rem">&#8212;</span>';
     return '<tr>'
       + '<td style="font-size:.74rem;color:var(--muted);text-align:center">' + (index + 1) + '</td>'
       + '<td style="font-size:.78rem;white-space:nowrap">' + (ev.ts ? fmtTs(ev.ts) : '\u2014') + '</td>'
@@ -9525,10 +9529,11 @@ function _cenSingleRenderAnalysis(report, centralItem) {
       + '<td style="font-size:.78rem;font-weight:700">' + (ev.direcao || '\u2014') + '</td>'
       + '<td style="font-size:.78rem;color:var(--muted)">' + (ev.vehicle_type || '\u2014') + '</td>'
       + '<td style="font-size:.78rem;color:var(--muted);text-align:center">' + conf + '</td>'
+      + '<td style="text-align:center">' + img + '</td>'
       + '</tr>';
   }).join('');
   var eventTableHtml = eventsDesc.length
-    ? '<div class="table-wrap" style="margin:0"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
+    ? '<div class="table-wrap" style="margin:0"><table><thead><tr><th>#</th><th>Data / Hora</th><th>C&acirc;mera</th><th>Dire&ccedil;&atilde;o</th><th>Tipo</th><th>Conf.</th><th style="text-align:center">Imagem</th></tr></thead><tbody>' + eventRows + '</tbody></table></div>'
     : '<div style="color:var(--muted);font-size:.85rem;padding:8px 0">Nenhuma passagem registrada no per&iacute;odo selecionado.</div>';
 
   var passagensHtml = '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px">'
