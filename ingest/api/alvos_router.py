@@ -16,31 +16,68 @@ def build_alvos_router(
     router = APIRouter(tags=["alvos"])
 
     @router.get("/api/alvos")
-    def alvos_list():
+    def alvos_list(lite: bool = False):
         with conn_factory() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT a.id, a.plate, a.descricao, a.created_at,
-                           MAX(COALESCE(e.occurred_at, e.ts)) AS last_seen
-                    FROM alvos a
-                    LEFT JOIN lpr_events e ON e.plate = a.plate
-                    GROUP BY a.id, a.plate, a.descricao, a.created_at
-                    ORDER BY a.created_at DESC
-                    """
-                )
+                if lite:
+                    cur.execute(
+                        """
+                        SELECT a.id, a.plate, a.descricao, a.created_at
+                        FROM alvos a
+                        ORDER BY a.created_at DESC
+                        """
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT a.id, a.plate, a.descricao, a.created_at,
+                               MAX(COALESCE(e.occurred_at, e.ts)) AS last_seen
+                        FROM alvos a
+                        LEFT JOIN lpr_events e ON e.plate = a.plate
+                        GROUP BY a.id, a.plate, a.descricao, a.created_at
+                        ORDER BY a.created_at DESC
+                        """
+                    )
                 rows = cur.fetchall()
-        alvos = [
-            {
+        alvos = []
+        for row in rows:
+            alvo = {
                 "id": row[0],
                 "plate": row[1],
                 "descricao": row[2],
                 "created_at": row[3].isoformat() if row[3] else None,
-                "last_seen": row[4].isoformat() if row[4] else None,
+                "last_seen": None,
             }
-            for row in rows
-        ]
+            if not lite and len(row) > 4:
+                alvo["last_seen"] = row[4].isoformat() if row[4] else None
+            alvos.append(alvo)
         return {"alvos": alvos, "total": len(alvos)}
+
+    @router.get("/api/alvos/last_seen")
+    def alvos_last_seen(plates: str):
+        items = [p.strip().upper() for p in (plates or "").split(",") if p.strip()]
+        if not items:
+            return {"items": []}
+        if len(items) > 200:
+            raise HTTPException(status_code=400, detail="Muitas placas solicitadas")
+        with conn_factory() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT plate, MAX(COALESCE(occurred_at, ts)) AS last_seen
+                    FROM lpr_events
+                    WHERE plate = ANY(%s)
+                    GROUP BY plate
+                    """,
+                    (items,),
+                )
+                rows = cur.fetchall()
+        return {
+            "items": [
+                {"plate": row[0], "last_seen": row[1].isoformat() if row[1] else None}
+                for row in rows
+            ]
+        }
 
     @router.post("/api/alvos")
     async def alvos_create(request: Request):

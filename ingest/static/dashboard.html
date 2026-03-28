@@ -13561,7 +13561,7 @@ async function loadAlvos() {
   tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px"><span class="spinner"></span></td></tr>';
   if (st) st.innerHTML = '<span class="spinner"></span>';
   try {
-    var resp = await _fetchWithTimeout('/api/alvos', null, 10000);
+    var resp = await _fetchWithTimeout('/api/alvos?lite=1', null, 10000);
     var data = await resp.json();
     var alvos = data.alvos || [];
     _alvosHasLoaded = true;
@@ -13585,26 +13585,7 @@ async function loadAlvos() {
       var plateEnc = encodeURIComponent(a.plate || '');
       var descEnc  = encodeURIComponent(a.descricao || '');
       var desdeEnc = encodeURIComponent(desde || '');
-      var lastSeen = (function() {
-        if (!a.last_seen) return '<span style="color:var(--muted);font-size:.78rem">&#8212;</span>';
-        var d   = new Date(a.last_seen);
-        var now = new Date();
-        var dtStr = d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-        var sameDay = d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
-        var diffH   = (now - d) / 3600000;
-        if (sameDay) {
-          return '<span style="display:inline-flex;align-items:center;gap:5px">'
-            + '<span style="background:#16a34a;color:#fff;font-size:.65rem;font-weight:800;padding:2px 6px;border-radius:99px;letter-spacing:.04em">HOJE</span>'
-            + '<span style="color:#4ade80;font-weight:600;font-size:.78rem">' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '</span>'
-            + '</span>';
-        } else if (diffH <= 48) {
-          return '<span style="color:#fbbf24;font-size:.78rem" title="' + dtStr + '">&#128308; ontem &nbsp;' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '</span>';
-        } else if (diffH <= 168) {
-          return '<span style="color:var(--muted);font-size:.78rem" title="' + dtStr + '">&#128997; ' + dtStr + '</span>';
-        } else {
-          return '<span style="color:var(--muted);font-size:.78rem">' + dtStr + '</span>';
-        }
-      })();
+      var lastSeen = '<span id="alvo-last-' + a.id + '" style="color:var(--muted);font-size:.78rem">&#8212;</span>';
       // Botões de ação por perfil
       var btnVer    = '<button class="btn btn-outline btn-xs" data-plate="' + plateEnc + '" data-desc="' + descEnc + '" data-desde="' + desdeEnc + '" onclick="alvoVer(' + a.id + ', decodeURIComponent(this.dataset.plate||\'\'), decodeURIComponent(this.dataset.desc||\'\'), decodeURIComponent(this.dataset.desde||\'\'))" title="Visualizar alvo">&#128269; Visualizar</button>';
       var btnEditar = (_role === 'admin' || _role === 'operador')
@@ -13618,7 +13599,7 @@ async function loadAlvos() {
       var descCell  = descTxt
         ? '<span title="' + descTitle + '" style="display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + descTxt + '</span>'
         : '<span style="color:var(--muted)">&#8212;</span>';
-      return '<tr id="alvo-card-' + a.id + '">'
+      return '<tr id="alvo-card-' + a.id + '" data-plate="' + (a.plate || '') + '">'
         + '<td>' + plateHtml(a.plate) + '</td>'
         + '<td style="color:var(--muted);max-width:260px">' + descCell + '</td>'
         + '<td style="white-space:nowrap;color:var(--muted);font-size:.78rem">' + desde + '</td>'
@@ -13626,6 +13607,7 @@ async function loadAlvos() {
         + '<td class="action-cell"><div class="action-buttons">' + btnVer + btnEditar + btnApagar + '</div></td>'
         + '</tr>';
     }).join('');
+    _loadAlvosLastSeen(alvos);
   } catch(e) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:24px">Erro: ' + e + '</td></tr>';
     if (st) st.textContent = 'Erro';
@@ -13641,6 +13623,45 @@ function _alvosInitIfNeeded() {
   if (st) st.textContent = 'Clique em Atualizar para carregar.';
   if (tb) {
     tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px">Clique em Atualizar para carregar os alvos.</td></tr>';
+  }
+}
+
+async function _loadAlvosLastSeen(alvos) {
+  try {
+    if (!alvos || !alvos.length) return;
+    var plates = alvos.map(function(a) { return a.plate; }).filter(Boolean);
+    if (!plates.length) return;
+    var resp = await _fetchWithTimeout('/api/alvos/last_seen?plates=' + encodeURIComponent(plates.join(',')), null, 12000);
+    if (!resp.ok) return;
+    var data = await resp.json();
+    var items = data.items || [];
+    var map = {};
+    items.forEach(function(it) { if (it && it.plate) map[it.plate] = it.last_seen; });
+    alvos.forEach(function(a) {
+      var last = map[a.plate];
+      var el = document.getElementById('alvo-last-' + a.id);
+      if (!el) return;
+      if (!last) { el.innerHTML = '&#8212;'; return; }
+      var d = new Date(last);
+      var now = new Date();
+      var dtStr = d.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      var sameDay = d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+      var diffH   = (now - d) / 3600000;
+      if (sameDay) {
+        el.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px">'
+          + '<span style="background:#16a34a;color:#fff;font-size:.65rem;font-weight:800;padding:2px 6px;border-radius:99px;letter-spacing:.04em">HOJE</span>'
+          + '<span style="color:#4ade80;font-weight:600;font-size:.78rem">' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '</span>'
+          + '</span>';
+      } else if (diffH <= 48) {
+        el.innerHTML = '<span style="color:#fbbf24;font-size:.78rem" title="' + dtStr + '">&#128308; ontem &nbsp;' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) + '</span>';
+      } else if (diffH <= 168) {
+        el.innerHTML = '<span style="color:var(--muted);font-size:.78rem" title="' + dtStr + '">&#128997; ' + dtStr + '</span>';
+      } else {
+        el.innerHTML = '<span style="color:var(--muted);font-size:.78rem">' + dtStr + '</span>';
+      }
+    });
+  } catch (e) {
+    // silencioso
   }
 }
 
