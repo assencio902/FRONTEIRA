@@ -8315,8 +8315,18 @@ async function downloadBackup() {
 
 async function runBackupNow() {
   var btn = document.getElementById('saude-backup-run');
+  var backupEl = document.getElementById('saude-backup');
+  var startTs = Date.now();
+  var timerId = null;
   if (btn) btn.disabled = true;
   try {
+    if (backupEl) {
+      backupEl.textContent = 'Backup: em andamento... (0s)';
+      timerId = setInterval(function() {
+        var secs = Math.floor((Date.now() - startTs) / 1000);
+        backupEl.textContent = 'Backup: em andamento... (' + secs + 's)';
+      }, 1000);
+    }
     var resp = await fetch('/api/backup/run', { method: 'POST' });
     if (!resp.ok) {
       var err = await resp.json().catch(function(){ return {}; });
@@ -8326,10 +8336,15 @@ async function runBackupNow() {
     var msg = 'Backup concluído com sucesso.';
     if (data && data.file) msg += ' Arquivo: ' + data.file;
     alert(msg);
+    if (backupEl) {
+      var totalSecs = Math.max(1, Math.floor((Date.now() - startTs) / 1000));
+      backupEl.textContent = 'Backup: concluído agora (tempo: ' + totalSecs + 's)';
+    }
     await loadSaude();
   } catch (err) {
     alert('Falha ao executar backup: ' + (err.message || err));
   } finally {
+    if (timerId) clearInterval(timerId);
     if (btn) btn.disabled = false;
   }
 }
