@@ -9715,6 +9715,7 @@ async function _cenSingleSearch(plate, opts) {
     if (centralItem) _cenAllItems = [centralItem];
     _cenSingleBuildMapState(plate, report.events || []);
     _cenSingleSyncSummaryCards(report, centralItem);
+    _cenSingleRenderAnalysis(report, centralItem);
     _cenSingleSetStatus('Relat&oacute;rio carregado para ' + plate + '.', 'ok');
     _cenSingleSwitchTab('passagens');
   } catch(e) {
