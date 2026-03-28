@@ -145,11 +145,20 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
         if not mount_points:
             continue
         primary_mount = mount_points[0]
+        if not device.startswith("/dev/"):
+            continue
+        if primary_mount.startswith(("/host/proc", "/host/sys", "/host/dev", "/host/run")):
+            continue
+        if primary_mount.startswith(("/host/boot", "/host/boot/efi")):
+            continue
         usage_path = _resolve_host_path(Path(primary_mount)) or Path(primary_mount)
         try:
             usage = shutil.disk_usage(usage_path)
         except Exception:
             usage = None
+        total_gb = round((usage.total / (1024**3)), 2) if usage else None
+        if total_gb is not None and total_gb < 5:
+            continue
         items.append(
             {
                 "key": f"device:{device}",
@@ -159,7 +168,7 @@ def _list_storage_mounts(storage_dirs: dict[str, Path]) -> list[dict[str, Any]]:
                 "device": device,
                 "fs_type": info.get("fs_type"),
                 "backing_mount": primary_mount,
-                "total_gb": round((usage.total / (1024**3)), 2) if usage else None,
+                "total_gb": total_gb,
                 "used_gb": round((usage.used / (1024**3)), 2) if usage else None,
                 "free_gb": round((usage.free / (1024**3)), 2) if usage else None,
                 "used_percent": round(((usage.used / usage.total) * 100), 2)
