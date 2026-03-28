@@ -36,6 +36,7 @@ from api.alarmes_router import build_alarmes_router
 from api.admin_activity_router import build_admin_activity_router
 from api.auth_router import build_auth_router
 from api.alvos_router import build_alvos_router
+from api.backup_router import build_backup_router
 from api.camera_router import build_camera_router
 from api.central_router import build_central_router
 from api.comboio_router import build_comboio_router
@@ -1262,6 +1263,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(build_auth_router(_conn))
 app.include_router(build_admin_activity_router(_conn))
 app.include_router(build_camera_router(_conn, get_camera_row))
+app.include_router(build_backup_router(require_auth, assert_admin))
 app.include_router(
     build_storage_router(
         _conn,
