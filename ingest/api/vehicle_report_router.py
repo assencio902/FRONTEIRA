@@ -30,6 +30,7 @@ def build_vehicle_report_router(
         co_window: int = 300,
         limit_events: int = 4000,
         skip_convoy: bool = False,
+        events_limit: int = 500,
     ):
         plate = (plate or "").strip().upper()
         if not plate:
@@ -69,6 +70,7 @@ def build_vehicle_report_router(
 
         with conn_factory() as conn:
             with conn.cursor() as cur:
+                safe_events_limit = max(100, min(int(events_limit), 2000))
                 cur.execute(
                     f"""
                     SELECT
@@ -95,7 +97,7 @@ def build_vehicle_report_router(
                       AND COALESCE(e.occurred_at, e.ts) BETWEEN %s AND %s
                       {ev_extra_sql}
                     ORDER BY ts DESC
-                    LIMIT 500
+                    LIMIT {safe_events_limit}
                 """,
                     (plate, t_from, t_to, *ev_extra_vals),
                 )

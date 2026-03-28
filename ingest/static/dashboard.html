@@ -9324,6 +9324,10 @@ function _cenSingleBuildReportUrl(plate, opts) {
   if (opts.min_confidence > 0) url += '&min_confidence=' + String(opts.min_confidence);
   if (opts.min_cameras > 0) url += '&min_cameras=' + String(opts.min_cameras);
   if (opts.co_window) url += '&co_window=' + String(opts.co_window);
+  var win = (opts.window || '').toLowerCase();
+  var longWin = (win === '15d' || win === '30d' || win === '60d' || win === '90d' || win === '180d');
+  url += '&events_limit=' + (longWin ? '1500' : '800');
+  if (longWin) url += '&skip_convoy=1';
   url += '&limit_events=3000';
   return url;
 }
