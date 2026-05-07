@@ -1,0 +1,137 @@
+/* ============================================================
+   FRONTEIRA INTELIGENTE – Custom Styles
+   ============================================================ */
+
+:root {
+  --fi-blue:    #0d6efd;
+  --fi-green:   #198754;
+  --fi-yellow:  #ffc107;
+  --fi-red:     #dc3545;
+  --fi-dark:    #212529;
+  --fi-bg:      #f4f6f9;
+}
+
+body {
+  background-color: var(--fi-bg);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ---- Navbar ---- */
+.navbar-brand {
+  letter-spacing: 1px;
+  font-size: 1.1rem;
+}
+
+/* ---- Page sections ---- */
+.page-section {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Stat Cards ---- */
+.card .fs-1 {
+  line-height: 1.1;
+}
+
+/* ---- LPR Camera Box ---- */
+.lpr-camera-box {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background: #111;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0d6efd;
+}
+
+.lpr-camera-box::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(13,110,253,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13,110,253,0.08) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.lpr-overlay-text {
+  color: rgba(255,255,255,0.55);
+  text-align: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lpr-scan-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #0d6efd, transparent);
+  animation: scanDown 2s linear infinite;
+  z-index: 5;
+}
+
+@keyframes scanDown {
+  0%   { top: 0; }
+  100% { top: 100%; }
+}
+
+.lpr-plate-detected {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 6px 20px;
+  border-radius: 6px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 4px;
+  z-index: 10;
+  font-family: 'Courier New', monospace;
+  border: 2px solid #0d6efd;
+}
+
+/* ---- LPR input ---- */
+.lpr-input {
+  font-size: 1.4rem;
+  letter-spacing: 4px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+/* ---- Status Badges ---- */
+.badge-status-liberado  { background-color: var(--fi-green);  color: #fff; }
+.badge-status-alerta    { background-color: var(--fi-yellow); color: #000; }
+.badge-status-bloqueado { background-color: var(--fi-red);    color: #fff; }
+
+/* ---- Result card ---- */
+#lprResult .result-plate {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+/* ---- Alert cards ---- */
+.alert-card-alerta   { border-left: 5px solid var(--fi-yellow); }
+.alert-card-bloqueado { border-left: 5px solid var(--fi-red); }
+
+/* ---- Table tweaks ---- */
+.table th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.table td { font-size: 0.9rem; }
+
+/* ---- Responsive tweaks ---- */
+@media (max-width: 576px) {
+  .lpr-camera-box { height: 160px; }
+  #lprResult .result-plate { font-size: 1.8rem; }
+}
